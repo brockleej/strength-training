@@ -28,6 +28,9 @@ struct ContentView: View {
                     Tab("Exercises", systemImage: "list.bullet") {
                         ExerciseLibraryView()
                     }
+                    Tab("Settings", systemImage: "gear") {
+                        SettingsView()
+                    }
                 }
             } else {
                 ProgressView()

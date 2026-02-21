@@ -6,12 +6,25 @@
 //
 
 import SwiftData
+import Foundation
 
 struct SeedData {
+    private static let seededKey = "hasSeededExercises"
+
     static func seedIfNeeded(context: ModelContext) {
-        let descriptor = FetchDescriptor<Exercise>()
-        let count = (try? context.fetchCount(descriptor)) ?? 0
-        guard count == 0 else { return }
+        let kvStore = NSUbiquitousKeyValueStore.default
+
+        // Already seeded — skip.
+        if kvStore.bool(forKey: seededKey) { return }
+
+        // Migration path: existing local data from before CloudKit was added.
+        // Mark as seeded so we don't duplicate on next launch, then bail.
+        let count = (try? context.fetchCount(FetchDescriptor<Exercise>())) ?? 0
+        if count > 0 {
+            kvStore.set(true, forKey: seededKey)
+            kvStore.synchronize()
+            return
+        }
 
         let armsExercises: [(String, String)] = [
             ("Shoulder Press", "Shoulders"),
@@ -51,5 +64,7 @@ struct SeedData {
         }
 
         try? context.save()
+        kvStore.set(true, forKey: seededKey)
+        kvStore.synchronize()
     }
 }
