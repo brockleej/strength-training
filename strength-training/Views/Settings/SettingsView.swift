@@ -9,25 +9,9 @@ import SwiftUI
 import SwiftData
 import UIKit
 
-// MARK: - Share sheet wrapper
-
-private struct ActivityView: UIViewControllerRepresentable {
-    let items: [Any]
-
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        UIActivityViewController(activityItems: items, applicationActivities: nil)
-    }
-
-    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
-}
-
-// MARK: - Settings view
-
 struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
 
-    @State private var exportURL: URL?
-    @State private var isExporting = false
     @State private var isImporting = false
     @State private var pendingRestoreData: Data?
     @State private var showRestoreConfirmation = false
@@ -40,15 +24,6 @@ struct SettingsView: View {
         NavigationStack {
             List {
                 Section {
-                    Label("Data syncs automatically to your private iCloud account in the background.", systemImage: "icloud")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .listRowBackground(Color.clear)
-                } header: {
-                    Text("iCloud Sync")
-                }
-
-                Section {
                     Button(action: exportBackup) {
                         Label("Export Backup", systemImage: "square.and.arrow.up")
                     }
@@ -60,20 +35,12 @@ struct SettingsView: View {
                             .foregroundStyle(.orange)
                     }
                 } header: {
-                    Text("Manual Backup")
+                    Text("Backup")
                 } footer: {
                     Text("Restore replaces all existing data with the contents of the selected backup file.")
                 }
             }
             .navigationTitle("Settings")
-            // Share sheet
-            .sheet(isPresented: $isExporting) {
-                if let url = exportURL {
-                    ActivityView(items: [url])
-                        .presentationDetents([.medium])
-                }
-            }
-            // File picker for restore
             .fileImporter(
                 isPresented: $isImporting,
                 allowedContentTypes: [.json],
@@ -81,7 +48,6 @@ struct SettingsView: View {
             ) { result in
                 handleImportResult(result)
             }
-            // Restore confirmation
             .confirmationDialog(
                 "Restore Backup?",
                 isPresented: $showRestoreConfirmation,
@@ -121,8 +87,15 @@ struct SettingsView: View {
             let filename = "strength-training-backup-\(formatter.string(from: .now)).json"
             let url = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
             try data.write(to: url)
-            exportURL = url
-            isExporting = true
+
+            // Present UIActivityViewController directly from root — embedding it in a
+            // SwiftUI .sheet causes a nested modal that renders blank.
+            guard let rootVC = UIApplication.shared.connectedScenes
+                .compactMap({ $0 as? UIWindowScene })
+                .first?.windows.first?.rootViewController else { return }
+
+            let activityVC = UIActivityViewController(activityItems: [url], applicationActivities: nil)
+            rootVC.present(activityVC, animated: true)
         } catch {
             errorMessage = error.localizedDescription
             showError = true
