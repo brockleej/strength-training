@@ -27,7 +27,7 @@ struct AddExerciseView: View {
                     TextField("Exercise Name", text: $name)
 
                     Picker("Day Type", selection: $dayType) {
-                        ForEach(DayType.allCases) { type in
+                        ForEach(DayType.allCases.filter { $0 != .fullBody }) { type in
                             Text(type.rawValue).tag(type)
                         }
                     }
@@ -49,7 +49,7 @@ struct AddExerciseView: View {
                 }
             }
             .onAppear {
-                dayType = preselectedDayType
+                dayType = preselectedDayType == .fullBody ? .arms : preselectedDayType
             }
         }
     }

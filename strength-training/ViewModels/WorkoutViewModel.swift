@@ -82,6 +82,7 @@ final class WorkoutViewModel {
             sortBy: [SortDescriptor(\Exercise.sortOrder)]
         )
         let all = (try? modelContext.fetch(descriptor)) ?? []
+        if dayType == .fullBody { return all }
         return all.filter { $0.dayType == dayType }
     }
 

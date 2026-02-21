@@ -16,7 +16,7 @@ struct ExerciseLibraryView: View {
     var body: some View {
         NavigationStack {
             List {
-                ForEach(DayType.allCases) { dayType in
+                ForEach(DayType.allCases.filter { $0 != .fullBody }) { dayType in
                     Section(dayType.rawValue) {
                         let exercises = allExercises.filter { $0.dayType == dayType }
                         ForEach(exercises) { exercise in

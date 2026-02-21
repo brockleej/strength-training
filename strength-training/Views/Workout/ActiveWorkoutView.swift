@@ -15,13 +15,10 @@ struct ActiveWorkoutView: View {
     @State private var expandedExerciseID: UUID?
     @State private var showFinishConfirmation = false
     @State private var showAddExercise = false
+    @State private var addExercisePreselectedType: DayType = .arms
 
     private var dayType: DayType {
         viewModel.activeSession?.dayType ?? .arms
-    }
-
-    private var exercises: [Exercise] {
-        allExercises.filter { $0.dayType == dayType }
     }
 
     var body: some View {
@@ -32,31 +29,11 @@ struct ActiveWorkoutView: View {
                         .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                 }
 
-                Section {
-                    ForEach(exercises) { exercise in
-                        ExerciseRowView(
-                            exercise: exercise,
-                            viewModel: viewModel,
-                            isExpanded: Binding(
-                                get: { expandedExerciseID == exercise.id },
-                                set: { newValue in
-                                    withAnimation(.easeInOut(duration: 0.2)) {
-                                        expandedExerciseID = newValue ? exercise.id : nil
-                                    }
-                                }
-                            )
-                        )
-                    }
-
-                    // Add exercise inline button
-                    Button {
-                        showAddExercise = true
-                    } label: {
-                        Label("Add Exercise", systemImage: "plus.circle")
-                            .foregroundStyle(.tint)
-                    }
-                } header: {
-                    Text("\(dayType.rawValue) Exercises")
+                if dayType == .fullBody {
+                    exerciseSection(for: .arms)
+                    exerciseSection(for: .legs)
+                } else {
+                    exerciseSection(for: dayType)
                 }
             }
             .navigationTitle("\(dayType.rawValue) Day")
@@ -84,8 +61,38 @@ struct ActiveWorkoutView: View {
                 Text("You completed \(completedCount) exercise\(completedCount == 1 ? "" : "s") this session.")
             }
             .sheet(isPresented: $showAddExercise) {
-                AddExerciseView(preselectedDayType: dayType)
+                AddExerciseView(preselectedDayType: addExercisePreselectedType)
             }
+        }
+    }
+
+    @ViewBuilder
+    private func exerciseSection(for sectionDayType: DayType) -> some View {
+        Section {
+            ForEach(allExercises.filter { $0.dayType == sectionDayType }) { exercise in
+                ExerciseRowView(
+                    exercise: exercise,
+                    viewModel: viewModel,
+                    isExpanded: Binding(
+                        get: { expandedExerciseID == exercise.id },
+                        set: { newValue in
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                expandedExerciseID = newValue ? exercise.id : nil
+                            }
+                        }
+                    )
+                )
+            }
+
+            Button {
+                addExercisePreselectedType = sectionDayType
+                showAddExercise = true
+            } label: {
+                Label("Add Exercise", systemImage: "plus.circle")
+                    .foregroundStyle(.tint)
+            }
+        } header: {
+            Text("\(sectionDayType.rawValue) Exercises")
         }
     }
 

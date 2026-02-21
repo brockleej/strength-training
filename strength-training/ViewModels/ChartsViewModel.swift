@@ -28,6 +28,7 @@ final class ChartsViewModel {
     func allExercises(for dayType: DayType) -> [Exercise] {
         let descriptor = FetchDescriptor<Exercise>(sortBy: [SortDescriptor(\Exercise.sortOrder)])
         let all = (try? modelContext.fetch(descriptor)) ?? []
+        if dayType == .fullBody { return all }
         return all.filter { $0.dayType == dayType }
     }
 

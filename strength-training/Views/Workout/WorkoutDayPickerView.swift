@@ -58,9 +58,7 @@ private struct DayTypeCard: View {
                 Text("\(dayType.rawValue) Day")
                     .font(.title3.bold())
 
-                Text(dayType == .arms
-                     ? "Shoulders, Chest, Back, Biceps, Triceps"
-                     : "Quads, Hamstrings, Glutes, Calves, Core")
+                Text(dayType.subtitle)
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
