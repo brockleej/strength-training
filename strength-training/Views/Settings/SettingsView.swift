@@ -8,6 +8,7 @@
 import SwiftUI
 import SwiftData
 import UIKit
+internal import UniformTypeIdentifiers
 
 struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
