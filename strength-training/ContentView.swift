@@ -6,19 +6,43 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct ContentView: View {
+    @Environment(\.modelContext) private var modelContext
+    @State private var workoutViewModel: WorkoutViewModel?
+
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        Group {
+            if let vm = workoutViewModel {
+                TabView {
+                    Tab("Workout", systemImage: "dumbbell") {
+                        WorkoutTabView(viewModel: vm)
+                    }
+                    Tab("History", systemImage: "clock") {
+                        HistoryListView()
+                    }
+                    Tab("Progress", systemImage: "chart.line.uptrend.xyaxis") {
+                        ChartsOverviewView()
+                    }
+                    Tab("Exercises", systemImage: "list.bullet") {
+                        ExerciseLibraryView()
+                    }
+                }
+            } else {
+                ProgressView()
+            }
         }
-        .padding()
+        .onAppear {
+            SeedData.seedIfNeeded(context: modelContext)
+            if workoutViewModel == nil {
+                workoutViewModel = WorkoutViewModel(modelContext: modelContext)
+            }
+        }
     }
 }
 
 #Preview {
     ContentView()
+        .modelContainer(previewContainer)
 }

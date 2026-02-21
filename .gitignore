@@ -1,0 +1,20 @@
+# Xcode
+DerivedData/
+*.xcuserstate
+xcuserdata/
+*.xcscmblueprint
+
+# macOS
+.DS_Store
+*.swp
+*~
+
+# Build
+build/
+.build/
+
+# CocoaPods (future-proofing)
+Pods/
+
+# Swift Package Manager
+.swiftpm/xcode/package.xcworkspace/contents.xcworkspacedata
