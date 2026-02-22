@@ -134,6 +134,20 @@ struct ActiveWorkoutView: View {
                 .padding(.bottom, 12)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(Color(.systemGroupedBackground))
+                // Gradient curtain that hangs 20 pt below the header into the
+                // content area. Pinned headers render above scroll content, so
+                // this overlay also sits above it — content fades as it scrolls
+                // up toward the header rather than cutting off abruptly.
+                .overlay(alignment: .bottom) {
+                    LinearGradient(
+                        colors: [Color(.systemGroupedBackground), .clear],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                    .frame(height: 20)
+                    .offset(y: 20)
+                    .allowsHitTesting(false)
+                }
         }
     }
 
