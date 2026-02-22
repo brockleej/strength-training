@@ -12,6 +12,11 @@ struct ExerciseRowView: View {
     @Bindable var viewModel: WorkoutViewModel
     @Binding var isExpanded: Bool
 
+    // Measured natural height of SetInputView.
+    // Using an explicit CGFloat (instead of nil) lets SwiftUI interpolate
+    // the frame height smoothly: 0 ↔ inputHeight, both animatable values.
+    @State private var inputHeight: CGFloat = 0
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             // Header row
@@ -60,11 +65,32 @@ struct ExerciseRowView: View {
                 isExpanded.toggle()
             }
 
-            // Expanded: set input
-            if isExpanded {
-                SetInputView(exercise: exercise, viewModel: viewModel)
-                    .padding(.leading, 36)
-            }
+            // Content is always in the view hierarchy — never inserted/removed.
+            // This prevents the "fade in on top of siblings" z-order issue that
+            // occurs when SwiftUI places a newly-inserted view at its final
+            // layout position before surrounding rows have animated there.
+            //
+            // fixedSize forces the view to always render at its natural height
+            // regardless of the frame constraint, so the GeometryReader background
+            // always measures the true content height even when collapsed.
+            // The frame clips from 0 → inputHeight using two real CGFloats that
+            // SwiftUI can actually interpolate — unlike nil → 0.
+            SetInputView(exercise: exercise, viewModel: viewModel)
+                .padding(.leading, 36)
+                .fixedSize(horizontal: false, vertical: true)
+                .background {
+                    GeometryReader { geo in
+                        Color.clear
+                            .onAppear { inputHeight = geo.size.height }
+                            .onChange(of: geo.size.height) { _, new in
+                                guard new > 0 else { return }
+                                inputHeight = new
+                            }
+                    }
+                }
+                .frame(height: isExpanded ? inputHeight : 0, alignment: .top)
+                .clipped()
+                .allowsHitTesting(isExpanded)
         }
         .padding(.vertical, 4)
         .padding(.horizontal, 16)
