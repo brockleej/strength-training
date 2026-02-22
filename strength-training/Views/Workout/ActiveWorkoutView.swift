@@ -23,28 +23,36 @@ struct ActiveWorkoutView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                LazyVStack(spacing: 16, pinnedViews: .sectionHeaders) {
-                    // Training mode picker
-                    TrainingModePickerView(selectedMode: $viewModel.selectedMode)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 10)
-                        .frame(maxWidth: .infinity)
-                        .background(Color(.secondarySystemGroupedBackground))
-                        .clipShape(RoundedRectangle(cornerRadius: 20))
-                        .padding(.horizontal, 16)
+            // VStack keeps the picker outside the scroll view entirely.
+            // Scroll content is physically below the picker, so it can never
+            // reach the picker or nav bar — no z-fighting or overscroll bleed.
+            VStack(spacing: 0) {
+                TrainingModePickerView(selectedMode: $viewModel.selectedMode)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+                    .frame(maxWidth: .infinity)
+                    .background(Color(.secondarySystemGroupedBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(Color(.systemGroupedBackground))
 
-                    if dayType == .fullBody {
-                        exerciseSection(for: .arms)
-                        exerciseSection(for: .legs)
-                    } else {
-                        exerciseSection(for: dayType)
+                ScrollView {
+                    LazyVStack(spacing: 16, pinnedViews: .sectionHeaders) {
+                        if dayType == .fullBody {
+                            exerciseSection(for: .arms)
+                            exerciseSection(for: .legs)
+                        } else {
+                            exerciseSection(for: dayType)
+                        }
                     }
+                    .padding(.vertical, 8)
                 }
-                .padding(.vertical, 8)
+                .background(Color(.systemGroupedBackground))
             }
             .background(Color(.systemGroupedBackground))
             .navigationTitle("\(dayType.rawValue) Day")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
@@ -92,7 +100,7 @@ struct ActiveWorkoutView: View {
                             }
                         )
                     )
-                    .padding(.vertical, 8)
+                    .padding(.top, 8)
 
                     if index < exercises.count - 1 {
                         Divider()
@@ -122,7 +130,8 @@ struct ActiveWorkoutView: View {
                 .foregroundStyle(.secondary)
                 .textCase(.uppercase)
                 .padding(.horizontal, 32)
-                .padding(.vertical, 6)
+                .padding(.top, 8)
+                .padding(.bottom, 12)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(Color(.systemGroupedBackground))
         }
