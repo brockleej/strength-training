@@ -7,6 +7,56 @@
 
 import SwiftUI
 
+// MARK: - StepperButton
+
+/// A square rounded-rect +/- button that fires once on tap and continuously
+/// while held. There is a 500ms pause before auto-repeat begins, after which
+/// the action fires every `holdInterval` seconds until the finger lifts.
+private struct StepperButton: View {
+    let systemName: String
+    /// Seconds between repeating steps once auto-repeat kicks in.
+    let holdInterval: TimeInterval
+    let action: () -> Void
+
+    @State private var isPressed = false
+    @State private var holdTask: Task<Void, Never>?
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: 10)
+            .fill(isPressed ? Color(.tertiarySystemFill) : Color(.secondarySystemFill))
+            .frame(width: 44, height: 44)
+            .overlay {
+                Image(systemName: systemName)
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(.primary)
+            }
+            .scaleEffect(isPressed ? 0.92 : 1.0)
+            .animation(.easeInOut(duration: 0.08), value: isPressed)
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { _ in
+                        guard !isPressed else { return }
+                        isPressed = true
+                        action()
+                        holdTask = Task { @MainActor in
+                            try? await Task.sleep(for: .milliseconds(250))
+                            while !Task.isCancelled {
+                                action()
+                                try? await Task.sleep(for: .seconds(holdInterval))
+                            }
+                        }
+                    }
+                    .onEnded { _ in
+                        isPressed = false
+                        holdTask?.cancel()
+                        holdTask = nil
+                    }
+            )
+    }
+}
+
+// MARK: - SetInputView
+
 struct SetInputView: View {
     let exercise: Exercise
     @Bindable var viewModel: WorkoutViewModel
@@ -44,65 +94,42 @@ struct SetInputView: View {
 
             // Input row
             HStack(spacing: 16) {
-                // Weight
-                VStack(spacing: 4) {
-                    Text("Weight")
+                // Weight — "lbs" moved into the label so both columns align
+                VStack(spacing: 8) {
+                    Text("Weight (lbs)")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     HStack(spacing: 8) {
-                        Button {
+                        StepperButton(systemName: "minus", holdInterval: 0.45) {
                             weight = max(0, weight - 5)
-                        } label: {
-                            Image(systemName: "minus.circle.fill")
-                                .font(.title3)
                         }
-                        .buttonStyle(.borderless)
-
-                        Text("\(formattedWeight(weight))")
+                        Text(formattedWeight(weight))
                             .font(.title3.monospacedDigit().bold())
                             .frame(minWidth: 44)
-
-                        Button {
+                        StepperButton(systemName: "plus", holdInterval: 0.45) {
                             weight += 5
-                        } label: {
-                            Image(systemName: "plus.circle.fill")
-                                .font(.title3)
                         }
-                        .buttonStyle(.borderless)
                     }
-                    Text("lbs")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
                 }
 
                 Divider()
-                    .frame(height: 50)
+                    .frame(height: 60)
 
                 // Reps
-                VStack(spacing: 4) {
+                VStack(spacing: 8) {
                     Text("Reps")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     HStack(spacing: 8) {
-                        Button {
+                        StepperButton(systemName: "minus", holdInterval: 0.1) {
                             reps = max(1, reps - 1)
-                        } label: {
-                            Image(systemName: "minus.circle.fill")
-                                .font(.title3)
                         }
-                        .buttonStyle(.borderless)
-
                         Text("\(reps)")
                             .font(.title3.monospacedDigit().bold())
                             .frame(minWidth: 30)
-
-                        Button {
+                        StepperButton(systemName: "plus", holdInterval: 0.1) {
                             reps += 1
-                        } label: {
-                            Image(systemName: "plus.circle.fill")
-                                .font(.title3)
                         }
-                        .buttonStyle(.borderless)
                     }
                 }
             }
