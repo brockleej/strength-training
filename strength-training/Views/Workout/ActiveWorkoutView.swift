@@ -23,19 +23,27 @@ struct ActiveWorkoutView: View {
 
     var body: some View {
         NavigationStack {
-            List {
-                Section {
+            ScrollView {
+                LazyVStack(spacing: 16, pinnedViews: .sectionHeaders) {
+                    // Training mode picker
                     TrainingModePickerView(selectedMode: $viewModel.selectedMode)
-                        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-                }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 10)
+                        .frame(maxWidth: .infinity)
+                        .background(Color(.secondarySystemGroupedBackground))
+                        .clipShape(RoundedRectangle(cornerRadius: 20))
+                        .padding(.horizontal, 16)
 
-                if dayType == .fullBody {
-                    exerciseSection(for: .arms)
-                    exerciseSection(for: .legs)
-                } else {
-                    exerciseSection(for: dayType)
+                    if dayType == .fullBody {
+                        exerciseSection(for: .arms)
+                        exerciseSection(for: .legs)
+                    } else {
+                        exerciseSection(for: dayType)
+                    }
                 }
+                .padding(.vertical, 8)
             }
+            .background(Color(.systemGroupedBackground))
             .navigationTitle("\(dayType.rawValue) Day")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -69,30 +77,54 @@ struct ActiveWorkoutView: View {
     @ViewBuilder
     private func exerciseSection(for sectionDayType: DayType) -> some View {
         Section {
-            ForEach(allExercises.filter { $0.dayType == sectionDayType }) { exercise in
-                ExerciseRowView(
-                    exercise: exercise,
-                    viewModel: viewModel,
-                    isExpanded: Binding(
-                        get: { expandedExerciseID == exercise.id },
-                        set: { newValue in
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                expandedExerciseID = newValue ? exercise.id : nil
+            VStack(spacing: 0) {
+                let exercises = allExercises.filter { $0.dayType == sectionDayType }
+                ForEach(Array(exercises.enumerated()), id: \.element.id) { index, exercise in
+                    ExerciseRowView(
+                        exercise: exercise,
+                        viewModel: viewModel,
+                        isExpanded: Binding(
+                            get: { expandedExerciseID == exercise.id },
+                            set: { newValue in
+                                withAnimation(.easeInOut(duration: 0.25)) {
+                                    expandedExerciseID = newValue ? exercise.id : nil
+                                }
                             }
-                        }
+                        )
                     )
-                )
-            }
+                    .padding(.vertical, 8)
 
-            Button {
-                addExercisePreselectedType = sectionDayType
-                showAddExercise = true
-            } label: {
-                Label("Add Exercise", systemImage: "plus.circle")
-                    .foregroundStyle(.tint)
+                    if index < exercises.count - 1 {
+                        Divider()
+                            .padding(.leading, 16)
+                    }
+                }
+
+                Divider()
+                    .padding(.leading, 16)
+
+                Button {
+                    addExercisePreselectedType = sectionDayType
+                    showAddExercise = true
+                } label: {
+                    Label("Add Exercise", systemImage: "plus.circle")
+                        .foregroundStyle(.tint)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
             }
+            .background(Color(.secondarySystemGroupedBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .padding(.horizontal, 16)
         } header: {
             Text("\(sectionDayType.rawValue) Exercises")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .textCase(.uppercase)
+                .padding(.horizontal, 32)
+                .padding(.vertical, 6)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color(.systemGroupedBackground))
         }
     }
 

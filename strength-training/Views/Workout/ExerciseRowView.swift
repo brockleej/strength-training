@@ -50,15 +50,14 @@ struct ExerciseRowView: View {
                     LastSessionBanner(record: last)
                 }
 
-                Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                Image(systemName: "chevron.down")
                     .font(.caption)
                     .foregroundStyle(.tertiary)
+                    .rotationEffect(.degrees(isExpanded ? 180 : 0))
             }
             .contentShape(Rectangle())
             .onTapGesture {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    isExpanded.toggle()
-                }
+                isExpanded.toggle()
             }
 
             // Expanded: set input
@@ -68,5 +67,6 @@ struct ExerciseRowView: View {
             }
         }
         .padding(.vertical, 4)
+        .padding(.horizontal, 16)
     }
 }
