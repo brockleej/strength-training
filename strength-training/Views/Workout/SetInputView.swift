@@ -100,13 +100,13 @@ struct SetInputView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     HStack(spacing: 8) {
-                        StepperButton(systemName: "minus", holdInterval: 0.45) {
+                        StepperButton(systemName: "minus", holdInterval: 0.2) {
                             weight = max(0, weight - 5)
                         }
                         Text(formattedWeight(weight))
                             .font(.title3.monospacedDigit().bold())
                             .frame(minWidth: 44)
-                        StepperButton(systemName: "plus", holdInterval: 0.45) {
+                        StepperButton(systemName: "plus", holdInterval: 0.2) {
                             weight += 5
                         }
                     }
