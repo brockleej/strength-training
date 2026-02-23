@@ -10,6 +10,17 @@ import SwiftData
 
 @main
 struct strength_trainingApp: App {
+    init() {
+        // Pre-create the Application Support directory so SwiftData doesn't
+        // hit "No such file or directory" errors on first launch.
+        let fileManager = FileManager.default
+        if let appSupportURL = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first {
+            if !fileManager.fileExists(atPath: appSupportURL.path) {
+                try? fileManager.createDirectory(at: appSupportURL, withIntermediateDirectories: true)
+            }
+        }
+    }
+
     var body: some Scene {
         WindowGroup {
             ContentView()

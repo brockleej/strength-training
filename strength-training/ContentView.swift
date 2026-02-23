@@ -13,32 +13,34 @@ struct ContentView: View {
     @State private var workoutViewModel: WorkoutViewModel?
 
     var body: some View {
-        Group {
-            if let vm = workoutViewModel {
-                TabView {
-                    Tab("Workout", systemImage: "dumbbell") {
-                        WorkoutTabView(viewModel: vm)
-                    }
-                    Tab("History", systemImage: "clock") {
-                        HistoryListView()
-                    }
-                    Tab("Progress", systemImage: "chart.line.uptrend.xyaxis") {
-                        ChartsOverviewView()
-                    }
-                    Tab("Exercises", systemImage: "list.bullet") {
-                        ExerciseLibraryView()
-                    }
-                    Tab("Settings", systemImage: "gear") {
-                        SettingsView()
-                    }
+        if let vm = workoutViewModel {
+            TabView {
+                Tab("Workout", systemImage: "dumbbell") {
+                    WorkoutTabView(viewModel: vm)
                 }
-            } else {
+                Tab("History", systemImage: "clock") {
+                    HistoryListView()
+                }
+                Tab("Progress", systemImage: "chart.line.uptrend.xyaxis") {
+                    ChartsOverviewView()
+                }
+                Tab("Exercises", systemImage: "list.bullet") {
+                    ExerciseLibraryView()
+                }
+                Tab("Settings", systemImage: "gear") {
+                    SettingsView()
+                }
+            }
+        } else {
+            VStack(spacing: 16) {
+                Image(systemName: "dumbbell.fill")
+                    .font(.system(size: 48))
+                    .foregroundStyle(.blue)
                 ProgressView()
             }
-        }
-        .onAppear {
-            SeedData.seedIfNeeded(context: modelContext)
-            if workoutViewModel == nil {
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .onAppear {
+                SeedData.seedIfNeeded(context: modelContext)
                 workoutViewModel = WorkoutViewModel(modelContext: modelContext)
             }
         }
