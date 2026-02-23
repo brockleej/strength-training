@@ -132,43 +132,6 @@ final class WorkoutViewModel {
         try? modelContext.save()
     }
 
-    // MARK: - Exercise Completion
-
-    func markExerciseComplete(_ exercise: Exercise) {
-        let record = findOrCreateRecord(for: exercise)
-
-        // If no sets logged, copy from last session
-        if record.sets.isEmpty {
-            if let lastRecord = lastRecord(for: exercise, mode: selectedMode) {
-                for lastSet in lastRecord.sets.sorted(by: { $0.setNumber < $1.setNumber }) {
-                    let copiedSet = SetRecord(
-                        setNumber: lastSet.setNumber,
-                        weightLbs: lastSet.weightLbs,
-                        reps: lastSet.reps,
-                        isWarmup: lastSet.isWarmup
-                    )
-                    copiedSet.exerciseRecord = record
-                    record.sets.append(copiedSet)
-                    modelContext.insert(copiedSet)
-                }
-            }
-        }
-
-        record.isCompleted = true
-        try? modelContext.save()
-    }
-
-    func markExerciseIncomplete(_ exercise: Exercise) {
-        if let record = currentRecord(for: exercise) {
-            record.isCompleted = false
-            try? modelContext.save()
-        }
-    }
-
-    func isExerciseCompleted(_ exercise: Exercise) -> Bool {
-        currentRecord(for: exercise)?.isCompleted ?? false
-    }
-
     // MARK: - Helpers
 
     private func findOrCreateRecord(for exercise: Exercise) -> ExerciseRecord {

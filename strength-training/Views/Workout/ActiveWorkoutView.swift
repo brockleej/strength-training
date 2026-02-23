@@ -153,6 +153,6 @@ struct ActiveWorkoutView: View {
 
     private var completedExerciseCount: Int {
         guard let session = viewModel.activeSession else { return 0 }
-        return session.exerciseRecords.filter(\.isCompleted).count
+        return session.exerciseRecords.filter { !$0.sets.isEmpty }.count
     }
 }

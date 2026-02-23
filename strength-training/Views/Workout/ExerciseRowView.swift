@@ -17,29 +17,37 @@ struct ExerciseRowView: View {
     // the frame height smoothly: 0 ↔ inputHeight, both animatable values.
     @State private var inputHeight: CGFloat = 0
 
+    private enum Status { case none, inProgress, completed }
+
+    private var status: Status {
+        if isExpanded { return .inProgress }
+        let hasSets = viewModel.currentRecord(for: exercise).map { !$0.sets.isEmpty } ?? false
+        return hasSets ? .completed : .none
+    }
+
+    @ViewBuilder
+    private var statusIcon: some View {
+        switch status {
+        case .none:
+            Image(systemName: "circle")
+                .font(.title3)
+                .foregroundStyle(.tertiary)
+        case .inProgress:
+            Image(systemName: "circle.fill")
+                .font(.title3)
+                .foregroundStyle(.tint)
+        case .completed:
+            Image(systemName: "checkmark.circle.fill")
+                .font(.title3)
+                .foregroundStyle(.green)
+        }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             // Header row
             HStack {
-                Button {
-                    let completed = viewModel.isExerciseCompleted(exercise)
-                    if completed {
-                        viewModel.markExerciseIncomplete(exercise)
-                    } else {
-                        viewModel.markExerciseComplete(exercise)
-                    }
-                } label: {
-                    Image(systemName: viewModel.isExerciseCompleted(exercise)
-                          ? "checkmark.circle.fill"
-                          : "circle")
-                        .font(.title3)
-                        .foregroundStyle(
-                            viewModel.isExerciseCompleted(exercise)
-                                ? .green
-                                : .secondary
-                        )
-                }
-                .buttonStyle(.borderless)
+                statusIcon
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(exercise.name)
