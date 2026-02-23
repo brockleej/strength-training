@@ -9,6 +9,7 @@ import SwiftUI
 
 struct WorkoutDayPickerView: View {
     @Bindable var viewModel: WorkoutViewModel
+    @State private var confirmingDayType: DayType?
 
     var body: some View {
         NavigationStack {
@@ -24,10 +25,20 @@ struct WorkoutDayPickerView: View {
 
                 VStack(spacing: 16) {
                     ForEach(DayType.allCases) { dayType in
+                        let isActive = viewModel.suspendedSession?.dayType == dayType
+
                         Button {
-                            viewModel.startSession(dayType: dayType)
+                            if viewModel.suspendedHasSets && !isActive {
+                                confirmingDayType = dayType
+                            } else {
+                                viewModel.startSession(dayType: dayType)
+                            }
                         } label: {
-                            DayTypeCard(dayType: dayType)
+                            DayTypeCard(
+                                dayType: dayType,
+                                isActive: isActive,
+                                inProgressCount: isActive ? viewModel.suspendedInProgressExerciseCount : 0
+                            )
                         }
                         .buttonStyle(.plain)
                     }
@@ -39,19 +50,43 @@ struct WorkoutDayPickerView: View {
             }
             .navigationTitle("Strength Training")
             .navigationBarTitleDisplayMode(.inline)
+            .confirmationDialog(
+                "Replace Current Workout?",
+                isPresented: Binding(
+                    get: { confirmingDayType != nil },
+                    set: { if !$0 { confirmingDayType = nil } }
+                ),
+                titleVisibility: .visible
+            ) {
+                if let dayType = confirmingDayType {
+                    Button("Start \(dayType.rawValue) Day", role: .destructive) {
+                        viewModel.abandonSuspendedAndStart(dayType: dayType)
+                        confirmingDayType = nil
+                    }
+                }
+                Button("Cancel", role: .cancel) {
+                    confirmingDayType = nil
+                }
+            } message: {
+                let count = viewModel.suspendedInProgressExerciseCount
+                let dayName = viewModel.suspendedSession?.dayType.rawValue ?? "current"
+                Text("Your \(dayName) Day workout has \(count) exercise\(count == 1 ? "" : "s") in progress. Starting a new workout will discard it.")
+            }
         }
     }
 }
 
 private struct DayTypeCard: View {
     let dayType: DayType
+    var isActive: Bool = false
+    var inProgressCount: Int = 0
 
     var body: some View {
         HStack(spacing: 16) {
             Image(systemName: dayType.systemImage)
                 .font(.system(size: 36))
                 .frame(width: 56, height: 56)
-                .background(.tint.opacity(0.1))
+                .background(.tint.opacity(isActive ? 0.15 : 0.1))
                 .clipShape(RoundedRectangle(cornerRadius: 12))
 
             VStack(alignment: .leading, spacing: 4) {
@@ -61,12 +96,20 @@ private struct DayTypeCard: View {
                 Text(dayType.subtitle)
                     .font(.caption)
                     .foregroundStyle(.secondary)
+
+                if isActive && inProgressCount > 0 {
+                    Text("\(inProgressCount) exercise\(inProgressCount == 1 ? "" : "s") in progress · tap to resume")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundStyle(.tint)
+                }
             }
 
             Spacer()
 
-            Image(systemName: "chevron.right")
-                .foregroundStyle(.tertiary)
+            Image(systemName: isActive ? "arrow.counterclockwise.circle.fill" : "chevron.right")
+                .font(isActive ? .title3 : .body)
+                .foregroundStyle(isActive ? AnyShapeStyle(.tint) : AnyShapeStyle(.tertiary))
         }
         .padding()
         .background(.background)
@@ -74,7 +117,7 @@ private struct DayTypeCard: View {
         .shadow(color: .black.opacity(0.06), radius: 8, y: 4)
         .overlay(
             RoundedRectangle(cornerRadius: 16)
-                .strokeBorder(.quaternary, lineWidth: 1)
+                .strokeBorder(isActive ? AnyShapeStyle(.tint) : AnyShapeStyle(.quaternary), lineWidth: isActive ? 2 : 1)
         )
     }
 }

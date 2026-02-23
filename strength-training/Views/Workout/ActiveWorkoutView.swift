@@ -54,6 +54,11 @@ struct ActiveWorkoutView: View {
             .navigationTitle("\(dayType.rawValue) Day")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Workouts", systemImage: "chevron.backward") {
+                        viewModel.suspendSession()
+                    }
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         showFinishConfirmation = true

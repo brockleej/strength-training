@@ -12,6 +12,9 @@ import SwiftData
 final class WorkoutViewModel {
     var modelContext: ModelContext
     var activeSession: WorkoutSession?
+    /// A session the user navigated away from without finishing.
+    /// Kept alive so it can be resumed or explicitly abandoned.
+    var suspendedSession: WorkoutSession?
     var selectedMode: TrainingMode = .highWeightLowReps
 
     init(modelContext: ModelContext) {
@@ -61,10 +64,53 @@ final class WorkoutViewModel {
     }
 
     func startSession(dayType: DayType) {
+        // Resume a suspended session of the same type
+        if let suspended = suspendedSession, suspended.dayType == dayType {
+            activeSession = suspended
+            suspendedSession = nil
+            return
+        }
+        // Silently discard a suspended session that has no sets
+        if let suspended = suspendedSession {
+            if !suspended.exerciseRecords.contains(where: { !$0.sets.isEmpty }) {
+                modelContext.delete(suspended)
+                try? modelContext.save()
+            }
+            suspendedSession = nil
+        }
         let session = WorkoutSession(dayType: dayType)
         modelContext.insert(session)
         try? modelContext.save()
         activeSession = session
+    }
+
+    /// Move the active session to the background without completing it.
+    func suspendSession() {
+        suspendedSession = activeSession
+        activeSession = nil
+    }
+
+    /// Discard the suspended session and immediately start a new one.
+    func abandonSuspendedAndStart(dayType: DayType) {
+        if let suspended = suspendedSession {
+            modelContext.delete(suspended)
+            try? modelContext.save()
+            suspendedSession = nil
+        }
+        let session = WorkoutSession(dayType: dayType)
+        modelContext.insert(session)
+        try? modelContext.save()
+        activeSession = session
+    }
+
+    /// Number of exercises in the suspended session that have at least one set.
+    var suspendedInProgressExerciseCount: Int {
+        suspendedSession?.exerciseRecords.filter { !$0.sets.isEmpty }.count ?? 0
+    }
+
+    /// True when the suspended session has at least one set logged.
+    var suspendedHasSets: Bool {
+        suspendedSession?.exerciseRecords.contains { !$0.sets.isEmpty } ?? false
     }
 
     func finishSession() {
