@@ -127,7 +127,7 @@ private struct SessionRow: View {
 
             Spacer()
 
-            let exerciseCount = session.exerciseRecords.filter(\.isCompleted).count
+            let exerciseCount = session.exerciseRecords.filter { !$0.sets.isEmpty }.count
             Text("\(exerciseCount) exercise\(exerciseCount == 1 ? "" : "s")")
                 .font(.caption)
                 .foregroundStyle(.secondary)

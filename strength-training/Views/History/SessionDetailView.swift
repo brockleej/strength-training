@@ -56,7 +56,7 @@ struct SessionDetailView: View {
     }
 
     private var completedRecords: [ExerciseRecord] {
-        session.exerciseRecords.filter(\.isCompleted)
+        session.exerciseRecords.filter { !$0.sets.isEmpty }
     }
 
     private var sortedRecords: [ExerciseRecord] {
