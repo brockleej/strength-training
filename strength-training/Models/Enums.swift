@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import SwiftUI
 
 enum DayType: String, Codable, CaseIterable, Identifiable {
     case arms = "Arms"
@@ -19,6 +20,14 @@ enum DayType: String, Codable, CaseIterable, Identifiable {
         case .arms: "figure.arms.open"
         case .legs: "figure.walk"
         case .fullBody: "figure.strengthtraining.functional"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .arms: .pink
+        case .legs: .blue
+        case .fullBody: .purple
         }
     }
 

@@ -86,7 +86,8 @@ private struct DayTypeCard: View {
             Image(systemName: dayType.systemImage)
                 .font(.system(size: 36))
                 .frame(width: 56, height: 56)
-                .background(.tint.opacity(isActive ? 0.15 : 0.1))
+                .foregroundStyle(dayType.color)
+                .background(dayType.color.opacity(isActive ? 0.2 : 0.15))
                 .clipShape(RoundedRectangle(cornerRadius: 12))
 
             VStack(alignment: .leading, spacing: 4) {
@@ -101,7 +102,7 @@ private struct DayTypeCard: View {
                     Text("\(inProgressCount) exercise\(inProgressCount == 1 ? "" : "s") in progress · tap to resume")
                         .font(.caption)
                         .fontWeight(.medium)
-                        .foregroundStyle(.tint)
+                        .foregroundStyle(dayType.color)
                 }
             }
 
@@ -109,7 +110,7 @@ private struct DayTypeCard: View {
 
             Image(systemName: isActive ? "arrow.counterclockwise.circle.fill" : "chevron.right")
                 .font(isActive ? .title3 : .body)
-                .foregroundStyle(isActive ? AnyShapeStyle(.tint) : AnyShapeStyle(.tertiary))
+                .foregroundStyle(isActive ? AnyShapeStyle(dayType.color) : AnyShapeStyle(.tertiary))
         }
         .padding()
         .background(.background)
@@ -117,7 +118,7 @@ private struct DayTypeCard: View {
         .shadow(color: .black.opacity(0.06), radius: 8, y: 4)
         .overlay(
             RoundedRectangle(cornerRadius: 16)
-                .strokeBorder(isActive ? AnyShapeStyle(.tint) : AnyShapeStyle(.quaternary), lineWidth: isActive ? 2 : 1)
+                .strokeBorder(isActive ? AnyShapeStyle(dayType.color) : AnyShapeStyle(.quaternary), lineWidth: isActive ? 2 : 1)
         )
     }
 }

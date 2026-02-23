@@ -114,7 +114,8 @@ private struct SessionRow: View {
             Image(systemName: session.dayType.systemImage)
                 .font(.title3)
                 .frame(width: 36, height: 36)
-                .background(.tint.opacity(0.1))
+                .foregroundStyle(session.dayType.color)
+                .background(session.dayType.color.opacity(0.15))
                 .clipShape(RoundedRectangle(cornerRadius: 8))
 
             VStack(alignment: .leading, spacing: 2) {
