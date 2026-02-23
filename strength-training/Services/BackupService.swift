@@ -98,9 +98,18 @@ struct BackupService {
             throw BackupError.unsupportedVersion(backup.version)
         }
 
-        // Delete all existing records (cascade handles child records)
-        try context.delete(model: WorkoutSession.self)
-        try context.delete(model: Exercise.self)
+        // context.delete(model:) is a SQL-level batch delete that bypasses the
+        // object graph — cascade rules and inverse nullification never fire.
+        // Fetching and deleting each instance individually lets SwiftData
+        // process relationships correctly before saving.
+        let sets = (try? context.fetch(FetchDescriptor<SetRecord>())) ?? []
+        sets.forEach { context.delete($0) }
+        let records = (try? context.fetch(FetchDescriptor<ExerciseRecord>())) ?? []
+        records.forEach { context.delete($0) }
+        let sessions = (try? context.fetch(FetchDescriptor<WorkoutSession>())) ?? []
+        sessions.forEach { context.delete($0) }
+        let exercises = (try? context.fetch(FetchDescriptor<Exercise>())) ?? []
+        exercises.forEach { context.delete($0) }
 
         // Re-insert exercises, building an ID → Exercise map for linking records
         var exerciseMap: [UUID: Exercise] = [:]
