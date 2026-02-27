@@ -23,7 +23,7 @@ struct ContentView: View {
                         HistoryListView()
                     }
                     Tab("Progress", systemImage: "chart.line.uptrend.xyaxis") {
-                        ChartsOverviewView()
+                        ProgressDashboardView()
                     }
                     Tab("Exercises", systemImage: "list.bullet") {
                         ExerciseLibraryView()

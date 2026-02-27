@@ -62,8 +62,8 @@ enum TrainingMode: String, Codable, CaseIterable, Identifiable {
 
     var systemImage: String {
         switch self {
-        case .lowWeightHighReps: "hare"
-        case .highWeightLowReps: "tortoise"
+        case .lowWeightHighReps: "flame"
+        case .highWeightLowReps: "bolt"
         }
     }
 }
