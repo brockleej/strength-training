@@ -16,7 +16,7 @@ struct PRsThisMonthCard: View {
                 Spacer()
                 Text("\(prs.count)")
                     .font(.title2.bold())
-                    .foregroundStyle(prs.isEmpty ? Color.secondary : Color.orange)
+                    .foregroundStyle(prs.isEmpty ? Color.secondary : Color.pink)
             }
 
             if prs.isEmpty {
@@ -27,7 +27,7 @@ struct PRsThisMonthCard: View {
                 ForEach(prs.prefix(5)) { pr in
                     HStack(spacing: 8) {
                         Image(systemName: pr.type.systemImage)
-                            .foregroundStyle(.orange)
+                            .foregroundStyle(.pink)
                             .frame(width: 20)
 
                         VStack(alignment: .leading, spacing: 1) {

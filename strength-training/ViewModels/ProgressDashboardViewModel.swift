@@ -177,45 +177,110 @@ final class ProgressDashboardViewModel {
         guard let monthStart = calendar.dateInterval(of: .month, for: .now)?.start else { return [] }
 
         let allSessions = fetchAllCompletedSessions()
-        let priorSessions = allSessions.filter { $0.date < monthStart }
+            .sorted { $0.date < $1.date }
         let currentMonthSessions = allSessions.filter { $0.date >= monthStart }
 
         var prs: [PersonalRecord] = []
-
         let allExercises = self.allExercises()
+
         for exercise in allExercises {
-            let priorRecords = priorSessions.flatMap { $0.exerciseRecords }.filter { $0.exercise?.id == exercise.id }
-            let currentRecords = currentMonthSessions.flatMap { $0.exerciseRecords }.filter { $0.exercise?.id == exercise.id }
+            // All records for this exercise sorted chronologically
+            let allRecords = allSessions
+                .flatMap { $0.exerciseRecords }
+                .filter { $0.exercise?.id == exercise.id }
 
-            let priorWorkingSets = priorRecords.flatMap { $0.sets.filter { !$0.isWarmup } }
-            let priorE1RMs = priorWorkingSets.map { $0.weightLbs * (1.0 + Double($0.reps) / 30.0) }
-            let priorBestE1RM = priorE1RMs.max() ?? 0
+            let allWorkingSets = allRecords.flatMap { $0.sets.filter { !$0.isWarmup } }
+            guard !allWorkingSets.isEmpty else { continue }
 
-            let priorWeights = priorWorkingSets.map(\.weightLbs)
-            let priorBestWeight = priorWeights.max() ?? 0
-
-            for record in currentRecords {
-                let workingSets = record.sets.filter { !$0.isWarmup }
-                let sessionDate = record.session?.date ?? .now
-
-                if let bestE1RM = workingSets.map({ $0.weightLbs * (1.0 + Double($0.reps) / 30.0) }).max(),
-                   bestE1RM > priorBestE1RM, priorBestE1RM > 0 {
-                    prs.append(PersonalRecord(
-                        exerciseName: exercise.name,
-                        type: .estimatedOneRM,
-                        value: bestE1RM,
-                        date: sessionDate
-                    ))
+            // Current month records for this exercise, sorted by date
+            let currentRecords = currentMonthSessions
+                .sorted { $0.date < $1.date }
+                .flatMap { session in
+                    session.exerciseRecords
+                        .filter { $0.exercise?.id == exercise.id }
+                        .map { (record: $0, date: session.date) }
                 }
 
-                if let bestWeight = workingSets.map(\.weightLbs).max(),
-                   bestWeight > priorBestWeight, priorBestWeight > 0 {
-                    prs.append(PersonalRecord(
-                        exerciseName: exercise.name,
-                        type: .topSetWeight,
-                        value: bestWeight,
-                        date: sessionDate
-                    ))
+            // Track running best across all sessions up to each point
+            var runningBestE1RM: Double = 0
+            var runningBestWeight: Double = 0
+            var bestE1RMAlreadyPR = false
+            var bestWeightAlreadyPR = false
+
+            for session in allSessions {
+                let records = session.exerciseRecords.filter { $0.exercise?.id == exercise.id }
+                for record in records {
+                    let sets = record.sets.filter { !$0.isWarmup }
+                    let sessionBestE1RM = sets.map { $0.weightLbs * (1.0 + Double($0.reps) / 30.0) }.max() ?? 0
+                    let sessionBestWeight = sets.map(\.weightLbs).max() ?? 0
+
+                    let isCurrentMonth = session.date >= monthStart
+
+                    if sessionBestE1RM > runningBestE1RM {
+                        if isCurrentMonth && runningBestE1RM > 0 && !bestE1RMAlreadyPR {
+                            prs.append(PersonalRecord(
+                                exerciseName: exercise.name,
+                                type: .estimatedOneRM,
+                                value: sessionBestE1RM,
+                                date: session.date
+                            ))
+                            bestE1RMAlreadyPR = true
+                        } else if isCurrentMonth && runningBestE1RM == 0 {
+                            // First month of data — mark the overall best this month as a PR
+                            // We'll handle this after the loop
+                        }
+                        runningBestE1RM = sessionBestE1RM
+                    }
+
+                    if sessionBestWeight > runningBestWeight {
+                        if isCurrentMonth && runningBestWeight > 0 && !bestWeightAlreadyPR {
+                            prs.append(PersonalRecord(
+                                exerciseName: exercise.name,
+                                type: .topSetWeight,
+                                value: sessionBestWeight,
+                                date: session.date
+                            ))
+                            bestWeightAlreadyPR = true
+                        }
+                        runningBestWeight = sessionBestWeight
+                    }
+                }
+            }
+
+            // For first month of data: find the best e1RM across multiple sessions this month
+            // and mark it as a PR if there are at least 2 sessions
+            if !bestE1RMAlreadyPR && currentRecords.count >= 2 {
+                var monthRunningBest: Double = 0
+                for (record, date) in currentRecords {
+                    let sets = record.sets.filter { !$0.isWarmup }
+                    let best = sets.map { $0.weightLbs * (1.0 + Double($0.reps) / 30.0) }.max() ?? 0
+                    if best > monthRunningBest && monthRunningBest > 0 {
+                        prs.append(PersonalRecord(
+                            exerciseName: exercise.name,
+                            type: .estimatedOneRM,
+                            value: best,
+                            date: date
+                        ))
+                        bestE1RMAlreadyPR = true
+                    }
+                    if best > monthRunningBest { monthRunningBest = best }
+                }
+            }
+
+            if !bestWeightAlreadyPR && currentRecords.count >= 2 {
+                var monthRunningBest: Double = 0
+                for (record, date) in currentRecords {
+                    let sets = record.sets.filter { !$0.isWarmup }
+                    let best = sets.map(\.weightLbs).max() ?? 0
+                    if best > monthRunningBest && monthRunningBest > 0 {
+                        prs.append(PersonalRecord(
+                            exerciseName: exercise.name,
+                            type: .topSetWeight,
+                            value: best,
+                            date: date
+                        ))
+                    }
+                    if best > monthRunningBest { monthRunningBest = best }
                 }
             }
         }
@@ -283,13 +348,8 @@ final class ProgressDashboardViewModel {
 
     func exercisesGroupedByDayType() -> [(DayType, [Exercise])] {
         let all = allExercises()
-        return DayType.allCases.compactMap { dayType in
-            let exercises: [Exercise]
-            if dayType == .fullBody {
-                exercises = all
-            } else {
-                exercises = all.filter { $0.dayType == dayType }
-            }
+        return [DayType.arms, DayType.legs].compactMap { dayType in
+            let exercises = all.filter { $0.dayType == dayType }
             return exercises.isEmpty ? nil : (dayType, exercises)
         }
     }

@@ -34,11 +34,11 @@ struct E1RMTrendChart: View {
                         )
                         .symbol(.asterisk)
                         .symbolSize(120)
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(.pink)
                         .annotation(position: .top, spacing: 4) {
                             Text("PR")
                                 .font(.caption2.bold())
-                                .foregroundStyle(.orange)
+                                .foregroundStyle(.pink)
                         }
                     } else {
                         PointMark(

@@ -12,12 +12,16 @@ struct StrengthScoreCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Label("Strength", systemImage: "flame")
+            Label("Est. 1RM Total", systemImage: "flame")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
             Text(score, format: .number.precision(.fractionLength(0)))
                 .font(.title.bold())
+
+            Text("lbs combined")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
 
             if trend != .insufficientData {
                 HStack(spacing: 4) {
@@ -29,10 +33,6 @@ struct StrengthScoreCard: View {
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
-            } else {
-                Text("Not enough data")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

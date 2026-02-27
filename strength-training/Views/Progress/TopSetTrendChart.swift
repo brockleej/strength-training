@@ -34,7 +34,7 @@ struct TopSetTrendChart: View {
             }
             .chartForegroundStyleScale([
                 TrainingMode.highWeightLowReps.rawValue: Color.blue,
-                TrainingMode.lowWeightHighReps.rawValue: Color.orange
+                TrainingMode.lowWeightHighReps.rawValue: Color.pink
             ])
             .chartLegend(position: .bottom)
             .chartXAxis {
