@@ -32,6 +32,9 @@ struct ActiveWorkoutView: View {
                     .padding(.vertical, 8)
                     .background(Color(.systemGroupedBackground))
 
+                WorkoutMetricsBannerView(service: viewModel.healthKitService)
+                    .padding(.bottom, 4)
+
                 ScrollView {
                     LazyVStack(spacing: 16, pinnedViews: .sectionHeaders) {
                         if dayType == .fullBody {
