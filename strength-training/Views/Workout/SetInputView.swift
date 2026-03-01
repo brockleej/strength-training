@@ -38,10 +38,12 @@ private struct StepperButton: View {
                         guard !isPressed else { return }
                         isPressed = true
                         action()
+                        HapticService.stepperTick()
                         holdTask = Task { @MainActor in
                             try? await Task.sleep(for: .milliseconds(250))
                             while !Task.isCancelled {
                                 action()
+                                HapticService.stepperTick()
                                 try? await Task.sleep(for: .seconds(holdInterval))
                             }
                         }

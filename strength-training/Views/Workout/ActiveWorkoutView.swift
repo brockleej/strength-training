@@ -28,11 +28,6 @@ struct ActiveWorkoutView: View {
             // reach the picker or nav bar — no z-fighting or overscroll bleed.
             VStack(spacing: 0) {
                 TrainingModePickerView(selectedMode: $viewModel.selectedMode)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 10)
-                    .frame(maxWidth: .infinity)
-                    .background(Color(.secondarySystemGroupedBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: 20))
                     .padding(.horizontal, 16)
                     .padding(.vertical, 8)
                     .background(Color(.systemGroupedBackground))
@@ -99,6 +94,12 @@ struct ActiveWorkoutView: View {
                         isExpanded: Binding(
                             get: { expandedExerciseID == exercise.id },
                             set: { newValue in
+                                // Haptic when collapsing an exercise that has logged sets
+                                if !newValue, let currentID = expandedExerciseID,
+                                   currentID == exercise.id,
+                                   viewModel.currentRecord(for: exercise)?.sets.isEmpty == false {
+                                    HapticService.exerciseCompleted()
+                                }
                                 withAnimation(.easeInOut(duration: 0.25)) {
                                     expandedExerciseID = newValue ? exercise.id : nil
                                 }

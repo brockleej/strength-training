@@ -117,6 +117,7 @@ final class WorkoutViewModel {
         guard let session = activeSession else { return }
         session.isCompleted = true
         try? modelContext.save()
+        HapticService.workoutCompleted()
         activeSession = nil
     }
 
@@ -164,9 +165,11 @@ final class WorkoutViewModel {
         record.sets.append(set)
         modelContext.insert(set)
         try? modelContext.save()
+        HapticService.setLogged()
     }
 
     func deleteSet(_ set: SetRecord, from exercise: Exercise) {
+        HapticService.swipeToDelete()
         modelContext.delete(set)
         // Renumber remaining sets
         if let record = currentRecord(for: exercise) {
