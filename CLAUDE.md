@@ -23,17 +23,6 @@ open strength-training.xcodeproj
 
 No separate test or lint commands are configured.
 
-## Build Verification
-
-After every change is finalized, **always run a build** to confirm there are no errors before responding:
-
-```bash
-xcodebuild -scheme strength-training -destination 'platform=iOS Simulator,name=iPhone 17' build 2>&1 | grep -E '^.*(error:|BUILD SUCCEEDED|BUILD FAILED).*$'
-```
-
-- If the build **fails**, attempt to fix the errors and rebuild — repeat for **at least 2 full cycles** before surfacing unresolved errors to the user.
-- Only report errors to the user if they remain unresolved after 2 fix cycles.
-
 ## Architecture
 
 **MVVM** with SwiftUI's `@Observable` macro.
