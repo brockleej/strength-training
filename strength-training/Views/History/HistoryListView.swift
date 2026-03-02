@@ -39,19 +39,17 @@ private struct HistoryContent: View {
         List {
             // Filter chips
             Section {
-                GlassEffectContainer {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
-                            FilterChip(label: "All", isSelected: viewModel.filterDayType == nil) {
-                                viewModel.filterDayType = nil
-                            }
-                            ForEach(DayType.allCases) { dayType in
-                                FilterChip(
-                                    label: dayType.rawValue,
-                                    isSelected: viewModel.filterDayType == dayType
-                                ) {
-                                    viewModel.filterDayType = dayType
-                                }
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        FilterChip(label: "All", isSelected: viewModel.filterDayType == nil) {
+                            viewModel.filterDayType = nil
+                        }
+                        ForEach(DayType.allCases) { dayType in
+                            FilterChip(
+                                label: dayType.rawValue,
+                                isSelected: viewModel.filterDayType == dayType
+                            ) {
+                                viewModel.filterDayType = dayType
                             }
                         }
                     }
@@ -100,13 +98,11 @@ private struct FilterChip: View {
                 .font(.subheadline.weight(.medium))
                 .padding(.horizontal, 14)
                 .padding(.vertical, 6)
+                .background(isSelected ? Color.accentColor : Color(.systemGray5))
                 .foregroundStyle(isSelected ? .white : .primary)
+                .clipShape(Capsule())
         }
         .buttonStyle(.plain)
-        .glassEffect(
-            isSelected ? .regular.interactive().tint(.accentColor) : .regular.interactive(),
-            in: .capsule
-        )
     }
 }
 

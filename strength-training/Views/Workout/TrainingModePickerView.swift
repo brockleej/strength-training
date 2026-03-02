@@ -11,27 +11,29 @@ struct TrainingModePickerView: View {
     @Binding var selectedMode: TrainingMode
 
     var body: some View {
-        GlassEffectContainer {
-            HStack(spacing: 4) {
-                ForEach(TrainingMode.allCases) { mode in
-                    Button {
-                        selectedMode = mode
-                    } label: {
-                        Label(mode.rawValue, systemImage: mode.systemImage)
-                            .font(.subheadline.weight(.semibold))
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 7)
-                            .foregroundStyle(selectedMode == mode ? .primary : .secondary)
-                    }
-                    .buttonStyle(.plain)
-                    .glassEffect(
-                        selectedMode == mode ? .regular.interactive() : .clear,
-                        in: .rect(cornerRadius: 8)
-                    )
-                    .animation(.easeInOut(duration: 0.15), value: selectedMode)
+        HStack(spacing: 4) {
+            ForEach(TrainingMode.allCases) { mode in
+                Button {
+                    selectedMode = mode
+                } label: {
+                    Label(mode.rawValue, systemImage: mode.systemImage)
+                        .font(.subheadline.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 7)
+                        .background {
+                            if selectedMode == mode {
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(Color(.systemBackground))
+                                    .shadow(color: .black.opacity(0.12), radius: 2, x: 0, y: 1)
+                            }
+                        }
+                        .foregroundStyle(selectedMode == mode ? .primary : .secondary)
                 }
+                .buttonStyle(.plain)
+                .animation(.easeInOut(duration: 0.15), value: selectedMode)
             }
-            .padding(4)
         }
+        .padding(4)
+        .background(Color(.tertiarySystemFill), in: RoundedRectangle(cornerRadius: 11))
     }
 }

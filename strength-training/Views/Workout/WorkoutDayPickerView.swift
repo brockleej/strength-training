@@ -23,26 +23,24 @@ struct WorkoutDayPickerView: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
 
-                GlassEffectContainer {
-                    VStack(spacing: 16) {
-                        ForEach(DayType.allCases) { dayType in
-                            let isActive = viewModel.suspendedSession?.dayType == dayType
+                VStack(spacing: 16) {
+                    ForEach(DayType.allCases) { dayType in
+                        let isActive = viewModel.suspendedSession?.dayType == dayType
 
-                            Button {
-                                if viewModel.suspendedHasSets && !isActive {
-                                    confirmingDayType = dayType
-                                } else {
-                                    viewModel.startSession(dayType: dayType)
-                                }
-                            } label: {
-                                DayTypeCard(
-                                    dayType: dayType,
-                                    isActive: isActive,
-                                    inProgressCount: isActive ? viewModel.suspendedInProgressExerciseCount : 0
-                                )
+                        Button {
+                            if viewModel.suspendedHasSets && !isActive {
+                                confirmingDayType = dayType
+                            } else {
+                                viewModel.startSession(dayType: dayType)
                             }
-                            .buttonStyle(.plain)
+                        } label: {
+                            DayTypeCard(
+                                dayType: dayType,
+                                isActive: isActive,
+                                inProgressCount: isActive ? viewModel.suspendedInProgressExerciseCount : 0
+                            )
                         }
+                        .buttonStyle(.plain)
                     }
                 }
                 .padding(.horizontal)
@@ -115,11 +113,12 @@ private struct DayTypeCard: View {
                 .foregroundStyle(isActive ? AnyShapeStyle(dayType.color) : AnyShapeStyle(.tertiary))
         }
         .padding()
-        .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 16))
+        .background(.background)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .shadow(color: .black.opacity(0.06), radius: 8, y: 4)
         .overlay(
-            isActive
-                ? AnyView(RoundedRectangle(cornerRadius: 16).strokeBorder(dayType.color, lineWidth: 2))
-                : AnyView(EmptyView())
+            RoundedRectangle(cornerRadius: 16)
+                .strokeBorder(isActive ? AnyShapeStyle(dayType.color) : AnyShapeStyle(.quaternary), lineWidth: isActive ? 2 : 1)
         )
     }
 }
