@@ -7,6 +7,28 @@
 
 import SwiftUI
 
+private struct SpinningGradientCircle: View {
+    let color: Color
+    @State private var rotation: Double = 0
+
+    var body: some View {
+        Circle()
+            .fill(
+                AngularGradient(
+                    gradient: Gradient(colors: [color.opacity(0.15), color]),
+                    center: .center
+                )
+            )
+            .frame(width: 22, height: 22)
+            .rotationEffect(.degrees(rotation))
+            .onAppear {
+                withAnimation(.linear(duration: 1.2).repeatForever(autoreverses: false)) {
+                    rotation = 360
+                }
+            }
+    }
+}
+
 struct ExerciseRowView: View {
     let exercise: Exercise
     @Bindable var viewModel: WorkoutViewModel
@@ -17,11 +39,14 @@ struct ExerciseRowView: View {
     // the frame height smoothly: 0 ↔ inputHeight, both animatable values.
     @State private var inputHeight: CGFloat = 0
 
+    private var hasSets: Bool {
+        viewModel.currentRecord(for: exercise).map { !$0.sets.isEmpty } ?? false
+    }
+
     private enum Status { case none, inProgress, completed }
 
     private var status: Status {
         if isExpanded { return .inProgress }
-        let hasSets = viewModel.currentRecord(for: exercise).map { !$0.sets.isEmpty } ?? false
         return hasSets ? .completed : .none
     }
 
@@ -33,9 +58,7 @@ struct ExerciseRowView: View {
                 .font(.title3)
                 .foregroundStyle(.tertiary)
         case .inProgress:
-            Image(systemName: "circle.fill")
-                .font(.title3)
-                .foregroundStyle(.tint)
+            SpinningGradientCircle(color: hasSets ? .green : .accentColor)
         case .completed:
             Image(systemName: "checkmark.circle.fill")
                 .font(.title3)
