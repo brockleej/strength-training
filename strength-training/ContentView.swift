@@ -11,13 +11,14 @@ import SwiftData
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var workoutViewModel: WorkoutViewModel?
+    @State private var recoveryViewModel: RecoveryViewModel?
 
     var body: some View {
         Group {
-            if let vm = workoutViewModel {
+            if let vm = workoutViewModel, let recoveryVM = recoveryViewModel {
                 TabView {
                     Tab("Workout", systemImage: "dumbbell") {
-                        WorkoutTabView(viewModel: vm)
+                        WorkoutTabView(viewModel: vm, recoveryViewModel: recoveryVM)
                     }
                     Tab("History", systemImage: "clock") {
                         HistoryListView()
@@ -39,7 +40,14 @@ struct ContentView: View {
         .onAppear {
             SeedData.seedIfNeeded(context: modelContext)
             if workoutViewModel == nil {
-                workoutViewModel = WorkoutViewModel(modelContext: modelContext)
+                let recoveryVM = RecoveryViewModel(modelContext: modelContext)
+                recoveryViewModel = recoveryVM
+
+                let workoutVM = WorkoutViewModel(modelContext: modelContext)
+                workoutVM.onSessionFinished = { [weak recoveryVM] in
+                    recoveryVM?.refresh()
+                }
+                workoutViewModel = workoutVM
             }
         }
     }

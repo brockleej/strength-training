@@ -10,6 +10,7 @@ import SwiftData
 
 struct ActiveWorkoutView: View {
     @Bindable var viewModel: WorkoutViewModel
+    var recoveryViewModel: RecoveryViewModel
     // Fetch all exercises reactively — filter in Swift to avoid #Predicate enum issues
     @Query(sort: \Exercise.sortOrder) private var allExercises: [Exercise]
     @State private var expandedExerciseID: UUID?
@@ -34,6 +35,24 @@ struct ActiveWorkoutView: View {
 
                 ScrollView {
                     LazyVStack(spacing: 16, pinnedViews: .sectionHeaders) {
+                        let warnings = recoveryViewModel.warnings(for: dayType)
+                        if !warnings.isEmpty {
+                            VStack(alignment: .leading, spacing: 6) {
+                                Label("Recovery Alert", systemImage: "exclamationmark.triangle.fill")
+                                    .font(.subheadline.bold())
+                                    .foregroundStyle(.orange)
+                                ForEach(warnings) { warning in
+                                    Text("\(warning.exerciseName) e1RM declined \(warning.consecutiveDeclines) sessions in a row")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                            .padding()
+                            .background(.orange.opacity(0.1))
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                            .padding(.horizontal, 16)
+                        }
+
                         if dayType == .fullBody {
                             exerciseSection(for: .arms)
                             exerciseSection(for: .legs)

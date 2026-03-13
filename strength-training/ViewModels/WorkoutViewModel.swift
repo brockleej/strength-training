@@ -16,6 +16,7 @@ final class WorkoutViewModel {
     /// Kept alive so it can be resumed or explicitly abandoned.
     var suspendedSession: WorkoutSession?
     var selectedMode: TrainingMode = .highWeightLowReps
+    var onSessionFinished: (() -> Void)?
 
     init(modelContext: ModelContext) {
         self.modelContext = modelContext
@@ -119,6 +120,7 @@ final class WorkoutViewModel {
         try? modelContext.save()
         HapticService.workoutCompleted()
         activeSession = nil
+        onSessionFinished?()
     }
 
     // MARK: - Exercises
