@@ -6,6 +6,10 @@
 import SwiftUI
 import SwiftData
 
+extension Notification.Name {
+    static let workoutDataDidChange = Notification.Name("workoutDataDidChange")
+}
+
 @Observable
 final class RecoveryViewModel {
     var modelContext: ModelContext
@@ -16,47 +20,61 @@ final class RecoveryViewModel {
     init(modelContext: ModelContext) {
         self.modelContext = modelContext
         refresh()
+
+        NotificationCenter.default.addObserver(
+            forName: .workoutDataDidChange,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.refresh()
+        }
     }
 
     func refresh() {
-        let sessions = fetchRecentSessions(days: 28)
-        let allSessions = fetchAllCompletedSessions()
+        let allSessions = fetchCompletedSessions()
         let exercises = fetchExercises()
 
-        // Compute readiness per day type
+        // Filter recent sessions for readiness (reuse the single fetch)
+        let cutoff = Calendar.current.date(byAdding: .day, value: -28, to: .now)!
+        let recentSessions = allSessions.filter { $0.date >= cutoff }
+
+        // Compute readiness per day type using exercises for dynamic muscle groups
         var readiness: [DayType: ReadinessLevel] = [:]
         for dayType in DayType.allCases {
-            readiness[dayType] = RecoveryService.dayTypeReadiness(
-                sessions: sessions,
-                dayType: dayType
-            )
+            let muscleGroups = Self.muscleGroups(for: dayType, from: exercises)
+            let fatigueData = RecoveryService.muscleGroupReadiness(sessions: recentSessions, for: muscleGroups)
+            let minScore = fatigueData.map(\.readinessScore).min() ?? 1.0
+            readiness[dayType] = ReadinessLevel(score: minScore)
         }
         dayTypeReadiness = readiness
 
-        // Compute overtraining warnings per day type
+        // Compute overtraining warnings per day type (group by exercise ID)
         let allWarnings = RecoveryService.overtrainingWarnings(
             sessions: allSessions,
             exercises: exercises
         )
         var warningsByDayType: [DayType: [OvertrainingWarning]] = [:]
         for dayType in DayType.allCases {
-            let dayTypeExerciseNames = Set(
+            let dayTypeExerciseIDs = Set(
                 exercises
                     .filter { dayType == .fullBody || $0.dayType == dayType }
-                    .map(\.name)
+                    .map(\.id)
             )
             warningsByDayType[dayType] = allWarnings.filter {
-                dayTypeExerciseNames.contains($0.exerciseName)
+                dayTypeExerciseIDs.contains($0.id)
             }
         }
         dayTypeWarnings = warningsByDayType
     }
 
     func muscleGroupDetail(for dayType: DayType) -> [MuscleGroupFatigue] {
-        let sessions = fetchRecentSessions(days: 28)
+        let cutoff = Calendar.current.date(byAdding: .day, value: -28, to: .now)!
+        let sessions = fetchCompletedSessions().filter { $0.date >= cutoff }
+        let exercises = fetchExercises()
+        let muscleGroups = Self.muscleGroups(for: dayType, from: exercises)
         return RecoveryService.muscleGroupReadiness(
             sessions: sessions,
-            for: dayType.muscleGroups
+            for: muscleGroups
         )
     }
 
@@ -70,17 +88,7 @@ final class RecoveryViewModel {
 
     // MARK: - Data Fetching
 
-    private func fetchRecentSessions(days: Int) -> [WorkoutSession] {
-        let descriptor = FetchDescriptor<WorkoutSession>(
-            predicate: #Predicate<WorkoutSession> { $0.isCompleted == true },
-            sortBy: [SortDescriptor(\WorkoutSession.date, order: .reverse)]
-        )
-        let all = (try? modelContext.fetch(descriptor)) ?? []
-        let cutoff = Calendar.current.date(byAdding: .day, value: -days, to: .now)!
-        return all.filter { $0.date >= cutoff }
-    }
-
-    private func fetchAllCompletedSessions() -> [WorkoutSession] {
+    private func fetchCompletedSessions() -> [WorkoutSession] {
         let descriptor = FetchDescriptor<WorkoutSession>(
             predicate: #Predicate<WorkoutSession> { $0.isCompleted == true },
             sortBy: [SortDescriptor(\WorkoutSession.date, order: .reverse)]
@@ -93,5 +101,14 @@ final class RecoveryViewModel {
             sortBy: [SortDescriptor(\Exercise.sortOrder)]
         )
         return (try? modelContext.fetch(descriptor)) ?? []
+    }
+
+    // MARK: - Helpers
+
+    static func muscleGroups(for dayType: DayType, from exercises: [Exercise]) -> [String] {
+        let filtered = exercises.filter { dayType == .fullBody || $0.dayType == dayType }
+        let dynamic = Array(Set(filtered.map(\.muscleGroup)).filter { !$0.isEmpty })
+        // Fall back to hardcoded defaults if no exercises exist yet
+        return dynamic.isEmpty ? dayType.muscleGroups : dynamic
     }
 }

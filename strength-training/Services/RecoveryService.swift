@@ -51,7 +51,7 @@ struct MuscleGroupFatigue: Identifiable {
 }
 
 struct OvertrainingWarning: Identifiable {
-    var id: String { exerciseName }
+    let id: UUID
     let exerciseName: String
     let consecutiveDeclines: Int
     let e1rmDeclinePercent: Double
@@ -218,9 +218,12 @@ enum RecoveryService {
             if consecutiveDeclines >= 3 {
                 let peakE1RM = sessionData[lastIndex - consecutiveDeclines].e1rm
                 let currentE1RM = sessionData[lastIndex].e1rm
+
+                guard peakE1RM > 0 else { continue }
                 let declinePercent = ((peakE1RM - currentE1RM) / peakE1RM) * 100
 
                 warnings.append(OvertrainingWarning(
+                    id: exercise.id,
                     exerciseName: exercise.name,
                     consecutiveDeclines: consecutiveDeclines,
                     e1rmDeclinePercent: declinePercent

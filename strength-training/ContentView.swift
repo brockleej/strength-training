@@ -40,14 +40,8 @@ struct ContentView: View {
         .onAppear {
             SeedData.seedIfNeeded(context: modelContext)
             if workoutViewModel == nil {
-                let recoveryVM = RecoveryViewModel(modelContext: modelContext)
-                recoveryViewModel = recoveryVM
-
-                let workoutVM = WorkoutViewModel(modelContext: modelContext)
-                workoutVM.onSessionFinished = { [weak recoveryVM] in
-                    recoveryVM?.refresh()
-                }
-                workoutViewModel = workoutVM
+                recoveryViewModel = RecoveryViewModel(modelContext: modelContext)
+                workoutViewModel = WorkoutViewModel(modelContext: modelContext)
             }
         }
     }

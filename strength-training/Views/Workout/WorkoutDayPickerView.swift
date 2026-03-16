@@ -131,10 +131,12 @@ private struct DayTypeCard: View {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .font(.caption2)
                         .foregroundStyle(.orange)
+                        .accessibilityLabel("\(warningCount) overtraining warning\(warningCount == 1 ? "" : "s")")
                 }
                 Circle()
                     .fill(readinessLevel.color)
                     .frame(width: 10, height: 10)
+                    .accessibilityLabel("Readiness: \(readinessLevel.label)")
             }
             .padding(10)
         }
