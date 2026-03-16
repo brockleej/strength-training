@@ -51,5 +51,6 @@ final class HistoryViewModel {
     func deleteSession(_ session: WorkoutSession) {
         modelContext.delete(session)
         try? modelContext.save()
+        NotificationCenter.default.post(name: .workoutDataDidChange, object: nil)
     }
 }

@@ -9,6 +9,7 @@ import SwiftUI
 
 struct WorkoutDayPickerView: View {
     @Bindable var viewModel: WorkoutViewModel
+    var recoveryViewModel: RecoveryViewModel
     @State private var confirmingDayType: DayType?
 
     var body: some View {
@@ -37,7 +38,9 @@ struct WorkoutDayPickerView: View {
                             DayTypeCard(
                                 dayType: dayType,
                                 isActive: isActive,
-                                inProgressCount: isActive ? viewModel.suspendedInProgressExerciseCount : 0
+                                inProgressCount: isActive ? viewModel.suspendedInProgressExerciseCount : 0,
+                                readinessLevel: recoveryViewModel.readiness(for: dayType),
+                                warningCount: recoveryViewModel.warnings(for: dayType).count
                             )
                         }
                         .buttonStyle(.plain)
@@ -80,6 +83,8 @@ private struct DayTypeCard: View {
     let dayType: DayType
     var isActive: Bool = false
     var inProgressCount: Int = 0
+    var readinessLevel: ReadinessLevel = .fresh
+    var warningCount: Int = 0
 
     var body: some View {
         HStack(spacing: 16) {
@@ -120,5 +125,20 @@ private struct DayTypeCard: View {
             RoundedRectangle(cornerRadius: 16)
                 .strokeBorder(isActive ? AnyShapeStyle(dayType.color) : AnyShapeStyle(.quaternary), lineWidth: isActive ? 2 : 1)
         )
+        .overlay(alignment: .topTrailing) {
+            HStack(spacing: 4) {
+                if warningCount > 0 {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.caption2)
+                        .foregroundStyle(.orange)
+                        .accessibilityLabel("\(warningCount) overtraining warning\(warningCount == 1 ? "" : "s")")
+                }
+                Circle()
+                    .fill(readinessLevel.color)
+                    .frame(width: 10, height: 10)
+                    .accessibilityLabel("Readiness: \(readinessLevel.label)")
+            }
+            .padding(10)
+        }
     }
 }
