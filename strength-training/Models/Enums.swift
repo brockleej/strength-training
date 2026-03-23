@@ -38,18 +38,6 @@ enum DayType: String, Codable, CaseIterable, Identifiable {
         case .fullBody: "All exercises across Arms and Legs"
         }
     }
-
-    var muscleGroups: [String] {
-        switch self {
-        case .arms:
-            ["Shoulders", "Chest", "Back", "Biceps", "Triceps", "Core"]
-        case .legs:
-            ["Quads", "Hamstrings", "Glutes", "Calves", "Lower Back", "Adductors", "Core"]
-        case .fullBody:
-            ["Shoulders", "Chest", "Back", "Biceps", "Triceps",
-             "Quads", "Hamstrings", "Glutes", "Calves", "Lower Back", "Adductors", "Core"]
-        }
-    }
 }
 
 enum TrainingMode: String, Codable, CaseIterable, Identifiable {

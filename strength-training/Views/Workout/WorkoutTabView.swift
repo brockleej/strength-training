@@ -9,13 +9,12 @@ import SwiftUI
 
 struct WorkoutTabView: View {
     @Bindable var viewModel: WorkoutViewModel
-    var recoveryViewModel: RecoveryViewModel
 
     var body: some View {
         if viewModel.activeSession != nil {
-            ActiveWorkoutView(viewModel: viewModel, recoveryViewModel: recoveryViewModel)
+            ActiveWorkoutView(viewModel: viewModel)
         } else {
-            WorkoutDayPickerView(viewModel: viewModel, recoveryViewModel: recoveryViewModel)
+            WorkoutDayPickerView(viewModel: viewModel)
         }
     }
 }

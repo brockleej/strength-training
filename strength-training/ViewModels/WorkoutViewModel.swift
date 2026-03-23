@@ -119,7 +119,6 @@ final class WorkoutViewModel {
         try? modelContext.save()
         HapticService.workoutCompleted()
         activeSession = nil
-        NotificationCenter.default.post(name: .workoutDataDidChange, object: nil)
     }
 
     // MARK: - Exercises
