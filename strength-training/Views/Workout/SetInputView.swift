@@ -146,11 +146,11 @@ struct SetInputView: View {
                 }
                 .buttonStyle(.borderedProminent)
 
-                if viewModel.lastRecord(for: exercise, mode: viewModel.selectedMode) != nil {
+                if viewModel.suggestion(for: exercise, mode: viewModel.selectedMode) != nil {
                     Button {
-                        prefillFromLastSession()
+                        prefillFromSuggestion()
                     } label: {
-                        Label("Last", systemImage: "arrow.counterclockwise")
+                        Label("Target", systemImage: "arrow.counterclockwise")
                     }
                     .buttonStyle(.bordered)
                 }
@@ -158,12 +158,12 @@ struct SetInputView: View {
         }
         .onAppear {
             if !hasLoadedDefaults {
-                prefillFromLastSession()
+                prefillFromSuggestion()
                 hasLoadedDefaults = true
             }
         }
         .onChange(of: viewModel.selectedMode) {
-            prefillFromLastSession()
+            prefillFromSuggestion()
         }
     }
 
@@ -172,12 +172,10 @@ struct SetInputView: View {
         return record.sets.sorted { $0.setNumber < $1.setNumber }
     }
 
-    private func prefillFromLastSession() {
-        if let lastRecord = viewModel.lastRecord(for: exercise, mode: viewModel.selectedMode),
-           let lastSet = lastRecord.sets.sorted(by: { $0.setNumber < $1.setNumber }).last
-        {
-            weight = lastSet.weightLbs
-            reps = lastSet.reps
+    private func prefillFromSuggestion() {
+        if let s = viewModel.suggestion(for: exercise, mode: viewModel.selectedMode) {
+            weight = s.targetWeight
+            reps = s.targetReps
         }
     }
 

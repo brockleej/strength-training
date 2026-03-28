@@ -21,9 +21,25 @@ struct SettingsView: View {
     @State private var showSuccess = false
     @State private var successMessage = ""
 
+    @AppStorage("progressionAggressiveness")
+    private var aggressiveness: String = ProgressionAggressiveness.moderate.rawValue
+
     var body: some View {
         NavigationStack {
             List {
+                Section {
+                    Picker("Aggressiveness", selection: $aggressiveness) {
+                        ForEach(ProgressionAggressiveness.allCases) { mode in
+                            Text(mode.rawValue).tag(mode.rawValue)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                } header: {
+                    Text("Progressive Overload")
+                } footer: {
+                    Text("Moderate recommends a weight increase after 2 consistent sessions. Conservative requires 3.")
+                }
+
                 Section {
                     Button(action: exportBackup) {
                         Label("Export Backup", systemImage: "square.and.arrow.up")

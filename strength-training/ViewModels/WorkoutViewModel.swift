@@ -133,16 +133,16 @@ final class WorkoutViewModel {
         return all.filter { $0.dayType == dayType }
     }
 
-    // MARK: - Last Session Query
+    // MARK: - Progression
 
-    /// The key query: what did I do last time for this exercise in this mode?
-    /// Uses the existing relationship on Exercise instead of a fetch — avoids
-    /// #Predicate limitations with optional chaining and enum rawValue.
-    func lastRecord(for exercise: Exercise, mode: TrainingMode) -> ExerciseRecord? {
-        exercise.records
-            .filter { $0.trainingMode == mode && $0.session?.isCompleted == true }
-            .sorted { ($0.session?.date ?? .distantPast) > ($1.session?.date ?? .distantPast) }
-            .first
+    func recentAverage(for exercise: Exercise, mode: TrainingMode) -> RecentAverage? {
+        ProgressionService.recentAverage(for: exercise, mode: mode)
+    }
+
+    func suggestion(for exercise: Exercise, mode: TrainingMode) -> ProgressionSuggestion? {
+        let raw = UserDefaults.standard.string(forKey: "progressionAggressiveness") ?? ""
+        let aggressiveness = ProgressionAggressiveness(rawValue: raw) ?? .moderate
+        return ProgressionService.suggestion(for: exercise, mode: mode, aggressiveness: aggressiveness)
     }
 
     /// Get the current session's record for an exercise in the active mode.

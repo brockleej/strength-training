@@ -82,9 +82,10 @@ struct ExerciseRowView: View {
 
                 Spacer()
 
-                if let last = viewModel.lastRecord(for: exercise, mode: viewModel.selectedMode) {
-                    LastSessionBanner(record: last)
-                }
+                ProgressionBanner(
+                    suggestion: viewModel.suggestion(for: exercise, mode: viewModel.selectedMode),
+                    average: viewModel.recentAverage(for: exercise, mode: viewModel.selectedMode)
+                )
 
                 Image(systemName: "chevron.down")
                     .font(.caption)
