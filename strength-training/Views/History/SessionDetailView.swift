@@ -11,6 +11,9 @@ struct SessionDetailView: View {
     @Environment(\.modelContext) private var modelContext
     let session: WorkoutSession
 
+    @State private var healthStats: HealthKitWorkoutStats?
+    @State private var loadedStats = false
+
     var body: some View {
         List {
             Section {
@@ -19,6 +22,59 @@ struct SessionDetailView: View {
                 LabeledContent("Exercises Completed", value: "\(completedRecords.count)")
                 LabeledContent("Total Sets", value: "\(totalSets)")
                 LabeledContent("Total Volume", value: "\(formattedVolume) lbs")
+            }
+
+            if let stats = healthStats {
+                Section("Apple Health") {
+                    LabeledContent {
+                        Text(formattedDuration(stats.duration))
+                            .monospacedDigit()
+                    } label: {
+                        Label("Duration", systemImage: "timer")
+                    }
+
+                    LabeledContent {
+                        Text("\(Int(stats.activeCalories)) kcal")
+                            .monospacedDigit()
+                    } label: {
+                        Label("Active Calories", systemImage: "flame.fill")
+                            .foregroundStyle(.orange)
+                    }
+
+                    if let avgHR = stats.avgHeartRate {
+                        LabeledContent {
+                            Text("\(Int(avgHR)) BPM")
+                                .monospacedDigit()
+                        } label: {
+                            Label("Avg Heart Rate", systemImage: "heart.fill")
+                                .foregroundStyle(.red)
+                        }
+                    }
+
+                    if let maxHR = stats.maxHeartRate {
+                        LabeledContent {
+                            Text("\(Int(maxHR)) BPM")
+                                .monospacedDigit()
+                        } label: {
+                            Label("Max Heart Rate", systemImage: "heart.fill")
+                                .foregroundStyle(.red)
+                        }
+                    }
+
+                    if let effort = stats.effortRating ?? session.effortRating {
+                        LabeledContent {
+                            HStack(spacing: 4) {
+                                Text("\(effort)/10")
+                                    .monospacedDigit()
+                                Text(effortLabel(for: effort))
+                                    .font(.caption)
+                                    .foregroundStyle(effortColor(for: effort))
+                            }
+                        } label: {
+                            Label("Effort", systemImage: "figure.strengthtraining.functional")
+                        }
+                    }
+                }
             }
 
             ForEach(sortedRecords) { record in
@@ -69,7 +125,15 @@ struct SessionDetailView: View {
         }
         .navigationTitle("\(session.dayType.rawValue) Day")
         .navigationBarTitleDisplayMode(.inline)
+        .task {
+            guard !loadedStats, let uuid = session.healthKitWorkoutUUID else { return }
+            loadedStats = true
+            let service = HealthKitWorkoutService()
+            healthStats = await service.fetchWorkoutStats(for: uuid)
+        }
     }
+
+    // MARK: - Computed Properties
 
     private var completedRecords: [ExerciseRecord] {
         session.exerciseRecords.filter { !$0.sets.isEmpty }
@@ -96,6 +160,36 @@ struct SessionDetailView: View {
         weight.truncatingRemainder(dividingBy: 1) == 0
             ? String(format: "%.0f", weight)
             : String(format: "%.1f", weight)
+    }
+
+    private func formattedDuration(_ interval: TimeInterval) -> String {
+        let total = Int(interval)
+        let hours = total / 3600
+        let minutes = (total % 3600) / 60
+        let seconds = total % 60
+        if hours > 0 {
+            return String(format: "%d:%02d:%02d", hours, minutes, seconds)
+        }
+        return String(format: "%d:%02d", minutes, seconds)
+    }
+
+    private func effortColor(for rating: Int) -> Color {
+        switch rating {
+        case 1...3: return .green
+        case 4...6: return .yellow
+        case 7, 8: return .orange
+        default: return .red
+        }
+    }
+
+    private func effortLabel(for rating: Int) -> String {
+        switch rating {
+        case 1...3: return "Easy"
+        case 4...6: return "Moderate"
+        case 7, 8: return "Hard"
+        case 9, 10: return "All Out"
+        default: return ""
+        }
     }
 }
 

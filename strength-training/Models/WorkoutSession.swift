@@ -15,6 +15,8 @@ final class WorkoutSession {
     var dayType: DayType
     var notes: String
     var isCompleted: Bool
+    var healthKitWorkoutUUID: UUID?
+    var effortRating: Int?
 
     @Relationship(deleteRule: .cascade, inverse: \ExerciseRecord.session)
     var exerciseRecords: [ExerciseRecord]

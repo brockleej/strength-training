@@ -45,7 +45,7 @@ struct ContentView: View {
         }
         .task {
             if healthKitService.isAvailable && healthKitService.authorizationStatus == nil {
-                await healthKitService.requestAuthorization()
+                _ = await healthKitService.requestAuthorization()
             }
         }
     }

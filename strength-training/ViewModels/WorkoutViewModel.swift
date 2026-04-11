@@ -16,6 +16,7 @@ final class WorkoutViewModel {
     /// Kept alive so it can be resumed or explicitly abandoned.
     var suspendedSession: WorkoutSession?
     var selectedMode: TrainingMode = .highWeightLowReps
+    var sessionPendingEffortRating: WorkoutSession?
     let healthKitService: HealthKitWorkoutService
 
     init(modelContext: ModelContext, healthKitService: HealthKitWorkoutService) {
@@ -127,12 +128,33 @@ final class WorkoutViewModel {
     func finishSession() {
         guard let session = activeSession else { return }
         session.isCompleted = true
+        let capturedSession = session
+        activeSession = nil
         try? modelContext.save()
         HapticService.workoutCompleted()
-        activeSession = nil
         Task {
-            await healthKitService.endWorkout()
+            let uuid = await healthKitService.endWorkout()
+            capturedSession.healthKitWorkoutUUID = uuid
+            try? modelContext.save()
+            if uuid != nil {
+                sessionPendingEffortRating = capturedSession
+            }
         }
+    }
+
+    func saveEffortRating(_ rating: Int) {
+        guard let session = sessionPendingEffortRating else { return }
+        session.effortRating = rating
+        try? modelContext.save()
+        let uuid = session.healthKitWorkoutUUID
+        sessionPendingEffortRating = nil
+        if let uuid {
+            Task { await healthKitService.saveEffortRating(rating, workoutUUID: uuid) }
+        }
+    }
+
+    func skipEffortRating() {
+        sessionPendingEffortRating = nil
     }
 
     // MARK: - Exercises

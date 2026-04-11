@@ -8,6 +8,14 @@
 import Foundation
 internal import HealthKit
 
+struct HealthKitWorkoutStats {
+    let duration: TimeInterval
+    let activeCalories: Double
+    let avgHeartRate: Double?
+    let maxHeartRate: Double?
+    let effortRating: Int?
+}
+
 @Observable
 final class HealthKitWorkoutService {
     // MARK: - Public State
@@ -38,6 +46,7 @@ final class HealthKitWorkoutService {
             HKObjectType.workoutType(),
             HKQuantityType(.activeEnergyBurned),
             HKQuantityType(.heartRate),
+            HKQuantityType(.workoutEffortScore),
         ]
     }
 
@@ -45,6 +54,7 @@ final class HealthKitWorkoutService {
         [
             HKQuantityType(.activeEnergyBurned),
             HKQuantityType(.heartRate),
+            HKQuantityType(.workoutEffortScore),
         ]
     }
 
@@ -138,10 +148,11 @@ final class HealthKitWorkoutService {
         startElapsedTimer()
     }
 
-    func endWorkout() async {
+    @discardableResult
+    func endWorkout() async -> UUID? {
         guard let session = workoutSession, let builder = workoutBuilder else {
             clearState()
-            return
+            return nil
         }
 
         let endDate = Date()
@@ -149,12 +160,14 @@ final class HealthKitWorkoutService {
 
         do {
             try await builder.endCollection(at: endDate)
-            try await builder.finishWorkout()
+            let finishedWorkout = try await builder.finishWorkout()
+            clearState()
+            return finishedWorkout?.uuid
         } catch {
             print("HealthKit workout finish error: \(error)")
+            clearState()
+            return nil
         }
-
-        clearState()
     }
 
     func cleanUpOrphanedState() {
@@ -165,7 +178,135 @@ final class HealthKitWorkoutService {
         }
     }
 
+    // MARK: - Post-Workout Queries
+
+    func fetchWorkoutStats(for workoutUUID: UUID) async -> HealthKitWorkoutStats? {
+        guard isAvailable else { return nil }
+
+        let predicate = HKQuery.predicateForObject(with: workoutUUID)
+
+        let workout: HKWorkout? = await withCheckedContinuation { continuation in
+            let query = HKSampleQuery(
+                sampleType: HKObjectType.workoutType(),
+                predicate: predicate,
+                limit: 1,
+                sortDescriptors: nil
+            ) { _, samples, _ in
+                continuation.resume(returning: samples?.first as? HKWorkout)
+            }
+            healthStore.execute(query)
+        }
+
+        guard let workout else { return nil }
+
+        let duration = workout.duration
+        let calories = workout.statistics(for: HKQuantityType(.activeEnergyBurned))?
+            .sumQuantity()?
+            .doubleValue(for: .kilocalorie()) ?? 0
+
+        let hrStats = await fetchHeartRateStats(for: workout)
+        let effort = await fetchEffortRating(for: workout)
+
+        return HealthKitWorkoutStats(
+            duration: duration,
+            activeCalories: calories,
+            avgHeartRate: hrStats?.avg,
+            maxHeartRate: hrStats?.max,
+            effortRating: effort
+        )
+    }
+
+    func saveEffortRating(_ rating: Int, workoutUUID: UUID) async {
+        guard isAvailable else {
+            print("[HealthKit Effort] Not available")
+            return
+        }
+
+        // Re-request authorization to ensure effort score type is included
+        // (handles case where user authorized before this type was added)
+        _ = await requestAuthorization()
+
+        let predicate = HKQuery.predicateForObject(with: workoutUUID)
+
+        let workout: HKWorkout? = await withCheckedContinuation { continuation in
+            let query = HKSampleQuery(
+                sampleType: HKObjectType.workoutType(),
+                predicate: predicate,
+                limit: 1,
+                sortDescriptors: nil
+            ) { _, samples, _ in
+                continuation.resume(returning: samples?.first as? HKWorkout)
+            }
+            healthStore.execute(query)
+        }
+
+        guard let workout else {
+            print("[HealthKit Effort] Could not find workout with UUID: \(workoutUUID)")
+            return
+        }
+
+        let effortSample = HKQuantitySample(
+            type: HKQuantityType(.workoutEffortScore),
+            quantity: HKQuantity(unit: .appleEffortScore(), doubleValue: Double(rating)),
+            start: workout.startDate,
+            end: workout.endDate
+        )
+
+        do {
+            try await healthStore.relateWorkoutEffortSample(effortSample, with: workout, activity: nil)
+            print("[HealthKit Effort] Saved effort \(rating) for workout \(workoutUUID)")
+        } catch {
+            print("[HealthKit Effort] Save error: \(error)")
+        }
+    }
+
     // MARK: - Private
+
+    private func fetchHeartRateStats(for workout: HKWorkout) async -> (avg: Double, max: Double)? {
+        let heartRateType = HKQuantityType(.heartRate)
+        let predicate = HKQuery.predicateForObjects(from: workout)
+        let bpmUnit = HKUnit.count().unitDivided(by: .minute())
+
+        return await withCheckedContinuation { continuation in
+            let query = HKStatisticsQuery(
+                quantityType: heartRateType,
+                quantitySamplePredicate: predicate,
+                options: [.discreteAverage, .discreteMax]
+            ) { _, stats, _ in
+                guard let stats,
+                      let avg = stats.averageQuantity()?.doubleValue(for: bpmUnit),
+                      let max = stats.maximumQuantity()?.doubleValue(for: bpmUnit)
+                else {
+                    continuation.resume(returning: nil)
+                    return
+                }
+                continuation.resume(returning: (avg: avg, max: max))
+            }
+            healthStore.execute(query)
+        }
+    }
+
+    private func fetchEffortRating(for workout: HKWorkout) async -> Int? {
+        let effortType = HKQuantityType(.workoutEffortScore)
+        let predicate = HKQuery.predicateForWorkoutEffortSamplesRelated(workout: workout, activity: nil)
+
+        return await withCheckedContinuation { continuation in
+            let query = HKSampleQuery(
+                sampleType: effortType,
+                predicate: predicate,
+                limit: 1,
+                sortDescriptors: nil
+            ) { _, samples, _ in
+                guard let sample = samples?.first as? HKQuantitySample else {
+                    continuation.resume(returning: nil)
+                    return
+                }
+                let value = Int(sample.quantity.doubleValue(for: .appleEffortScore()))
+                continuation.resume(returning: value)
+            }
+            healthStore.execute(query)
+        }
+    }
 
     private func startElapsedTimer() {
         stopElapsedTimer()
