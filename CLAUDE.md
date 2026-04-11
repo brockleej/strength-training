@@ -74,6 +74,29 @@ Use `PreviewSampleData` (in `Utilities/`) for all SwiftUI previews that require 
 }
 ```
 
+## App Icon
+
+The icon source file is `strength_training.icon/` (Apple Icon Composer). Icon Composer exports 16-bit RGBA PNGs, but App Store rejects alpha channels (ITMS-90717). After exporting, always strip alpha before committing.
+
+**Workflow after re-exporting from Icon Composer:**
+
+```bash
+# 1. Copy the three iOS variants into the asset catalog
+cp "strength_training Exports/strength_training-iOS-Default-1024x1024@1x.png" \
+   strength-training/Assets.xcassets/AppIcon.appiconset/Icon-iOS-Default.png
+cp "strength_training Exports/strength_training-iOS-Dark-1024x1024@1x.png" \
+   strength-training/Assets.xcassets/AppIcon.appiconset/Icon-iOS-Dark.png
+cp "strength_training Exports/strength_training-iOS-TintedDark-1024x1024@1x.png" \
+   strength-training/Assets.xcassets/AppIcon.appiconset/Icon-iOS-Tinted.png
+
+# 2. Strip alpha channel
+swift scripts/strip-icon-alpha.swift \
+  strength-training/Assets.xcassets/AppIcon.appiconset/*.png
+
+# 3. Clean up the exports folder
+rm -rf "strength_training Exports/"
+```
+
 ## Git Conventions
 
 Use conventional commits:

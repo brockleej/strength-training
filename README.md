@@ -30,75 +30,38 @@ A native iOS app for tracking gym workouts, built with SwiftUI and SwiftData. Lo
 
 ## Requirements
 
-| Requirement | Version |
-|-------------|---------|
-| iOS | 26.2+ |
-| Xcode | 16+ |
-| Swift | 5.0+ |
+- Xcode 16+
+- iOS 26.2+
 
----
-
-## Getting Started
-
-### 1. Clone the repository
+## Build & Run
 
 ```bash
-git clone https://github.com/danielkuhlwein/strength-training.git
-cd strength-training
-```
+# Build for simulator
+xcodebuild -scheme strength-training -destination 'platform=iOS Simulator,name=iPhone 17'
 
-### 2. Open in Xcode
-
-```bash
+# Open in Xcode
 open strength-training.xcodeproj
 ```
 
-### 3. Run the app
+## App Icon
 
-Select a simulator or connected device from the Xcode toolbar, then press **⌘R** to build and run.
+The icon source file is `strength_training.icon/` (Apple Icon Composer).
 
-> **Physical device:** You'll need to set a Development Team under _Signing & Capabilities_ in the project target settings. A free Apple ID is sufficient for personal use.
+Icon Composer exports PNGs with an alpha channel, which App Store Connect rejects (ITMS-90717). After exporting, strip the alpha with the included script:
 
----
+```bash
+# 1. Copy the three iOS variants into the asset catalog
+cp "strength_training Exports/strength_training-iOS-Default-1024x1024@1x.png" \
+   strength-training/Assets.xcassets/AppIcon.appiconset/Icon-iOS-Default.png
+cp "strength_training Exports/strength_training-iOS-Dark-1024x1024@1x.png" \
+   strength-training/Assets.xcassets/AppIcon.appiconset/Icon-iOS-Dark.png
+cp "strength_training Exports/strength_training-iOS-TintedDark-1024x1024@1x.png" \
+   strength-training/Assets.xcassets/AppIcon.appiconset/Icon-iOS-Tinted.png
 
-## Usage
+# 2. Strip alpha channel
+swift scripts/strip-icon-alpha.swift \
+  strength-training/Assets.xcassets/AppIcon.appiconset/*.png
 
-1. **Start a workout** — Tap the Workout tab and choose Arms or Legs day
-2. **Log sets** — Tap an exercise to expand it, adjust weight and reps, then tap _Add Set_
-3. **Reference history** — The "Last" banner shows your best set from the previous session; tap _Last_ to prefill those values
-4. **Switch training modes** — Use the Strength / Endurance toggle at the top of the workout screen
-5. **Finish** — Tap _Finish Workout_ when done; the session is saved to history
-6. **Review progress** — Visit the Progress tab to see charts broken down by exercise, mode, and metric
-
----
-
-## Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| UI | SwiftUI |
-| Data persistence | SwiftData |
-| Charts | Swift Charts |
-| Architecture | MVVM + `@Observable` |
-
----
-
-## Project Structure
-
+# 3. Clean up the exports folder
+rm -rf "strength_training Exports/"
 ```
-strength-training/
-├── Models/              # SwiftData model definitions (Exercise, WorkoutSession, ExerciseRecord, SetRecord)
-├── ViewModels/          # Observable state managers (Workout, History, Charts)
-├── Views/               # UI components organised by feature
-│   ├── Workout/
-│   ├── History/
-│   ├── Charts/
-│   └── Exercises/
-└── Utilities/           # Seed data and SwiftUI preview helpers
-```
-
----
-
-## License
-
-MIT
