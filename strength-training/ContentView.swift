@@ -43,6 +43,11 @@ struct ContentView: View {
                 workoutViewModel = WorkoutViewModel(modelContext: modelContext, healthKitService: healthKitService)
             }
         }
+        .task {
+            if healthKitService.isAvailable && healthKitService.authorizationStatus == nil {
+                await healthKitService.requestAuthorization()
+            }
+        }
     }
 }
 

@@ -73,7 +73,16 @@ final class HealthKitWorkoutService {
             return
         }
         let status = healthStore.authorizationStatus(for: HKObjectType.workoutType())
-        authorizationStatus = (status == .sharingAuthorized)
+        switch status {
+        case .sharingAuthorized:
+            authorizationStatus = true
+        case .sharingDenied:
+            authorizationStatus = false
+        case .notDetermined:
+            authorizationStatus = nil
+        @unknown default:
+            authorizationStatus = nil
+        }
     }
 
     // MARK: - Workout Session Lifecycle
@@ -86,7 +95,7 @@ final class HealthKitWorkoutService {
         }
 
         let configuration = HKWorkoutConfiguration()
-        configuration.activityType = .traditionalStrengthTraining
+        configuration.activityType = .functionalStrengthTraining
         configuration.locationType = .indoor
 
         let session = try HKWorkoutSession(
