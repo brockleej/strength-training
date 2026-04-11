@@ -19,7 +19,12 @@ A native iOS app for tracking gym workouts, built with SwiftUI and SwiftData. Lo
 
 ## Screenshots
 
-> _Coming soon_
+<p align="center">
+  <img src="docs/screenshots/workout.png" alt="Workout" width="200" />
+  <img src="docs/screenshots/exercises.png" alt="Exercises" width="200" />
+  <img src="docs/screenshots/history.png" alt="History" width="200" />
+  <img src="docs/screenshots/progress.png" alt="Progress" width="200" />
+</p>
 
 ---
 
