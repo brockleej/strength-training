@@ -9,6 +9,30 @@ import Foundation
 import SwiftData
 
 struct SeedData {
+    /// Removes duplicate exercises (same name + dayType), keeping the one with the most history.
+    /// Records from duplicates are reassigned to the kept exercise before deletion.
+    static func deduplicateExercises(context: ModelContext) {
+        let exercises = (try? context.fetch(FetchDescriptor<Exercise>())) ?? []
+        var grouped: [String: [Exercise]] = [:]
+        for exercise in exercises {
+            let key = "\(exercise.name)|\(exercise.dayType.rawValue)"
+            grouped[key, default: []].append(exercise)
+        }
+        for (_, group) in grouped where group.count > 1 {
+            // Keep the exercise with the most records
+            let sorted = group.sorted { $0.recordsArray.count > $1.recordsArray.count }
+            let keeper = sorted[0]
+            for duplicate in sorted.dropFirst() {
+                // Reassign any records from the duplicate to the keeper
+                for record in duplicate.recordsArray {
+                    record.exercise = keeper
+                }
+                context.delete(duplicate)
+            }
+        }
+        try? context.save()
+    }
+
     static func seedIfNeeded(context: ModelContext) {
         let hasSeeded = UserDefaults.standard.bool(forKey: "hasSeededExercises")
         guard !hasSeeded else { return }

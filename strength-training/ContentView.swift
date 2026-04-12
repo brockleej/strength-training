@@ -39,6 +39,7 @@ struct ContentView: View {
             }
         }
         .onAppear {
+            SeedData.deduplicateExercises(context: modelContext)
             SeedData.seedIfNeeded(context: modelContext)
             if workoutViewModel == nil {
                 workoutViewModel = WorkoutViewModel(modelContext: modelContext, healthKitService: healthKitService)
