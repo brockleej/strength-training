@@ -272,7 +272,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "strength-training/Info.plist";
-				INFOPLIST_KEY_CFBundleDisplayName = "Strength Training";
+				INFOPLIST_KEY_CFBundleDisplayName = UpLift;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "View workout metrics like calories and heart rate during your workouts.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Save your strength training workouts to Apple Health for Activity Ring credit and fitness tracking.";
@@ -312,7 +312,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "strength-training/Info.plist";
-				INFOPLIST_KEY_CFBundleDisplayName = "Strength Training";
+				INFOPLIST_KEY_CFBundleDisplayName = UpLift;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "View workout metrics like calories and heart rate during your workouts.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Save your strength training workouts to Apple Health for Activity Ring credit and fitness tracking.";
