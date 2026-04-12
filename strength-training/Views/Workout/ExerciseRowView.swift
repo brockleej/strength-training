@@ -40,7 +40,7 @@ struct ExerciseRowView: View {
     @State private var inputHeight: CGFloat = 0
 
     private var hasSets: Bool {
-        viewModel.currentRecord(for: exercise).map { !$0.sets.isEmpty } ?? false
+        viewModel.currentRecord(for: exercise).map { !$0.setsArray.isEmpty } ?? false
     }
 
     private enum Status { case none, inProgress, completed }

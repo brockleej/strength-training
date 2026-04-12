@@ -37,8 +37,8 @@ final class ProgressDashboardViewModel {
 
     private func allWorkingSets() -> [(set: SetRecord, record: ExerciseRecord, session: WorkoutSession)] {
         fetchCompletedSessions().flatMap { session in
-            session.exerciseRecords.flatMap { record in
-                record.sets
+            session.exerciseRecordsArray.flatMap { record in
+                record.setsArray
                     .filter { !$0.isWarmup }
                     .map { (set: $0, record: record, session: session) }
             }
@@ -91,9 +91,9 @@ final class ProgressDashboardViewModel {
         var bestE1RMPerExercise: [UUID: Double] = [:]
 
         for session in sessions {
-            for record in session.exerciseRecords {
+            for record in session.exerciseRecordsArray {
                 guard let exerciseID = record.exercise?.id else { continue }
-                let workingSets = record.sets.filter { !$0.isWarmup }
+                let workingSets = record.setsArray.filter { !$0.isWarmup }
                 for set in workingSets {
                     let e1rm = set.weightLbs * (1.0 + Double(set.reps) / 30.0)
                     if e1rm > (bestE1RMPerExercise[exerciseID] ?? 0) {
@@ -156,11 +156,11 @@ final class ProgressDashboardViewModel {
         guard let weekEnd = calendar.date(byAdding: .weekOfYear, value: 1, to: weekStart) else { return 0 }
 
         let weekSessions = sessions.filter { $0.date >= weekStart && $0.date < weekEnd }
-        let allRecords = weekSessions.flatMap { $0.exerciseRecords }
+        let allRecords = weekSessions.flatMap { $0.exerciseRecordsArray }
 
         var total: Double = 0
         for record in allRecords {
-            let workingSets = record.sets.filter { !$0.isWarmup }
+            let workingSets = record.setsArray.filter { !$0.isWarmup }
             if volumeFilterMode == nil || record.trainingMode == volumeFilterMode {
                 for set in workingSets {
                     total += set.weightLbs * Double(set.reps)
@@ -186,17 +186,17 @@ final class ProgressDashboardViewModel {
         for exercise in allExercises {
             // All records for this exercise sorted chronologically
             let allRecords = allSessions
-                .flatMap { $0.exerciseRecords }
+                .flatMap { $0.exerciseRecordsArray }
                 .filter { $0.exercise?.id == exercise.id }
 
-            let allWorkingSets = allRecords.flatMap { $0.sets.filter { !$0.isWarmup } }
+            let allWorkingSets = allRecords.flatMap { $0.setsArray.filter { !$0.isWarmup } }
             guard !allWorkingSets.isEmpty else { continue }
 
             // Current month records for this exercise, sorted by date
             let currentRecords = currentMonthSessions
                 .sorted { $0.date < $1.date }
                 .flatMap { session in
-                    session.exerciseRecords
+                    session.exerciseRecordsArray
                         .filter { $0.exercise?.id == exercise.id }
                         .map { (record: $0, date: session.date) }
                 }
@@ -208,9 +208,9 @@ final class ProgressDashboardViewModel {
             var bestWeightAlreadyPR = false
 
             for session in allSessions {
-                let records = session.exerciseRecords.filter { $0.exercise?.id == exercise.id }
+                let records = session.exerciseRecordsArray.filter { $0.exercise?.id == exercise.id }
                 for record in records {
-                    let sets = record.sets.filter { !$0.isWarmup }
+                    let sets = record.setsArray.filter { !$0.isWarmup }
                     let sessionBestE1RM = sets.map { $0.weightLbs * (1.0 + Double($0.reps) / 30.0) }.max() ?? 0
                     let sessionBestWeight = sets.map(\.weightLbs).max() ?? 0
 
@@ -252,7 +252,7 @@ final class ProgressDashboardViewModel {
             if !bestE1RMAlreadyPR && currentRecords.count >= 2 {
                 var monthRunningBest: Double = 0
                 for (record, date) in currentRecords {
-                    let sets = record.sets.filter { !$0.isWarmup }
+                    let sets = record.setsArray.filter { !$0.isWarmup }
                     let best = sets.map { $0.weightLbs * (1.0 + Double($0.reps) / 30.0) }.max() ?? 0
                     if best > monthRunningBest && monthRunningBest > 0 {
                         prs.append(PersonalRecord(
@@ -270,7 +270,7 @@ final class ProgressDashboardViewModel {
             if !bestWeightAlreadyPR && currentRecords.count >= 2 {
                 var monthRunningBest: Double = 0
                 for (record, date) in currentRecords {
-                    let sets = record.sets.filter { !$0.isWarmup }
+                    let sets = record.setsArray.filter { !$0.isWarmup }
                     let best = sets.map(\.weightLbs).max() ?? 0
                     if best > monthRunningBest && monthRunningBest > 0 {
                         prs.append(PersonalRecord(

@@ -100,7 +100,7 @@ struct ActiveWorkoutView: View {
                                 // Haptic when collapsing an exercise that has logged sets
                                 if !newValue, let currentID = expandedExerciseID,
                                    currentID == exercise.id,
-                                   viewModel.currentRecord(for: exercise)?.sets.isEmpty == false {
+                                   viewModel.currentRecord(for: exercise)?.setsArray.isEmpty == false {
                                     HapticService.exerciseCompleted()
                                 }
                                 withAnimation(.easeInOut(duration: 0.25)) {
@@ -162,6 +162,6 @@ struct ActiveWorkoutView: View {
 
     private var completedExerciseCount: Int {
         guard let session = viewModel.activeSession else { return 0 }
-        return session.exerciseRecords.filter { !$0.sets.isEmpty }.count
+        return session.exerciseRecordsArray.filter { !$0.setsArray.isEmpty }.count
     }
 }

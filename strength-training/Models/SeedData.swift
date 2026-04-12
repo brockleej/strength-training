@@ -5,12 +5,19 @@
 //  Created by Daniel Kuhlwein on 2026-02-21.
 //
 
+import Foundation
 import SwiftData
 
 struct SeedData {
     static func seedIfNeeded(context: ModelContext) {
+        let hasSeeded = UserDefaults.standard.bool(forKey: "hasSeededExercises")
+        guard !hasSeeded else { return }
         let count = (try? context.fetchCount(FetchDescriptor<Exercise>())) ?? 0
-        guard count == 0 else { return }
+        guard count == 0 else {
+            // Data exists (possibly from iCloud sync) — mark as seeded
+            UserDefaults.standard.set(true, forKey: "hasSeededExercises")
+            return
+        }
 
         let armsExercises: [(String, String)] = [
             ("Shoulder Press", "Shoulders"),
@@ -50,5 +57,6 @@ struct SeedData {
         }
 
         try? context.save()
+        UserDefaults.standard.set(true, forKey: "hasSeededExercises")
     }
 }

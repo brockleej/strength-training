@@ -10,17 +10,19 @@ import SwiftData
 
 @Model
 final class ExerciseRecord {
-    var id: UUID
-    var trainingMode: TrainingMode
-    var sortOrder: Int
-    var isCompleted: Bool
-    var notes: String
+    var id: UUID = UUID()
+    var trainingMode: TrainingMode = TrainingMode.highWeightLowReps
+    var sortOrder: Int = 0
+    var isCompleted: Bool = false
+    var notes: String = ""
 
     var exercise: Exercise?
     var session: WorkoutSession?
 
     @Relationship(deleteRule: .cascade, inverse: \SetRecord.exerciseRecord)
-    var sets: [SetRecord]
+    var sets: [SetRecord]?
+
+    var setsArray: [SetRecord] { sets ?? [] }
 
     init(trainingMode: TrainingMode, sortOrder: Int = 0) {
         self.id = UUID()

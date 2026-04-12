@@ -106,7 +106,7 @@ struct SessionDetailView: View {
                         }
                     }
 
-                    ForEach(record.sets.sorted(by: { $0.setNumber < $1.setNumber })) { set in
+                    ForEach(record.setsArray.sorted(by: { $0.setNumber < $1.setNumber })) { set in
                         HStack {
                             Text("Set \(set.setNumber)")
                                 .foregroundStyle(.secondary)
@@ -136,7 +136,7 @@ struct SessionDetailView: View {
     // MARK: - Computed Properties
 
     private var completedRecords: [ExerciseRecord] {
-        session.exerciseRecords.filter { !$0.sets.isEmpty }
+        session.exerciseRecordsArray.filter { !$0.setsArray.isEmpty }
     }
 
     private var sortedRecords: [ExerciseRecord] {
@@ -144,12 +144,12 @@ struct SessionDetailView: View {
     }
 
     private var totalSets: Int {
-        completedRecords.reduce(0) { $0 + $1.sets.count }
+        completedRecords.reduce(0) { $0 + $1.setsArray.count }
     }
 
     private var formattedVolume: String {
         let volume = completedRecords.reduce(0.0) { total, record in
-            total + record.sets.reduce(0.0) { $0 + $1.weightLbs * Double($1.reps) }
+            total + record.setsArray.reduce(0.0) { $0 + $1.weightLbs * Double($1.reps) }
         }
         return volume.truncatingRemainder(dividingBy: 1) == 0
             ? String(format: "%.0f", volume)
@@ -242,14 +242,14 @@ private struct ExerciseHeaderRow: View {
     // MARK: - Computations
 
     private var currentE1RM: Double {
-        record.sets
+        record.setsArray
             .filter { !$0.isWarmup }
             .map { $0.weightLbs * (1.0 + Double($0.reps) / 30.0) }
             .max() ?? 0
     }
 
     private var previousRecord: ExerciseRecord? {
-        exercise.records
+        exercise.recordsArray
             .filter { rec in
                 rec.id != record.id &&
                 rec.session?.isCompleted == true &&
@@ -261,7 +261,7 @@ private struct ExerciseHeaderRow: View {
 
     private var previousE1RM: Double? {
         guard let prev = previousRecord else { return nil }
-        let best = prev.sets
+        let best = prev.setsArray
             .filter { !$0.isWarmup }
             .map { $0.weightLbs * (1.0 + Double($0.reps) / 30.0) }
             .max()
@@ -269,8 +269,8 @@ private struct ExerciseHeaderRow: View {
     }
 
     private var allTimeE1RM: Double {
-        let completedRecords = exercise.records.filter { $0.session?.isCompleted == true }
-        let workingSets = completedRecords.flatMap { $0.sets.filter { !$0.isWarmup } }
+        let completedRecords = exercise.recordsArray.filter { $0.session?.isCompleted == true }
+        let workingSets = completedRecords.flatMap { $0.setsArray.filter { !$0.isWarmup } }
         let e1rms: [Double] = workingSets.map { set in
             set.weightLbs * (1.0 + Double(set.reps) / 30.0)
         }

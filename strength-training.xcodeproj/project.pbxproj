@@ -10,9 +10,22 @@
 		E18CFB5F2F4A312400991D60 /* strength-training.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "strength-training.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		E1FCA4802F8B1BD7006E0E77 /* Exceptions for "strength-training" folder in "strength-training" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = E18CFB5E2F4A312400991D60 /* strength-training */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		E18CFB612F4A312400991D60 /* strength-training */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				E1FCA4802F8B1BD7006E0E77 /* Exceptions for "strength-training" folder in "strength-training" target */,
+			);
 			path = "strength-training";
 			sourceTree = "<group>";
 		};
@@ -258,6 +271,7 @@
 				DEVELOPMENT_TEAM = WG7BK7C4BG;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "strength-training/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "Strength Training";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "View workout metrics like calories and heart rate during your workouts.";
@@ -297,6 +311,7 @@
 				DEVELOPMENT_TEAM = WG7BK7C4BG;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "strength-training/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "Strength Training";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "View workout metrics like calories and heart rate during your workouts.";

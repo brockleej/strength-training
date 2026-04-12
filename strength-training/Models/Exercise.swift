@@ -10,16 +10,18 @@ import SwiftData
 
 @Model
 final class Exercise {
-    var id: UUID
-    var name: String
-    var dayType: DayType
-    var muscleGroup: String
-    var sortOrder: Int
-    var isCustom: Bool
-    var notes: String
+    var id: UUID = UUID()
+    var name: String = ""
+    var dayType: DayType = DayType.arms
+    var muscleGroup: String = ""
+    var sortOrder: Int = 0
+    var isCustom: Bool = false
+    var notes: String = ""
 
     @Relationship(deleteRule: .cascade, inverse: \ExerciseRecord.exercise)
-    var records: [ExerciseRecord]
+    var records: [ExerciseRecord]?
+
+    var recordsArray: [ExerciseRecord] { records ?? [] }
 
     init(
         name: String,

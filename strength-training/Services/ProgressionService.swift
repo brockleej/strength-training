@@ -93,14 +93,14 @@ struct ProgressionService {
 
     /// All completed ExerciseRecords for this exercise + mode, newest first.
     private static func completedRecords(for exercise: Exercise, mode: TrainingMode) -> [ExerciseRecord] {
-        exercise.records
+        exercise.recordsArray
             .filter { $0.trainingMode == mode && $0.session?.isCompleted == true }
             .sorted { ($0.session?.date ?? .distantPast) > ($1.session?.date ?? .distantPast) }
     }
 
     /// The single heaviest set in a record (by weight). Ties broken by first occurrence.
     private static func bestSet(in record: ExerciseRecord) -> SetRecord? {
-        record.sets.max(by: { $0.weightLbs < $1.weightLbs })
+        record.setsArray.max(by: { $0.weightLbs < $1.weightLbs })
     }
 
     /// Round to the nearest 5 lbs.

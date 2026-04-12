@@ -12,6 +12,7 @@ struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var workoutViewModel: WorkoutViewModel?
     @State private var healthKitService = HealthKitWorkoutService()
+    @State private var cloudKitSyncService = CloudKitSyncService()
 
     var body: some View {
         Group {
@@ -30,7 +31,7 @@ struct ContentView: View {
                         ExerciseLibraryView()
                     }
                     Tab("Settings", systemImage: "gear") {
-                        SettingsView(healthKitService: healthKitService)
+                        SettingsView(healthKitService: healthKitService, cloudKitSyncService: cloudKitSyncService)
                     }
                 }
             } else {

@@ -10,16 +10,18 @@ import SwiftData
 
 @Model
 final class WorkoutSession {
-    var id: UUID
-    var date: Date
-    var dayType: DayType
-    var notes: String
-    var isCompleted: Bool
+    var id: UUID = UUID()
+    var date: Date = Date.now
+    var dayType: DayType = DayType.arms
+    var notes: String = ""
+    var isCompleted: Bool = false
     var healthKitWorkoutUUID: UUID?
     var effortRating: Int?
 
     @Relationship(deleteRule: .cascade, inverse: \ExerciseRecord.session)
-    var exerciseRecords: [ExerciseRecord]
+    var exerciseRecords: [ExerciseRecord]?
+
+    var exerciseRecordsArray: [ExerciseRecord] { exerciseRecords ?? [] }
 
     init(dayType: DayType, date: Date = .now) {
         self.id = UUID()

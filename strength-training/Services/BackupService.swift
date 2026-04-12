@@ -47,7 +47,7 @@ struct BackupService {
                 dayType: s.dayType.rawValue,
                 notes: s.notes,
                 isCompleted: s.isCompleted,
-                exerciseRecords: s.exerciseRecords
+                exerciseRecords: s.exerciseRecordsArray
                     .sorted { $0.sortOrder < $1.sortOrder }
                     .map { r in
                         ExerciseRecordBackup(
@@ -57,7 +57,7 @@ struct BackupService {
                             sortOrder: r.sortOrder,
                             isCompleted: r.isCompleted,
                             notes: r.notes,
-                            sets: r.sets
+                            sets: r.setsArray
                                 .sorted { $0.setNumber < $1.setNumber }
                                 .map { s in
                                     SetRecordBackup(
@@ -147,7 +147,8 @@ struct BackupService {
                 if let exerciseID = rb.exerciseID {
                     record.exercise = exerciseMap[exerciseID]
                 }
-                session.exerciseRecords.append(record)
+                if session.exerciseRecords == nil { session.exerciseRecords = [] }
+                session.exerciseRecords?.append(record)
                 context.insert(record)
 
                 for setb in rb.sets {
@@ -160,7 +161,8 @@ struct BackupService {
                     set.id = setb.id
                     set.completedAt = setb.completedAt
                     set.exerciseRecord = record
-                    record.sets.append(set)
+                    if record.sets == nil { record.sets = [] }
+                    record.sets?.append(set)
                     context.insert(set)
                 }
             }

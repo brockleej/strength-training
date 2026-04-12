@@ -29,7 +29,7 @@ final class ExerciseDrillDownViewModel {
 
     private func filteredRecords() -> [ExerciseRecord] {
         let startDate = selectedTimeRange.startDate
-        return exercise.records
+        return exercise.recordsArray
             .filter { record in
                 guard record.session?.isCompleted == true else { return false }
                 if let start = startDate, let date = record.session?.date {
@@ -41,7 +41,7 @@ final class ExerciseDrillDownViewModel {
     }
 
     private func workingSets(_ record: ExerciseRecord) -> [SetRecord] {
-        record.sets.filter { !$0.isWarmup }
+        record.setsArray.filter { !$0.isWarmup }
     }
 
     // MARK: - Top Set Trend (2A + 2D mode overlay)
@@ -73,7 +73,7 @@ final class ExerciseDrillDownViewModel {
         var runningMax: Double = 0
 
         // Include ALL records for PR detection, not just filtered ones
-        let allRecords = exercise.records
+        let allRecords = exercise.recordsArray
             .filter { $0.session?.isCompleted == true }
             .sorted { ($0.session?.date ?? .distantPast) < ($1.session?.date ?? .distantPast) }
 
@@ -112,22 +112,22 @@ final class ExerciseDrillDownViewModel {
     // MARK: - Summary Stats
 
     var allTimeE1RM: Double? {
-        let allSets = exercise.records
+        let allSets = exercise.recordsArray
             .filter { $0.session?.isCompleted == true }
-            .flatMap { $0.sets.filter { !$0.isWarmup } }
+            .flatMap { $0.setsArray.filter { !$0.isWarmup } }
 
         let best = allSets.map { $0.weightLbs * (1.0 + Double($0.reps) / 30.0) }.max()
         return best
     }
 
     var totalSessions: Int {
-        exercise.records
+        exercise.recordsArray
             .filter { $0.session?.isCompleted == true }
             .count
     }
 
     var lastSessionDate: Date? {
-        exercise.records
+        exercise.recordsArray
             .compactMap { $0.session?.date }
             .max()
     }

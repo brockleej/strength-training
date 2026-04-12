@@ -10,12 +10,12 @@ import SwiftData
 
 @Model
 final class SetRecord {
-    var id: UUID
-    var setNumber: Int
-    var weightLbs: Double
-    var reps: Int
-    var isWarmup: Bool
-    var completedAt: Date
+    var id: UUID = UUID()
+    var setNumber: Int = 0
+    var weightLbs: Double = 0
+    var reps: Int = 0
+    var isWarmup: Bool = false
+    var completedAt: Date = Date.now
 
     var exerciseRecord: ExerciseRecord?
 

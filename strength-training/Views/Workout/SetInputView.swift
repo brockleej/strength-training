@@ -169,7 +169,7 @@ struct SetInputView: View {
 
     private var currentSessionSets: [SetRecord] {
         guard let record = viewModel.currentRecord(for: exercise) else { return [] }
-        return record.sets.sorted { $0.setNumber < $1.setNumber }
+        return record.setsArray.sorted { $0.setNumber < $1.setNumber }
     }
 
     private func prefillFromSuggestion() {

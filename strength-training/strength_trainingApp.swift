@@ -10,15 +10,30 @@ import SwiftData
 
 @main
 struct strength_trainingApp: App {
-    var body: some Scene {
-        WindowGroup {
-            ContentView()
-        }
-        .modelContainer(for: [
+    let container: ModelContainer
+
+    init() {
+        let schema = Schema([
             Exercise.self,
             WorkoutSession.self,
             ExerciseRecord.self,
             SetRecord.self
         ])
+        let config = ModelConfiguration(
+            schema: schema,
+            cloudKitDatabase: .automatic
+        )
+        do {
+            container = try ModelContainer(for: schema, configurations: [config])
+        } catch {
+            fatalError("Failed to create ModelContainer: \(error)")
+        }
+    }
+
+    var body: some Scene {
+        WindowGroup {
+            ContentView()
+        }
+        .modelContainer(container)
     }
 }

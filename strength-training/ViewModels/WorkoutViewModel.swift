@@ -78,7 +78,7 @@ final class WorkoutViewModel {
         }
         // Silently discard a suspended session that has no sets
         if let suspended = suspendedSession {
-            if !suspended.exerciseRecords.contains(where: { !$0.sets.isEmpty }) {
+            if !suspended.exerciseRecordsArray.contains(where: { !$0.setsArray.isEmpty }) {
                 modelContext.delete(suspended)
                 try? modelContext.save()
             }
@@ -117,12 +117,12 @@ final class WorkoutViewModel {
 
     /// Number of exercises in the suspended session that have at least one set.
     var suspendedInProgressExerciseCount: Int {
-        suspendedSession?.exerciseRecords.filter { !$0.sets.isEmpty }.count ?? 0
+        suspendedSession?.exerciseRecordsArray.filter { !$0.setsArray.isEmpty }.count ?? 0
     }
 
     /// True when the suspended session has at least one set logged.
     var suspendedHasSets: Bool {
-        suspendedSession?.exerciseRecords.contains { !$0.sets.isEmpty } ?? false
+        suspendedSession?.exerciseRecordsArray.contains { !$0.setsArray.isEmpty } ?? false
     }
 
     func finishSession() {
@@ -185,7 +185,7 @@ final class WorkoutViewModel {
     func currentRecord(for exercise: Exercise) -> ExerciseRecord? {
         guard let session = activeSession else { return nil }
         let modeRaw = selectedMode.rawValue
-        return session.exerciseRecords.first {
+        return session.exerciseRecordsArray.first {
             $0.exercise?.id == exercise.id &&
             $0.trainingMode.rawValue == modeRaw
         }
@@ -195,10 +195,11 @@ final class WorkoutViewModel {
 
     func addSet(exercise: Exercise, weight: Double, reps: Int) {
         let record = findOrCreateRecord(for: exercise)
-        let setNumber = record.sets.count + 1
+        let setNumber = record.setsArray.count + 1
         let set = SetRecord(setNumber: setNumber, weightLbs: weight, reps: reps)
         set.exerciseRecord = record
-        record.sets.append(set)
+        if record.sets == nil { record.sets = [] }
+        record.sets?.append(set)
         modelContext.insert(set)
         try? modelContext.save()
         HapticService.setLogged()
@@ -209,7 +210,7 @@ final class WorkoutViewModel {
         modelContext.delete(set)
         // Renumber remaining sets
         if let record = currentRecord(for: exercise) {
-            let sorted = record.sets.sorted { $0.setNumber < $1.setNumber }
+            let sorted = record.setsArray.sorted { $0.setNumber < $1.setNumber }
             for (index, s) in sorted.enumerated() {
                 s.setNumber = index + 1
             }
@@ -243,11 +244,12 @@ final class WorkoutViewModel {
 
         let record = ExerciseRecord(
             trainingMode: selectedMode,
-            sortOrder: session.exerciseRecords.count
+            sortOrder: session.exerciseRecordsArray.count
         )
         record.exercise = exercise
         record.session = session
-        session.exerciseRecords.append(record)
+        if session.exerciseRecords == nil { session.exerciseRecords = [] }
+        session.exerciseRecords?.append(record)
         modelContext.insert(record)
         try? modelContext.save()
         return record

@@ -9,10 +9,12 @@ import SwiftUI
 import SwiftData
 import UIKit
 internal import UniformTypeIdentifiers
+import CloudKit
 
 struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
     var healthKitService: HealthKitWorkoutService
+    var cloudKitSyncService: CloudKitSyncService
 
     @State private var isImporting = false
     @State private var pendingRestoreData: Data?
@@ -74,6 +76,8 @@ struct SettingsView: View {
                     Text("Moderate recommends a weight increase after 2 consistent sessions. Conservative requires 3.")
                 }
 
+                iCloudSyncSection
+
                 Section {
                     Button(action: exportBackup) {
                         Label("Export Backup", systemImage: "square.and.arrow.up")
@@ -86,9 +90,9 @@ struct SettingsView: View {
                             .foregroundStyle(.orange)
                     }
                 } header: {
-                    Text("Backup")
+                    Text("Data Management")
                 } footer: {
-                    Text("Restore replaces all existing data with the contents of the selected backup file.")
+                    Text("Export a complete backup of your data as a JSON file for safekeeping or to transfer to another device. Restoring replaces all current data.")
                 }
             }
             .navigationTitle("Settings")
@@ -125,6 +129,72 @@ struct SettingsView: View {
             } message: {
                 Text(successMessage)
             }
+        }
+    }
+
+    // MARK: - iCloud Sync Section
+
+    @ViewBuilder
+    private var iCloudSyncSection: some View {
+        Section {
+            switch cloudKitSyncService.accountStatus {
+            case .available:
+                if cloudKitSyncService.isSyncing {
+                    HStack {
+                        Label("Syncing", systemImage: "arrow.triangle.2.circlepath.icloud")
+                        Spacer()
+                        ProgressView()
+                    }
+                } else if let error = cloudKitSyncService.syncError {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Label("Sync Error", systemImage: "exclamationmark.icloud")
+                            .foregroundStyle(.orange)
+                        Text(error)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                } else {
+                    HStack {
+                        Label("iCloud Sync Active", systemImage: "checkmark.icloud.fill")
+                            .foregroundStyle(.green)
+                        Spacer()
+                        if let lastSync = cloudKitSyncService.lastSyncDate {
+                            Text(lastSync, style: .relative)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+
+            case .noAccount:
+                VStack(alignment: .leading, spacing: 4) {
+                    Label("iCloud Not Signed In", systemImage: "icloud.slash")
+                        .foregroundStyle(.orange)
+                    Text("Sign in to iCloud in Settings to sync your workout data across devices.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+            case .restricted:
+                Label("iCloud Restricted", systemImage: "exclamationmark.icloud")
+                    .foregroundStyle(.secondary)
+
+            case .temporarilyUnavailable:
+                Label("iCloud Temporarily Unavailable", systemImage: "exclamationmark.icloud")
+                    .foregroundStyle(.secondary)
+
+            case .couldNotDetermine:
+                Label("Checking iCloud Status...", systemImage: "icloud")
+                    .foregroundStyle(.secondary)
+
+            @unknown default:
+                Label("iCloud Unavailable", systemImage: "icloud.slash")
+                    .foregroundStyle(.secondary)
+            }
+        } header: {
+            Text("iCloud Sync")
+        } footer: {
+            Text("Your workout data automatically syncs to iCloud and is available across all your devices. Data persists even if you uninstall the app.")
         }
     }
 
