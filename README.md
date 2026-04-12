@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="strength-training/Assets.xcassets/AppIcon.appiconset/Icon-iOS-Default.png" alt="UpLift Icon" width="120" />
+  <img src="docs/screenshots/app_icon.png" alt="UpLift Icon" width="120" />
   <h1>UpLift</h1>
   <em>Your gym, your data, your progress.<br>A native iOS workout tracker built with SwiftUI.</em>
   <br><br>
