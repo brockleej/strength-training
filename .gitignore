@@ -3,6 +3,15 @@ DerivedData/
 *.xcuserstate
 xcuserdata/
 *.xcscmblueprint
+*.ipa
+*.dSYM.zip
+*.dSYM
+*.moved-aside
+*.xccheckout
+*.hmap
+*.gcno
+timeline.xctimeline
+playground.xcworkspace
 
 # macOS
 .DS_Store
@@ -18,3 +27,29 @@ Pods/
 
 # Swift Package Manager
 .swiftpm/xcode/package.xcworkspace/contents.xcworkspacedata
+
+# Claude Code (local-only)
+.claude/settings.local.json
+.claude/worktrees/
+.claude/plans/
+.claude/scheduled-tasks/
+
+# Docs (local-only planning and superpowers files)
+docs/plans/
+docs/superpowers/
+
+# Feature ideas (generated locally by scheduled task)
+feature-ideas*.md
+
+# Signing (safety net)
+*.p12
+*.mobileprovision
+*.provisionprofile
+*.cer
+ExportOptions.plist
+
+# Secrets (safety net)
+*.env
+Secrets.swift
+*.xcconfig
+!*.xcconfig.example
