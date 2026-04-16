@@ -11,10 +11,26 @@ import SwiftData
 @Observable
 final class WorkoutViewModel {
     var modelContext: ModelContext
-    var activeSession: WorkoutSession?
+    // Backed by private storage to guard against SwiftData zombie objects
+    // (e.g. after a backup restore deletes all sessions while refs are held).
+    private var _activeSession: WorkoutSession?
+    var activeSession: WorkoutSession? {
+        get {
+            if let s = _activeSession, s.isDeleted { _activeSession = nil }
+            return _activeSession
+        }
+        set { _activeSession = newValue }
+    }
     /// A session the user navigated away from without finishing.
     /// Kept alive so it can be resumed or explicitly abandoned.
-    var suspendedSession: WorkoutSession?
+    private var _suspendedSession: WorkoutSession?
+    var suspendedSession: WorkoutSession? {
+        get {
+            if let s = _suspendedSession, s.isDeleted { _suspendedSession = nil }
+            return _suspendedSession
+        }
+        set { _suspendedSession = newValue }
+    }
     var selectedMode: TrainingMode = .highWeightLowReps
     var sessionPendingEffortRating: WorkoutSession?
     let healthKitService: HealthKitWorkoutService
