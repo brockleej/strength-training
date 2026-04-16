@@ -32,8 +32,22 @@ final class WorkoutViewModel {
         set { _suspendedSession = newValue }
     }
     var selectedMode: TrainingMode = .highWeightLowReps
+    var showDeleteHint = false
+    private var deleteHintShownThisSession = false
     var sessionPendingEffortRating: WorkoutSession?
     let healthKitService: HealthKitWorkoutService
+
+    // MARK: - Cancel / Abandon Workout State
+
+    var showCancelConfirmation = false
+    var showHealthKitKeepPrompt = false
+    private var pendingAction: PendingAction?
+    private var healthKitDecisionMade = false
+
+    private enum PendingAction {
+        case cancelOnly
+        case replaceWith(DayType)
+    }
 
     init(modelContext: ModelContext, healthKitService: HealthKitWorkoutService) {
         self.modelContext = modelContext
@@ -115,19 +129,52 @@ final class WorkoutViewModel {
     }
 
     /// Discard the suspended session and immediately start a new one.
+    /// HealthKit disposal follows the >= 5 min threshold logic.
     func abandonSuspendedAndStart(dayType: DayType) {
         if let suspended = suspendedSession {
             modelContext.delete(suspended)
             try? modelContext.save()
             suspendedSession = nil
         }
-        let session = WorkoutSession(dayType: dayType)
-        modelContext.insert(session)
-        try? modelContext.save()
-        activeSession = session
+        // Delay to let the first confirmation dialog dismiss before potentially showing the HealthKit one.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
+            self?.resolveHealthKitDisposal(.replaceWith(dayType))
+        }
+    }
+
+    /// Cancel and delete the suspended session entirely.
+    func cancelSuspendedSession() {
+        if let suspended = suspendedSession {
+            modelContext.delete(suspended)
+            try? modelContext.save()
+            suspendedSession = nil
+        }
+        resolveHealthKitDisposal(.cancelOnly)
+    }
+
+    /// Called when the HealthKit keep/delete dialog dismisses without an explicit button tap.
+    func handleHealthKitPromptDismissed() {
+        guard !healthKitDecisionMade else { return }
+        keepHealthKitWorkout()
+    }
+
+    func keepHealthKitWorkout() {
+        healthKitDecisionMade = true
+        let action = pendingAction
+        pendingAction = nil
         Task {
             await healthKitService.endWorkout()
-            try? await healthKitService.startWorkout()
+            await MainActor.run { [weak self] in self?.completePendingAction(action) }
+        }
+    }
+
+    func deleteHealthKitWorkout() {
+        healthKitDecisionMade = true
+        let action = pendingAction
+        pendingAction = nil
+        Task {
+            await healthKitService.discardWorkout()
+            await MainActor.run { [weak self] in self?.completePendingAction(action) }
         }
     }
 
@@ -139,6 +186,36 @@ final class WorkoutViewModel {
     /// True when the suspended session has at least one set logged.
     var suspendedHasSets: Bool {
         suspendedSession?.exerciseRecordsArray.contains { !$0.setsArray.isEmpty } ?? false
+    }
+
+    // MARK: - HealthKit Disposal
+
+    private func resolveHealthKitDisposal(_ action: PendingAction) {
+        let elapsed = healthKitService.elapsedSeconds
+        if elapsed >= 300 {
+            pendingAction = action
+            healthKitDecisionMade = false
+            showHealthKitKeepPrompt = true
+        } else {
+            Task {
+                await healthKitService.discardWorkout()
+                await MainActor.run { [weak self] in self?.completePendingAction(action) }
+            }
+        }
+    }
+
+    private func completePendingAction(_ action: PendingAction?) {
+        guard let action else { return }
+        switch action {
+        case .cancelOnly:
+            break
+        case .replaceWith(let dayType):
+            let session = WorkoutSession(dayType: dayType)
+            modelContext.insert(session)
+            try? modelContext.save()
+            activeSession = session
+            startHealthKitWorkout()
+        }
     }
 
     func finishSession() {
@@ -207,6 +284,19 @@ final class WorkoutViewModel {
         }
     }
 
+    /// Show the delete-set hint once per session, auto-hiding after 5 seconds.
+    func showDeleteHintIfNeeded() {
+        guard !deleteHintShownThisSession else { return }
+        deleteHintShownThisSession = true
+        Task { @MainActor in
+            // Delay so the hint reads as a distinct event from the set appearing
+            try? await Task.sleep(for: .milliseconds(600))
+            withAnimation(.easeInOut(duration: 0.4)) { showDeleteHint = true }
+            try? await Task.sleep(for: .seconds(5))
+            withAnimation(.easeInOut(duration: 0.6)) { showDeleteHint = false }
+        }
+    }
+
     // MARK: - Set Logging
 
     func addSet(exercise: Exercise, weight: Double, reps: Int) {
@@ -219,6 +309,7 @@ final class WorkoutViewModel {
         modelContext.insert(set)
         try? modelContext.save()
         HapticService.setLogged()
+        showDeleteHintIfNeeded()
     }
 
     func deleteSet(_ set: SetRecord, from exercise: Exercise) {
