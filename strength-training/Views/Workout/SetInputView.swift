@@ -82,14 +82,35 @@ struct SetInputView: View {
                             Text("\(formattedWeight(set.weightLbs)) lbs x \(set.reps)")
                                 .font(.subheadline.monospacedDigit())
                         }
-                        .swipeActions(edge: .trailing) {
+                        .contextMenu {
                             Button(role: .destructive) {
-                                viewModel.deleteSet(set, from: exercise)
+                                withAnimation(.easeInOut(duration: 0.25)) {
+                                    viewModel.deleteSet(set, from: exercise)
+                                }
                             } label: {
-                                Label("Delete", systemImage: "trash")
+                                Label("Delete Set", systemImage: "trash")
                             }
+                        } preview: {
+                            HStack {
+                                Text("Set \(set.setNumber)")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                                Spacer()
+                                Text("\(formattedWeight(set.weightLbs)) lbs x \(set.reps)")
+                                    .font(.subheadline.monospacedDigit())
+                            }
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 12)
+                            .frame(width: 280)
                         }
                     }
+                }
+                if viewModel.showDeleteHint {
+                    Text("Long press a set to delete it")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                        .transition(.opacity)
                 }
                 Divider()
             }
