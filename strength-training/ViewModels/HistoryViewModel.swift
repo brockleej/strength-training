@@ -17,30 +17,19 @@ final class HistoryViewModel {
         self.modelContext = modelContext
     }
 
-    func fetchSessions() -> [WorkoutSession] {
-        // Fetch all completed sessions, then filter by dayType in Swift
-        // to avoid #Predicate limitations with Codable enums
-        let descriptor = FetchDescriptor<WorkoutSession>(
-            predicate: #Predicate<WorkoutSession> { $0.isCompleted == true },
-            sortBy: [SortDescriptor(\WorkoutSession.date, order: .reverse)]
-        )
-
-        let all = (try? modelContext.fetch(descriptor)) ?? []
-
+    /// Group sessions by month/year for section headers, applying the current filter.
+    func groupedSessions(from sessions: [WorkoutSession]) -> [(String, [WorkoutSession])] {
+        let filtered: [WorkoutSession]
         if let filter = filterDayType {
-            return all.filter { $0.dayType == filter }
+            filtered = sessions.filter { $0.dayType == filter }
+        } else {
+            filtered = sessions
         }
-        return all
-    }
 
-    /// Group sessions by month/year for section headers.
-    func groupedSessions() -> [(String, [WorkoutSession])] {
-        let sessions = fetchSessions()
-        let grouped = Dictionary(grouping: sessions) { session in
+        let grouped = Dictionary(grouping: filtered) { session in
             session.date.formatted(.dateTime.month(.wide).year())
         }
 
-        // Sort groups by the most recent session date in each group
         return grouped.sorted { a, b in
             let dateA = a.value.first?.date ?? .distantPast
             let dateB = b.value.first?.date ?? .distantPast

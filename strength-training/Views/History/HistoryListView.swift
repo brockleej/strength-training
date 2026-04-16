@@ -6,35 +6,60 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct HistoryListView: View {
     @Environment(\.modelContext) private var modelContext
+    @Query(filter: #Predicate<WorkoutSession> { $0.isCompleted == true },
+           sort: \WorkoutSession.date, order: .reverse)
+    private var sessions: [WorkoutSession]
+
     @State private var viewModel: HistoryViewModel?
+    @State private var navigationPath = NavigationPath()
+    @Binding var reviewSession: WorkoutSession?
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationPath) {
             Group {
                 if let vm = viewModel {
-                    HistoryContent(viewModel: vm)
+                    HistoryContent(viewModel: vm, sessions: sessions)
                 } else {
                     ProgressView()
                 }
             }
             .navigationTitle("History")
-            .onAppear {
-                if viewModel == nil {
-                    viewModel = HistoryViewModel(modelContext: modelContext)
-                }
+            .navigationDestination(for: WorkoutSession.self) { session in
+                SessionDetailView(session: session)
             }
+        }
+        .onAppear {
+            if viewModel == nil {
+                viewModel = HistoryViewModel(modelContext: modelContext)
+            }
+            navigateToReviewSession()
+        }
+        .onChange(of: reviewSession) { _, _ in
+            navigateToReviewSession()
+        }
+    }
+
+    /// Defer the navigation push so the NavigationStack is laid out and
+    /// active after a tab switch before we modify its path.
+    private func navigateToReviewSession() {
+        guard let session = reviewSession else { return }
+        reviewSession = nil
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+            navigationPath.append(session)
         }
     }
 }
 
 private struct HistoryContent: View {
     @Bindable var viewModel: HistoryViewModel
+    let sessions: [WorkoutSession]
 
     var body: some View {
-        let grouped = viewModel.groupedSessions()
+        let grouped = viewModel.groupedSessions(from: sessions)
 
         List {
             // Filter chips
@@ -69,9 +94,7 @@ private struct HistoryContent: View {
                 ForEach(grouped, id: \.0) { monthLabel, sessions in
                     Section(monthLabel) {
                         ForEach(sessions) { session in
-                            NavigationLink {
-                                SessionDetailView(session: session)
-                            } label: {
+                            NavigationLink(value: session) {
                                 SessionRow(session: session)
                             }
                         }

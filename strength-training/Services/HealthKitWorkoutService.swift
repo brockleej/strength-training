@@ -170,6 +170,24 @@ final class HealthKitWorkoutService {
         }
     }
 
+    /// End the current HealthKit workout session WITHOUT saving data to Apple Health.
+    func discardWorkout() async {
+        guard let session = workoutSession, let builder = workoutBuilder else {
+            clearState()
+            return
+        }
+
+        session.end()
+
+        do {
+            try await builder.endCollection(at: Date())
+        } catch {
+            print("HealthKit endCollection error: \(error)")
+        }
+        builder.discardWorkout()
+        clearState()
+    }
+
     func cleanUpOrphanedState() {
         let wasActive = UserDefaults.standard.bool(forKey: kIsHKSessionActive)
         if wasActive && workoutSession == nil {

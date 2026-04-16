@@ -13,25 +13,35 @@ struct ContentView: View {
     @State private var workoutViewModel: WorkoutViewModel?
     @State private var healthKitService = HealthKitWorkoutService()
     @State private var cloudKitSyncService = CloudKitSyncService()
+    @State private var selectedTab = "workout"
+    @State private var sessionToReview: WorkoutSession?
 
     var body: some View {
         Group {
             if let vm = workoutViewModel {
-                TabView {
-                    Tab("Workout", systemImage: "dumbbell") {
+                TabView(selection: $selectedTab) {
+                    Tab("Workout", systemImage: "dumbbell", value: "workout") {
                         WorkoutTabView(viewModel: vm)
                     }
-                    Tab("History", systemImage: "clock") {
-                        HistoryListView()
+                    Tab("History", systemImage: "clock", value: "history") {
+                        HistoryListView(reviewSession: $sessionToReview)
                     }
-                    Tab("Progress", systemImage: "chart.line.uptrend.xyaxis") {
+                    Tab("Progress", systemImage: "chart.line.uptrend.xyaxis", value: "progress") {
                         ProgressDashboardView()
                     }
-                    Tab("Exercises", systemImage: "list.bullet") {
+                    Tab("Exercises", systemImage: "list.bullet", value: "exercises") {
                         ExerciseLibraryView()
                     }
-                    Tab("Settings", systemImage: "gear") {
+                    Tab("Settings", systemImage: "gear", value: "settings") {
                         SettingsView(healthKitService: healthKitService, cloudKitSyncService: cloudKitSyncService)
+                    }
+                }
+                .onChange(of: vm.completedSessionToReview) { _, session in
+                    if let session {
+                        sessionToReview = session
+                        selectedTab = "history"
+                        vm.activeSession = nil
+                        vm.completedSessionToReview = nil
                     }
                 }
             } else {

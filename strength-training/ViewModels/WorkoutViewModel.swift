@@ -35,6 +35,8 @@ final class WorkoutViewModel {
     var showDeleteHint = false
     private var deleteHintShownThisSession = false
     var sessionPendingEffortRating: WorkoutSession?
+    /// Set after a workout is finished (and effort rating handled) to trigger navigation to its detail.
+    var completedSessionToReview: WorkoutSession?
     let healthKitService: HealthKitWorkoutService
 
     // MARK: - Cancel / Abandon Workout State
@@ -219,10 +221,13 @@ final class WorkoutViewModel {
     }
 
     func finishSession() {
-        guard let session = activeSession else { return }
+        guard let session = activeSession, !session.isCompleted else { return }
         session.isCompleted = true
         let capturedSession = session
-        activeSession = nil
+        // Don't nil activeSession here — keep the ActiveWorkoutView visible as a
+        // stable backdrop while the effort-rating sheet shows. ContentView clears
+        // activeSession after switching to the History tab so no intermediate
+        // screens flash.
         try? modelContext.save()
         HapticService.workoutCompleted()
         Task {
@@ -231,6 +236,8 @@ final class WorkoutViewModel {
             try? modelContext.save()
             if uuid != nil {
                 sessionPendingEffortRating = capturedSession
+            } else {
+                completedSessionToReview = capturedSession
             }
         }
     }
@@ -240,6 +247,7 @@ final class WorkoutViewModel {
         session.effortRating = rating
         try? modelContext.save()
         let uuid = session.healthKitWorkoutUUID
+        completedSessionToReview = session
         sessionPendingEffortRating = nil
         if let uuid {
             Task { await healthKitService.saveEffortRating(rating, workoutUUID: uuid) }
@@ -247,6 +255,7 @@ final class WorkoutViewModel {
     }
 
     func skipEffortRating() {
+        completedSessionToReview = sessionPendingEffortRating
         sessionPendingEffortRating = nil
     }
 

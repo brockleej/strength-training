@@ -48,8 +48,50 @@ struct WorkoutDayPickerView: View {
                 Spacer()
                 Spacer()
             }
-            .navigationTitle("Strength Training")
+            .navigationTitle("UpLift")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    if viewModel.suspendedSession != nil {
+                        Button("Cancel Workout", systemImage: "xmark") {
+                            viewModel.showCancelConfirmation = true
+                        }
+                        .tint(.red)
+                    }
+                }
+            }
+            .confirmationDialog(
+                "Cancel Workout?",
+                isPresented: $viewModel.showCancelConfirmation,
+                titleVisibility: .visible
+            ) {
+                Button("Cancel Workout", role: .destructive) {
+                    viewModel.cancelSuspendedSession()
+                }
+                Button("Keep Training", role: .cancel) {}
+            } message: {
+                let dayName = viewModel.suspendedSession?.dayType.rawValue ?? "current"
+                Text("Your \(dayName) Day workout will be discarded. This can't be undone.")
+            }
+            .confirmationDialog(
+                "Apple Health Workout",
+                isPresented: $viewModel.showHealthKitKeepPrompt,
+                titleVisibility: .visible
+            ) {
+                Button("Delete from Apple Health", role: .destructive) {
+                    viewModel.deleteHealthKitWorkout()
+                }
+                Button("Keep in Apple Health") {
+                    viewModel.keepHealthKitWorkout()
+                }
+            } message: {
+                Text("This workout has been running for over 5 minutes. Would you also like to delete it from Apple Health?")
+            }
+            .onChange(of: viewModel.showHealthKitKeepPrompt) { _, newValue in
+                if !newValue {
+                    viewModel.handleHealthKitPromptDismissed()
+                }
+            }
             .confirmationDialog(
                 "Replace Current Workout?",
                 isPresented: Binding(
