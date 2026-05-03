@@ -51,7 +51,7 @@ xcodebuild test -scheme ProgressionLab -destination 'platform=macOS'
 
 ### Deployment
 
-**Xcode Cloud auto-deploys every push to `main` to TestFlight.** Treat `main` as a release branch — anything merged ships to internal testers automatically. PRs are required; direct pushes to `main` are restricted.
+**Xcode Cloud auto-deploys every push to `main` to TestFlight.** Treat `main` as a release branch — anything pushed ships to internal testers automatically. Direct pushes to `main` are allowed; PRs are optional.
 
 ### Local-dev caveats
 
@@ -126,4 +126,4 @@ fix: resolves Y bug
 refactor: improves Z
 ```
 
-PRs against `main` are required; direct pushes are restricted. Keep PRs focused — one feature or fix per PR.
+Direct pushes to `main` are allowed (every push auto-deploys to TestFlight, so confirm work is ready before pushing). Use feature branches + PRs when you want review before shipping. Keep work focused — one feature or fix per commit/PR.
