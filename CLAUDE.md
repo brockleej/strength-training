@@ -25,7 +25,29 @@ xcodebuild -scheme strength-training -destination 'platform=iOS Simulator,name=i
 open strength-training.xcodeproj
 ```
 
-No test target or lint commands are configured.
+### Tests
+
+```bash
+# Run all iOS tests
+xcodebuild test -scheme strength-training -destination 'platform=iOS Simulator,name=iPhone 17'
+
+# Run a specific test class
+xcodebuild test -scheme strength-training -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:strength-training-tests/<TestClassName>
+```
+
+No lint commands are configured.
+
+### ProgressionLab (macOS dev tool)
+
+Local-only macOS app for visualizing and tuning the progression algorithm. Never ships to TestFlight (separate scheme, not part of the Xcode Cloud workflow). See [docs/superpowers/specs/2026-05-03-progression-lab-design.md](docs/superpowers/specs/2026-05-03-progression-lab-design.md).
+
+```bash
+# Build the macOS dev tool
+xcodebuild -scheme ProgressionLab -destination 'platform=macOS' build
+
+# Run its tests
+xcodebuild test -scheme ProgressionLab -destination 'platform=macOS'
+```
 
 ### Deployment
 

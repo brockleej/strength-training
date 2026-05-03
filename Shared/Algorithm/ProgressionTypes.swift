@@ -21,6 +21,15 @@ enum ProgressionAggressiveness: String, CaseIterable, Identifiable {
         case .conservative: 3
         }
     }
+
+    /// The full parameter set this aggressiveness level represents.
+    /// Used by the iOS-facing wrapper to call into the pure algorithm.
+    var parameters: ProgressionParameters {
+        switch self {
+        case .moderate: .productionModerate
+        case .conservative: .productionConservative
+        }
+    }
 }
 
 // Rolling average of the best set per session across the last N sessions.

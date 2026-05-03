@@ -6,8 +6,113 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		023DF2513891F3465C785A7B /* LoaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E75D110844E6FE14A1B67FD5 /* LoaderView.swift */; };
+		058F457680F9F458E2562E70 /* ProgressionParameters.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7455DAD78FC12D62CD5226C5 /* ProgressionParameters.swift */; };
+		06EAF8373D2C66680087860B /* BackupModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C9B1F409EF0053F85ACE816 /* BackupModels.swift */; };
+		172DA18BD502793ABA69F1B4 /* ProgressionTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC5ED87967CB436716AA1EF1 /* ProgressionTypes.swift */; };
+		22F976653D7F36A7EB48172F /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 895B32CADD7EDFED27265A07 /* AppState.swift */; };
+		2334F6309DF8766B63363CB5 /* ProgressionTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC5ED87967CB436716AA1EF1 /* ProgressionTypes.swift */; };
+		2D03708673FAE0D1B6845C04 /* ReplayEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F61759A35E022B875EEF79F5 /* ReplayEngineTests.swift */; };
+		30C661C6E4E303A2AD8F7D62 /* AlgorithmInput.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EB559FDE4D121DA2D8342FB /* AlgorithmInput.swift */; };
+		30F2A7026B68E6EF1D57D58D /* ProgressionParameters.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7455DAD78FC12D62CD5226C5 /* ProgressionParameters.swift */; };
+		3182A5D7AC487DB54E11B33B /* AlgorithmFixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = D922C1B9725A7CCFCA27550B /* AlgorithmFixtures.swift */; };
+		31F77B75A3F399B10127FD2C /* ReplayChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = 590147BF5DC7692C61D005AA /* ReplayChart.swift */; };
+		3342601B9D695C951361CD50 /* ReplayEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CC4D1E291A947627897B17B /* ReplayEngine.swift */; };
+		37C45FF0E0D33AE49B93AB69 /* ProgressionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87211BB2F7AB169D53339453 /* ProgressionService.swift */; };
+		414E0889CE9CB7D5F7A19D95 /* RecentFilesStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30709EE3E70A2B4579A1E994 /* RecentFilesStore.swift */; };
+		4CA65A9EBF4643E176DB4F83 /* BackupLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A503B4DC340838FA30BCFC0 /* BackupLoader.swift */; };
+		51D08E2A584B751A23D12A5B /* SimulationStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F99BAA364B2D2DBD347ACC68 /* SimulationStoreTests.swift */; };
+		61FC8B4E1A8C1EFE7FC32702 /* ExerciseModeReplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 978F4F3D2BE8A98E61F6B83C /* ExerciseModeReplay.swift */; };
+		63C0E77E57834034C11BC61C /* ProgressionServiceParityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BB09AE52C260DDF439056CC /* ProgressionServiceParityTests.swift */; };
+		6688F4F5FCAD452A77731D79 /* AlgorithmInput.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EB559FDE4D121DA2D8342FB /* AlgorithmInput.swift */; };
+		66F97F53AE5EEA46833897FF /* BackupModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C9B1F409EF0053F85ACE816 /* BackupModels.swift */; };
+		68281B3C9FF71E8872734EEF /* minimal-backup.json in Resources */ = {isa = PBXBuildFile; fileRef = C29E8DFE676157D4AD6A2D25 /* minimal-backup.json */; };
+		6D330B77B96C23565510CD3C /* SimulationStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3E6DCDC4270F67C50095A9A /* SimulationStore.swift */; };
+		7168DE0B871D42DCB066106F /* LoadedDataset.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58F1145FDD6431DE49AAABB2 /* LoadedDataset.swift */; };
+		7BD31A210861E10FCC130CC8 /* unsupported-version.json in Resources */ = {isa = PBXBuildFile; fileRef = 6F62C644CB9B4CFF6875CF58 /* unsupported-version.json */; };
+		85CBF49126D27BC7C7C68605 /* ConfigArtifact.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC046B453D9070D004742173 /* ConfigArtifact.swift */; };
+		A3A7A993E817CEC629FC7D7A /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8227BD6A0FFEBA20B7444236 /* Foundation.framework */; };
+		A86332EC74EEB61D502B9A66 /* ProgressionLabApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2375B8872C6A1C21691DF866 /* ProgressionLabApp.swift */; };
+		AB75C1610447582730CCCB17 /* TrainingMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = E15010E72FA7E5AB009EF2FB /* TrainingMode.swift */; };
+		B30B972F00BEB5024C59291A /* ExerciseDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA1089E656CA94B6914585FB /* ExerciseDetailView.swift */; };
+		B5CE50F29CC09192CC7D822B /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AA363F8D7BCEA2FCDE96CCEE /* Cocoa.framework */; };
+		BC3117F994C6BEF049F4F098 /* ProgressionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87211BB2F7AB169D53339453 /* ProgressionService.swift */; };
+		BD236B396E52380C0E086E31 /* ConfigArtifactReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42F6226112928C7FE996EAB2 /* ConfigArtifactReader.swift */; };
+		C1702C911A282B1D864CF718 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AA363F8D7BCEA2FCDE96CCEE /* Cocoa.framework */; };
+		C313AB84BBB7C618881DB9C7 /* BackupLoaderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FE94BB865292C869CD64F4F /* BackupLoaderTests.swift */; };
+		C6BC791F18CDB317248A0634 /* ProgressionServicePureFunctionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A284E56C056FDF4F4E7CE02C /* ProgressionServicePureFunctionTests.swift */; };
+		DD4064CC113170BDC4CA230E /* ReplayTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5781434F825A1387BC87CAD /* ReplayTable.swift */; };
+		E15010E82FA7E5AB009EF2FB /* TrainingMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = E15010E72FA7E5AB009EF2FB /* TrainingMode.swift */; };
+		E71CE961AAE0B26627F132E0 /* backup-with-orphans.json in Resources */ = {isa = PBXBuildFile; fileRef = 8EE03F51930E877B27379EF2 /* backup-with-orphans.json */; };
+		E805369068D8F5B36110D3FB /* ConfigArtifactWriter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 450F037775C1159761CB6A2E /* ConfigArtifactWriter.swift */; };
+		EF566BBF0799C21A469B514C /* Sparkline.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7F178DC244F07C15EE63542 /* Sparkline.swift */; };
+		EFC69339D307E6EF3EE4B039 /* ConfigArtifactRoundTripTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDFCFE81F28301E70314A05D /* ConfigArtifactRoundTripTests.swift */; };
+		F1575293D208883B22818EF3 /* ParameterPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 165BF58640500A519020F992 /* ParameterPanel.swift */; };
+		F782886371C54BEC655F1D47 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32C7938965779BE5D2C32989 /* DashboardView.swift */; };
+		FD8D7B4D50F612D4C3DC32C0 /* ExerciseDashboardRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = E90D8161F780FCDA4CBDA8C4 /* ExerciseDashboardRow.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		61A6969CA7DB50FC8E10EA44 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E18CFB572F4A312400991D60 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 4F24BB600FA0AED51F0C2A5B;
+			remoteInfo = ProgressionLab;
+		};
+		877E81E4CAAC1AB6B22AEB4C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E18CFB572F4A312400991D60 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = E18CFB5E2F4A312400991D60;
+			remoteInfo = "strength-training";
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
+		0A503B4DC340838FA30BCFC0 /* BackupLoader.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BackupLoader.swift; sourceTree = "<group>"; };
+		0FE94BB865292C869CD64F4F /* BackupLoaderTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BackupLoaderTests.swift; sourceTree = "<group>"; };
+		165BF58640500A519020F992 /* ParameterPanel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ParameterPanel.swift; sourceTree = "<group>"; };
+		2375B8872C6A1C21691DF866 /* ProgressionLabApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ProgressionLabApp.swift; sourceTree = "<group>"; };
+		30709EE3E70A2B4579A1E994 /* RecentFilesStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecentFilesStore.swift; sourceTree = "<group>"; };
+		32C7938965779BE5D2C32989 /* DashboardView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
+		42F6226112928C7FE996EAB2 /* ConfigArtifactReader.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ConfigArtifactReader.swift; sourceTree = "<group>"; };
+		450F037775C1159761CB6A2E /* ConfigArtifactWriter.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ConfigArtifactWriter.swift; sourceTree = "<group>"; };
+		58F1145FDD6431DE49AAABB2 /* LoadedDataset.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LoadedDataset.swift; sourceTree = "<group>"; };
+		590147BF5DC7692C61D005AA /* ReplayChart.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ReplayChart.swift; sourceTree = "<group>"; };
+		6F62C644CB9B4CFF6875CF58 /* unsupported-version.json */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.json; path = "unsupported-version.json"; sourceTree = "<group>"; };
+		6FACF751523D26D1277331C7 /* ProgressionLab.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = ProgressionLab.entitlements; sourceTree = "<group>"; };
+		7455DAD78FC12D62CD5226C5 /* ProgressionParameters.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ProgressionParameters.swift; sourceTree = "<group>"; };
+		8227BD6A0FFEBA20B7444236 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
+		87211BB2F7AB169D53339453 /* ProgressionService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ProgressionService.swift; sourceTree = "<group>"; };
+		895B32CADD7EDFED27265A07 /* AppState.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
+		8CC4D1E291A947627897B17B /* ReplayEngine.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ReplayEngine.swift; sourceTree = "<group>"; };
+		8EB559FDE4D121DA2D8342FB /* AlgorithmInput.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AlgorithmInput.swift; sourceTree = "<group>"; };
+		8EE03F51930E877B27379EF2 /* backup-with-orphans.json */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.json; path = "backup-with-orphans.json"; sourceTree = "<group>"; };
+		8F65F06B7DAEC56D1511479D /* progression-lab-tests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "progression-lab-tests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		978F4F3D2BE8A98E61F6B83C /* ExerciseModeReplay.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ExerciseModeReplay.swift; sourceTree = "<group>"; };
+		9BB09AE52C260DDF439056CC /* ProgressionServiceParityTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ProgressionServiceParityTests.swift; sourceTree = "<group>"; };
+		9C9B1F409EF0053F85ACE816 /* BackupModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BackupModels.swift; sourceTree = "<group>"; };
+		A284E56C056FDF4F4E7CE02C /* ProgressionServicePureFunctionTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ProgressionServicePureFunctionTests.swift; sourceTree = "<group>"; };
+		AA363F8D7BCEA2FCDE96CCEE /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.0.sdk/System/Library/Frameworks/Cocoa.framework; sourceTree = DEVELOPER_DIR; };
+		B3E6DCDC4270F67C50095A9A /* SimulationStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SimulationStore.swift; sourceTree = "<group>"; };
+		C29E8DFE676157D4AD6A2D25 /* minimal-backup.json */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.json; path = "minimal-backup.json"; sourceTree = "<group>"; };
+		D7F178DC244F07C15EE63542 /* Sparkline.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Sparkline.swift; sourceTree = "<group>"; };
+		D831F8CB0728963D5B3EAFD0 /* ProgressionLab.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ProgressionLab.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		D922C1B9725A7CCFCA27550B /* AlgorithmFixtures.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AlgorithmFixtures.swift; sourceTree = "<group>"; };
+		DA1089E656CA94B6914585FB /* ExerciseDetailView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ExerciseDetailView.swift; sourceTree = "<group>"; };
+		DDFCFE81F28301E70314A05D /* ConfigArtifactRoundTripTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ConfigArtifactRoundTripTests.swift; sourceTree = "<group>"; };
+		E15010E72FA7E5AB009EF2FB /* TrainingMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingMode.swift; sourceTree = "<group>"; };
 		E18CFB5F2F4A312400991D60 /* strength-training.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "strength-training.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		E75D110844E6FE14A1B67FD5 /* LoaderView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LoaderView.swift; sourceTree = "<group>"; };
+		E90D8161F780FCDA4CBDA8C4 /* ExerciseDashboardRow.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ExerciseDashboardRow.swift; sourceTree = "<group>"; };
+		F5781434F825A1387BC87CAD /* ReplayTable.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ReplayTable.swift; sourceTree = "<group>"; };
+		F61759A35E022B875EEF79F5 /* ReplayEngineTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ReplayEngineTests.swift; sourceTree = "<group>"; };
+		F99BAA364B2D2DBD347ACC68 /* SimulationStoreTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SimulationStoreTests.swift; sourceTree = "<group>"; };
+		FC046B453D9070D004742173 /* ConfigArtifact.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ConfigArtifact.swift; sourceTree = "<group>"; };
+		FC5ED87967CB436716AA1EF1 /* ProgressionTypes.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ProgressionTypes.swift; sourceTree = "<group>"; };
+		FCD72FE4DBC5F2CB9BEB771B /* strength-training-tests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; name = "strength-training-tests.xctest"; path = strength_training_tests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -32,6 +137,22 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		235420D99E56A70524AF7296 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B5CE50F29CC09192CC7D822B /* Cocoa.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		335A15485300A47A843A6388 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C1702C911A282B1D864CF718 /* Cocoa.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		E18CFB5C2F4A312400991D60 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -39,14 +160,178 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		F422C1724F6C789090E94266 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A3A7A993E817CEC629FC7D7A /* Foundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		08081F3FD2336389AEDC8540 /* progression-lab */ = {
+			isa = PBXGroup;
+			children = (
+				4721ACE2395372A1C9CE603C /* Loader */,
+				2375B8872C6A1C21691DF866 /* ProgressionLabApp.swift */,
+				895B32CADD7EDFED27265A07 /* AppState.swift */,
+				6FACF751523D26D1277331C7 /* ProgressionLab.entitlements */,
+				446B573164D6539EE248F913 /* Simulation */,
+				D071FF8A61F769F7C6408A5C /* Dashboard */,
+				5586F26CFBC70DED3B05BF91 /* ExerciseDetail */,
+				AD3755924777E64E6EE0BC32 /* Artifact */,
+			);
+			path = "progression-lab";
+			sourceTree = "<group>";
+		};
+		0F1B900D7BD7B14B41F6AEC0 /* progression-lab-tests */ = {
+			isa = PBXGroup;
+			children = (
+				1CFBEFF6AEE76C1B57BB4FCB /* Fixtures */,
+				0FE94BB865292C869CD64F4F /* BackupLoaderTests.swift */,
+				F61759A35E022B875EEF79F5 /* ReplayEngineTests.swift */,
+				F99BAA364B2D2DBD347ACC68 /* SimulationStoreTests.swift */,
+				DDFCFE81F28301E70314A05D /* ConfigArtifactRoundTripTests.swift */,
+			);
+			name = "progression-lab-tests";
+			path = "progression-lab-tests";
+			sourceTree = "<group>";
+		};
+		1CFBEFF6AEE76C1B57BB4FCB /* Fixtures */ = {
+			isa = PBXGroup;
+			children = (
+				C29E8DFE676157D4AD6A2D25 /* minimal-backup.json */,
+				8EE03F51930E877B27379EF2 /* backup-with-orphans.json */,
+				6F62C644CB9B4CFF6875CF58 /* unsupported-version.json */,
+			);
+			name = Fixtures;
+			path = Fixtures;
+			sourceTree = "<group>";
+		};
+		446B573164D6539EE248F913 /* Simulation */ = {
+			isa = PBXGroup;
+			children = (
+				978F4F3D2BE8A98E61F6B83C /* ExerciseModeReplay.swift */,
+				8CC4D1E291A947627897B17B /* ReplayEngine.swift */,
+				B3E6DCDC4270F67C50095A9A /* SimulationStore.swift */,
+			);
+			name = Simulation;
+			path = Simulation;
+			sourceTree = "<group>";
+		};
+		4721ACE2395372A1C9CE603C /* Loader */ = {
+			isa = PBXGroup;
+			children = (
+				58F1145FDD6431DE49AAABB2 /* LoadedDataset.swift */,
+				0A503B4DC340838FA30BCFC0 /* BackupLoader.swift */,
+				30709EE3E70A2B4579A1E994 /* RecentFilesStore.swift */,
+				E75D110844E6FE14A1B67FD5 /* LoaderView.swift */,
+			);
+			path = Loader;
+			sourceTree = "<group>";
+		};
+		51C16B157883C4911DC9C13D /* strength-training-tests */ = {
+			isa = PBXGroup;
+			children = (
+				D922C1B9725A7CCFCA27550B /* AlgorithmFixtures.swift */,
+				A284E56C056FDF4F4E7CE02C /* ProgressionServicePureFunctionTests.swift */,
+				9BB09AE52C260DDF439056CC /* ProgressionServiceParityTests.swift */,
+			);
+			path = "strength-training-tests";
+			sourceTree = "<group>";
+		};
+		5586F26CFBC70DED3B05BF91 /* ExerciseDetail */ = {
+			isa = PBXGroup;
+			children = (
+				590147BF5DC7692C61D005AA /* ReplayChart.swift */,
+				F5781434F825A1387BC87CAD /* ReplayTable.swift */,
+				DA1089E656CA94B6914585FB /* ExerciseDetailView.swift */,
+			);
+			name = ExerciseDetail;
+			path = ExerciseDetail;
+			sourceTree = "<group>";
+		};
+		90A2C847D772897F31D1CDDA /* iOS */ = {
+			isa = PBXGroup;
+			children = (
+				8227BD6A0FFEBA20B7444236 /* Foundation.framework */,
+			);
+			name = iOS;
+			sourceTree = "<group>";
+		};
+		AD3755924777E64E6EE0BC32 /* Artifact */ = {
+			isa = PBXGroup;
+			children = (
+				FC046B453D9070D004742173 /* ConfigArtifact.swift */,
+				450F037775C1159761CB6A2E /* ConfigArtifactWriter.swift */,
+				42F6226112928C7FE996EAB2 /* ConfigArtifactReader.swift */,
+			);
+			name = Artifact;
+			path = Artifact;
+			sourceTree = "<group>";
+		};
+		B8A6E9183137B4E42B761145 /* OS X */ = {
+			isa = PBXGroup;
+			children = (
+				AA363F8D7BCEA2FCDE96CCEE /* Cocoa.framework */,
+			);
+			name = "OS X";
+			sourceTree = "<group>";
+		};
+		D071FF8A61F769F7C6408A5C /* Dashboard */ = {
+			isa = PBXGroup;
+			children = (
+				D7F178DC244F07C15EE63542 /* Sparkline.swift */,
+				165BF58640500A519020F992 /* ParameterPanel.swift */,
+				E90D8161F780FCDA4CBDA8C4 /* ExerciseDashboardRow.swift */,
+				32C7938965779BE5D2C32989 /* DashboardView.swift */,
+			);
+			name = Dashboard;
+			path = Dashboard;
+			sourceTree = "<group>";
+		};
+		DCE6C1DA63A5EBF17D0B879B /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				90A2C847D772897F31D1CDDA /* iOS */,
+				B8A6E9183137B4E42B761145 /* OS X */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		E15010E32FA7E526009EF2FB /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				E15010E42FA7E53C009EF2FB /* Algorithm */,
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		E15010E42FA7E53C009EF2FB /* Algorithm */ = {
+			isa = PBXGroup;
+			children = (
+				E15010E72FA7E5AB009EF2FB /* TrainingMode.swift */,
+				7455DAD78FC12D62CD5226C5 /* ProgressionParameters.swift */,
+				8EB559FDE4D121DA2D8342FB /* AlgorithmInput.swift */,
+				FC5ED87967CB436716AA1EF1 /* ProgressionTypes.swift */,
+				9C9B1F409EF0053F85ACE816 /* BackupModels.swift */,
+				87211BB2F7AB169D53339453 /* ProgressionService.swift */,
+			);
+			path = Algorithm;
+			sourceTree = "<group>";
+		};
 		E18CFB562F4A312400991D60 = {
 			isa = PBXGroup;
 			children = (
+				E15010E32FA7E526009EF2FB /* Shared */,
 				E18CFB612F4A312400991D60 /* strength-training */,
 				E18CFB602F4A312400991D60 /* Products */,
+				DCE6C1DA63A5EBF17D0B879B /* Frameworks */,
+				51C16B157883C4911DC9C13D /* strength-training-tests */,
+				08081F3FD2336389AEDC8540 /* progression-lab */,
+				0F1B900D7BD7B14B41F6AEC0 /* progression-lab-tests */,
 			);
 			sourceTree = "<group>";
 		};
@@ -54,6 +339,9 @@
 			isa = PBXGroup;
 			children = (
 				E18CFB5F2F4A312400991D60 /* strength-training.app */,
+				FCD72FE4DBC5F2CB9BEB771B /* strength-training-tests.xctest */,
+				D831F8CB0728963D5B3EAFD0 /* ProgressionLab.app */,
+				8F65F06B7DAEC56D1511479D /* progression-lab-tests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -61,6 +349,59 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		4F24BB600FA0AED51F0C2A5B /* ProgressionLab */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = EF7F1FE4310832054B156107 /* Build configuration list for PBXNativeTarget "ProgressionLab" */;
+			buildPhases = (
+				00CE090325A5AAB105899A68 /* Sources */,
+				335A15485300A47A843A6388 /* Frameworks */,
+				939DA61D7B673F734AE3BB27 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ProgressionLab;
+			productName = ProgressionLab;
+			productReference = D831F8CB0728963D5B3EAFD0 /* ProgressionLab.app */;
+			productType = "com.apple.product-type.application";
+		};
+		63987D9F4690E57A621DFB86 /* progression-lab-tests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 8E39AD46564680BF399F3538 /* Build configuration list for PBXNativeTarget "progression-lab-tests" */;
+			buildPhases = (
+				A84B52A784254BA43E394598 /* Sources */,
+				235420D99E56A70524AF7296 /* Frameworks */,
+				49A347B83602FDEAE17D4DA8 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				FFAA7AF3A6E21217E8CAFE0B /* PBXTargetDependency */,
+			);
+			name = "progression-lab-tests";
+			productName = "progression-lab-tests";
+			productReference = 8F65F06B7DAEC56D1511479D /* progression-lab-tests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		CF2665086E70C7E1BDE1852D /* strength-training-tests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 20AF46B0AD2E826ABB190CEE /* Build configuration list for PBXNativeTarget "strength-training-tests" */;
+			buildPhases = (
+				5DE70D93BE9A110F2AA78985 /* Sources */,
+				F422C1724F6C789090E94266 /* Frameworks */,
+				8A5E13949A31DEAA593F581B /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				F6CD2017D76F9477DC870001 /* PBXTargetDependency */,
+			);
+			name = "strength-training-tests";
+			productName = "strength-training-tests";
+			productReference = FCD72FE4DBC5F2CB9BEB771B /* strength-training-tests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		E18CFB5E2F4A312400991D60 /* strength-training */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = E18CFB6A2F4A312500991D60 /* Build configuration list for PBXNativeTarget "strength-training" */;
@@ -77,8 +418,6 @@
 				E18CFB612F4A312400991D60 /* strength-training */,
 			);
 			name = "strength-training";
-			packageProductDependencies = (
-			);
 			productName = "strength-training";
 			productReference = E18CFB5F2F4A312400991D60 /* strength-training.app */;
 			productType = "com.apple.product-type.application";
@@ -113,11 +452,38 @@
 			projectRoot = "";
 			targets = (
 				E18CFB5E2F4A312400991D60 /* strength-training */,
+				CF2665086E70C7E1BDE1852D /* strength-training-tests */,
+				4F24BB600FA0AED51F0C2A5B /* ProgressionLab */,
+				63987D9F4690E57A621DFB86 /* progression-lab-tests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		49A347B83602FDEAE17D4DA8 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				68281B3C9FF71E8872734EEF /* minimal-backup.json in Resources */,
+				E71CE961AAE0B26627F132E0 /* backup-with-orphans.json in Resources */,
+				7BD31A210861E10FCC130CC8 /* unsupported-version.json in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		8A5E13949A31DEAA593F581B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		939DA61D7B673F734AE3BB27 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		E18CFB5D2F4A312400991D60 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -128,16 +494,177 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		00CE090325A5AAB105899A68 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A86332EC74EEB61D502B9A66 /* ProgressionLabApp.swift in Sources */,
+				22F976653D7F36A7EB48172F /* AppState.swift in Sources */,
+				7168DE0B871D42DCB066106F /* LoadedDataset.swift in Sources */,
+				4CA65A9EBF4643E176DB4F83 /* BackupLoader.swift in Sources */,
+				414E0889CE9CB7D5F7A19D95 /* RecentFilesStore.swift in Sources */,
+				023DF2513891F3465C785A7B /* LoaderView.swift in Sources */,
+				AB75C1610447582730CCCB17 /* TrainingMode.swift in Sources */,
+				058F457680F9F458E2562E70 /* ProgressionParameters.swift in Sources */,
+				6688F4F5FCAD452A77731D79 /* AlgorithmInput.swift in Sources */,
+				172DA18BD502793ABA69F1B4 /* ProgressionTypes.swift in Sources */,
+				66F97F53AE5EEA46833897FF /* BackupModels.swift in Sources */,
+				BC3117F994C6BEF049F4F098 /* ProgressionService.swift in Sources */,
+				61FC8B4E1A8C1EFE7FC32702 /* ExerciseModeReplay.swift in Sources */,
+				3342601B9D695C951361CD50 /* ReplayEngine.swift in Sources */,
+				6D330B77B96C23565510CD3C /* SimulationStore.swift in Sources */,
+				EF566BBF0799C21A469B514C /* Sparkline.swift in Sources */,
+				F1575293D208883B22818EF3 /* ParameterPanel.swift in Sources */,
+				FD8D7B4D50F612D4C3DC32C0 /* ExerciseDashboardRow.swift in Sources */,
+				F782886371C54BEC655F1D47 /* DashboardView.swift in Sources */,
+				31F77B75A3F399B10127FD2C /* ReplayChart.swift in Sources */,
+				DD4064CC113170BDC4CA230E /* ReplayTable.swift in Sources */,
+				B30B972F00BEB5024C59291A /* ExerciseDetailView.swift in Sources */,
+				85CBF49126D27BC7C7C68605 /* ConfigArtifact.swift in Sources */,
+				E805369068D8F5B36110D3FB /* ConfigArtifactWriter.swift in Sources */,
+				BD236B396E52380C0E086E31 /* ConfigArtifactReader.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5DE70D93BE9A110F2AA78985 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3182A5D7AC487DB54E11B33B /* AlgorithmFixtures.swift in Sources */,
+				C6BC791F18CDB317248A0634 /* ProgressionServicePureFunctionTests.swift in Sources */,
+				63C0E77E57834034C11BC61C /* ProgressionServiceParityTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A84B52A784254BA43E394598 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C313AB84BBB7C618881DB9C7 /* BackupLoaderTests.swift in Sources */,
+				2D03708673FAE0D1B6845C04 /* ReplayEngineTests.swift in Sources */,
+				51D08E2A584B751A23D12A5B /* SimulationStoreTests.swift in Sources */,
+				EFC69339D307E6EF3EE4B039 /* ConfigArtifactRoundTripTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		E18CFB5B2F4A312400991D60 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E15010E82FA7E5AB009EF2FB /* TrainingMode.swift in Sources */,
+				30F2A7026B68E6EF1D57D58D /* ProgressionParameters.swift in Sources */,
+				30C661C6E4E303A2AD8F7D62 /* AlgorithmInput.swift in Sources */,
+				2334F6309DF8766B63363CB5 /* ProgressionTypes.swift in Sources */,
+				06EAF8373D2C66680087860B /* BackupModels.swift in Sources */,
+				37C45FF0E0D33AE49B93AB69 /* ProgressionService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		F6CD2017D76F9477DC870001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = "strength-training";
+			target = E18CFB5E2F4A312400991D60 /* strength-training */;
+			targetProxy = 877E81E4CAAC1AB6B22AEB4C /* PBXContainerItemProxy */;
+		};
+		FFAA7AF3A6E21217E8CAFE0B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = ProgressionLab;
+			target = 4F24BB600FA0AED51F0C2A5B /* ProgressionLab */;
+			targetProxy = 61A6969CA7DB50FC8E10EA44 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		166442A14944D600641D9B1D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = "";
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "progression-lab/ProgressionLab.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = V8227YC5UT;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.danielkuhlwein.ProgressionLab.debug;
+				PRODUCT_NAME = ProgressionLab;
+				SDKROOT = macosx;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		1CF8A54282EC38FE7AF4F62A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = "";
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "progression-lab/ProgressionLab.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = V8227YC5UT;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.danielkuhlwein.ProgressionLab.debug;
+				PRODUCT_NAME = ProgressionLab;
+				SDKROOT = macosx;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		7152696AB04AF5E250B6EF40 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = V8227YC5UT;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				PRODUCT_BUNDLE_IDENTIFIER = com.danielkuhlwein.strengthtrainingtests;
+				PRODUCT_NAME = strength_training_tests;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/strength-training.app/strength-training";
+			};
+			name = Debug;
+		};
+		D66CD616015FBAA8FDE65A28 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = V8227YC5UT;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				PRODUCT_BUNDLE_IDENTIFIER = com.danielkuhlwein.strengthtrainingtests;
+				PRODUCT_NAME = strength_training_tests;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/strength-training.app/strength-training";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 		E18CFB682F4A312500991D60 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -339,9 +866,59 @@
 			};
 			name = Release;
 		};
+		EA7E8CE9F736056CD0A71615 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = V8227YC5UT;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.danielkuhlwein.progressionlabtests;
+				PRODUCT_NAME = progression_lab_tests;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/ProgressionLab.app/Contents/MacOS/ProgressionLab";
+			};
+			name = Release;
+		};
+		F860DA83B96BA8BD72E67DF3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = V8227YC5UT;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.danielkuhlwein.progressionlabtests;
+				PRODUCT_NAME = progression_lab_tests;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/ProgressionLab.app/Contents/MacOS/ProgressionLab";
+			};
+			name = Debug;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		20AF46B0AD2E826ABB190CEE /* Build configuration list for PBXNativeTarget "strength-training-tests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D66CD616015FBAA8FDE65A28 /* Release */,
+				7152696AB04AF5E250B6EF40 /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		8E39AD46564680BF399F3538 /* Build configuration list for PBXNativeTarget "progression-lab-tests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				EA7E8CE9F736056CD0A71615 /* Release */,
+				F860DA83B96BA8BD72E67DF3 /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		E18CFB5A2F4A312400991D60 /* Build configuration list for PBXProject "strength-training" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -356,6 +933,15 @@
 			buildConfigurations = (
 				E18CFB6B2F4A312500991D60 /* Debug */,
 				E18CFB6C2F4A312500991D60 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		EF7F1FE4310832054B156107 /* Build configuration list for PBXNativeTarget "ProgressionLab" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				166442A14944D600641D9B1D /* Release */,
+				1CF8A54282EC38FE7AF4F62A /* Debug */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
