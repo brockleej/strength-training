@@ -159,15 +159,6 @@ strength-training/
 
 </details>
 
-## App Icon
-
-The icon source is `strength_training.icon/` (Apple Icon Composer). Icon Composer exports PNGs with an alpha channel, which App Store Connect rejects. After exporting, strip alpha with the included script:
-
-```bash
-swift scripts/strip-icon-alpha.swift \
-  strength-training/Assets.xcassets/AppIcon.appiconset/*.png
-```
-
 ## Contributing
 
 Contributions are welcome! Please follow these guidelines:
