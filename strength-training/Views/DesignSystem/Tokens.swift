@@ -56,6 +56,7 @@ struct UpliftPalette {
     let pr   = Color(hex: 0xFFB547)
 
     // Apple Health (used only by HealthKitCard)
-    let ahkitGreen = Color(hex: 0x30D158)
-    let ahkitRed   = Color(hex: 0xFF375F)
+    let ahkitGreen  = Color(hex: 0x30D158)
+    let ahkitOrange = Color(hex: 0xFF9F0A)
+    let ahkitRed    = Color(hex: 0xFF375F)
 }

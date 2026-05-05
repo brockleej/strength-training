@@ -4,10 +4,10 @@ import SwiftUI
 /// `surface1` background, `fg` icon. Two sizes: 36pt (compact, default) or 44pt (large title).
 ///
 /// ```swift
-/// CircleBtn(icon: "chevron.left") { dismiss() }
-/// CircleBtn(icon: "plus", size: .large) { showAddSheet = true }
+/// CircleButton(icon: "chevron.left") { dismiss() }
+/// CircleButton(icon: "plus", size: .large) { showAddSheet = true }
 /// ```
-struct CircleBtn: View {
+struct CircleButton: View {
     enum Size {
         case compact, large
         var px: CGFloat   { self == .compact ? 36 : 44 }
@@ -36,13 +36,13 @@ struct CircleBtn: View {
     }
 }
 
-#Preview("CircleBtn — variants") {
+#Preview("CircleButton — variants") {
     HStack(spacing: 14) {
-        CircleBtn(icon: "chevron.left") {}
-        CircleBtn(icon: "ellipsis") {}
-        CircleBtn(icon: "magnifyingglass") {}
-        CircleBtn(icon: "plus", size: .large) {}
-        CircleBtn(icon: "checkmark", iconColor: .uplift.accent) {}
+        CircleButton(icon: "chevron.left") {}
+        CircleButton(icon: "ellipsis") {}
+        CircleButton(icon: "magnifyingglass") {}
+        CircleButton(icon: "plus", size: .large) {}
+        CircleButton(icon: "checkmark", iconColor: .uplift.accent) {}
     }
     .padding(40)
     .background(Color.uplift.bgElev)

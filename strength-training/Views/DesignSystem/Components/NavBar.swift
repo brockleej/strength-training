@@ -11,8 +11,8 @@ import SwiftUI
 /// ```swift
 /// VStack(spacing: 0) {
 ///     NavBar(title: "History", style: .large(size: 38),
-///         leading: { CircleBtn(icon: "magnifyingglass") {} },
-///         trailing: { CircleBtn(icon: "ellipsis") {} })
+///         leading: { CircleButton(icon: "magnifyingglass") {} },
+///         trailing: { CircleButton(icon: "ellipsis") {} })
 ///     ScrollView { ... }
 /// }
 /// ```
@@ -73,8 +73,8 @@ struct NavBar<Leading: View, Trailing: View>: View {
 #Preview("NavBar — compact") {
     VStack(spacing: 0) {
         NavBar(title: "Push", style: .compact,
-            leading: { CircleBtn(icon: "chevron.left") {} },
-            trailing: { CircleBtn(icon: "ellipsis") {} })
+            leading: { CircleButton(icon: "chevron.left") {} },
+            trailing: { CircleButton(icon: "ellipsis") {} })
         Spacer()
     }
     .background(Color.uplift.bgElev)
@@ -83,8 +83,8 @@ struct NavBar<Leading: View, Trailing: View>: View {
 #Preview("NavBar — large 34pt (History)") {
     VStack(spacing: 0) {
         NavBar(title: "History", style: .large(size: 34),
-            leading: { CircleBtn(icon: "magnifyingglass") {} },
-            trailing: { CircleBtn(icon: "ellipsis") {} })
+            leading: { CircleButton(icon: "magnifyingglass") {} },
+            trailing: { CircleButton(icon: "ellipsis") {} })
         Spacer()
     }
     .background(Color.uplift.bgElev)
@@ -94,7 +94,7 @@ struct NavBar<Leading: View, Trailing: View>: View {
     VStack(spacing: 0) {
         NavBar(title: "Exercises", style: .large(size: 38),
             leading: { EmptyView() },
-            trailing: { CircleBtn(icon: "plus", size: .large) {} })
+            trailing: { CircleButton(icon: "plus", size: .large) {} })
         Spacer()
     }
     .background(Color.uplift.bgElev)

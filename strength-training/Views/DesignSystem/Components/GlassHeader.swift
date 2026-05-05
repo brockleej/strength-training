@@ -12,12 +12,12 @@ import SwiftUI
 /// ZStack(alignment: .top) {
 ///     ScrollView { ... }
 ///     GlassHeader {
-///         CircleBtn(icon: "chevron.down") { dismiss() }
+///         CircleButton(icon: "chevron.down") { dismiss() }
 ///         Spacer()
 ///         Text("LEG DAY").font(.uplift.text(11, weight: .semibold)).tracking(0.4)
 ///             .foregroundStyle(Color.uplift.fgMuted)
 ///         Spacer()
-///         CircleBtn(icon: "ellipsis") {}
+///         CircleButton(icon: "ellipsis") {}
 ///     }
 /// }
 /// ```
@@ -66,14 +66,14 @@ struct GlassHeader<Content: View>: View {
         .background(Color.uplift.bgElev)
 
         GlassHeader {
-            CircleBtn(icon: "chevron.down") {}
+            CircleButton(icon: "chevron.down") {}
             Spacer()
             Text("LEG DAY")
                 .font(.uplift.text(11, weight: .semibold))
                 .tracking(0.4)
                 .foregroundStyle(Color.uplift.fgMuted)
             Spacer()
-            CircleBtn(icon: "ellipsis") {}
+            CircleButton(icon: "ellipsis") {}
         }
     }
 }

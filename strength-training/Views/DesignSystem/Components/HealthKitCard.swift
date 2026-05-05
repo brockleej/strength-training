@@ -20,7 +20,7 @@ struct HealthKitCard: View {
             sourceBadge
             tile(icon: "heart.fill",  iconColor: .uplift.ahkitRed,   value: "\(bpm)",     unit: "bpm",  beat: true)
             tileDivider
-            tile(icon: "flame.fill",  iconColor: Color(hex: 0xFF9F0A), value: "\(kcal)",   unit: "kcal", beat: false)
+            tile(icon: "flame.fill",  iconColor: .uplift.ahkitOrange, value: "\(kcal)",   unit: "kcal", beat: false)
             tileDivider
             tile(icon: "clock.fill",  iconColor: .uplift.ahkitGreen, value: elapsed,                 beat: false)
         }
