@@ -13,33 +13,21 @@ struct ContentView: View {
     @State private var workoutViewModel: WorkoutViewModel?
     @State private var healthKitService = HealthKitWorkoutService()
     @State private var cloudKitSyncService = CloudKitSyncService()
-    @State private var selectedTab = "workout"
+    @State private var selectedTab: UpliftTab = .today
     @State private var sessionToReview: WorkoutSession?
 
     var body: some View {
         Group {
             if let vm = workoutViewModel {
-                TabView(selection: $selectedTab) {
-                    Tab("Workout", systemImage: "dumbbell", value: "workout") {
-                        WorkoutTabView(viewModel: vm)
-                    }
-                    Tab("History", systemImage: "clock", value: "history") {
-                        HistoryListView(reviewSession: $sessionToReview)
-                    }
-                    Tab("Progress", systemImage: "chart.line.uptrend.xyaxis", value: "progress") {
-                        ProgressDashboardView()
-                    }
-                    Tab("Exercises", systemImage: "list.bullet", value: "exercises") {
-                        ExerciseLibraryView()
-                    }
-                    Tab("Settings", systemImage: "gear", value: "settings") {
-                        SettingsView(healthKitService: healthKitService, cloudKitSyncService: cloudKitSyncService)
-                    }
+                ZStack(alignment: .bottom) {
+                    tabContent(vm: vm)
+                    TabBar(selection: $selectedTab)
                 }
+                .ignoresSafeArea(.keyboard, edges: .bottom)
                 .onChange(of: vm.completedSessionToReview) { _, session in
                     if let session {
                         sessionToReview = session
-                        selectedTab = "history"
+                        selectedTab = .history
                         vm.activeSession = nil
                         vm.completedSessionToReview = nil
                     }
@@ -59,6 +47,22 @@ struct ContentView: View {
             if healthKitService.isAvailable && healthKitService.authorizationStatus == nil {
                 _ = await healthKitService.requestAuthorization()
             }
+        }
+    }
+
+    @ViewBuilder
+    private func tabContent(vm: WorkoutViewModel) -> some View {
+        switch selectedTab {
+        case .today:
+            WorkoutTabView(viewModel: vm)
+        case .history:
+            HistoryListView(reviewSession: $sessionToReview)
+        case .progress:
+            ProgressDashboardView()
+        case .exercises:
+            ExerciseLibraryView()
+        case .settings:
+            SettingsView(healthKitService: healthKitService, cloudKitSyncService: cloudKitSyncService)
         }
     }
 }
