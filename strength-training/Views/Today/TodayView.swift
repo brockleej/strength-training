@@ -25,7 +25,10 @@ struct TodayView: View {
                     header
                     pickerSection
                     primaryActions
-                    // Yesterday + This Week sections added in Chunk 3
+                    if let yd = todayVM?.yesterdayData() {
+                        yesterdaySection(yd)
+                    }
+                    thisWeekSection
                 }
                 .padding(.bottom, 120)  // breathing room above the floating tab bar
             }
@@ -162,6 +165,53 @@ struct TodayView: View {
         }
         .padding(.horizontal, 20)
         .padding(.top, 14)
+    }
+
+    @ViewBuilder
+    private func yesterdaySection(_ yd: TodayViewModel.YesterdayData) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            SectionHeader(yd.label)
+            NavigationLink {
+                SessionDetailView(session: yd.session)
+            } label: {
+                YesterdayCard(
+                    dayType: yd.dayType,
+                    durationLabel: yd.durationLabel,
+                    totalVolume: yd.totalVolume,
+                    totalSets: yd.totalSets,
+                    prCount: yd.prCount
+                )
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 4)
+    }
+
+    private var thisWeekSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            SectionHeader("This week")
+            if let vm = todayVM {
+                let stats = vm.thisWeekStats()
+                ThisWeekCard(
+                    sessionCount: stats.sessionCount,
+                    totalVolume: stats.totalVolume,
+                    totalSets: stats.totalSets,
+                    dayTypes: vm.weekDayTypes(),
+                    todayIndex: todayWeekdayIndex(),
+                    weeklyDelta: vm.weeklyVolumeDelta()
+                )
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 4)
+    }
+
+    /// 0 (Mon) – 6 (Sun) for today's date.
+    private func todayWeekdayIndex() -> Int {
+        let cal = Calendar(identifier: .iso8601)
+        let weekday = cal.component(.weekday, from: .now)
+        return (weekday + 5) % 7
     }
 
     // MARK: - Helpers
