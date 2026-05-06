@@ -190,4 +190,107 @@ final class TodayViewModelTests: XCTestCase {
         // 2 arms exercises ("A" + "Press") + 1h 15m session
         XCTAssertEqual(vm.cardSubtitle(for: .arms), "2 lifts · last session 1h 15m")
     }
+
+    // MARK: - Week aggregates
+
+    private func makeContext() throws -> ModelContext {
+        let container = try ModelContainer(
+            for: WorkoutSession.self, ExerciseRecord.self, SetRecord.self, Exercise.self,
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+        )
+        return ModelContext(container)
+    }
+
+    /// Insert a completed session at a specific date with one set of given weight × reps.
+    private func insertCompletedSession(
+        _ ctx: ModelContext,
+        dayType: DayType,
+        date: Date,
+        weight: Double,
+        reps: Int
+    ) {
+        let session = WorkoutSession(dayType: dayType)
+        session.isCompleted = true
+        session.date = date
+        let ex = Exercise(name: "x", dayType: dayType == .fullBody ? .arms : dayType)
+        let record = ExerciseRecord(trainingMode: .highWeightLowReps, sortOrder: 0)
+        record.exercise = ex
+        record.session = session
+        let set = SetRecord(setNumber: 1, weightLbs: weight, reps: reps)
+        set.exerciseRecord = record
+        set.completedAt = date.addingTimeInterval(60)
+        record.sets = [set]
+        session.exerciseRecords = [record]
+        ctx.insert(ex); ctx.insert(session); ctx.insert(record); ctx.insert(set)
+    }
+
+    func testWeekStats_aggregatesSessionsInISOWeek() throws {
+        let ctx = try makeContext()
+        // Pin "now" to Wednesday May 6, 2026 → ISO week is Mon May 4 – Sun May 10
+        let cal = Calendar(identifier: .gregorian)
+        let now = cal.date(from: DateComponents(year: 2026, month: 5, day: 6, hour: 12))!
+        let monThisWeek = cal.date(from: DateComponents(year: 2026, month: 5, day: 4, hour: 8))!
+        let wedThisWeek = cal.date(from: DateComponents(year: 2026, month: 5, day: 6, hour: 18))!
+        let sunLastWeek = cal.date(from: DateComponents(year: 2026, month: 5, day: 3, hour: 10))!
+
+        insertCompletedSession(ctx, dayType: .arms, date: monThisWeek, weight: 100, reps: 10)
+        insertCompletedSession(ctx, dayType: .legs, date: wedThisWeek, weight: 200, reps: 5)
+        insertCompletedSession(ctx, dayType: .arms, date: sunLastWeek, weight: 50, reps: 10)  // last week, excluded
+
+        let vm = TodayViewModel(modelContext: ctx)
+        let stats = vm.thisWeekStats(now: now)
+        XCTAssertEqual(stats.sessionCount, 2)
+        XCTAssertEqual(stats.totalVolume, 100 * 10 + 200 * 5)  // 1000 + 1000 = 2000
+        XCTAssertEqual(stats.totalSets, 2)
+    }
+
+    func testWeekStats_emptyWeek_returnsZeroes() throws {
+        let ctx = try makeContext()
+        let vm = TodayViewModel(modelContext: ctx)
+        let stats = vm.thisWeekStats(now: .now)
+        XCTAssertEqual(stats.sessionCount, 0)
+        XCTAssertEqual(stats.totalVolume, 0)
+        XCTAssertEqual(stats.totalSets, 0)
+    }
+
+    func testWeekDayTypes_mapsCompletedDaysToDayType() throws {
+        let ctx = try makeContext()
+        let cal = Calendar(identifier: .gregorian)
+        let now = cal.date(from: DateComponents(year: 2026, month: 5, day: 6, hour: 12))!  // Wed
+        let monThisWeek = cal.date(from: DateComponents(year: 2026, month: 5, day: 4, hour: 8))!
+        let wedThisWeek = cal.date(from: DateComponents(year: 2026, month: 5, day: 6, hour: 18))!
+
+        insertCompletedSession(ctx, dayType: .arms, date: monThisWeek, weight: 100, reps: 10)
+        insertCompletedSession(ctx, dayType: .legs, date: wedThisWeek, weight: 200, reps: 5)
+
+        let vm = TodayViewModel(modelContext: ctx)
+        let dayMap = vm.weekDayTypes(now: now)
+        XCTAssertEqual(dayMap[0], .arms)   // Mon
+        XCTAssertNil(dayMap[1])            // Tue (rest)
+        XCTAssertEqual(dayMap[2], .legs)   // Wed
+        XCTAssertNil(dayMap[3])            // Thu (future)
+        XCTAssertNil(dayMap[6])            // Sun (future)
+    }
+
+    func testWeekDelta_returnsNilWhenLastWeekZero() throws {
+        let ctx = try makeContext()
+        let vm = TodayViewModel(modelContext: ctx)
+        // No history at all
+        XCTAssertNil(vm.weeklyVolumeDelta(now: .now))
+    }
+
+    func testWeekDelta_computesPercentChange() throws {
+        let ctx = try makeContext()
+        let cal = Calendar(identifier: .gregorian)
+        let now = cal.date(from: DateComponents(year: 2026, month: 5, day: 6, hour: 12))!  // Wed
+        // This week: 2000 lb total
+        insertCompletedSession(ctx, dayType: .arms, date: cal.date(from: DateComponents(year: 2026, month: 5, day: 4, hour: 10))!, weight: 200, reps: 5)
+        insertCompletedSession(ctx, dayType: .legs, date: cal.date(from: DateComponents(year: 2026, month: 5, day: 6, hour: 10))!, weight: 200, reps: 5)
+        // Last week: 1000 lb
+        insertCompletedSession(ctx, dayType: .arms, date: cal.date(from: DateComponents(year: 2026, month: 4, day: 27, hour: 10))!, weight: 100, reps: 10)
+
+        let vm = TodayViewModel(modelContext: ctx)
+        // (2000 - 1000) / 1000 = +1.0 = +100%
+        XCTAssertEqual(vm.weeklyVolumeDelta(now: now) ?? 0, 1.0, accuracy: 0.001)
+    }
 }
