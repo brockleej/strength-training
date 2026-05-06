@@ -144,7 +144,8 @@ final class TodayViewModel {
 
     /// Maps weekday index 0–6 (Monday=0 ... Sunday=6) to the day type of the most
     /// recent completed session on that day, or nil if none.
-    /// If multiple sessions on one day (rare), the last wins.
+    /// If multiple sessions on one day (rare), the most recent (latest by session.date)
+    /// wins — this depends on `sessionsInWeek` returning sessions sorted ascending by date.
     func weekDayTypes(now: Date = .now) -> [Int: DayType] {
         let sessions = sessionsInWeek(containing: now)
         let cal = isoCalendar()

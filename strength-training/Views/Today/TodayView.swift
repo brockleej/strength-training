@@ -90,6 +90,11 @@ struct TodayView: View {
             if todayVM == nil {
                 todayVM = TodayViewModel(modelContext: modelContext)
             }
+            // Clear manual override on every appear so the picker re-syncs to the
+            // suspended day (or last-trained day) — matches the doc-commented intent
+            // on `selectedDayType`. Without this, a user who taps a card once then
+            // navigates away would see their stale manual selection forever.
+            manualSelection = nil
         }
     }
 
@@ -208,8 +213,11 @@ struct TodayView: View {
     }
 
     /// 0 (Mon) – 6 (Sun) for today's date.
+    /// Uses the same firstWeekday=2 configuration as `TodayViewModel.isoCalendar()`
+    /// for consistency, even though `(weekday + 5) % 7` doesn't depend on it.
     private func todayWeekdayIndex() -> Int {
-        let cal = Calendar(identifier: .iso8601)
+        var cal = Calendar(identifier: .iso8601)
+        cal.firstWeekday = 2
         let weekday = cal.component(.weekday, from: .now)
         return (weekday + 5) % 7
     }
