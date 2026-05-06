@@ -51,6 +51,55 @@ final class TodayViewModel {
         return .arms
     }
 
+    // MARK: - Card subtitle data
+
+    /// "{N} lifts · last session {duration}" (or " · no history" suffix when no prior).
+    func cardSubtitle(for dayType: DayType) -> String {
+        let liftCount = liftCount(for: dayType)
+        if let duration = lastSessionDuration(for: dayType) {
+            return "\(liftCount) lifts · last session \(formatDuration(duration))"
+        }
+        return "\(liftCount) lifts · no history"
+    }
+
+    private func liftCount(for dayType: DayType) -> Int {
+        let descriptor = FetchDescriptor<Exercise>()
+        let all = (try? modelContext.fetch(descriptor)) ?? []
+        switch dayType {
+        case .arms:     return all.filter { $0.dayType == .arms }.count
+        case .legs:     return all.filter { $0.dayType == .legs }.count
+        case .fullBody: return all.count   // arms + legs union
+        }
+    }
+
+    /// Duration of most recent completed session of this day type, in seconds.
+    /// Returns nil if no such session exists or the session has no logged sets.
+    private func lastSessionDuration(for dayType: DayType) -> TimeInterval? {
+        // SwiftData #Predicate can't compare enum values directly, so fetch all
+        // completed sessions sorted descending by date, then filter in Swift.
+        let descriptor = FetchDescriptor<WorkoutSession>(
+            predicate: #Predicate<WorkoutSession> { $0.isCompleted == true },
+            sortBy: [SortDescriptor(\.date, order: .reverse)]
+        )
+        let candidates = (try? modelContext.fetch(descriptor)) ?? []
+        guard let session = candidates.first(where: { $0.dayType == dayType }) else { return nil }
+
+        // Prefer the time of the last logged set; return nil if no sets.
+        let allSets = session.exerciseRecordsArray.flatMap { $0.setsArray }
+        guard let lastSetAt = allSets.map(\.completedAt).max() else { return nil }
+        return lastSetAt.timeIntervalSince(session.date)
+    }
+
+    private func formatDuration(_ seconds: TimeInterval) -> String {
+        let totalMinutes = Int(seconds / 60)
+        if totalMinutes < 60 {
+            return "\(totalMinutes) min"
+        }
+        let hours = totalMinutes / 60
+        let minutes = totalMinutes % 60
+        return "\(hours)h \(minutes)m"
+    }
+
     // MARK: - Queries (private)
 
     /// The single most-recent completed `WorkoutSession`, or nil.

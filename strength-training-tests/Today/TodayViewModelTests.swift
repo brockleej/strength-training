@@ -95,4 +95,99 @@ final class TodayViewModelTests: XCTestCase {
         let vm = TodayViewModel(modelContext: ctx)
         XCTAssertEqual(vm.initialDayType(suspendedDayType: nil), .arms)
     }
+
+    // MARK: - Card subtitle
+
+    func testCardSubtitle_noHistory_showsLiftCountOnly() throws {
+        let container = try ModelContainer(
+            for: WorkoutSession.self, ExerciseRecord.self, SetRecord.self, Exercise.self,
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+        )
+        let ctx = ModelContext(container)
+        // 5 arms exercises, no sessions
+        for i in 0..<5 {
+            let ex = Exercise(name: "Arms\(i)", dayType: .arms)
+            ctx.insert(ex)
+        }
+        try ctx.save()
+
+        let vm = TodayViewModel(modelContext: ctx)
+        XCTAssertEqual(vm.cardSubtitle(for: .arms), "5 lifts · no history")
+    }
+
+    func testCardSubtitle_withHistory_showsDuration() throws {
+        let container = try ModelContainer(
+            for: WorkoutSession.self, ExerciseRecord.self, SetRecord.self, Exercise.self,
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+        )
+        let ctx = ModelContext(container)
+        for i in 0..<3 {
+            let ex = Exercise(name: "Legs\(i)", dayType: .legs)
+            ctx.insert(ex)
+        }
+        let session = WorkoutSession(dayType: .legs)
+        session.isCompleted = true
+        let start = Date(timeIntervalSinceNow: -3000)  // 50 min ago
+        session.date = start
+        let ex = Exercise(name: "Squat", dayType: .legs)
+        let record = ExerciseRecord(trainingMode: .highWeightLowReps, sortOrder: 0)
+        record.exercise = ex
+        record.session = session
+        let set = SetRecord(setNumber: 1, weightLbs: 100, reps: 5)
+        set.exerciseRecord = record
+        set.completedAt = start.addingTimeInterval(2820)  // session lasted 47 min
+        record.sets = [set]
+        session.exerciseRecords = [record]
+        ctx.insert(ex)
+        ctx.insert(session)
+        ctx.insert(record)
+        ctx.insert(set)
+        try ctx.save()
+
+        let vm = TodayViewModel(modelContext: ctx)
+        // 4 legs lifts (3 from loop + 1 "Squat") + 47min last session
+        XCTAssertEqual(vm.cardSubtitle(for: .legs), "4 lifts · last session 47 min")
+    }
+
+    func testCardSubtitle_fullBody_sumsArmsAndLegs() throws {
+        let container = try ModelContainer(
+            for: WorkoutSession.self, ExerciseRecord.self, SetRecord.self, Exercise.self,
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+        )
+        let ctx = ModelContext(container)
+        for i in 0..<4 { ctx.insert(Exercise(name: "A\(i)", dayType: .arms)) }
+        for i in 0..<5 { ctx.insert(Exercise(name: "L\(i)", dayType: .legs)) }
+        try ctx.save()
+
+        let vm = TodayViewModel(modelContext: ctx)
+        XCTAssertEqual(vm.cardSubtitle(for: .fullBody), "9 lifts · no history")
+    }
+
+    func testCardSubtitle_durationOverOneHour_showsHoursAndMinutes() throws {
+        let container = try ModelContainer(
+            for: WorkoutSession.self, ExerciseRecord.self, SetRecord.self, Exercise.self,
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+        )
+        let ctx = ModelContext(container)
+        ctx.insert(Exercise(name: "A", dayType: .arms))
+        let session = WorkoutSession(dayType: .arms)
+        session.isCompleted = true
+        let start = Date(timeIntervalSinceNow: -10000)
+        session.date = start
+        let ex = Exercise(name: "Press", dayType: .arms)
+        let record = ExerciseRecord(trainingMode: .highWeightLowReps, sortOrder: 0)
+        record.exercise = ex
+        record.session = session
+        let set = SetRecord(setNumber: 1, weightLbs: 100, reps: 5)
+        set.exerciseRecord = record
+        set.completedAt = start.addingTimeInterval(4500)  // 75 min
+        record.sets = [set]
+        session.exerciseRecords = [record]
+        ctx.insert(ex); ctx.insert(session); ctx.insert(record); ctx.insert(set)
+        try ctx.save()
+
+        let vm = TodayViewModel(modelContext: ctx)
+        // 2 arms exercises ("A" + "Press") + 1h 15m session
+        XCTAssertEqual(vm.cardSubtitle(for: .arms), "2 lifts · last session 1h 15m")
+    }
 }
