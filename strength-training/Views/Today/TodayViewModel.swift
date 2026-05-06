@@ -40,4 +40,26 @@ final class TodayViewModel {
             return "\(days) DAYS AGO"
         }
     }
+
+    // MARK: - Initial day-card selection
+
+    /// Pick which day card the picker should auto-select on appear.
+    /// Priority: suspended → most recent completed session → `.arms` fallback.
+    func initialDayType(suspendedDayType: DayType?) -> DayType {
+        if let suspendedDayType { return suspendedDayType }
+        if let mostRecent = mostRecentCompletedSession()?.dayType { return mostRecent }
+        return .arms
+    }
+
+    // MARK: - Queries (private)
+
+    /// The single most-recent completed `WorkoutSession`, or nil.
+    private func mostRecentCompletedSession() -> WorkoutSession? {
+        var descriptor = FetchDescriptor<WorkoutSession>(
+            predicate: #Predicate<WorkoutSession> { $0.isCompleted == true },
+            sortBy: [SortDescriptor(\.date, order: .reverse)]
+        )
+        descriptor.fetchLimit = 1
+        return try? modelContext.fetch(descriptor).first
+    }
 }

@@ -1,4 +1,5 @@
 import XCTest
+import SwiftData
 @testable import strength_training
 
 final class TodayViewModelTests: XCTestCase {
@@ -37,5 +38,61 @@ final class TodayViewModelTests: XCTestCase {
 
     func testLabel_twelveDaysAgo() {
         XCTAssertEqual(TodayViewModel.relativeDayLabel(for: date(daysAgo: 12), now: .now), "12 DAYS AGO")
+    }
+
+    // MARK: - Initial day-card selection
+    //
+    // Selection priority (per spec §6.4):
+    //   1. Suspended session's day type (if any)
+    //   2. Most recent completed session's day type
+    //   3. .arms as fallback
+
+    func testInitialDayType_prefersSuspendedOverHistory() throws {
+        let container = try ModelContainer(
+            for: WorkoutSession.self, ExerciseRecord.self, SetRecord.self, Exercise.self,
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+        )
+        let ctx = ModelContext(container)
+        // Add a completed Arms session in history
+        let armsSession = WorkoutSession(dayType: .arms)
+        armsSession.isCompleted = true
+        armsSession.date = .now
+        ctx.insert(armsSession)
+        try ctx.save()
+
+        let vm = TodayViewModel(modelContext: ctx)
+        // Suspended is Legs — should win over arms history
+        XCTAssertEqual(vm.initialDayType(suspendedDayType: .legs), .legs)
+    }
+
+    func testInitialDayType_usesHistoryWhenNoSuspended() throws {
+        let container = try ModelContainer(
+            for: WorkoutSession.self, ExerciseRecord.self, SetRecord.self, Exercise.self,
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+        )
+        let ctx = ModelContext(container)
+        // History: Arms, then Legs more recently
+        let arms = WorkoutSession(dayType: .arms)
+        arms.isCompleted = true
+        arms.date = Date(timeIntervalSinceNow: -86400 * 2)
+        let legs = WorkoutSession(dayType: .legs)
+        legs.isCompleted = true
+        legs.date = Date(timeIntervalSinceNow: -86400)
+        ctx.insert(arms)
+        ctx.insert(legs)
+        try ctx.save()
+
+        let vm = TodayViewModel(modelContext: ctx)
+        XCTAssertEqual(vm.initialDayType(suspendedDayType: nil), .legs)
+    }
+
+    func testInitialDayType_fallsBackToArmsWhenEmpty() throws {
+        let container = try ModelContainer(
+            for: WorkoutSession.self, ExerciseRecord.self, SetRecord.self, Exercise.self,
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+        )
+        let ctx = ModelContext(container)
+        let vm = TodayViewModel(modelContext: ctx)
+        XCTAssertEqual(vm.initialDayType(suspendedDayType: nil), .arms)
     }
 }
