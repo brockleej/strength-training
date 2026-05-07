@@ -49,10 +49,20 @@ private struct ExerciseDrillDownContent: View {
                 personalBestCard
                 miniChartCard
                 recentSessionsSection
-                // Task 10: e1rmTrendCard, volumePerSessionCard
 
-                // LEGACY: replaced in Tasks 9-10
-                legacyChartsSection
+                // Range picker scopes the long-form trend charts below.
+                UpliftRangePicker(selection: $viewModel.selectedTimeRange)
+                    .padding(.top, 12)
+
+                VStack(alignment: .leading, spacing: 0) {
+                    SectionHeader("Estimated 1RM")
+                    E1RMTrendChart(data: viewModel.e1rmTrendData)
+                }
+
+                VStack(alignment: .leading, spacing: 0) {
+                    SectionHeader("Volume per session")
+                    VolumePerSessionChart(data: viewModel.volumePerSessionData)
+                }
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 100)
@@ -252,88 +262,6 @@ private struct ExerciseDrillDownContent: View {
         .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Color.uplift.surface1))
     }
 
-    // MARK: - LEGACY: replaced in Tasks 9-10
-
-    private var legacyChartsSection: some View {
-        VStack(spacing: 20) {
-            UpliftRangePicker(selection: $viewModel.selectedTimeRange)
-
-            // Summary header
-            ExerciseSummaryHeader(viewModel: viewModel)
-
-            // Top Set Trend
-            GroupBox {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Text("Top Set Trend")
-                            .font(.headline)
-                        Spacer()
-                        Picker("Metric", selection: $viewModel.topSetMetric) {
-                            ForEach(ExerciseDrillDownViewModel.TopSetMetric.allCases) {
-                                Text($0.rawValue).tag($0)
-                            }
-                        }
-                        .pickerStyle(.segmented)
-                        .frame(maxWidth: 200)
-                    }
-                    TopSetTrendChart(data: viewModel.topSetTrendData)
-                }
-            }
-
-            // Estimated 1RM Trend
-            GroupBox("Estimated 1RM") {
-                E1RMTrendChart(data: viewModel.e1rmTrendData)
-            }
-
-            // Volume per Session
-            GroupBox("Volume per Session") {
-                VolumePerSessionChart(data: viewModel.volumePerSessionData)
-            }
-        }
-        .padding(.top, 20)
-    }
-}
-
-private struct ExerciseSummaryHeader: View {
-    let viewModel: ExerciseDrillDownViewModel
-
-    var body: some View {
-        HStack(spacing: 16) {
-            SummaryTile(
-                label: "Best e1RM",
-                value: viewModel.allTimeE1RM.map { String(format: "%.0f lbs", $0) } ?? "—"
-            )
-            SummaryTile(
-                label: "Sessions",
-                value: "\(viewModel.totalSessions)"
-            )
-            SummaryTile(
-                label: "Last Trained",
-                value: viewModel.lastSessionDate.map {
-                    $0.formatted(.dateTime.month(.abbreviated).day())
-                } ?? "—"
-            )
-        }
-    }
-}
-
-private struct SummaryTile: View {
-    let label: String
-    let value: String
-
-    var body: some View {
-        VStack(spacing: 4) {
-            Text(value)
-                .font(.headline)
-            Text(label)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 8)
-        .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 8))
-    }
 }
 
 // MARK: - MiniBarChart (Task 9)
