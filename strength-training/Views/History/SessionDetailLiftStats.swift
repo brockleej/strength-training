@@ -36,23 +36,32 @@ enum SessionDetailLiftStats {
             guard !workingSets.isEmpty else { return nil }
 
             // Top set = highest e1RM, ties broken by weight then reps.
-            let top = workingSets.max(by: { lhs, rhs in
+            guard let top = workingSets.max(by: { lhs, rhs in
                 let l = ProgressionService.e1RM(weight: lhs.weightLbs, reps: lhs.reps)
                 let r = ProgressionService.e1RM(weight: rhs.weightLbs, reps: rhs.reps)
                 if l != r { return l < r }
                 if lhs.weightLbs != rhs.weightLbs { return lhs.weightLbs < rhs.weightLbs }
                 return lhs.reps < rhs.reps
-            })!
+            }) else { return nil }
 
             let currentMaxE1RM = ProgressionService.e1RM(weight: top.weightLbs, reps: top.reps)
 
             // Prior records: same exercise, completed session, dated strictly before this session.
+            // Sort newest-first; tie-break on session.id for deterministic "previous session"
+            // selection when two sessions share the exact same timestamp.
             let priorRecords = exercise.recordsArray
                 .filter { rec in
                     rec.session?.isCompleted == true &&
                     (rec.session?.date ?? .distantFuture) < session.date
                 }
-                .sorted { ($0.session?.date ?? .distantPast) > ($1.session?.date ?? .distantPast) }
+                .sorted { lhs, rhs in
+                    let lDate = lhs.session?.date ?? .distantPast
+                    let rDate = rhs.session?.date ?? .distantPast
+                    if lDate != rDate { return lDate > rDate }
+                    let lID = lhs.session?.id.uuidString ?? ""
+                    let rID = rhs.session?.id.uuidString ?? ""
+                    return lID > rID
+                }
 
             // PR: currentMax > all-time prior max
             let priorMaxE1RM = priorRecords
