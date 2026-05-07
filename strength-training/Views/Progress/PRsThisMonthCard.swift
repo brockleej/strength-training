@@ -9,53 +9,68 @@ struct PRsThisMonthCard: View {
     let prs: [PersonalRecord]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Label("PRs This Month", systemImage: "trophy")
-                    .font(.headline)
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 10) {
+                ZStack {
+                    Circle()
+                        .fill(Color.uplift.pr.opacity(0.18))
+                        .frame(width: 32, height: 32)
+                    Image(systemName: "trophy.fill")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Color.uplift.pr)
+                }
+                Text("PRs This Month")
+                    .font(.uplift.text(15, weight: .semibold))
+                    .foregroundStyle(Color.uplift.fg)
                 Spacer()
-                Text("\(prs.count)")
-                    .font(.title2.bold())
-                    .foregroundStyle(prs.isEmpty ? Color.secondary : Color.pink)
+                Num("\(prs.count)", size: 22, weight: .bold,
+                    color: prs.isEmpty ? Color.uplift.fgDim : Color.uplift.pr)
             }
 
             if prs.isEmpty {
                 Text("No new personal records this month. Keep training!")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(.uplift.text(12, weight: .regular))
+                    .foregroundStyle(Color.uplift.fgMuted)
             } else {
-                ForEach(prs.prefix(5)) { pr in
-                    HStack(spacing: 8) {
-                        Image(systemName: pr.type.systemImage)
-                            .foregroundStyle(.pink)
-                            .frame(width: 20)
+                VStack(alignment: .leading, spacing: 8) {
+                    ForEach(prs.prefix(5)) { pr in
+                        HStack(spacing: 10) {
+                            Image(systemName: pr.type.systemImage)
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(Color.uplift.pr)
+                                .frame(width: 18)
 
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(pr.exerciseName)
-                                .font(.subheadline.weight(.medium))
-                            Text("\(pr.type.rawValue): \(pr.value, specifier: "%.0f") lbs")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(pr.exerciseName)
+                                    .font(.uplift.text(13, weight: .medium))
+                                    .foregroundStyle(Color.uplift.fg)
+                                Text("\(pr.type.rawValue): \(pr.value, specifier: "%.0f") lbs")
+                                    .font(.uplift.text(11, weight: .regular))
+                                    .foregroundStyle(Color.uplift.fgMuted)
+                            }
+
+                            Spacer()
+
+                            Text(pr.date, format: .dateTime.month(.abbreviated).day())
+                                .font(.uplift.mono(11, weight: .medium))
+                                .foregroundStyle(Color.uplift.fgDim)
                         }
-
-                        Spacer()
-
-                        Text(pr.date, format: .dateTime.month(.abbreviated).day())
-                            .font(.caption2)
-                            .foregroundStyle(.tertiary)
                     }
-                }
 
-                if prs.count > 5 {
-                    Text("+\(prs.count - 5) more")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    if prs.count > 5 {
+                        Text("+\(prs.count - 5) more")
+                            .font(.uplift.text(12, weight: .medium))
+                            .foregroundStyle(Color.uplift.fgMuted)
+                    }
                 }
             }
         }
-        .padding()
-        .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Color.uplift.surface1)
+        )
     }
 }
 
