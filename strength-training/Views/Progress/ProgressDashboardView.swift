@@ -35,7 +35,7 @@ private struct ProgressDashboardContent: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
-                TimeRangePicker(selection: $viewModel.selectedTimeRange)
+                UpliftRangePicker(selection: $viewModel.selectedTimeRange)
                     .padding(.horizontal)
 
                 // Headline metric cards

@@ -9,7 +9,7 @@ import SwiftData
 @Observable
 final class ProgressDashboardViewModel {
     var modelContext: ModelContext
-    var selectedTimeRange: ProgressTimeRange = .twelveWeeks
+    var selectedTimeRange: ProgressTimeRange = .threeMonths
     var volumeFilterMode: TrainingMode? = nil
     var modeSplitPeriod: ModeSplitPeriod = .week
 

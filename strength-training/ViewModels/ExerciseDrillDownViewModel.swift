@@ -10,7 +10,7 @@ import SwiftData
 final class ExerciseDrillDownViewModel {
     var modelContext: ModelContext
     let exercise: Exercise
-    var selectedTimeRange: ProgressTimeRange = .twelveWeeks
+    var selectedTimeRange: ProgressTimeRange = .threeMonths
     var topSetMetric: TopSetMetric = .e1RM
 
     enum TopSetMetric: String, CaseIterable, Identifiable {

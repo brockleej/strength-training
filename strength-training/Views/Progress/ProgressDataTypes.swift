@@ -9,22 +9,27 @@ import SwiftUI
 // MARK: - Time Range
 
 enum ProgressTimeRange: String, CaseIterable, Identifiable {
-    case fourWeeks = "4W"
-    case twelveWeeks = "12W"
-    case oneYear = "1Y"
+    case week = "Week"
+    case month = "Month"
+    case threeMonths = "3 mo"
+    case year = "Year"
     case all = "All"
 
     var id: String { rawValue }
 
-    var startDate: Date? {
-        let calendar = Calendar.current
+    /// Inclusive start of the period anchored to `now`. Returns nil for `.all`.
+    func startDate(now: Date = .now, calendar: Calendar = .current) -> Date? {
         switch self {
-        case .fourWeeks:  return calendar.date(byAdding: .weekOfYear, value: -4, to: .now)
-        case .twelveWeeks: return calendar.date(byAdding: .weekOfYear, value: -12, to: .now)
-        case .oneYear:    return calendar.date(byAdding: .year, value: -1, to: .now)
-        case .all:        return nil
+        case .week:        return calendar.date(byAdding: .weekOfYear, value: -1, to: now)
+        case .month:       return calendar.date(byAdding: .month, value: -1, to: now)
+        case .threeMonths: return calendar.date(byAdding: .month, value: -3, to: now)
+        case .year:        return calendar.date(byAdding: .year, value: -1, to: now)
+        case .all:         return nil
         }
     }
+
+    /// Convenience for legacy call sites that read the property directly.
+    var startDate: Date? { startDate() }
 }
 
 // MARK: - Chart Data Points
