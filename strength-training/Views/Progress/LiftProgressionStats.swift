@@ -9,11 +9,24 @@ enum LiftProgressionStats {
         let id: UUID
         let exerciseName: String
         let dayType: DayType
+        /// Heaviest single non-warmup weight in the period (raw `weightLbs.max()`).
+        /// NOTE: This is **raw weight**, not the e1RM-best set's weight. Diverges
+        /// intentionally from `ExerciseDrillDownStats.Bar.weight`, which picks the
+        /// e1RM-best set. The dashboard surface conveys "heaviest weight you lifted";
+        /// the drill-down conveys "best work set."
         let topWeightLb: Double
+        /// All-time max non-warmup weight (raw, same definition as `topWeightLb`).
         let allTimeBestLb: Double
         /// 0...1 — progress bar fill (topWeightLb / allTimeBestLb, clamped).
         let progressPct: Double
+        /// Top-weight delta vs the immediately-preceding session for this exercise (any window).
+        /// Nil when this is the first session ever logged for the exercise.
+        /// NOTE: Compared in **raw weight** units to match `topWeightLb` semantics —
+        /// `isPR` (below) is computed in **e1RM** units, so a session can show
+        /// "delta = 0 lb" while still being a PR (e.g. same weight × more reps).
         let deltaVsLastSessionLb: Double?
+        /// True iff the latest in-period session's top e1RM strictly beats the
+        /// all-time prior e1RM for this exercise. Strict `>`.
         let isPR: Bool
     }
 

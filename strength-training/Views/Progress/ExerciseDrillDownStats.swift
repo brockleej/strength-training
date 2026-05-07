@@ -75,11 +75,8 @@ enum ExerciseDrillDownStats {
         let recent = Array(priorSorted.prefix(10).reversed())
         guard !recent.isEmpty else { return [] }
 
-        // Walk all-time history once to compute running-max for PR flagging.
-        var runningMax: Double = 0
-        var bars: [Bar] = []
-        // To get accurate PR for older bars, we need the all-time history up to each session.
-        // We'll precompute the running-max stream via the FULL chronological history.
+        // Walk all-time history once to capture running-max e1RM BEFORE each record
+        // for accurate PR flagging on older bars.
         let chrono = exercise.recordsArray
             .filter { $0.session?.isCompleted == true }
             .compactMap { rec -> (record: ExerciseRecord, date: Date)? in
@@ -88,18 +85,18 @@ enum ExerciseDrillDownStats {
             }
             .sorted { $0.date < $1.date }
 
-        var maxAtOrBeforeDate: [Date: Double] = [:]
+        var runningMax: Double = 0
         var maxAtOrBeforeID: [UUID: Double] = [:]
         for entry in chrono {
             let workingSets = entry.record.setsArray.filter { !$0.isWarmup }
             let sessionTopE1RM = workingSets
                 .map { ProgressionService.e1RM(weight: $0.weightLbs, reps: $0.reps) }
                 .max() ?? 0
-            // Running max BEFORE this session
-            maxAtOrBeforeDate[entry.date] = runningMax
-            maxAtOrBeforeID[entry.record.id] = runningMax
+            maxAtOrBeforeID[entry.record.id] = runningMax  // snapshot prior to this record
             if sessionTopE1RM > runningMax { runningMax = sessionTopE1RM }
         }
+
+        var bars: [Bar] = []
 
         for (i, entry) in recent.enumerated() {
             let workingSets = entry.record.setsArray.filter { !$0.isWarmup }
