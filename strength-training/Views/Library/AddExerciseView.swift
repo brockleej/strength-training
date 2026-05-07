@@ -73,6 +73,11 @@ struct AddExerciseView: View {
         .presentationDragIndicator(.visible)
         .background(Color.uplift.bgElev)
         .onAppear {
+            // Reset all form state on every present so re-presenting the sheet
+            // (e.g. via Cancel → tap +) starts clean rather than retaining the
+            // previous attempt's name/muscleGroup.
+            name = ""
+            muscleGroup = ""
             dayType = preselectedDayType == .fullBody ? .arms : preselectedDayType
             // Auto-focus name field on present
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { nameFocused = true }
