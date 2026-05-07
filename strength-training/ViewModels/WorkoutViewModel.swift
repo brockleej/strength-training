@@ -8,6 +8,37 @@
 import SwiftUI
 import SwiftData
 
+/// Display context for `PRCelebrationView`. Built by `WorkoutViewModel` when a
+/// just-logged set creates a new all-time e1RM PR for the exercise.
+///
+/// Identifiable so `.fullScreenCover(item:)` can drive presentation in FocusView.
+struct PRCelebrationContext: Identifiable, Equatable {
+    /// Stable across the lifetime of one celebration trigger; new id per PR
+    /// so SwiftUI re-presents if the user logs another PR after dismissing.
+    let id: UUID = UUID()
+    /// The exercise the PR was achieved on. Used for the title.
+    let exerciseName: String
+    /// The just-logged set that triggered the celebration.
+    let weight: Double
+    let reps: Int
+    /// Computed e1RM for the just-logged set. Used for the "1RM est. {N} lb" subtitle.
+    let newE1RM: Double
+    /// The previous best — used for the delta card. Nil if this exercise had no
+    /// prior history (so the delta card hides).
+    let previousBest: ProgressionService.E1RMBest?
+
+    /// Computed delta in pounds between new e1RM and previous best.
+    /// Always > 0 when `previousBest != nil` (otherwise we wouldn't celebrate).
+    var weightDelta: Double {
+        guard let previousBest else { return 0 }
+        // The set's weight - the previous best's weight is more meaningful for
+        // the user than e1RM-vs-e1RM delta. If the user hit the same weight at
+        // higher reps (also a PR), this returns 0 — fall back to the e1RM delta
+        // pill in that case (handled at the view).
+        return weight - previousBest.weight
+    }
+}
+
 @Observable
 final class WorkoutViewModel {
     var modelContext: ModelContext
@@ -37,6 +68,15 @@ final class WorkoutViewModel {
     var sessionPendingEffortRating: WorkoutSession?
     /// Set after a workout is finished (and effort rating handled) to trigger navigation to its detail.
     var completedSessionToReview: WorkoutSession?
+    /// Pending PR celebration to present, if any. Bound by FocusView via .fullScreenCover(item:).
+    /// Set by `addSet(...)` when a logged set creates a new all-time e1RM PR. Cleared
+    /// when the view dismisses.
+    var pendingCelebration: PRCelebrationContext?
+
+    /// Per-session re-fire guard: tracks Exercise.id values that have already
+    /// celebrated in the current session. Reset whenever a new session starts.
+    /// In-memory only — not persisted.
+    private var celebratedExerciseIDs: Set<UUID> = []
     let healthKitService: HealthKitWorkoutService
 
     // MARK: - Cancel / Abandon Workout State
@@ -120,6 +160,7 @@ final class WorkoutViewModel {
         modelContext.insert(session)
         try? modelContext.save()
         activeSession = session
+        celebratedExerciseIDs.removeAll()
         startHealthKitWorkout()
     }
 
@@ -216,6 +257,7 @@ final class WorkoutViewModel {
             modelContext.insert(session)
             try? modelContext.save()
             activeSession = session
+            celebratedExerciseIDs.removeAll()
             startHealthKitWorkout()
         }
     }
@@ -224,7 +266,7 @@ final class WorkoutViewModel {
         guard let session = activeSession, !session.isCompleted else { return }
         session.isCompleted = true
         let capturedSession = session
-        // Don't nil activeSession here — keep the ActiveWorkoutView visible as a
+        // Don't nil activeSession here — keep the ExerciseListView visible as a
         // stable backdrop while the effort-rating sheet shows. ContentView clears
         // activeSession after switching to the History tab so no intermediate
         // screens flash.
@@ -309,6 +351,10 @@ final class WorkoutViewModel {
     // MARK: - Set Logging
 
     func addSet(exercise: Exercise, weight: Double, reps: Int) {
+        // Phase 3 — capture prior all-time best BEFORE saving so the new set
+        // doesn't influence the comparison.
+        let priorBest = ProgressionService.allTimeBestE1RM(for: exercise)
+
         let record = findOrCreateRecord(for: exercise)
         let setNumber = record.setsArray.count + 1
         let set = SetRecord(setNumber: setNumber, weightLbs: weight, reps: reps)
@@ -319,6 +365,20 @@ final class WorkoutViewModel {
         try? modelContext.save()
         HapticService.setLogged()
         showDeleteHintIfNeeded()
+
+        // Phase 3 — PR check: did this set produce a new all-time-best e1RM?
+        let newE1RM = ProgressionService.e1RM(weight: weight, reps: reps)
+        let priorE1RM = priorBest?.e1RM ?? 0
+        if newE1RM > priorE1RM, !celebratedExerciseIDs.contains(exercise.id) {
+            celebratedExerciseIDs.insert(exercise.id)
+            pendingCelebration = PRCelebrationContext(
+                exerciseName: exercise.name,
+                weight: weight,
+                reps: reps,
+                newE1RM: newE1RM,
+                previousBest: priorBest
+            )
+        }
     }
 
     func deleteSet(_ set: SetRecord, from exercise: Exercise) {
