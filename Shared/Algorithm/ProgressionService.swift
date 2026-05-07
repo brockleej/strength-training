@@ -120,4 +120,45 @@ struct ProgressionService {
     static func snap5(_ value: Double) -> Double {
         (value / 5).rounded() * 5
     }
+
+    // MARK: - PR Detection (Phase 3)
+    //
+    // Epley formula for estimated 1-rep max + all-time-best scan across completed sessions.
+    // Pure data operations on `ExerciseRecordSnapshot` arrays; no SwiftData here.
+
+    /// Epley estimated 1-rep max: `weight × (1 + reps / 30)`.
+    /// At 1 rep this slightly overshoots (≈1.033x weight) — accepted convention.
+    static func e1RM(weight: Double, reps: Int) -> Double {
+        weight * (1.0 + Double(reps) / 30.0)
+    }
+
+    /// The set with the highest computed e1RM across all non-warmup sets in `records`.
+    /// Returns nil when the input is empty or contains no non-warmup sets.
+    static func allTimeBestE1RM(in records: [ExerciseRecordSnapshot]) -> E1RMBest? {
+        var best: E1RMBest?
+        for record in records {
+            for set in record.sets where !set.isWarmup {
+                let computed = e1RM(weight: set.weightLbs, reps: set.reps)
+                if best == nil || computed > best!.e1RM {
+                    best = E1RMBest(
+                        weight: set.weightLbs,
+                        reps: set.reps,
+                        e1RM: computed,
+                        recordedAt: record.sessionDate
+                    )
+                }
+            }
+        }
+        return best
+    }
+
+    /// The single best e1RM-producing set across an exercise's history.
+    /// Includes the *prior* best's weight + reps + date so callers can show a
+    /// "Previous best 225 × 5 · 3 wks ago" delta on the celebration screen.
+    struct E1RMBest: Equatable {
+        let weight: Double
+        let reps: Int
+        let e1RM: Double
+        let recordedAt: Date
+    }
 }
