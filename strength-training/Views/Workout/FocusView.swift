@@ -33,6 +33,26 @@ struct FocusView: View {
                     titleSection
                     PrevSessionsStrip(entries: historyEntries)
                         .padding(.bottom, 14)
+                    if workoutVM.showDeleteHint {
+                        HStack(spacing: 6) {
+                            Image(systemName: "hand.tap.fill")
+                                .font(.system(size: 12))
+                                .foregroundStyle(Color.uplift.accent)
+                            Text("Long press a set to delete it")
+                                .font(.uplift.text(12, weight: .medium))
+                                .foregroundStyle(Color.uplift.fgMuted)
+                            Spacer()
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 10)
+                        .background {
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .fill(Color.uplift.accentSoft)
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 8)
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                    }
                     FocusSetsCard(sets: loggedSets) { set in
                         workoutVM.deleteSet(set, from: exercise)
                     }
