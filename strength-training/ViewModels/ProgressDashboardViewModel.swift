@@ -353,4 +353,22 @@ final class ProgressDashboardViewModel {
             return exercises.isEmpty ? nil : (dayType, exercises)
         }
     }
+
+    // MARK: - Dashboard headline (Phase 6)
+
+    var totalVolumeInRange: Double {
+        ProgressVolumeStats.totalVolume(in: selectedTimeRange, sessions: fetchAllCompletedSessions())
+    }
+
+    var totalVolumeDeltaPct: Double? {
+        ProgressVolumeStats.deltaPct(in: selectedTimeRange, sessions: fetchAllCompletedSessions())
+    }
+
+    var volumeSeriesPoints: [ProgressVolumeStats.VolumePoint] {
+        ProgressVolumeStats.bucketedSeries(in: selectedTimeRange, sessions: fetchAllCompletedSessions())
+    }
+
+    var liftProgressionRows: [LiftProgressionStats.Row] {
+        LiftProgressionStats.rows(in: selectedTimeRange, exercises: allExercises())
+    }
 }
