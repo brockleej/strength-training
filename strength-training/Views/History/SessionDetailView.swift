@@ -6,125 +6,78 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct SessionDetailView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
     let session: WorkoutSession
 
     @State private var healthStats: HealthKitWorkoutStats?
     @State private var loadedStats = false
+    @State private var showDeleteConfirm = false
+
+    private var liftRows: [SessionDetailLiftStats.LiftRow] { SessionDetailLiftStats.rows(for: session) }
+    private var prCount: Int { liftRows.filter(\.isPR).count }
+    private var prNames: [String] { liftRows.filter(\.isPR).map(\.exerciseName) }
 
     var body: some View {
-        List {
-            Section {
-                LabeledContent("Date", value: session.date.formatted(.dateTime.weekday(.wide).month().day().year()))
-                LabeledContent("Day Type", value: session.dayType.rawValue)
-                LabeledContent("Exercises Completed", value: "\(completedRecords.count)")
-                LabeledContent("Total Sets", value: "\(totalSets)")
-                LabeledContent("Total Volume", value: "\(formattedVolume) lbs")
-            }
-
-            if let stats = healthStats {
-                Section("Apple Health") {
-                    LabeledContent {
-                        Text(formattedDuration(stats.duration))
-                            .monospacedDigit()
-                    } label: {
-                        Label("Duration", systemImage: "timer")
-                    }
-
-                    LabeledContent {
-                        Text("\(Int(stats.activeCalories)) kcal")
-                            .monospacedDigit()
-                    } label: {
-                        Label("Active Calories", systemImage: "flame.fill")
-                            .foregroundStyle(.orange)
-                    }
-
-                    if let avgHR = stats.avgHeartRate {
-                        LabeledContent {
-                            Text("\(Int(avgHR)) BPM")
-                                .monospacedDigit()
+        VStack(spacing: 0) {
+            NavBar(title: session.dayType.rawValue, style: .compact,
+                leading: { CircleButton(icon: "chevron.left") { dismiss() } },
+                trailing: {
+                    Menu {
+                        Button(role: .destructive) {
+                            showDeleteConfirm = true
                         } label: {
-                            Label("Avg Heart Rate", systemImage: "heart.fill")
-                                .foregroundStyle(.red)
+                            Label("Delete session", systemImage: "trash")
                         }
-                    }
-
-                    if let maxHR = stats.maxHeartRate {
-                        LabeledContent {
-                            Text("\(Int(maxHR)) BPM")
-                                .monospacedDigit()
-                        } label: {
-                            Label("Max Heart Rate", systemImage: "heart.fill")
-                                .foregroundStyle(.red)
-                        }
-                    }
-
-                    if let effort = stats.effortRating ?? session.effortRating {
-                        LabeledContent {
-                            HStack(spacing: 4) {
-                                Text("\(effort)/10")
-                                    .monospacedDigit()
-                                Text(effortLabel(for: effort))
-                                    .font(.caption)
-                                    .foregroundStyle(effortColor(for: effort))
-                            }
-                        } label: {
-                            Label("Effort", systemImage: "figure.strengthtraining.functional")
+                    } label: {
+                        ZStack {
+                            Circle().fill(Color.uplift.surface1).frame(width: 36, height: 36)
+                            Image(systemName: "ellipsis")
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundStyle(Color.uplift.fg)
                         }
                     }
                 }
-            }
+            )
 
-            ForEach(sortedRecords) { record in
-                Section {
-                    if let exercise = record.exercise {
-                        NavigationLink {
-                            ExerciseDrillDownView(
-                                exercise: exercise,
-                                modelContext: modelContext
-                            )
-                        } label: {
-                            ExerciseHeaderRow(
-                                exercise: exercise,
-                                record: record,
-                                sessionDate: session.date
-                            )
-                        }
-                    } else {
-                        HStack {
-                            Text("Unknown")
-                                .font(.headline)
-                            Spacer()
-                            Text(record.trainingMode.rawValue)
-                                .font(.caption)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 3)
-                                .background(.quaternary)
-                                .clipShape(Capsule())
-                        }
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    heroBlock
+                        .padding(.bottom, 16)
+                    statsCard
+                        .padding(.bottom, 8)
+                    if prCount > 0 {
+                        prCallout
+                            .padding(.top, 6)
+                            .padding(.bottom, 6)
                     }
-
-                    ForEach(record.setsArray.sorted(by: { $0.setNumber < $1.setNumber })) { set in
-                        HStack {
-                            Text("Set \(set.setNumber)")
-                                .foregroundStyle(.secondary)
-                            if set.isWarmup {
-                                Text("Warmup")
-                                    .font(.caption)
-                                    .foregroundStyle(.orange)
-                            }
-                            Spacer()
-                            Text("\(formattedWeight(set.weightLbs)) lbs x \(set.reps)")
-                                .monospacedDigit()
-                        }
+                    liftsSection                  // Task 6
+                        .padding(.top, 4)
+                    if healthStats != nil {
+                        appleHealthCard           // Task 6
+                            .padding(.top, 12)
                     }
                 }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 100)
             }
+            .scrollIndicators(.hidden)
         }
-        .navigationTitle("\(session.dayType.rawValue) Day")
-        .navigationBarTitleDisplayMode(.inline)
+        .background(Color.uplift.bgElev)
+        .toolbar(.hidden, for: .navigationBar)
+        .confirmationDialog("Delete this session?", isPresented: $showDeleteConfirm, titleVisibility: .visible) {
+            Button("Delete", role: .destructive) {
+                modelContext.delete(session)
+                try? modelContext.save()
+                dismiss()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This permanently removes the session and its lifts.")
+        }
         .task {
             guard !loadedStats, let uuid = session.healthKitWorkoutUUID else { return }
             loadedStats = true
@@ -133,176 +86,98 @@ struct SessionDetailView: View {
         }
     }
 
-    // MARK: - Computed Properties
+    // MARK: - Hero
 
-    private var completedRecords: [ExerciseRecord] {
-        session.exerciseRecordsArray.filter { !$0.setsArray.isEmpty }
-    }
-
-    private var sortedRecords: [ExerciseRecord] {
-        completedRecords.sorted { $0.sortOrder < $1.sortOrder }
-    }
-
-    private var totalSets: Int {
-        completedRecords.reduce(0) { $0 + $1.setsArray.count }
-    }
-
-    private var formattedVolume: String {
-        let volume = completedRecords.reduce(0.0) { total, record in
-            total + record.setsArray.reduce(0.0) { $0 + $1.weightLbs * Double($1.reps) }
-        }
-        return volume.truncatingRemainder(dividingBy: 1) == 0
-            ? String(format: "%.0f", volume)
-            : String(format: "%.1f", volume)
-    }
-
-    private func formattedWeight(_ weight: Double) -> String {
-        weight.truncatingRemainder(dividingBy: 1) == 0
-            ? String(format: "%.0f", weight)
-            : String(format: "%.1f", weight)
-    }
-
-    private func formattedDuration(_ interval: TimeInterval) -> String {
-        let total = Int(interval)
-        let hours = total / 3600
-        let minutes = (total % 3600) / 60
-        let seconds = total % 60
-        if hours > 0 {
-            return String(format: "%d:%02d:%02d", hours, minutes, seconds)
-        }
-        return String(format: "%d:%02d", minutes, seconds)
-    }
-
-    private func effortColor(for rating: Int) -> Color {
-        switch rating {
-        case 1...3: return .green
-        case 4...6: return .yellow
-        case 7, 8: return .orange
-        default: return .red
+    private var heroBlock: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .center, spacing: 10) {
+                DayChip(dayType: session.dayType, size: .sm)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("\(session.dayType.rawValue.uppercased()) DAY")
+                        .font(.uplift.text(11, weight: .semibold))
+                        .tracking(0.4)
+                        .foregroundStyle(dayInk)
+                    Text(formattedHeroSubtitle(session.date))
+                        .font(.uplift.text(12, weight: .medium))
+                        .foregroundStyle(Color.uplift.fgMuted)
+                }
+            }
+            Text(session.dayType.rawValue)
+                .font(.uplift.display(30, weight: .bold))
+                .kerning(-0.8)
+                .foregroundStyle(Color.uplift.fg)
         }
     }
 
-    private func effortLabel(for rating: Int) -> String {
-        switch rating {
-        case 1...3: return "Easy"
-        case 4...6: return "Moderate"
-        case 7, 8: return "Hard"
-        case 9, 10: return "All Out"
-        default: return ""
+    private var dayInk: Color {
+        switch session.dayType {
+        case .arms:     .uplift.armsInk
+        case .legs:     .uplift.legsInk
+        case .fullBody: .uplift.fullInk
         }
     }
-}
 
-// MARK: - Exercise Header with Trend & PR Indicators
+    private func formattedHeroSubtitle(_ date: Date) -> String {
+        let dateF = DateFormatter(); dateF.dateFormat = "EEEE, MMM d"
+        let timeF = DateFormatter(); timeF.dateFormat = "h:mm a"
+        return "\(dateF.string(from: date)) · \(timeF.string(from: date).lowercased())"
+    }
 
-private struct ExerciseHeaderRow: View {
-    let exercise: Exercise
-    let record: ExerciseRecord
-    let sessionDate: Date
+    // MARK: - Stats card
 
-    var body: some View {
+    private var statsCard: some View {
+        let durationMin = WorkoutSummaryStats.formatDurationMin(WorkoutSummaryStats.durationSeconds(for: session))
+        let volumeLb = WorkoutSummaryStats.totalVolume(for: session)
+        let setCount = WorkoutSummaryStats.totalSets(for: session)
+        return HStack(spacing: 14) {
+            Stat(label: "Duration", value: "\(durationMin)", unit: "min")
+            Stat(label: "Volume", value: volumeLb.formatted(.number), unit: "lb")
+            Stat(label: "Sets", value: "\(setCount)")
+            statTinted(label: "PRs", value: "\(prCount)", tinted: prCount > 0)
+        }
+        .padding(16)
+        .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Color.uplift.surface1))
+    }
+
+    /// Stat-shaped cell with optional amber tint for PR count.
+    private func statTinted(label: String, value: String, tinted: Bool) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            HStack {
-                Text(exercise.name)
-                    .font(.headline)
-
-                if isPR {
-                    Text("PR")
-                        .font(.caption2.bold())
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(.pink)
-                        .clipShape(Capsule())
-                }
-
-                Spacer()
-
-                Text(record.trainingMode.rawValue)
-                    .font(.caption)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(.quaternary)
-                    .clipShape(Capsule())
-            }
-
-            if let comparison = comparisonText {
-                HStack(spacing: 4) {
-                    Image(systemName: trendIcon)
-                        .font(.caption2)
-                        .foregroundStyle(trendColor)
-                    Text(comparison)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
+            Text(label.uppercased())
+                .font(.uplift.text(11, weight: .semibold))
+                .tracking(0.2)
+                .foregroundStyle(Color.uplift.fgMuted)
+            Num(value, size: 20, weight: .bold, color: tinted ? .uplift.pr : .uplift.fg)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    // MARK: - Computations
+    // MARK: - PR callout
 
-    private var currentE1RM: Double {
-        record.setsArray
-            .filter { !$0.isWarmup }
-            .map { $0.weightLbs * (1.0 + Double($0.reps) / 30.0) }
-            .max() ?? 0
-    }
-
-    private var previousRecord: ExerciseRecord? {
-        exercise.recordsArray
-            .filter { rec in
-                rec.id != record.id &&
-                rec.session?.isCompleted == true &&
-                (rec.session?.date ?? .distantFuture) < sessionDate
+    private var prCallout: some View {
+        HStack(spacing: 12) {
+            ZStack {
+                Circle().fill(Color.uplift.pr.opacity(0.18)).frame(width: 36, height: 36)
+                Image(systemName: "trophy.fill")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(Color.uplift.pr)
             }
-            .sorted { ($0.session?.date ?? .distantPast) > ($1.session?.date ?? .distantPast) }
-            .first
-    }
-
-    private var previousE1RM: Double? {
-        guard let prev = previousRecord else { return nil }
-        let best = prev.setsArray
-            .filter { !$0.isWarmup }
-            .map { $0.weightLbs * (1.0 + Double($0.reps) / 30.0) }
-            .max()
-        return best
-    }
-
-    private var allTimeE1RM: Double {
-        let completedRecords = exercise.recordsArray.filter { $0.session?.isCompleted == true }
-        let workingSets = completedRecords.flatMap { $0.setsArray.filter { !$0.isWarmup } }
-        let e1rms: [Double] = workingSets.map { set in
-            set.weightLbs * (1.0 + Double(set.reps) / 30.0)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("\(prCount) personal record\(prCount == 1 ? "" : "s")")
+                    .font(.uplift.text(14, weight: .semibold))
+                    .foregroundStyle(Color.uplift.fg)
+                Text(prNames.joined(separator: " · "))
+                    .font(.uplift.text(12, weight: .medium))
+                    .foregroundStyle(Color.uplift.fgMuted)
+                    .lineLimit(2)
+            }
+            Spacer(minLength: 0)
         }
-        return e1rms.max() ?? 0
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Color.uplift.pr.opacity(0.10)))
     }
 
-    private var isPR: Bool {
-        currentE1RM > 0 && currentE1RM >= allTimeE1RM
-    }
-
-    private var delta: Double? {
-        guard let prev = previousE1RM, prev > 0 else { return nil }
-        return currentE1RM - prev
-    }
-
-    private var comparisonText: String? {
-        guard let d = delta else { return nil }
-        let sign = d >= 0 ? "+" : ""
-        return "\(sign)\(String(format: "%.0f", d)) lbs e1RM vs last"
-    }
-
-    private var trendIcon: String {
-        guard let d = delta else { return "minus" }
-        if d > 0 { return "arrow.up.right" }
-        if d < 0 { return "arrow.down.right" }
-        return "arrow.right"
-    }
-
-    private var trendColor: Color {
-        guard let d = delta else { return .secondary }
-        if d > 0 { return .green }
-        if d < 0 { return .red }
-        return .secondary
-    }
+    // Stubbed for this task — implemented in Task 6
+    private var liftsSection: some View { EmptyView() }
+    private var appleHealthCard: some View { EmptyView() }
 }
