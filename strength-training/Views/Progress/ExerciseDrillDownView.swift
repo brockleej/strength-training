@@ -47,7 +47,8 @@ private struct ExerciseDrillDownContent: View {
             VStack(alignment: .leading, spacing: 8) {
                 heroCard
                 personalBestCard
-                // Task 9: miniChartCard, recentSessionsSection
+                miniChartCard
+                recentSessionsSection
                 // Task 10: e1rmTrendCard, volumePerSessionCard
 
                 // LEGACY: replaced in Tasks 9-10
@@ -173,6 +174,84 @@ private struct ExerciseDrillDownContent: View {
             : String(format: "%.1f", w)
     }
 
+    // MARK: - Mini chart card (Task 9)
+
+    private var miniChartCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Top set")
+                    .font(.uplift.text(13, weight: .semibold))
+                    .foregroundStyle(Color.uplift.fg)
+                Spacer()
+                Text("Last 10 sessions")
+                    .font(.uplift.text(12, weight: .medium))
+                    .foregroundStyle(Color.uplift.fgMuted)
+            }
+            // Metric selector folded in (Weight / Reps / Est. 1RM)
+            miniMetricSelector
+            MiniBarChart(bars: viewModel.lastTenBars, metric: viewModel.topSetMetric)
+        }
+        .padding(16)
+        .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Color.uplift.surface1))
+    }
+
+    private var miniMetricSelector: some View {
+        HStack(spacing: 4) {
+            ForEach(ExerciseDrillDownViewModel.TopSetMetric.allCases) { metric in
+                let active = (metric == viewModel.topSetMetric)
+                Button { viewModel.topSetMetric = metric } label: {
+                    Text(metric.rawValue)
+                        .font(.uplift.text(11, weight: .semibold))
+                        .foregroundStyle(active ? Color.uplift.fg : Color.uplift.fgMuted)
+                        .padding(.horizontal, 10).padding(.vertical, 5)
+                        .background(active ? Color.uplift.surface3 : Color.clear,
+                                    in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(3)
+        .background(Color.uplift.surface2, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+
+    // MARK: - Recent sessions (Task 9)
+
+    private var recentSessionsSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            SectionHeader("Recent sessions")
+            VStack(spacing: 6) {
+                ForEach(viewModel.recentSessionRows) { row in
+                    recentRow(row)
+                }
+            }
+        }
+    }
+
+    private func recentRow(_ row: ExerciseDrillDownStats.RecentRow) -> some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 1) {
+                HStack(spacing: 5) {
+                    Text(row.dateLabel)
+                        .font(.uplift.text(14, weight: .semibold))
+                        .kerning(-0.1)
+                        .foregroundStyle(Color.uplift.fg)
+                    if row.isPR {
+                        Image(systemName: "trophy.fill")
+                            .font(.system(size: 11))
+                            .foregroundStyle(Color.uplift.pr)
+                    }
+                }
+                Text("\(row.setsCount) × \(row.topReps)")
+                    .font(.uplift.text(12, weight: .medium))
+                    .foregroundStyle(Color.uplift.fgMuted)
+            }
+            Spacer(minLength: 0)
+            Num("\(formattedWeight(row.topWeightLb)) × \(row.topReps)", size: 14, weight: .semibold, color: .uplift.fg)
+        }
+        .padding(13)
+        .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Color.uplift.surface1))
+    }
+
     // MARK: - LEGACY: replaced in Tasks 9-10
 
     private var legacyChartsSection: some View {
@@ -254,5 +333,60 @@ private struct SummaryTile: View {
         .padding(.vertical, 8)
         .background(.ultraThinMaterial)
         .clipShape(RoundedRectangle(cornerRadius: 8))
+    }
+}
+
+// MARK: - MiniBarChart (Task 9)
+
+private struct MiniBarChart: View {
+    let bars: [ExerciseDrillDownStats.Bar]
+    /// Selected metric used to pick the bar's height value. The chart
+    /// auto-scales between min/max of that metric.
+    let metric: ExerciseDrillDownViewModel.TopSetMetric
+
+    private var values: [Double] {
+        bars.map { bar in
+            switch metric {
+            case .weight: return bar.weight
+            case .reps:   return Double(bar.reps)
+            case .e1RM:   return ProgressionService.e1RM(weight: bar.weight, reps: bar.reps)
+            }
+        }
+    }
+    private var minVal: Double { values.min() ?? 0 }
+    private var maxVal: Double { values.max() ?? 1 }
+
+    var body: some View {
+        if bars.isEmpty {
+            ContentUnavailableView("No history yet", systemImage: "chart.bar")
+                .foregroundStyle(Color.uplift.fgMuted)
+                .frame(height: 90)
+        } else {
+            HStack(alignment: .bottom, spacing: 6) {
+                ForEach(Array(bars.enumerated()), id: \.element.id) { idx, item in
+                    let v = values[idx]
+                    let h = max(0.05, (v - minVal) / max(0.001, maxVal - minVal))
+                    barView(for: item, heightFraction: h)
+                }
+            }
+            .frame(height: 90)
+        }
+    }
+
+    /// Renamed from `bar(...)` to avoid shadowing the ForEach closure parameter.
+    private func barView(for item: ExerciseDrillDownStats.Bar, heightFraction: Double) -> some View {
+        let color: Color
+        if item.isLatest        { color = .uplift.pr }
+        else if item.isPR       { color = .uplift.accent }
+        else                    { color = .uplift.fgFaint }
+        return GeometryReader { geo in
+            VStack {
+                Spacer()
+                RoundedRectangle(cornerRadius: 4, style: .continuous)
+                    .fill(color)
+                    .frame(height: max(2, geo.size.height * heightFraction))
+                    .opacity(item.isLatest ? 1.0 : 0.85)
+            }
+        }
     }
 }
