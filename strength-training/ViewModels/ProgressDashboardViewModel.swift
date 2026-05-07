@@ -346,6 +346,11 @@ final class ProgressDashboardViewModel {
         return (try? modelContext.fetch(descriptor)) ?? []
     }
 
+    /// Resolve an exercise by id (used by the LIFT PROGRESSION rows to push the drill-down).
+    func exercise(forID id: UUID) -> Exercise? {
+        allExercises().first { $0.id == id }
+    }
+
     func exercisesGroupedByDayType() -> [(DayType, [Exercise])] {
         let all = allExercises()
         return [DayType.arms, DayType.legs].compactMap { dayType in

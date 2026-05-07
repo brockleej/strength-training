@@ -47,11 +47,9 @@ private struct ProgressDashboardContent: View {
                     headlineBlock
                     volumeChartCard
 
-                    // Task 7 will add: scoreCardsRow, prsCard, muscleGroupCard,
-                    // modeSplitCard, liftProgressionSection, exerciseListSection.
-
-                    // LEGACY: replaced in Task 7
-                    legacyBlock
+                    trainingScoresSection
+                    volumeBreakdownSection
+                    liftProgressionSection
                 }
                 .padding(.horizontal, 20)
                 .padding(.bottom, 100)
@@ -110,11 +108,10 @@ private struct ProgressDashboardContent: View {
         return Int(v).formatted(.number)
     }
 
-    // LEGACY: replaced in Task 7
-    private var legacyBlock: some View {
-        VStack(spacing: 20) {
-            // Headline metric cards
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+    private var trainingScoresSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SectionHeader("Training scores")
+            HStack(spacing: 12) {
                 StrengthScoreCard(
                     score: viewModel.strengthScore,
                     trend: viewModel.strengthScoreTrend,
@@ -127,28 +124,104 @@ private struct ProgressDashboardContent: View {
                     filterMode: $viewModel.volumeFilterMode
                 )
             }
-
             PRsThisMonthCard(prs: viewModel.prsThisMonth)
-
-            // Balance & Coverage
-            GroupBox("Muscle Group Volume") {
-                MuscleGroupVolumeChart(data: viewModel.muscleGroupVolumes)
-            }
-
-            GroupBox("Training Mode Split") {
-                ModeSplitChart(
-                    data: viewModel.modeSplit,
-                    period: $viewModel.modeSplitPeriod
-                )
-            }
-
-            // Exercise drill-down list
-            ExerciseListSection(
-                groupedExercises: viewModel.exercisesGroupedByDayType(),
-                modelContext: viewModel.modelContext
-            )
         }
-        .padding(.top, 20)
+    }
+
+    private var volumeBreakdownSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SectionHeader("Volume breakdown")
+            MuscleGroupVolumeChart(data: viewModel.muscleGroupVolumes)
+                .padding(16)
+                .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Color.uplift.surface1))
+            ModeSplitChart(
+                data: viewModel.modeSplit,
+                period: $viewModel.modeSplitPeriod
+            )
+            .padding(16)
+            .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Color.uplift.surface1))
+        }
+    }
+
+    private var liftProgressionSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            SectionHeader("Lift progression")
+            ForEach(viewModel.liftProgressionRows) { row in
+                if let exercise = viewModel.exercise(forID: row.id) {
+                    NavigationLink {
+                        ExerciseDrillDownView(
+                            exercise: exercise,
+                            modelContext: viewModel.modelContext
+                        )
+                    } label: {
+                        LiftProgressionRow(row: row)
+                    }
+                    .buttonStyle(.plain)
+                } else {
+                    LiftProgressionRow(row: row)
+                }
+            }
+        }
+    }
+}
+
+private struct LiftProgressionRow: View {
+    let row: LiftProgressionStats.Row
+
+    var body: some View {
+        HStack(spacing: 14) {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 6) {
+                    Text(row.exerciseName)
+                        .font(.uplift.text(14, weight: .semibold))
+                        .kerning(-0.2)
+                        .foregroundStyle(Color.uplift.fg)
+                    if row.isPR {
+                        Image(systemName: "trophy.fill")
+                            .font(.system(size: 11))
+                            .foregroundStyle(Color.uplift.pr)
+                    }
+                }
+                progressBar
+            }
+            VStack(alignment: .trailing, spacing: 2) {
+                Num("\(formattedWeight(row.topWeightLb))", size: 16, weight: .semibold, color: .uplift.fg)
+                deltaLabel
+            }
+        }
+        .padding(14)
+        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.uplift.surface1))
+    }
+
+    private var progressBar: some View {
+        GeometryReader { geo in
+            ZStack(alignment: .leading) {
+                RoundedRectangle(cornerRadius: 2).fill(Color.uplift.fgFaint)
+                RoundedRectangle(cornerRadius: 2).fill(Color.uplift.accent)
+                    .frame(width: geo.size.width * row.progressPct)
+            }
+        }
+        .frame(height: 4)
+    }
+
+    @ViewBuilder
+    private var deltaLabel: some View {
+        if let d = row.deltaVsLastSessionLb, d != 0 {
+            let sign = d > 0 ? "+" : ""
+            Text("\(sign)\(formattedWeight(d)) lb")
+                .font(.uplift.mono(11, weight: .semibold))
+                .foregroundStyle(d > 0 ? Color.uplift.up : Color.uplift.down)
+        } else {
+            Text("—")
+                .font(.uplift.mono(11, weight: .semibold))
+                .foregroundStyle(Color.uplift.fgDim)
+        }
+    }
+
+    private func formattedWeight(_ w: Double) -> String {
+        w.truncatingRemainder(dividingBy: 1) == 0
+            ? String(format: "%.0f", w)
+            : String(format: "%.1f", w)
     }
 }
 
