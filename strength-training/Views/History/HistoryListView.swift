@@ -209,30 +209,73 @@ private struct FilterChip: View {
 private struct SessionRow: View {
     let session: WorkoutSession
 
-    var body: some View {
-        HStack {
-            Image(systemName: session.dayType.systemImage)
-                .font(.title3)
-                .frame(width: 36, height: 36)
-                .foregroundStyle(session.dayType.color)
-                .background(session.dayType.color.opacity(0.15))
-                .clipShape(RoundedRectangle(cornerRadius: 8))
+    private var prCount: Int { SessionDetailLiftStats.prCount(for: session) }
+    private var durationMin: Int { WorkoutSummaryStats.formatDurationMin(WorkoutSummaryStats.durationSeconds(for: session)) }
+    private var volumeLb: Int { WorkoutSummaryStats.totalVolume(for: session) }
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text("\(session.dayType.rawValue) Day")
-                    .font(.headline)
-                Text(session.date.formatted(.dateTime.weekday(.wide).month().day()))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+    var body: some View {
+        HStack(spacing: 12) {
+            DayChip(dayType: session.dayType, size: .sm)
+
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(session.dayType.rawValue)
+                        .font(.uplift.text(15, weight: .semibold))
+                        .kerning(-0.2)
+                        .foregroundStyle(Color.uplift.fg)
+                    if prCount > 0 {
+                        HStack(spacing: 3) {
+                            Image(systemName: "trophy.fill")
+                                .font(.system(size: 11))
+                                .foregroundStyle(Color.uplift.pr)
+                            Text("\(prCount)")
+                                .font(.uplift.mono(11, weight: .semibold))
+                                .foregroundStyle(Color.uplift.pr)
+                        }
+                    }
+                }
+                metaRow
             }
 
-            Spacer()
+            Spacer(minLength: 0)
 
-            let exerciseCount = session.exerciseRecordsArray.filter { !$0.setsArray.isEmpty }.count
-            Text("\(exerciseCount) exercise\(exerciseCount == 1 ? "" : "s")")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            Image(systemName: "chevron.right")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(Color.uplift.fgDim)
         }
-        .padding(.vertical, 2)
+        .padding(14)
+        .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Color.uplift.surface1))
+    }
+
+    private var metaRow: some View {
+        HStack(spacing: 10) {
+            Text(formattedDate(session.date))
+                .font(.uplift.text(12, weight: .medium))
+                .foregroundStyle(Color.uplift.fgMuted)
+            dot
+            Text("\(durationMin) min")
+                .font(.uplift.mono(12, weight: .medium))
+                .foregroundStyle(Color.uplift.fgMuted)
+            dot
+            Text(formattedVolume(volumeLb))
+                .font(.uplift.mono(12, weight: .medium))
+                .foregroundStyle(Color.uplift.fgMuted)
+        }
+    }
+
+    private var dot: some View {
+        Text("·").font(.uplift.text(12, weight: .medium)).foregroundStyle(Color.uplift.fgMuted)
+    }
+
+    private func formattedDate(_ date: Date) -> String {
+        let f = DateFormatter()
+        f.dateFormat = "EEE, MMM d"
+        return f.string(from: date)
+    }
+
+    private func formattedVolume(_ lb: Int) -> String {
+        if lb == 0 { return "—" }
+        if lb >= 100_000 { return "\(Int((Double(lb) / 1000.0).rounded()))k lb" }
+        return "\(lb.formatted(.number)) lb"
     }
 }
