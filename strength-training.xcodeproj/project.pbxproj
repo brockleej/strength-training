@@ -24,6 +24,7 @@
 		D5C01201000100000000000B /* PrevSessionsStripDataTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5C01201000100000000000C /* PrevSessionsStripDataTests.swift */; };
 		D5C01201000100000000000E /* FocusViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5C01201000100000000000F /* FocusViewModelTests.swift */; };
 		D5C012010001000000000010 /* PRDetectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5C012010001000000000011 /* PRDetectionTests.swift */; };
+		D5C012010001000000000013 /* WorkoutSummaryStatsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5C012010001000000000014 /* WorkoutSummaryStatsTests.swift */; };
 		31F77B75A3F399B10127FD2C /* ReplayChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = 590147BF5DC7692C61D005AA /* ReplayChart.swift */; };
 		3342601B9D695C951361CD50 /* ReplayEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CC4D1E291A947627897B17B /* ReplayEngine.swift */; };
 		37C45FF0E0D33AE49B93AB69 /* ProgressionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87211BB2F7AB169D53339453 /* ProgressionService.swift */; };
@@ -115,6 +116,7 @@
 		D5C01201000100000000000C /* PrevSessionsStripDataTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PrevSessionsStripDataTests.swift; sourceTree = "<group>"; };
 		D5C01201000100000000000F /* FocusViewModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FocusViewModelTests.swift; sourceTree = "<group>"; };
 		D5C012010001000000000011 /* PRDetectionTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PRDetectionTests.swift; sourceTree = "<group>"; };
+		D5C012010001000000000014 /* WorkoutSummaryStatsTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkoutSummaryStatsTests.swift; sourceTree = "<group>"; };
 		DA1089E656CA94B6914585FB /* ExerciseDetailView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ExerciseDetailView.swift; sourceTree = "<group>"; };
 		DDFCFE81F28301E70314A05D /* ConfigArtifactRoundTripTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ConfigArtifactRoundTripTests.swift; sourceTree = "<group>"; };
 		E15010E72FA7E5AB009EF2FB /* TrainingMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingMode.swift; sourceTree = "<group>"; };
@@ -291,6 +293,7 @@
 			children = (
 				D5C01201000100000000000C /* PrevSessionsStripDataTests.swift */,
 				D5C01201000100000000000F /* FocusViewModelTests.swift */,
+				D5C012010001000000000014 /* WorkoutSummaryStatsTests.swift */,
 			);
 			path = Workout;
 			sourceTree = "<group>";
@@ -593,6 +596,7 @@
 				D5C01201000100000000000B /* PrevSessionsStripDataTests.swift in Sources */,
 				D5C01201000100000000000E /* FocusViewModelTests.swift in Sources */,
 				D5C012010001000000000010 /* PRDetectionTests.swift in Sources */,
+				D5C012010001000000000013 /* WorkoutSummaryStatsTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
