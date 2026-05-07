@@ -53,4 +53,15 @@ extension ProgressionService {
                 )
             }
     }
+
+    // MARK: - PR Detection (Phase 3) — SwiftData adapter
+
+    /// SwiftData-aware version of `allTimeBestE1RM(in:)`. Converts the exercise's
+    /// completed-session records to snapshots and delegates to the pure function.
+    /// Returns the best (weight, reps, e1RM, recordedAt) across all non-warmup sets,
+    /// or nil if the exercise has no completed sessions yet.
+    static func allTimeBestE1RM(for exercise: Exercise) -> E1RMBest? {
+        let snapshots = snapshotsFromCompletedRecords(of: exercise)
+        return allTimeBestE1RM(in: snapshots)
+    }
 }
