@@ -11,6 +11,8 @@ struct FocusView: View {
 
     @Environment(\.dismiss) private var dismiss
 
+    @State private var focusVM: FocusViewModel?
+
     /// Sets logged for this exercise in the current session, sorted ascending by set#.
     private var loggedSets: [SetRecord] {
         let record = workoutVM.currentRecord(for: exercise)
@@ -54,7 +56,22 @@ struct FocusView: View {
                 overflowMenu
             }
         }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if let focusVM {
+                VStack(spacing: 12) {
+                    FocusStepperFooter(focusVM: focusVM)
+                    FocusActionBar(focusVM: focusVM) {
+                        logSet()
+                    }
+                }
+            }
+        }
         .navigationBarHidden(true)
+        .onAppear {
+            if focusVM == nil {
+                focusVM = makeFocusViewModel()
+            }
+        }
     }
 
     private var titleSection: some View {
@@ -108,5 +125,49 @@ struct FocusView: View {
         case .legs:     .uplift.legsInk
         case .fullBody: .uplift.fullInk
         }
+    }
+
+    // MARK: - FocusViewModel construction
+
+    private func makeFocusViewModel() -> FocusViewModel {
+        let suggestion = workoutVM.suggestion(for: exercise, mode: workoutVM.selectedMode)
+        let recent = workoutVM.recentAverage(for: exercise, mode: workoutVM.selectedMode)
+
+        // Initial value resolution: suggestion target if available, else recent average,
+        // else default for first-time users (0 × 1).
+        let initialWeight = suggestion?.targetWeight ?? recent?.weight ?? 0
+        let initialReps = suggestion?.targetReps ?? recent?.reps ?? 1
+
+        // Build target only when the suggestion's basis is `.consistent` — the
+        // algorithm has decided the user is ready for a weight bump. Other bases
+        // (`.notEnoughData` / `.improving`) shouldn't trigger the blue/bumped UI.
+        var target: FocusViewModel.Target?
+        if let s = suggestion, s.basis == .consistent, let r = recent {
+            let weightDelta = max(0, s.targetWeight - r.weight)
+            let repsDelta = max(0, s.targetReps - r.reps)
+            if weightDelta > 0 || repsDelta > 0 {
+                target = .init(
+                    weight: s.targetWeight,
+                    weightDelta: weightDelta,
+                    reps: s.targetReps,
+                    repsDelta: repsDelta
+                )
+            }
+        }
+        return FocusViewModel(
+            initialWeight: initialWeight,
+            initialReps: initialReps,
+            target: target
+        )
+    }
+
+    private func logSet() {
+        guard let focusVM else { return }
+        workoutVM.addSet(
+            exercise: exercise,
+            weight: focusVM.weight,
+            reps: focusVM.reps
+        )
+        focusVM.setLogged()
     }
 }
