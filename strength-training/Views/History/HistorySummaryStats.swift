@@ -39,7 +39,13 @@ enum HistorySummaryStats {
         }
 
         // Sessions sorted oldest → newest so we can scan all-time best as we go.
-        let sortedAll = allCompletedSessions.sorted { $0.date < $1.date }
+        // Tie-break on `id` for deterministic ordering when two sessions share an exact
+        // timestamp — without it, the running best could flip between runs and PR count
+        // would be non-reproducible.
+        let sortedAll = allCompletedSessions.sorted { lhs, rhs in
+            if lhs.date != rhs.date { return lhs.date < rhs.date }
+            return lhs.id.uuidString < rhs.id.uuidString
+        }
         var bestByExercise: [UUID: Double] = [:]
         var prCount = 0
 
