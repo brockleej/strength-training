@@ -131,4 +131,18 @@ final class ExerciseDrillDownViewModel {
             .compactMap { $0.session?.date }
             .max()
     }
+
+    // MARK: - Phase 6 hero / mini-chart / recent rows
+
+    var personalBest: ExerciseDrillDownStats.Best? {
+        ExerciseDrillDownStats.personalBest(for: exercise)
+    }
+
+    var lastTenBars: [ExerciseDrillDownStats.Bar] {
+        ExerciseDrillDownStats.lastTenTopSetBars(for: exercise)
+    }
+
+    var recentSessionRows: [ExerciseDrillDownStats.RecentRow] {
+        ExerciseDrillDownStats.recentSessionRows(for: exercise, limit: 4)
+    }
 }
