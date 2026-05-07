@@ -177,7 +177,149 @@ struct SessionDetailView: View {
         .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Color.uplift.pr.opacity(0.10)))
     }
 
-    // Stubbed for this task — implemented in Task 6
-    private var liftsSection: some View { EmptyView() }
-    private var appleHealthCard: some View { EmptyView() }
+    // MARK: - Lifts section
+
+    private var liftsSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            SectionHeader("Lifts")
+            VStack(spacing: 6) {
+                ForEach(liftRows) { row in
+                    NavigationLink {
+                        if let exercise = exercise(for: row.exerciseID) {
+                            ExerciseDrillDownView(exercise: exercise, modelContext: modelContext)
+                        }
+                    } label: {
+                        LiftRowCell(row: row)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+
+    private func exercise(for id: UUID) -> Exercise? {
+        session.exerciseRecordsArray.first { $0.exercise?.id == id }?.exercise
+    }
+
+    // MARK: - Apple Health card
+
+    @ViewBuilder
+    private var appleHealthCard: some View {
+        if let stats = healthStats {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 8) {
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .fill(Color.uplift.ahkitGreen)
+                        .frame(width: 22, height: 22)
+                        .overlay {
+                            Image(systemName: "heart.fill")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(.white)
+                        }
+                    Text("APPLE HEALTH")
+                        .font(.uplift.text(11, weight: .bold))
+                        .tracking(0.5)
+                        .foregroundStyle(Color.uplift.ahkitGreen)
+                    Spacer()
+                }
+                VStack(alignment: .leading, spacing: 10) {
+                    ahRow("Duration", value: "\(Int(stats.duration / 60))", unit: "min")
+                    ahRow("Active calories", value: "\(Int(stats.activeCalories.rounded()))", unit: "kcal")
+                    if let avg = stats.avgHeartRate {
+                        ahRow("Avg heart rate", value: "\(Int(avg.rounded()))", unit: "bpm")
+                    }
+                    if let maxHR = stats.maxHeartRate {
+                        ahRow("Max heart rate", value: "\(Int(maxHR.rounded()))", unit: "bpm")
+                    }
+                    if let effort = stats.effortRating ?? session.effortRating {
+                        ahRow("Effort rating", value: "\(effort)", unit: effortLabel(effort))
+                    }
+                }
+            }
+            .padding(16)
+            .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Color.uplift.ahkitGreen.opacity(0.10)))
+            .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).strokeBorder(Color.uplift.ahkitGreen.opacity(0.28), lineWidth: 0.5))
+        }
+    }
+
+    private func ahRow(_ label: String, value: String, unit: String) -> some View {
+        HStack {
+            Text(label)
+                .font(.uplift.text(13, weight: .medium))
+                .foregroundStyle(Color.uplift.fgMuted)
+            Spacer()
+            HStack(alignment: .lastTextBaseline, spacing: 4) {
+                Num(value, size: 14, color: .uplift.fg)
+                Text(unit)
+                    .font(.uplift.text(11, weight: .medium))
+                    .foregroundStyle(Color.uplift.fgMuted)
+            }
+        }
+    }
+
+    private func effortLabel(_ rating: Int) -> String {
+        switch rating {
+        case 1...3: return "easy"
+        case 4...6: return "moderate"
+        case 7, 8: return "hard"
+        case 9, 10: return "all out"
+        default: return ""
+        }
+    }
+}
+
+// MARK: - Lift row cell
+
+private struct LiftRowCell: View {
+    let row: SessionDetailLiftStats.LiftRow
+
+    var body: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
+                    Text(row.exerciseName)
+                        .font(.uplift.text(15, weight: .semibold))
+                        .kerning(-0.2)
+                        .foregroundStyle(Color.uplift.fg)
+                    if row.isPR {
+                        Image(systemName: "trophy.fill")
+                            .font(.system(size: 11))
+                            .foregroundStyle(Color.uplift.pr)
+                    }
+                }
+                Text("\(row.setsCount) × \(row.topReps)")
+                    .font(.uplift.text(12, weight: .medium))
+                    .foregroundStyle(Color.uplift.fgMuted)
+            }
+            Spacer(minLength: 0)
+            VStack(alignment: .trailing, spacing: 2) {
+                Text(formattedWeight(row.topWeightLb) + " lb")
+                    .font(.uplift.mono(14, weight: .semibold))
+                    .foregroundStyle(Color.uplift.fg)
+                deltaLabel
+            }
+        }
+        .padding(14)
+        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.uplift.surface1))
+    }
+
+    @ViewBuilder
+    private var deltaLabel: some View {
+        if let d = row.deltaVsLastLb, d != 0 {
+            let sign = d > 0 ? "+" : ""
+            Text("\(sign)\(formattedWeight(d)) lb")
+                .font(.uplift.mono(11, weight: .semibold))
+                .foregroundStyle(d > 0 ? Color.uplift.up : Color.uplift.down)
+        } else {
+            Text("—")
+                .font(.uplift.mono(11, weight: .semibold))
+                .foregroundStyle(Color.uplift.fgDim)
+        }
+    }
+
+    private func formattedWeight(_ w: Double) -> String {
+        w.truncatingRemainder(dividingBy: 1) == 0
+            ? String(format: "%.0f", w)
+            : String(format: "%.1f", w)
+    }
 }
