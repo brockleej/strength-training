@@ -44,28 +44,6 @@ final class ExerciseDrillDownViewModel {
         record.setsArray.filter { !$0.isWarmup }
     }
 
-    // MARK: - Top Set Trend (2A + 2D mode overlay)
-
-    var topSetTrendData: [ModeChartDataPoint] {
-        filteredRecords().compactMap { record in
-            guard let date = record.session?.date else { return nil }
-            let sets = workingSets(record)
-            guard !sets.isEmpty else { return nil }
-
-            let value: Double
-            switch topSetMetric {
-            case .weight:
-                value = sets.map(\.weightLbs).max() ?? 0
-            case .reps:
-                let bestSet = sets.max(by: { $0.weightLbs < $1.weightLbs })
-                value = Double(bestSet?.reps ?? 0)
-            case .e1RM:
-                value = sets.map { $0.weightLbs * (1.0 + Double($0.reps) / 30.0) }.max() ?? 0
-            }
-
-            return ModeChartDataPoint(date: date, value: value, mode: record.trainingMode)
-        }
-    }
 
     // MARK: - Estimated 1RM Trend with PR annotations (2B)
 
