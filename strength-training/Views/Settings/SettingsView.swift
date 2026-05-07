@@ -29,73 +29,28 @@ struct SettingsView: View {
 
     var body: some View {
         NavigationStack {
-            List {
-                Section {
-                    if healthKitService.isAvailable {
-                        switch healthKitService.authorizationStatus {
-                        case .none:
-                            Button {
-                                Task {
-                                    await healthKitService.requestAuthorization()
-                                }
-                            } label: {
-                                Label("Connect Apple Health", systemImage: "heart.fill")
-                            }
-                        case true?:
-                            Label("Apple Health Connected", systemImage: "checkmark.circle.fill")
-                                .foregroundStyle(.green)
-                        case false?:
-                            VStack(alignment: .leading, spacing: 4) {
-                                Label("Apple Health Not Authorized", systemImage: "exclamationmark.triangle")
-                                    .foregroundStyle(.orange)
-                                Text("Open Settings > Privacy > Health to grant access.")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                    } else {
-                        Label("Apple Health Not Available", systemImage: "heart.slash")
-                            .foregroundStyle(.secondary)
+            VStack(spacing: 0) {
+                NavBar(
+                    title: "Settings",
+                    style: .large(size: 38),
+                    leading: { EmptyView() },
+                    trailing: { EmptyView() }
+                )
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 0) {
+                        appleHealthSection
+                        progressiveOverloadSection
+                        iCloudSyncSection
+                        dataManagementSection
                     }
-                } header: {
-                    Text("Health")
-                } footer: {
-                    Text("When connected, workouts are saved to Apple Health for Activity Ring credit and fitness tracking.")
+                    .padding(.horizontal, 20)
+                    .padding(.top, 4)
+                    .padding(.bottom, 100)
                 }
-
-                Section {
-                    Picker("Aggressiveness", selection: $aggressiveness) {
-                        ForEach(ProgressionAggressiveness.allCases) { mode in
-                            Text(mode.rawValue).tag(mode.rawValue)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                } header: {
-                    Text("Progressive Overload")
-                } footer: {
-                    Text("Moderate recommends a weight increase after 2 consistent sessions. Conservative requires 3.")
-                }
-
-                iCloudSyncSection
-
-                Section {
-                    Button(action: exportBackup) {
-                        Label("Export Backup", systemImage: "square.and.arrow.up")
-                    }
-
-                    Button {
-                        isImporting = true
-                    } label: {
-                        Label("Restore from Backup", systemImage: "square.and.arrow.down")
-                            .foregroundStyle(.orange)
-                    }
-                } header: {
-                    Text("Data Management")
-                } footer: {
-                    Text("Export a complete backup of your data as a JSON file for safekeeping or to transfer to another device. Restoring replaces all current data.")
-                }
+                .scrollIndicators(.hidden)
             }
-            .navigationTitle("Settings")
+            .background(Color.uplift.bgElev)
+            .toolbar(.hidden, for: .navigationBar)
             .fileImporter(
                 isPresented: $isImporting,
                 allowedContentTypes: [.json],
@@ -132,70 +87,276 @@ struct SettingsView: View {
         }
     }
 
+    // MARK: - Apple Health Section
+
+    @ViewBuilder
+    private var appleHealthSection: some View {
+        SettingsSection(
+            header: "Apple Health",
+            footer: "When connected, workouts are saved to Apple Health for Activity Ring credit and fitness tracking."
+        ) {
+            let canTap = healthKitService.isAvailable && healthKitService.authorizationStatus == nil
+            HStack(spacing: 12) {
+                statusIcon
+                statusLabel
+                Spacer()
+            }
+            .padding(14)
+            .background(Color.uplift.surface1, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .contentShape(Rectangle())
+            .onTapGesture { if canTap { tryRequestAuth() } }
+        }
+    }
+
+    private var statusIcon: some View {
+        let (bg, sym, tint): (Color, String, Color) = {
+            guard healthKitService.isAvailable else {
+                return (Color.uplift.fgFaint, "heart.slash", Color.uplift.fgMuted)
+            }
+            switch healthKitService.authorizationStatus {
+            case true?:  return (Color.uplift.ahkitGreen.opacity(0.18), "checkmark", Color.uplift.ahkitGreen)
+            case false?: return (Color.uplift.ahkitOrange.opacity(0.18), "exclamationmark", Color.uplift.ahkitOrange)
+            case nil:    return (Color.uplift.accentSoft, "heart.fill", Color.uplift.accent)
+            }
+        }()
+        return ZStack {
+            Circle().fill(bg).frame(width: 28, height: 28)
+            Image(systemName: sym)
+                .font(.system(size: 14, weight: .bold))
+                .foregroundStyle(tint)
+        }
+    }
+
+    @ViewBuilder
+    private var statusLabel: some View {
+        if !healthKitService.isAvailable {
+            Text("Apple Health Not Available")
+                .font(.uplift.text(15, weight: .semibold))
+                .kerning(-0.2)
+                .foregroundStyle(Color.uplift.fgMuted)
+        } else {
+            switch healthKitService.authorizationStatus {
+            case true?:
+                Text("Apple Health Connected")
+                    .font(.uplift.text(15, weight: .semibold))
+                    .kerning(-0.2)
+                    .foregroundStyle(Color.uplift.ahkitGreen)
+            case false?:
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Apple Health Not Authorized")
+                        .font(.uplift.text(15, weight: .semibold))
+                        .kerning(-0.2)
+                        .foregroundStyle(Color.uplift.ahkitOrange)
+                    Text("Open Settings > Privacy > Health to grant access.")
+                        .font(.uplift.text(12, weight: .medium))
+                        .foregroundStyle(Color.uplift.fgMuted)
+                }
+            case nil:
+                Text("Connect Apple Health")
+                    .font(.uplift.text(15, weight: .semibold))
+                    .kerning(-0.2)
+                    .foregroundStyle(Color.uplift.accent)
+            }
+        }
+    }
+
+    private func tryRequestAuth() {
+        guard healthKitService.isAvailable, healthKitService.authorizationStatus == nil else { return }
+        Task { await healthKitService.requestAuthorization() }
+    }
+
+    // MARK: - Progressive Overload Section
+
+    private var progressiveOverloadSection: some View {
+        SettingsSection(
+            header: "Progressive Overload",
+            footer: footerText(for: aggressiveness)
+        ) {
+            HStack(spacing: 4) {
+                overloadSegment(rawValue: ProgressionAggressiveness.moderate.rawValue, label: "Moderate")
+                overloadSegment(rawValue: ProgressionAggressiveness.conservative.rawValue, label: "Conservative")
+            }
+            .padding(3)
+            .background(Color.uplift.surface1, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        }
+    }
+
+    private func overloadSegment(rawValue: String, label: String) -> some View {
+        let active = (aggressiveness == rawValue)
+        return Button { aggressiveness = rawValue } label: {
+            Text(label)
+                .font(.uplift.text(14, weight: .semibold))
+                .kerning(-0.1)
+                .foregroundStyle(active ? Color.uplift.fg : Color.uplift.fgMuted)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background(active ? Color.uplift.surface3 : Color.clear,
+                            in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func footerText(for raw: String) -> String {
+        raw == ProgressionAggressiveness.moderate.rawValue
+            ? "Moderate recommends a weight increase after 2 consistent sessions. Conservative requires 3."
+            : "Conservative requires 3 consistent sessions before recommending a weight increase. Moderate requires 2."
+    }
+
     // MARK: - iCloud Sync Section
 
     @ViewBuilder
     private var iCloudSyncSection: some View {
-        Section {
+        SettingsSection(
+            header: "iCloud Sync",
+            footer: "Your workout data automatically syncs to iCloud and is available across all your devices. Data persists even if you uninstall the app."
+        ) {
+            HStack(spacing: 12) {
+                iCloudIcon
+                iCloudLabel
+                Spacer(minLength: 0)
+                iCloudTrailing
+            }
+            .padding(14)
+            .background(Color.uplift.surface1, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        }
+    }
+
+    private var iCloudIcon: some View {
+        let (bg, sym, tint): (Color, String, Color) = {
             switch cloudKitSyncService.accountStatus {
             case .available:
-                if cloudKitSyncService.isSyncing {
-                    HStack {
-                        Label("Syncing", systemImage: "arrow.triangle.2.circlepath.icloud")
-                        Spacer()
-                        ProgressView()
-                    }
-                } else if let error = cloudKitSyncService.syncError {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Label("Sync Error", systemImage: "exclamationmark.icloud")
-                            .foregroundStyle(.orange)
-                        Text(error)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                } else {
-                    HStack {
-                        Label("iCloud Sync Active", systemImage: "checkmark.icloud.fill")
-                            .foregroundStyle(.green)
-                        Spacer()
-                        if let lastSync = cloudKitSyncService.lastSyncDate {
-                            Text(lastSync, style: .relative)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
+                if cloudKitSyncService.syncError != nil {
+                    return (Color.uplift.ahkitOrange.opacity(0.18), "exclamationmark.icloud", Color.uplift.ahkitOrange)
                 }
-
+                return (Color.uplift.ahkitGreen.opacity(0.18), "icloud.fill", Color.uplift.ahkitGreen)
             case .noAccount:
-                VStack(alignment: .leading, spacing: 4) {
-                    Label("iCloud Not Signed In", systemImage: "icloud.slash")
-                        .foregroundStyle(.orange)
-                    Text("Sign in to iCloud in Settings to sync your workout data across devices.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-            case .restricted:
-                Label("iCloud Restricted", systemImage: "exclamationmark.icloud")
-                    .foregroundStyle(.secondary)
-
-            case .temporarilyUnavailable:
-                Label("iCloud Temporarily Unavailable", systemImage: "exclamationmark.icloud")
-                    .foregroundStyle(.secondary)
-
+                return (Color.uplift.ahkitOrange.opacity(0.18), "icloud.slash", Color.uplift.ahkitOrange)
+            case .restricted, .temporarilyUnavailable:
+                return (Color.uplift.fgFaint, "exclamationmark.icloud", Color.uplift.fgMuted)
             case .couldNotDetermine:
-                Label("Checking iCloud Status...", systemImage: "icloud")
-                    .foregroundStyle(.secondary)
-
+                return (Color.uplift.fgFaint, "icloud", Color.uplift.fgMuted)
             @unknown default:
-                Label("iCloud Unavailable", systemImage: "icloud.slash")
-                    .foregroundStyle(.secondary)
+                return (Color.uplift.fgFaint, "icloud.slash", Color.uplift.fgMuted)
             }
-        } header: {
-            Text("iCloud Sync")
-        } footer: {
-            Text("Your workout data automatically syncs to iCloud and is available across all your devices. Data persists even if you uninstall the app.")
+        }()
+        return ZStack {
+            Circle().fill(bg).frame(width: 28, height: 28)
+            Image(systemName: sym)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(tint)
         }
+    }
+
+    @ViewBuilder
+    private var iCloudLabel: some View {
+        switch cloudKitSyncService.accountStatus {
+        case .available:
+            if cloudKitSyncService.isSyncing {
+                Text("Syncing")
+                    .font(.uplift.text(15, weight: .semibold))
+                    .kerning(-0.2)
+                    .foregroundStyle(Color.uplift.fg)
+            } else if let error = cloudKitSyncService.syncError {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Sync Error")
+                        .font(.uplift.text(15, weight: .semibold))
+                        .kerning(-0.2)
+                        .foregroundStyle(Color.uplift.ahkitOrange)
+                    Text(error)
+                        .font(.uplift.text(12, weight: .medium))
+                        .foregroundStyle(Color.uplift.fgMuted)
+                        .lineLimit(2)
+                }
+            } else {
+                Text("iCloud Sync Active")
+                    .font(.uplift.text(15, weight: .semibold))
+                    .kerning(-0.2)
+                    .foregroundStyle(Color.uplift.ahkitGreen)
+            }
+        case .noAccount:
+            VStack(alignment: .leading, spacing: 2) {
+                Text("iCloud Not Signed In")
+                    .font(.uplift.text(15, weight: .semibold))
+                    .kerning(-0.2)
+                    .foregroundStyle(Color.uplift.ahkitOrange)
+                Text("Sign in to iCloud in Settings to sync your workout data across devices.")
+                    .font(.uplift.text(12, weight: .medium))
+                    .foregroundStyle(Color.uplift.fgMuted)
+                    .lineLimit(2)
+            }
+        case .restricted:
+            Text("iCloud Restricted")
+                .font(.uplift.text(15, weight: .semibold))
+                .kerning(-0.2)
+                .foregroundStyle(Color.uplift.fgMuted)
+        case .temporarilyUnavailable:
+            Text("iCloud Temporarily Unavailable")
+                .font(.uplift.text(15, weight: .semibold))
+                .kerning(-0.2)
+                .foregroundStyle(Color.uplift.fgMuted)
+        case .couldNotDetermine:
+            Text("Checking iCloud Status...")
+                .font(.uplift.text(15, weight: .semibold))
+                .kerning(-0.2)
+                .foregroundStyle(Color.uplift.fgMuted)
+        @unknown default:
+            Text("iCloud Unavailable")
+                .font(.uplift.text(15, weight: .semibold))
+                .kerning(-0.2)
+                .foregroundStyle(Color.uplift.fgMuted)
+        }
+    }
+
+    @ViewBuilder
+    private var iCloudTrailing: some View {
+        if cloudKitSyncService.accountStatus == .available,
+           cloudKitSyncService.syncError == nil,
+           !cloudKitSyncService.isSyncing,
+           let lastSync = cloudKitSyncService.lastSyncDate {
+            Text(lastSync, style: .relative)
+                .font(.uplift.text(11, weight: .medium))
+                .foregroundStyle(Color.uplift.fgMuted)
+                .monospacedDigit()
+        } else if cloudKitSyncService.isSyncing {
+            ProgressView()
+                .scaleEffect(0.8)
+                .tint(Color.uplift.fgMuted)
+        }
+    }
+
+    // MARK: - Data Management Section
+
+    private var dataManagementSection: some View {
+        SettingsSection(
+            header: "Data Management",
+            footer: "Export a complete backup of your data as a JSON file for safekeeping or to transfer to another device. Restoring replaces all current data."
+        ) {
+            VStack(spacing: 0) {
+                dataRow(icon: "square.and.arrow.up", iconColor: Color.uplift.accent, label: "Export Backup", action: exportBackup)
+                Divider().background(Color.uplift.hairline)
+                dataRow(icon: "square.and.arrow.down", iconColor: Color.uplift.ahkitOrange, label: "Restore from Backup", action: { isImporting = true })
+            }
+            .background(Color.uplift.surface1, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        }
+    }
+
+    private func dataRow(icon: String, iconColor: Color, label: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Image(systemName: icon)
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(iconColor)
+                    .frame(width: 24)
+                Text(label)
+                    .font(.uplift.text(15, weight: .semibold))
+                    .kerning(-0.2)
+                    .foregroundStyle(iconColor)
+                Spacer()
+            }
+            .padding(14)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Actions
