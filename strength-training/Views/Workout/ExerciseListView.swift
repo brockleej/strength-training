@@ -140,9 +140,16 @@ struct ExerciseListView: View {
     private var exerciseList: some View {
         VStack(spacing: 8) {
             ForEach(Array(sessionExercises.enumerated()), id: \.element.id) { index, exercise in
-                Button {
-                    activeExerciseID = exercise.id
-                    // Task 10 wires this to push FocusView. For Task 4, just sets active.
+                NavigationLink {
+                    FocusView(
+                        workoutVM: workoutVM,
+                        exercise: exercise,
+                        liftIndex: index + 1,
+                        totalLifts: sessionExercises.count
+                    )
+                    .onAppear {
+                        activeExerciseID = exercise.id
+                    }
                 } label: {
                     ExerciseListRow(
                         exercise: exercise,

@@ -15,7 +15,7 @@ struct WorkoutTabView: View {
     /// Chunks 1–2 (the entire toggle compiles out via #if DEBUG, avoiding "unused"
     /// warnings on ExerciseListView). Chunk 4 hardcodes the new flow + drops this flag.
     #if DEBUG
-    @AppStorage("uplift_phase2_useNewWorkoutFlow") private var useNewFlow: Bool = false
+    @AppStorage("uplift_phase2_useNewWorkoutFlow") private var useNewFlow: Bool = true
     #endif
 
     var body: some View {
