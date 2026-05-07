@@ -68,6 +68,10 @@ final class WorkoutViewModel {
     var sessionPendingEffortRating: WorkoutSession?
     /// Set after a workout is finished (and effort rating handled) to trigger navigation to its detail.
     var completedSessionToReview: WorkoutSession?
+    /// Set after the effort rating sheet dismisses (Confirm or Skip). Drives presentation
+    /// of WorkoutSummaryView via WorkoutTabView's sheet binding. Cleared by Done/Detail
+    /// callbacks on the summary view.
+    var sessionPendingSummary: WorkoutSession?
     /// Pending PR celebration to present, if any. Bound by FocusView via .fullScreenCover(item:).
     /// Set by `addSet(...)` when a logged set creates a new all-time e1RM PR. Cleared
     /// when the view dismisses.
@@ -77,6 +81,13 @@ final class WorkoutViewModel {
     /// celebrated in the current session. Reset whenever a new session starts.
     /// In-memory only — not persisted.
     private var celebratedExerciseIDs: Set<UUID> = []
+
+    /// Per-session count of exercises that fired a PR celebration during the
+    /// active session. Reads the in-memory `celebratedExerciseIDs` set populated
+    /// by `addSet(...)`. Resets when a new session begins.
+    var prCountThisSession: Int {
+        celebratedExerciseIDs.count
+    }
     let healthKitService: HealthKitWorkoutService
 
     // MARK: - Cancel / Abandon Workout State
@@ -289,7 +300,8 @@ final class WorkoutViewModel {
         session.effortRating = rating
         try? modelContext.save()
         let uuid = session.healthKitWorkoutUUID
-        completedSessionToReview = session
+        // Phase 4: route through the summary screen instead of jumping straight to History.
+        sessionPendingSummary = session
         sessionPendingEffortRating = nil
         if let uuid {
             Task { await healthKitService.saveEffortRating(rating, workoutUUID: uuid) }
@@ -297,7 +309,8 @@ final class WorkoutViewModel {
     }
 
     func skipEffortRating() {
-        completedSessionToReview = sessionPendingEffortRating
+        // Phase 4: route through the summary screen instead of jumping straight to History.
+        sessionPendingSummary = sessionPendingEffortRating
         sessionPendingEffortRating = nil
     }
 
