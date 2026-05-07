@@ -79,15 +79,19 @@ private struct HistoryContent: View {
             )
 
             List {
-                Section { summaryStripCard }
-                    .listRowBackground(Color.uplift.bgElev)
-                    .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
+                // Hide summary strip + filter chips for fresh users (no history yet).
+                // Showing "0 sessions / 0 lb / 0 PRs" above "No workouts yet" reads as broken.
+                if !sessions.isEmpty {
+                    Section { summaryStripCard }
+                        .listRowBackground(Color.uplift.bgElev)
+                        .listRowSeparator(.hidden)
+                        .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
 
-                Section { filterChipRow }
-                    .listRowBackground(Color.uplift.bgElev)
-                    .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets(top: 16, leading: 0, bottom: 0, trailing: 0))
+                    Section { filterChipRow }
+                        .listRowBackground(Color.uplift.bgElev)
+                        .listRowSeparator(.hidden)
+                        .listRowInsets(EdgeInsets(top: 16, leading: 0, bottom: 0, trailing: 0))
+                }
 
                 if grouped.isEmpty {
                     Section { emptyState }
