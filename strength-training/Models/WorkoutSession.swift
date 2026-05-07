@@ -9,7 +9,7 @@ import Foundation
 import SwiftData
 
 @Model
-final class WorkoutSession {
+final class WorkoutSession: Identifiable {
     var id: UUID = UUID()
     var date: Date = Date.now
     var dayType: DayType = DayType.arms
