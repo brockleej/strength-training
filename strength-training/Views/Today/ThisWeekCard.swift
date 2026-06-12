@@ -30,7 +30,7 @@ struct ThisWeekCard: View {
                 .foregroundStyle(Color.uplift.fgMuted)
             }
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel("\(sessionCount) sessions this week, \(volumeText) pounds, \(setCount) sets")
+            .accessibilityLabel(statsAccessibilityLabel)
 
             HStack(spacing: 6) {
                 ForEach(Array(cells.enumerated()), id: \.offset) { _, cell in
@@ -75,6 +75,11 @@ struct ThisWeekCard: View {
                 }
             }
         }
+    }
+
+    private var statsAccessibilityLabel: String {
+        let plural = sessionCount == 1 ? "" : "s"
+        return "\(sessionCount) session\(plural) this week, \(volumeText) pounds, \(setCount) sets"
     }
 
     private var weekAccessibilityLabel: String {

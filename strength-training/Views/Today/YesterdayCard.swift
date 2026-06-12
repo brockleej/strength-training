@@ -55,6 +55,17 @@ struct YesterdayCard: View {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .fill(Color.uplift.surface1)
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(cardAccessibilityLabel)
+    }
+
+    private var cardAccessibilityLabel: String {
+        var label = "\(dayType.rawValue), \(volumeText) pounds, \(setCount) sets"
+        if prCount > 0 {
+            let plural = prCount == 1 ? "" : "s"
+            label += ", \(prCount) personal record\(plural)"
+        }
+        return label
     }
 }
 

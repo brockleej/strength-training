@@ -94,7 +94,10 @@ struct DayPickerCard: View {
     private var accessibilityText: String {
         var parts = [dayType.rawValue, dayType.subtitle]
         if let lastDuration { parts.append("\(lastDuration) last time") }
-        if let inProgressCount { parts.append("\(inProgressCount) exercises in progress") }
+        if let inProgressCount {
+            let plural = inProgressCount == 1 ? "" : "s"
+            parts.append("\(inProgressCount) exercise\(plural) in progress")
+        }
         return parts.joined(separator: ", ")
     }
 }
