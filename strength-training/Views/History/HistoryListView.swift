@@ -66,11 +66,11 @@ private struct HistoryContent: View {
             Section {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
-                        FilterChip(label: "All", isSelected: viewModel.filterDayType == nil) {
+                        LegacyFilterChip(label: "All", isSelected: viewModel.filterDayType == nil) {
                             viewModel.filterDayType = nil
                         }
                         ForEach(DayType.allCases) { dayType in
-                            FilterChip(
+                            LegacyFilterChip(
                                 label: dayType.rawValue,
                                 isSelected: viewModel.filterDayType == dayType
                             ) {
@@ -110,7 +110,7 @@ private struct HistoryContent: View {
     }
 }
 
-private struct FilterChip: View {
+private struct LegacyFilterChip: View {
     let label: String
     let isSelected: Bool
     let action: () -> Void
