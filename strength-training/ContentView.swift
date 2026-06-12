@@ -44,6 +44,8 @@ struct ContentView: View {
                         vm.completedSessionToReview = nil
                     }
                 }
+                .tint(Color.uplift.accent)
+                .preferredColorScheme(.dark)
             } else {
                 ProgressView()
             }
