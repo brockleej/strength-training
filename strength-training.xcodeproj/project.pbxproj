@@ -43,6 +43,7 @@
 		C313AB84BBB7C618881DB9C7 /* BackupLoaderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FE94BB865292C869CD64F4F /* BackupLoaderTests.swift */; };
 		C6BC791F18CDB317248A0634 /* ProgressionServicePureFunctionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A284E56C056FDF4F4E7CE02C /* ProgressionServicePureFunctionTests.swift */; };
 		DD4064CC113170BDC4CA230E /* ReplayTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5781434F825A1387BC87CAD /* ReplayTable.swift */; };
+		DD41F85ED9D23F809FE149E0 /* TodayStatsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A045484DE02168813131AA /* TodayStatsTests.swift */; };
 		E03682C16B5A7E61108A1231 /* UpliftTokensTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22DFB812A881562839943F79 /* UpliftTokensTests.swift */; };
 		E15010E82FA7E5AB009EF2FB /* TrainingMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = E15010E72FA7E5AB009EF2FB /* TrainingMode.swift */; };
 		E71CE961AAE0B26627F132E0 /* backup-with-orphans.json in Resources */ = {isa = PBXBuildFile; fileRef = 8EE03F51930E877B27379EF2 /* backup-with-orphans.json */; };
@@ -87,6 +88,7 @@
 		6F62C644CB9B4CFF6875CF58 /* unsupported-version.json */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.json; path = "unsupported-version.json"; sourceTree = "<group>"; };
 		6FACF751523D26D1277331C7 /* ProgressionLab.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = ProgressionLab.entitlements; sourceTree = "<group>"; };
 		7455DAD78FC12D62CD5226C5 /* ProgressionParameters.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ProgressionParameters.swift; sourceTree = "<group>"; };
+		77A045484DE02168813131AA /* TodayStatsTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TodayStatsTests.swift; sourceTree = "<group>"; };
 		8227BD6A0FFEBA20B7444236 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 		87211BB2F7AB169D53339453 /* ProgressionService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ProgressionService.swift; sourceTree = "<group>"; };
 		895B32CADD7EDFED27265A07 /* AppState.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
@@ -244,6 +246,7 @@
 				9BB09AE52C260DDF439056CC /* ProgressionServiceParityTests.swift */,
 				22DFB812A881562839943F79 /* UpliftTokensTests.swift */,
 				C4513366655FE67F2A44DEB5 /* StepperLogicTests.swift */,
+				77A045484DE02168813131AA /* TodayStatsTests.swift */,
 			);
 			path = "strength-training-tests";
 			sourceTree = "<group>";
@@ -541,6 +544,7 @@
 				63C0E77E57834034C11BC61C /* ProgressionServiceParityTests.swift in Sources */,
 				E03682C16B5A7E61108A1231 /* UpliftTokensTests.swift in Sources */,
 				E775E13496C6909B4FF9F6EB /* StepperLogicTests.swift in Sources */,
+				DD41F85ED9D23F809FE149E0 /* TodayStatsTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
