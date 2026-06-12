@@ -46,6 +46,7 @@
 		E03682C16B5A7E61108A1231 /* UpliftTokensTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22DFB812A881562839943F79 /* UpliftTokensTests.swift */; };
 		E15010E82FA7E5AB009EF2FB /* TrainingMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = E15010E72FA7E5AB009EF2FB /* TrainingMode.swift */; };
 		E71CE961AAE0B26627F132E0 /* backup-with-orphans.json in Resources */ = {isa = PBXBuildFile; fileRef = 8EE03F51930E877B27379EF2 /* backup-with-orphans.json */; };
+		E775E13496C6909B4FF9F6EB /* StepperLogicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4513366655FE67F2A44DEB5 /* StepperLogicTests.swift */; };
 		E805369068D8F5B36110D3FB /* ConfigArtifactWriter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 450F037775C1159761CB6A2E /* ConfigArtifactWriter.swift */; };
 		EF566BBF0799C21A469B514C /* Sparkline.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7F178DC244F07C15EE63542 /* Sparkline.swift */; };
 		EFC69339D307E6EF3EE4B039 /* ConfigArtifactRoundTripTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDFCFE81F28301E70314A05D /* ConfigArtifactRoundTripTests.swift */; };
@@ -100,6 +101,7 @@
 		AA363F8D7BCEA2FCDE96CCEE /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.0.sdk/System/Library/Frameworks/Cocoa.framework; sourceTree = DEVELOPER_DIR; };
 		B3E6DCDC4270F67C50095A9A /* SimulationStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SimulationStore.swift; sourceTree = "<group>"; };
 		C29E8DFE676157D4AD6A2D25 /* minimal-backup.json */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.json; path = "minimal-backup.json"; sourceTree = "<group>"; };
+		C4513366655FE67F2A44DEB5 /* StepperLogicTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StepperLogicTests.swift; sourceTree = "<group>"; };
 		D7F178DC244F07C15EE63542 /* Sparkline.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Sparkline.swift; sourceTree = "<group>"; };
 		D831F8CB0728963D5B3EAFD0 /* ProgressionLab.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ProgressionLab.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D922C1B9725A7CCFCA27550B /* AlgorithmFixtures.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AlgorithmFixtures.swift; sourceTree = "<group>"; };
@@ -241,6 +243,7 @@
 				A284E56C056FDF4F4E7CE02C /* ProgressionServicePureFunctionTests.swift */,
 				9BB09AE52C260DDF439056CC /* ProgressionServiceParityTests.swift */,
 				22DFB812A881562839943F79 /* UpliftTokensTests.swift */,
+				C4513366655FE67F2A44DEB5 /* StepperLogicTests.swift */,
 			);
 			path = "strength-training-tests";
 			sourceTree = "<group>";
@@ -537,6 +540,7 @@
 				C6BC791F18CDB317248A0634 /* ProgressionServicePureFunctionTests.swift in Sources */,
 				63C0E77E57834034C11BC61C /* ProgressionServiceParityTests.swift in Sources */,
 				E03682C16B5A7E61108A1231 /* UpliftTokensTests.swift in Sources */,
+				E775E13496C6909B4FF9F6EB /* StepperLogicTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
