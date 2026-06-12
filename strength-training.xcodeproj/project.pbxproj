@@ -43,6 +43,7 @@
 		C313AB84BBB7C618881DB9C7 /* BackupLoaderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FE94BB865292C869CD64F4F /* BackupLoaderTests.swift */; };
 		C6BC791F18CDB317248A0634 /* ProgressionServicePureFunctionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A284E56C056FDF4F4E7CE02C /* ProgressionServicePureFunctionTests.swift */; };
 		DD4064CC113170BDC4CA230E /* ReplayTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5781434F825A1387BC87CAD /* ReplayTable.swift */; };
+		E03682C16B5A7E61108A1231 /* UpliftTokensTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22DFB812A881562839943F79 /* UpliftTokensTests.swift */; };
 		E15010E82FA7E5AB009EF2FB /* TrainingMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = E15010E72FA7E5AB009EF2FB /* TrainingMode.swift */; };
 		E71CE961AAE0B26627F132E0 /* backup-with-orphans.json in Resources */ = {isa = PBXBuildFile; fileRef = 8EE03F51930E877B27379EF2 /* backup-with-orphans.json */; };
 		E805369068D8F5B36110D3FB /* ConfigArtifactWriter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 450F037775C1159761CB6A2E /* ConfigArtifactWriter.swift */; };
@@ -74,6 +75,7 @@
 		0A503B4DC340838FA30BCFC0 /* BackupLoader.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BackupLoader.swift; sourceTree = "<group>"; };
 		0FE94BB865292C869CD64F4F /* BackupLoaderTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BackupLoaderTests.swift; sourceTree = "<group>"; };
 		165BF58640500A519020F992 /* ParameterPanel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ParameterPanel.swift; sourceTree = "<group>"; };
+		22DFB812A881562839943F79 /* UpliftTokensTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = UpliftTokensTests.swift; sourceTree = "<group>"; };
 		2375B8872C6A1C21691DF866 /* ProgressionLabApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ProgressionLabApp.swift; sourceTree = "<group>"; };
 		30709EE3E70A2B4579A1E994 /* RecentFilesStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecentFilesStore.swift; sourceTree = "<group>"; };
 		32C7938965779BE5D2C32989 /* DashboardView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
@@ -238,6 +240,7 @@
 				D922C1B9725A7CCFCA27550B /* AlgorithmFixtures.swift */,
 				A284E56C056FDF4F4E7CE02C /* ProgressionServicePureFunctionTests.swift */,
 				9BB09AE52C260DDF439056CC /* ProgressionServiceParityTests.swift */,
+				22DFB812A881562839943F79 /* UpliftTokensTests.swift */,
 			);
 			path = "strength-training-tests";
 			sourceTree = "<group>";
@@ -533,6 +536,7 @@
 				3182A5D7AC487DB54E11B33B /* AlgorithmFixtures.swift in Sources */,
 				C6BC791F18CDB317248A0634 /* ProgressionServicePureFunctionTests.swift in Sources */,
 				63C0E77E57834034C11BC61C /* ProgressionServiceParityTests.swift in Sources */,
+				E03682C16B5A7E61108A1231 /* UpliftTokensTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
