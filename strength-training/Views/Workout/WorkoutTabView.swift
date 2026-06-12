@@ -15,7 +15,7 @@ struct WorkoutTabView: View {
             if viewModel.activeSession != nil {
                 ActiveWorkoutView(viewModel: viewModel)
             } else {
-                WorkoutDayPickerView(viewModel: viewModel)
+                TodayView(workoutVM: viewModel)
             }
         }
         .sheet(item: $viewModel.sessionPendingEffortRating) { _ in
