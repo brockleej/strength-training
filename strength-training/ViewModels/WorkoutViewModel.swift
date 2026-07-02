@@ -277,6 +277,29 @@ final class WorkoutViewModel {
         sessionPendingEffortRating = nil
     }
 
+    // MARK: - Post-finish Summary
+
+    /// Presented as a fullScreenCover from WorkoutTabView after the effort
+    /// sheet resolves. Staged via `pendingSummaryAfterRating` + the sheet's
+    /// onDismiss to avoid the sheet→cover presentation race.
+    var sessionPendingSummary: WorkoutSession?
+    /// Set while the effort sheet is still dismissing; promoted in onDismiss.
+    var pendingSummaryAfterRating: WorkoutSession?
+    /// Set when the user taps "View Details" — TodayView pushes this session's
+    /// detail via navigationDestination(item:).
+    var summaryDetailSession: WorkoutSession?
+
+    func dismissSummaryToToday() {
+        sessionPendingSummary = nil
+        activeSession = nil
+    }
+
+    func dismissSummaryToDetail() {
+        summaryDetailSession = sessionPendingSummary
+        sessionPendingSummary = nil
+        activeSession = nil
+    }
+
     // MARK: - Exercises
 
     func exercises(for dayType: DayType) -> [Exercise] {
