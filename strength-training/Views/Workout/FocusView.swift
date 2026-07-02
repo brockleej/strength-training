@@ -190,6 +190,7 @@ struct FocusView: View {
                 }
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel("Rest time")
+                .accessibilityValue(WorkoutFormat.elapsed(context.date.timeIntervalSince(focusVM.restAnchor)))
             }
             .padding(.vertical, 12)
             .padding(.horizontal, 16)
