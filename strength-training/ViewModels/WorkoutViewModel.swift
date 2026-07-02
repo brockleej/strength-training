@@ -271,6 +271,13 @@ final class WorkoutViewModel {
         return all.filter { $0.dayType == dayType }
     }
 
+    /// Eagerly create this exercise's record in the current session so it
+    /// appears in the exercise list before any set is logged (used by the
+    /// add-exercise picker for cross-day-type additions).
+    func addExerciseToSession(_ exercise: Exercise) {
+        _ = findOrCreateRecord(for: exercise)
+    }
+
     // MARK: - Progression
 
     func recentAverage(for exercise: Exercise, mode: TrainingMode) -> RecentAverage? {
