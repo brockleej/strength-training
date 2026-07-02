@@ -12,20 +12,22 @@ struct ModeSplitChart: View {
 
     var body: some View {
         VStack(spacing: 12) {
-            Picker("Period", selection: $period) {
-                ForEach(ProgressDashboardViewModel.ModeSplitPeriod.allCases, id: \.self) {
-                    Text($0.rawValue).tag($0)
-                }
-            }
-            .pickerStyle(.segmented)
+            UpliftSegmentedControl(
+                segments: ProgressDashboardViewModel.ModeSplitPeriod.allCases.map {
+                    UpliftSegment(id: $0.rawValue, label: $0.rawValue)
+                },
+                selection: Binding(
+                    get: { period.rawValue },
+                    set: { period = ProgressDashboardViewModel.ModeSplitPeriod(rawValue: $0) ?? .week }
+                )
+            )
 
             if data.isEmpty {
-                ContentUnavailableView(
-                    "No Data Yet",
-                    systemImage: "chart.pie",
-                    description: Text("Complete workouts to see training mode split.")
-                )
-                .frame(height: 200)
+                Text("Complete workouts to see training mode split")
+                    .font(.uplift.text(13, weight: .medium))
+                    .foregroundStyle(Color.uplift.fgDim)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 160)
             } else {
                 Chart(data) { item in
                     SectorMark(
@@ -36,17 +38,35 @@ struct ModeSplitChart: View {
                     .foregroundStyle(by: .value("Mode", item.mode.rawValue))
                     .annotation(position: .overlay) {
                         Text(item.percentage, format: .percent.precision(.fractionLength(0)))
-                            .font(.caption2.bold())
-                            .foregroundStyle(.white)
+                            .font(.uplift.text(11, weight: .bold))
+                            .foregroundStyle(Color.uplift.fg)
                     }
                 }
                 .chartForegroundStyleScale([
-                    TrainingMode.highWeightLowReps.rawValue: Color.blue,
-                    TrainingMode.lowWeightHighReps.rawValue: Color.pink
+                    TrainingMode.highWeightLowReps.rawValue: Color.uplift.accent,
+                    TrainingMode.lowWeightHighReps.rawValue: Color.uplift.endurance
                 ])
-                .chartLegend(position: .bottom)
+                .chartLegend(.hidden)
                 .frame(height: 200)
+
+                HStack(spacing: 16) {
+                    ForEach(data) { item in
+                        HStack(spacing: 6) {
+                            Circle()
+                                .fill(item.mode == .highWeightLowReps ? Color.uplift.accent : Color.uplift.endurance)
+                                .frame(width: 8, height: 8)
+                            Text(item.mode.rawValue)
+                                .font(.uplift.text(12, weight: .medium))
+                                .foregroundStyle(Color.uplift.fgMuted)
+                        }
+                    }
+                }
             }
+        }
+        .padding(16)
+        .background {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Color.uplift.surface1)
         }
     }
 }
