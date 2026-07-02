@@ -32,6 +32,8 @@ enum PRDetection {
     ) -> Outcome? {
         guard !alreadyCelebrated, let priorBest else { return nil }
         let newE1RM = E1RM.estimate(weightLbs: newWeight, reps: newReps)
+        // Strict > by design: a tie doesn't re-fire the fireworks, even though
+        // the History/Today PR badges use >= (a tying set still DISPLAYS as PR).
         guard newE1RM > priorBest.e1RM else { return nil }
         return Outcome(newE1RM: newE1RM, weightDelta: newWeight - priorBest.weight)
     }
