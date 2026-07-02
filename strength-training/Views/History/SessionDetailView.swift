@@ -244,7 +244,7 @@ private struct ExerciseHeaderRow: View {
     private var currentE1RM: Double {
         record.setsArray
             .filter { !$0.isWarmup }
-            .map { $0.weightLbs * (1.0 + Double($0.reps) / 30.0) }
+            .map { E1RM.estimate(weightLbs: $0.weightLbs, reps: $0.reps) }
             .max() ?? 0
     }
 
@@ -263,7 +263,7 @@ private struct ExerciseHeaderRow: View {
         guard let prev = previousRecord else { return nil }
         let best = prev.setsArray
             .filter { !$0.isWarmup }
-            .map { $0.weightLbs * (1.0 + Double($0.reps) / 30.0) }
+            .map { E1RM.estimate(weightLbs: $0.weightLbs, reps: $0.reps) }
             .max()
         return best
     }
@@ -272,7 +272,7 @@ private struct ExerciseHeaderRow: View {
         let completedRecords = exercise.recordsArray.filter { $0.session?.isCompleted == true }
         let workingSets = completedRecords.flatMap { $0.setsArray.filter { !$0.isWarmup } }
         let e1rms: [Double] = workingSets.map { set in
-            set.weightLbs * (1.0 + Double(set.reps) / 30.0)
+            E1RM.estimate(weightLbs: set.weightLbs, reps: set.reps)
         }
         return e1rms.max() ?? 0
     }

@@ -8,6 +8,19 @@
 import SwiftUI
 import SwiftData
 
+/// Everything PRCelebrationView renders. Value snapshot — safe across dismissal.
+struct PRCelebrationContext: Identifiable, Equatable {
+    let id = UUID()
+    let exerciseName: String
+    let weight: Double
+    let reps: Int
+    let e1RM: Double
+    let previousWeight: Double
+    let previousReps: Int
+    let previousDateLabel: String   // "3 wk ago"
+    let weightDelta: Double
+}
+
 @Observable
 final class WorkoutViewModel {
     var modelContext: ModelContext
@@ -35,6 +48,11 @@ final class WorkoutViewModel {
     var sessionPendingEffortRating: WorkoutSession?
     /// Set after a workout is finished (and effort rating handled) to trigger navigation to its detail.
     var completedSessionToReview: WorkoutSession?
+    /// Set when a just-logged set breaks the exercise's all-time e1RM record —
+    /// FocusView presents PRCelebrationView from this.
+    var pendingCelebration: PRCelebrationContext?
+    /// Re-fire guard: one celebration per exercise per session (spec §6.2).
+    private var celebratedExerciseIDsThisSession: Set<UUID> = []
     let healthKitService: HealthKitWorkoutService
 
     // MARK: - Cancel / Abandon Workout State
@@ -118,6 +136,7 @@ final class WorkoutViewModel {
         modelContext.insert(session)
         try? modelContext.save()
         activeSession = session
+        celebratedExerciseIDsThisSession = []
         startHealthKitWorkout()
     }
 
@@ -214,6 +233,7 @@ final class WorkoutViewModel {
             modelContext.insert(session)
             try? modelContext.save()
             activeSession = session
+            celebratedExerciseIDsThisSession = []
             startHealthKitWorkout()
         }
     }
@@ -276,6 +296,45 @@ final class WorkoutViewModel {
         _ = findOrCreateRecord(for: exercise)
     }
 
+    /// The set holding the all-time best e1RM for this exercise across
+    /// completed sessions (non-warmup sets, any mode). nil = no prior history.
+    private func priorBestE1RMSet(for exercise: Exercise) -> PRDetection.PriorBest? {
+        var best: PRDetection.PriorBest?
+        for record in exercise.recordsArray where record.session?.isCompleted == true {
+            let sessionDate = record.session?.date ?? .distantPast
+            for set in record.setsArray where !set.isWarmup {
+                let e1rm = E1RM.estimate(weightLbs: set.weightLbs, reps: set.reps)
+                if best == nil || e1rm > best!.e1RM {
+                    best = .init(weight: set.weightLbs, reps: set.reps, e1RM: e1rm, date: sessionDate)
+                }
+            }
+        }
+        return best
+    }
+
+    /// Called after a set is persisted; fires the celebration when it's a PR.
+    private func checkForPR(exercise: Exercise, weight: Double, reps: Int) {
+        guard let outcome = PRDetection.celebration(
+            newWeight: weight,
+            newReps: reps,
+            priorBest: priorBestE1RMSet(for: exercise),
+            alreadyCelebrated: celebratedExerciseIDsThisSession.contains(exercise.id)
+        ) else { return }
+        // priorBest is non-nil whenever an outcome exists
+        let prior = priorBestE1RMSet(for: exercise)!
+        celebratedExerciseIDsThisSession.insert(exercise.id)
+        pendingCelebration = PRCelebrationContext(
+            exerciseName: exercise.name,
+            weight: weight,
+            reps: reps,
+            e1RM: outcome.newE1RM,
+            previousWeight: prior.weight,
+            previousReps: prior.reps,
+            previousDateLabel: PrevSessionsStripData.relativeLabel(for: prior.date),
+            weightDelta: outcome.weightDelta
+        )
+    }
+
     // MARK: - Progression
 
     func recentAverage(for exercise: Exercise, mode: TrainingMode) -> RecentAverage? {
@@ -310,6 +369,7 @@ final class WorkoutViewModel {
         modelContext.insert(set)
         try? modelContext.save()
         HapticService.setLogged()
+        checkForPR(exercise: exercise, weight: weight, reps: reps)
     }
 
     func deleteSet(_ set: SetRecord, from exercise: Exercise) {

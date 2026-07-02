@@ -264,11 +264,8 @@ struct TodayView: View {
     /// Same formula/threshold as SessionDetailView's PR badge, but counted per
     /// EXERCISE (cross-mode best, deduped) — SessionDetailView badges per
     /// record (per mode), so counts can differ for multi-mode sessions.
-    /// A shared e1RM service lands in Phase 3; both call sites adopt it then.
+    /// Uses the shared `E1RM.estimate`.
     private func e1RMPRCount(for session: WorkoutSession) -> Int {
-        func e1rm(_ set: SetRecord) -> Double {
-            set.weightLbs * (1 + Double(set.reps) / 30)
-        }
         var counted = Set<UUID>()
         var count = 0
         for record in session.exerciseRecordsArray {
@@ -277,7 +274,7 @@ struct TodayView: View {
                 .filter { $0.exercise?.id == exerciseID }
                 .flatMap { $0.setsArray }
                 .filter { !$0.isWarmup }
-                .map(e1rm)
+                .map { E1RM.estimate(weightLbs: $0.weightLbs, reps: $0.reps) }
                 .max() ?? 0
             guard sessionBest > 0 else { continue }
             let allTimeBest = completedSessions
@@ -285,7 +282,7 @@ struct TodayView: View {
                 .filter { $0.exercise?.id == exerciseID }
                 .flatMap { $0.setsArray }
                 .filter { !$0.isWarmup }
-                .map(e1rm)
+                .map { E1RM.estimate(weightLbs: $0.weightLbs, reps: $0.reps) }
                 .max() ?? 0
             if sessionBest >= allTimeBest {
                 counted.insert(exerciseID)
