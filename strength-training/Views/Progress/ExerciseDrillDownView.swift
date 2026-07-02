@@ -37,8 +37,13 @@ private struct ExerciseDrillDownContent: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
-                TimeRangePicker(selection: $viewModel.selectedTimeRange)
-                    .padding(.horizontal)
+                Picker("Time Range", selection: $viewModel.selectedTimeRange) {
+                    ForEach(ProgressTimeRange.allCases) {
+                        Text($0.rawValue).tag($0)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .padding(.horizontal)
 
                 // Summary header
                 ExerciseSummaryHeader(viewModel: viewModel)
@@ -67,12 +72,6 @@ private struct ExerciseDrillDownContent: View {
                 // Estimated 1RM Trend
                 GroupBox("Estimated 1RM") {
                     E1RMTrendChart(data: viewModel.e1rmTrendData)
-                }
-                .padding(.horizontal)
-
-                // Volume per Session
-                GroupBox("Volume per Session") {
-                    VolumePerSessionChart(data: viewModel.volumePerSessionData)
                 }
                 .padding(.horizontal)
             }

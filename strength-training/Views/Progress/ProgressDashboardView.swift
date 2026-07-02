@@ -35,8 +35,13 @@ private struct ProgressDashboardContent: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
-                TimeRangePicker(selection: $viewModel.selectedTimeRange)
-                    .padding(.horizontal)
+                Picker("Time Range", selection: $viewModel.selectedTimeRange) {
+                    ForEach(ProgressTimeRange.allCases) {
+                        Text($0.rawValue).tag($0)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .padding(.horizontal)
 
                 // Headline metric cards
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
@@ -44,12 +49,6 @@ private struct ProgressDashboardContent: View {
                         score: viewModel.strengthScore,
                         trend: viewModel.strengthScoreTrend,
                         delta: viewModel.strengthScoreDelta
-                    )
-                    VolumeScoreCard(
-                        score: viewModel.volumeScore,
-                        trend: viewModel.volumeScoreTrend,
-                        delta: viewModel.volumeScoreDelta,
-                        filterMode: $viewModel.volumeFilterMode
                     )
                 }
                 .padding(.horizontal)

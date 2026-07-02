@@ -9,20 +9,40 @@ import SwiftUI
 // MARK: - Time Range
 
 enum ProgressTimeRange: String, CaseIterable, Identifiable {
-    case fourWeeks = "4W"
-    case twelveWeeks = "12W"
-    case oneYear = "1Y"
+    case week = "Week"
+    case month = "Month"
+    case threeMonths = "3 mo"
+    case year = "Year"
     case all = "All"
 
     var id: String { rawValue }
 
-    var startDate: Date? {
-        let calendar = Calendar.current
+    /// Days the window spans; nil = unbounded.
+    var dayCount: Int? {
         switch self {
-        case .fourWeeks:  return calendar.date(byAdding: .weekOfYear, value: -4, to: .now)
-        case .twelveWeeks: return calendar.date(byAdding: .weekOfYear, value: -12, to: .now)
-        case .oneYear:    return calendar.date(byAdding: .year, value: -1, to: .now)
-        case .all:        return nil
+        case .week: 7
+        case .month: 30
+        case .threeMonths: 90
+        case .year: 365
+        case .all: nil
+        }
+    }
+
+    var startDate: Date? {
+        dayCount.flatMap { Calendar.current.date(byAdding: .day, value: -$0, to: .now) }
+    }
+
+    /// Start of the equivalent window immediately before this one (for deltas).
+    var previousStartDate: Date? {
+        dayCount.flatMap { Calendar.current.date(byAdding: .day, value: -2 * $0, to: .now) }
+    }
+
+    /// Bucketing unit for the volume chart.
+    var bucketUnit: Calendar.Component {
+        switch self {
+        case .week: .day
+        case .month, .threeMonths: .weekOfYear
+        case .year, .all: .month
         }
     }
 }

@@ -9,8 +9,7 @@ import SwiftData
 @Observable
 final class ProgressDashboardViewModel {
     var modelContext: ModelContext
-    var selectedTimeRange: ProgressTimeRange = .twelveWeeks
-    var volumeFilterMode: TrainingMode? = nil
+    var selectedTimeRange: ProgressTimeRange = .threeMonths
     var modeSplitPeriod: ModeSplitPeriod = .week
 
     enum ModeSplitPeriod: String, CaseIterable {
@@ -95,7 +94,7 @@ final class ProgressDashboardViewModel {
                 guard let exerciseID = record.exercise?.id else { continue }
                 let workingSets = record.setsArray.filter { !$0.isWarmup }
                 for set in workingSets {
-                    let e1rm = set.weightLbs * (1.0 + Double(set.reps) / 30.0)
+                    let e1rm = E1RM.estimate(weightLbs: set.weightLbs, reps: set.reps)
                     if e1rm > (bestE1RMPerExercise[exerciseID] ?? 0) {
                         bestE1RMPerExercise[exerciseID] = e1rm
                     }
@@ -106,68 +105,91 @@ final class ProgressDashboardViewModel {
         return bestE1RMPerExercise.values.reduce(0, +)
     }
 
-    // MARK: - Volume Score
+    // MARK: - Total Volume (headline)
 
-    var volumeScore: Double {
-        let calendar = Calendar.current
-        let startOfWeek = calendar.dateInterval(of: .weekOfYear, for: .now)?.start ?? .now
-        let sets = allWorkingSets()
-
-        return sets
-            .filter { tuple in
-                tuple.session.date >= startOfWeek &&
-                (volumeFilterMode == nil || tuple.record.trainingMode == volumeFilterMode)
-            }
-            .reduce(0.0) { $0 + $1.set.weightLbs * Double($1.set.reps) }
+    /// Working-set volume within the selected range.
+    var totalVolume: Double {
+        allWorkingSets().reduce(0.0) { $0 + $1.set.weightLbs * Double($1.set.reps) }
     }
 
-    var volumeScoreTrend: TrendDirection {
-        let calendar = Calendar.current
-        let allSessions = fetchAllCompletedSessions()
-
-        guard let thisWeekStart = calendar.dateInterval(of: .weekOfYear, for: .now)?.start,
-              let lastWeekStart = calendar.date(byAdding: .weekOfYear, value: -1, to: thisWeekStart)
-        else { return .insufficientData }
-
-        let thisWeekVolume = weeklyVolume(sessions: allSessions, weekStart: thisWeekStart)
-        let lastWeekVolume = weeklyVolume(sessions: allSessions, weekStart: lastWeekStart)
-
-        guard lastWeekVolume > 0 else { return .insufficientData }
-        if thisWeekVolume > lastWeekVolume * 1.01 { return .up }
-        if thisWeekVolume < lastWeekVolume * 0.99 { return .down }
-        return .flat
-    }
-
-    var volumeScoreDelta: Double {
-        let calendar = Calendar.current
-        let allSessions = fetchAllCompletedSessions()
-
-        guard let thisWeekStart = calendar.dateInterval(of: .weekOfYear, for: .now)?.start,
-              let lastWeekStart = calendar.date(byAdding: .weekOfYear, value: -1, to: thisWeekStart)
-        else { return 0 }
-
-        let thisWeek = weeklyVolume(sessions: allSessions, weekStart: thisWeekStart)
-        let lastWeek = weeklyVolume(sessions: allSessions, weekStart: lastWeekStart)
-        return thisWeek - lastWeek
-    }
-
-    private func weeklyVolume(sessions: [WorkoutSession], weekStart: Date) -> Double {
-        let calendar = Calendar.current
-        guard let weekEnd = calendar.date(byAdding: .weekOfYear, value: 1, to: weekStart) else { return 0 }
-
-        let weekSessions = sessions.filter { $0.date >= weekStart && $0.date < weekEnd }
-        let allRecords = weekSessions.flatMap { $0.exerciseRecordsArray }
-
-        var total: Double = 0
-        for record in allRecords {
-            let workingSets = record.setsArray.filter { !$0.isWarmup }
-            if volumeFilterMode == nil || record.trainingMode == volumeFilterMode {
-                for set in workingSets {
-                    total += set.weightLbs * Double(set.reps)
-                }
-            }
+    /// Percent change vs the equivalent previous window (nil for All or no baseline).
+    var totalVolumeDeltaPercent: Double? {
+        guard let start = selectedTimeRange.startDate,
+              let prevStart = selectedTimeRange.previousStartDate else { return nil }
+        let all = fetchAllCompletedSessions()
+        func volume(_ sessions: [WorkoutSession]) -> Double {
+            sessions
+                .flatMap { $0.exerciseRecordsArray }
+                .flatMap { $0.setsArray.filter { !$0.isWarmup } }
+                .reduce(0.0) { $0 + $1.weightLbs * Double($1.reps) }
         }
-        return total
+        let current = volume(all.filter { $0.date >= start })
+        let previous = volume(all.filter { $0.date >= prevStart && $0.date < start })
+        guard previous > 0 else { return nil }
+        return (current - previous) / previous * 100
+    }
+
+    /// Volume bucketed by the range's calendar unit, oldest-first, for the area chart.
+    var volumeChartData: [ChartDataPoint] {
+        let cal = Calendar.current
+        var buckets: [Date: Double] = [:]
+        for tuple in allWorkingSets() {
+            guard let bucket = cal.dateInterval(of: selectedTimeRange.bucketUnit, for: tuple.session.date)?.start
+            else { continue }
+            buckets[bucket, default: 0] += tuple.set.weightLbs * Double(tuple.set.reps)
+        }
+        return buckets
+            .map { ChartDataPoint(date: $0.key, value: $0.value) }
+            .sorted { $0.date < $1.date }
+    }
+
+    // MARK: - Lift Progression
+
+    struct LiftProgress: Identifiable {
+        let id: UUID              // exercise id
+        let exercise: Exercise
+        let topWeight: Double     // best non-warmup weight within range
+        let allTimeBest: Double   // best non-warmup weight ever
+        let deltaInRange: Double? // topWeight − best before range start (nil without baseline)
+        let hasPRInRange: Bool    // range-best e1RM ties/beats all-time e1RM
+    }
+
+    /// One row per exercise with any activity in range, grouped by day type at the call site.
+    func liftProgression() -> [LiftProgress] {
+        let rangeStart = selectedTimeRange.startDate
+        return allExercises().compactMap { exercise in
+            let completed = exercise.recordsArray.filter { $0.session?.isCompleted == true }
+            let allSets = completed.flatMap { $0.setsArray.filter { !$0.isWarmup } }
+            guard !allSets.isEmpty else { return nil }
+
+            func inRange(_ record: ExerciseRecord) -> Bool {
+                guard let start = rangeStart else { return true }
+                return (record.session?.date ?? .distantPast) >= start
+            }
+
+            let rangeSets = completed.filter(inRange).flatMap { $0.setsArray.filter { !$0.isWarmup } }
+            guard let topWeight = rangeSets.map(\.weightLbs).max() else { return nil }
+
+            let allTimeBest = allSets.map(\.weightLbs).max() ?? 0
+
+            let beforeSets = completed
+                .filter { !inRange($0) }
+                .flatMap { $0.setsArray.filter { !$0.isWarmup } }
+            let baseline = beforeSets.map(\.weightLbs).max()
+            let delta = baseline.map { topWeight - $0 }
+
+            let rangeBestE1RM = rangeSets.map { E1RM.estimate(weightLbs: $0.weightLbs, reps: $0.reps) }.max() ?? 0
+            let allTimeE1RM = allSets.map { E1RM.estimate(weightLbs: $0.weightLbs, reps: $0.reps) }.max() ?? 0
+
+            return LiftProgress(
+                id: exercise.id,
+                exercise: exercise,
+                topWeight: topWeight,
+                allTimeBest: allTimeBest,
+                deltaInRange: delta,
+                hasPRInRange: rangeBestE1RM > 0 && rangeBestE1RM >= allTimeE1RM
+            )
+        }
     }
 
     // MARK: - PRs This Month
@@ -211,7 +233,7 @@ final class ProgressDashboardViewModel {
                 let records = session.exerciseRecordsArray.filter { $0.exercise?.id == exercise.id }
                 for record in records {
                     let sets = record.setsArray.filter { !$0.isWarmup }
-                    let sessionBestE1RM = sets.map { $0.weightLbs * (1.0 + Double($0.reps) / 30.0) }.max() ?? 0
+                    let sessionBestE1RM = sets.map { E1RM.estimate(weightLbs: $0.weightLbs, reps: $0.reps) }.max() ?? 0
                     let sessionBestWeight = sets.map(\.weightLbs).max() ?? 0
 
                     let isCurrentMonth = session.date >= monthStart
@@ -253,7 +275,7 @@ final class ProgressDashboardViewModel {
                 var monthRunningBest: Double = 0
                 for (record, date) in currentRecords {
                     let sets = record.setsArray.filter { !$0.isWarmup }
-                    let best = sets.map { $0.weightLbs * (1.0 + Double($0.reps) / 30.0) }.max() ?? 0
+                    let best = sets.map { E1RM.estimate(weightLbs: $0.weightLbs, reps: $0.reps) }.max() ?? 0
                     if best > monthRunningBest && monthRunningBest > 0 {
                         prs.append(PersonalRecord(
                             exerciseName: exercise.name,
