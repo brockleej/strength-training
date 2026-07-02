@@ -44,7 +44,7 @@ final class ExerciseDrillDownViewModel {
         record.setsArray.filter { !$0.isWarmup }
     }
 
-    // MARK: - Top Set Trend (2A + 2D mode overlay)
+    // MARK: - Top Set Trend
 
     var topSetTrendData: [ModeChartDataPoint] {
         filteredRecords().compactMap { record in
