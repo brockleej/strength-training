@@ -97,6 +97,11 @@ struct FocusView: View {
             }
         }
         .navigationBarHidden(true)
+        .fullScreenCover(item: $workoutVM.pendingCelebration) { context in
+            PRCelebrationView(context: context) {
+                workoutVM.pendingCelebration = nil
+            }
+        }
         .onAppear {
             if focusVM == nil {
                 focusVM = FocusViewModel(prefill: currentPrefill())
