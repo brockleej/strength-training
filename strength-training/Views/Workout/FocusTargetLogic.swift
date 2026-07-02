@@ -49,4 +49,12 @@ enum FocusTargetLogic {
         return Prefill(weight: suggestion.targetWeight, reps: suggestion.targetReps,
                        weightDelta: weightDelta, repsDelta: repsDelta)
     }
+
+    /// Heaviest set of a session — the dress baseline. Mirrors the algorithm's
+    /// `bestSet` convention exactly (see ProgressionService): warmups included,
+    /// ties broken by first occurrence (`max(by: <)` keeps the running max on
+    /// equal weights).
+    static func lastBest(from sets: [(weight: Double, reps: Int)]) -> (weight: Double, reps: Int)? {
+        sets.max(by: { $0.weight < $1.weight })
+    }
 }

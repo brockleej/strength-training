@@ -231,19 +231,17 @@ struct FocusView: View {
         )
     }
 
-    /// Best (heaviest) non-warmup set of the most recent completed session in
-    /// the current mode — the dress baseline (mirrors the algorithm's
-    /// heaviest-set convention).
+    /// Best (heaviest) set of the most recent completed session in the current
+    /// mode — the dress baseline. Sets are passed as-logged (warmups included),
+    /// matching the algorithm's `bestSet` convention via FocusTargetLogic.lastBest.
     private func lastSessionBestSet() -> (weight: Double, reps: Int)? {
         let modeRaw = workoutVM.selectedMode.rawValue
         let lastRecord = exercise.recordsArray
             .filter { $0.trainingMode.rawValue == modeRaw && $0.session?.isCompleted == true }
             .max { ($0.session?.date ?? .distantPast) < ($1.session?.date ?? .distantPast) }
-        guard let best = lastRecord?.setsArray
-            .filter({ !$0.isWarmup })
-            .max(by: { $0.weightLbs < $1.weightLbs })
+        guard let sets = lastRecord?.setsArray.map({ (weight: $0.weightLbs, reps: $0.reps) })
         else { return nil }
-        return (best.weightLbs, best.reps)
+        return FocusTargetLogic.lastBest(from: sets)
     }
 
     private func logSet(_ focusVM: FocusViewModel) {

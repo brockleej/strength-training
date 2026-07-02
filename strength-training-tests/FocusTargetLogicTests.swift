@@ -105,4 +105,27 @@ final class FocusTargetLogicTests: XCTestCase {
         )
         XCTAssertEqual(p.weightDelta, "+2.5 lb")
     }
+
+    // MARK: - lastBest (dress baseline, mirrors algorithm bestSet convention)
+
+    func test_lastBest_picksHeaviestSet() {
+        let best = FocusTargetLogic.lastBest(from: [
+            (weight: 135, reps: 10), (weight: 185, reps: 6), (weight: 155, reps: 8)
+        ])
+        XCTAssertEqual(best?.weight, 185)
+        XCTAssertEqual(best?.reps, 6)
+    }
+
+    func test_lastBest_tieBrokenByFirstOccurrence() {
+        // Same convention as ProgressionService.bestSet: max(by: <) keeps the
+        // FIRST occurrence of the max weight on ties.
+        let best = FocusTargetLogic.lastBest(from: [
+            (weight: 225, reps: 5), (weight: 225, reps: 3)
+        ])
+        XCTAssertEqual(best?.reps, 5)
+    }
+
+    func test_lastBest_emptySets_returnsNil() {
+        XCTAssertNil(FocusTargetLogic.lastBest(from: []))
+    }
 }
