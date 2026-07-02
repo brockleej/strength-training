@@ -52,6 +52,7 @@
 		E71CE961AAE0B26627F132E0 /* backup-with-orphans.json in Resources */ = {isa = PBXBuildFile; fileRef = 8EE03F51930E877B27379EF2 /* backup-with-orphans.json */; };
 		E775E13496C6909B4FF9F6EB /* StepperLogicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4513366655FE67F2A44DEB5 /* StepperLogicTests.swift */; };
 		E805369068D8F5B36110D3FB /* ConfigArtifactWriter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 450F037775C1159761CB6A2E /* ConfigArtifactWriter.swift */; };
+		E817E9DE7E0C2E2F33F7A626 /* EffortScaleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9D1927AD35565C0B0F0CB4D /* EffortScaleTests.swift */; };
 		EF566BBF0799C21A469B514C /* Sparkline.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7F178DC244F07C15EE63542 /* Sparkline.swift */; };
 		EFC69339D307E6EF3EE4B039 /* ConfigArtifactRoundTripTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDFCFE81F28301E70314A05D /* ConfigArtifactRoundTripTests.swift */; };
 		F10E09BC7B41DF904051DC08 /* PrevSessionsStripDataTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84E0B9265A12EFB99615DBA6 /* PrevSessionsStripDataTests.swift */; };
@@ -106,6 +107,7 @@
 		9BB09AE52C260DDF439056CC /* ProgressionServiceParityTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ProgressionServiceParityTests.swift; sourceTree = "<group>"; };
 		9C9B1F409EF0053F85ACE816 /* BackupModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BackupModels.swift; sourceTree = "<group>"; };
 		A284E56C056FDF4F4E7CE02C /* ProgressionServicePureFunctionTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ProgressionServicePureFunctionTests.swift; sourceTree = "<group>"; };
+		A9D1927AD35565C0B0F0CB4D /* EffortScaleTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EffortScaleTests.swift; sourceTree = "<group>"; };
 		AA363F8D7BCEA2FCDE96CCEE /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.0.sdk/System/Library/Frameworks/Cocoa.framework; sourceTree = DEVELOPER_DIR; };
 		B3E6DCDC4270F67C50095A9A /* SimulationStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SimulationStore.swift; sourceTree = "<group>"; };
 		C29E8DFE676157D4AD6A2D25 /* minimal-backup.json */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.json; path = "minimal-backup.json"; sourceTree = "<group>"; };
@@ -259,6 +261,7 @@
 				D469A75D83D9297C0A3174B3 /* FocusTargetLogicTests.swift */,
 				EB1C5CC453A0B417B4B47C31 /* WorkoutFormatTests.swift */,
 				2C13DB8B2815F5DFA66CB019 /* E1RMDetectionTests.swift */,
+				A9D1927AD35565C0B0F0CB4D /* EffortScaleTests.swift */,
 			);
 			path = "strength-training-tests";
 			sourceTree = "<group>";
@@ -561,6 +564,7 @@
 				93349D7552961CAD8C765FB7 /* FocusTargetLogicTests.swift in Sources */,
 				52260489A0E5F8F397C552CE /* WorkoutFormatTests.swift in Sources */,
 				08F2D596CD1C0AF37A4D316E /* E1RMDetectionTests.swift in Sources */,
+				E817E9DE7E0C2E2F33F7A626 /* EffortScaleTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
