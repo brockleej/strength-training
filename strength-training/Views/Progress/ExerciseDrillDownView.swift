@@ -21,7 +21,7 @@ struct ExerciseDrillDownView: View {
                 ProgressView()
             }
         }
-        .navigationTitle(exercise.name)
+        .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             if viewModel == nil {
@@ -190,7 +190,7 @@ private struct DrillDownContent: View {
                 },
                 selection: Binding(
                     get: { viewModel.topSetMetric.rawValue },
-                    set: { viewModel.topSetMetric = ExerciseDrillDownViewModel.TopSetMetric(rawValue: $0) ?? .e1RM }
+                    set: { viewModel.topSetMetric = ExerciseDrillDownViewModel.TopSetMetric(rawValue: $0) ?? .weight }
                 )
             )
             if viewModel.topSetBars.isEmpty {
@@ -208,7 +208,14 @@ private struct DrillDownContent: View {
                     .foregroundStyle(bar.isPR ? Color.uplift.pr : Color.uplift.accent.opacity(0.75))
                     .cornerRadius(3)
                 }
-                .chartYAxis(.hidden)
+                .chartYAxis {
+                    AxisMarks(values: .automatic(desiredCount: 3)) {
+                        AxisGridLine().foregroundStyle(Color.uplift.hairline)
+                        AxisValueLabel()
+                            .font(.uplift.text(10, weight: .medium))
+                            .foregroundStyle(Color.uplift.fgDim)
+                    }
+                }
                 .chartXAxis {
                     AxisMarks(values: .automatic(desiredCount: 3)) {
                         AxisValueLabel()

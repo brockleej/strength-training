@@ -51,7 +51,7 @@ struct E1RMTrendChart: View {
                     }
                 }
                 .chartXAxis {
-                    AxisMarks(values: .stride(by: .day, count: 7)) {
+                    AxisMarks(values: .automatic(desiredCount: 4)) {
                         AxisValueLabel(format: .dateTime.month(.abbreviated).day())
                             .font(.uplift.text(11, weight: .medium))
                             .foregroundStyle(Color.uplift.fgDim)

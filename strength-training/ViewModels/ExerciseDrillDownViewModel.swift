@@ -11,12 +11,11 @@ final class ExerciseDrillDownViewModel {
     var modelContext: ModelContext
     let exercise: Exercise
     var selectedTimeRange: ProgressTimeRange = .threeMonths
-    var topSetMetric: TopSetMetric = .e1RM
+    var topSetMetric: TopSetMetric = .weight
 
     enum TopSetMetric: String, CaseIterable, Identifiable {
         case weight = "Weight"
         case reps = "Reps"
-        case e1RM = "Est. 1RM"
         var id: String { rawValue }
     }
 
@@ -59,8 +58,6 @@ final class ExerciseDrillDownViewModel {
             case .reps:
                 let bestSet = sets.max(by: { $0.weightLbs < $1.weightLbs })
                 value = Double(bestSet?.reps ?? 0)
-            case .e1RM:
-                value = sets.map { E1RM.estimate(weightLbs: $0.weightLbs, reps: $0.reps) }.max() ?? 0
             }
 
             return ModeChartDataPoint(date: date, value: value, mode: record.trainingMode)
