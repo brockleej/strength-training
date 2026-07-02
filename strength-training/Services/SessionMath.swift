@@ -27,7 +27,8 @@ enum SessionMath {
     static func e1RMPRExerciseNames(for session: WorkoutSession, allSessions: [WorkoutSession]) -> [String] {
         var counted = Set<UUID>()
         var names: [String] = []
-        for record in session.exerciseRecordsArray {
+        // Relationship arrays are unordered — sort so callout name order is stable.
+        for record in session.exerciseRecordsArray.sorted(by: { $0.sortOrder < $1.sortOrder }) {
             guard let exercise = record.exercise, !counted.contains(exercise.id) else { continue }
             let sessionBest = session.exerciseRecordsArray
                 .filter { $0.exercise?.id == exercise.id }
