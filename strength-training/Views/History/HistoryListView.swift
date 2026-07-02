@@ -42,10 +42,11 @@ private struct HistoryContent: View {
 
     var body: some View {
         let grouped = viewModel.groupedSessions(from: sessions)
+        let allTimeBests = SessionMath.allTimeBestE1RMs(across: sessions)
 
         List {
             if !sessions.isEmpty {
-                summaryStrip
+                summaryStrip(allTimeBests: allTimeBests)
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets(top: 4, leading: 20, bottom: 4, trailing: 20))
@@ -71,7 +72,7 @@ private struct HistoryContent: View {
                             NavigationLink(value: session) {
                                 HistorySessionRow(
                                     session: session,
-                                    prCount: SessionMath.e1RMPRCount(for: session, allSessions: sessions)
+                                    prCount: SessionMath.e1RMPRCount(for: session, allTimeBests: allTimeBests)
                                 )
                             }
                             .listRowBackground(
@@ -105,11 +106,11 @@ private struct HistoryContent: View {
 
     // MARK: - Summary strip (current calendar month, unfiltered)
 
-    private var summaryStrip: some View {
+    private func summaryStrip(allTimeBests: [UUID: Double]) -> some View {
         let cal = Calendar.current
         let monthSessions = sessions.filter { cal.isDate($0.date, equalTo: .now, toGranularity: .month) }
         let monthVolume = monthSessions.reduce(0.0) { $0 + SessionMath.volume(of: $1) }
-        let monthPRs = monthSessions.reduce(0) { $0 + SessionMath.e1RMPRCount(for: $1, allSessions: sessions) }
+        let monthPRs = monthSessions.reduce(0) { $0 + SessionMath.e1RMPRCount(for: $1, allTimeBests: allTimeBests) }
 
         return HStack(spacing: 12) {
             SummaryStat(label: "This month", value: "\(monthSessions.count)", unit: "sessions")
