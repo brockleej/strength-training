@@ -14,7 +14,6 @@ struct ContentView: View {
     @State private var healthKitService = HealthKitWorkoutService()
     @State private var cloudKitSyncService = CloudKitSyncService()
     @State private var selectedTab = "workout"
-    @State private var sessionToReview: WorkoutSession?
 
     var body: some View {
         Group {
@@ -24,7 +23,7 @@ struct ContentView: View {
                         WorkoutTabView(viewModel: vm)
                     }
                     Tab("History", systemImage: "clock", value: "history") {
-                        HistoryListView(reviewSession: $sessionToReview)
+                        HistoryListView()
                     }
                     Tab("Progress", systemImage: "chart.line.uptrend.xyaxis", value: "progress") {
                         ProgressDashboardView()
