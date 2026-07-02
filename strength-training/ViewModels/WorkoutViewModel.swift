@@ -46,8 +46,6 @@ final class WorkoutViewModel {
     }
     var selectedMode: TrainingMode = .highWeightLowReps
     var sessionPendingEffortRating: WorkoutSession?
-    /// Set after a workout is finished (and effort rating handled) to trigger navigation to its detail.
-    var completedSessionToReview: WorkoutSession?
     /// Set when a just-logged set breaks the exercise's all-time e1RM record —
     /// FocusView presents PRCelebrationView from this.
     var pendingCelebration: PRCelebrationContext?
@@ -255,7 +253,7 @@ final class WorkoutViewModel {
             if uuid != nil {
                 sessionPendingEffortRating = capturedSession
             } else {
-                completedSessionToReview = capturedSession
+                sessionPendingSummary = capturedSession
             }
         }
     }
@@ -265,7 +263,7 @@ final class WorkoutViewModel {
         session.effortRating = rating
         try? modelContext.save()
         let uuid = session.healthKitWorkoutUUID
-        completedSessionToReview = session
+        pendingSummaryAfterRating = session
         sessionPendingEffortRating = nil
         if let uuid {
             Task { await healthKitService.saveEffortRating(rating, workoutUUID: uuid) }
@@ -273,7 +271,7 @@ final class WorkoutViewModel {
     }
 
     func skipEffortRating() {
-        completedSessionToReview = sessionPendingEffortRating
+        pendingSummaryAfterRating = sessionPendingEffortRating
         sessionPendingEffortRating = nil
     }
 

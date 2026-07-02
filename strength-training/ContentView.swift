@@ -36,14 +36,6 @@ struct ContentView: View {
                         SettingsView(healthKitService: healthKitService, cloudKitSyncService: cloudKitSyncService)
                     }
                 }
-                .onChange(of: vm.completedSessionToReview) { _, session in
-                    if let session {
-                        sessionToReview = session
-                        selectedTab = "history"
-                        vm.activeSession = nil
-                        vm.completedSessionToReview = nil
-                    }
-                }
                 .tint(Color.uplift.accent)
                 .preferredColorScheme(.dark)
             } else {

@@ -18,11 +18,19 @@ struct WorkoutTabView: View {
                 TodayView(workoutVM: viewModel)
             }
         }
-        .sheet(item: $viewModel.sessionPendingEffortRating) { _ in
+        .sheet(item: $viewModel.sessionPendingEffortRating, onDismiss: {
+            if let staged = viewModel.pendingSummaryAfterRating {
+                viewModel.pendingSummaryAfterRating = nil
+                viewModel.sessionPendingSummary = staged
+            }
+        }) { _ in
             EffortRatingView(
                 onSave: { rating in viewModel.saveEffortRating(rating) },
                 onSkip: { viewModel.skipEffortRating() }
             )
+        }
+        .fullScreenCover(item: $viewModel.sessionPendingSummary) { session in
+            WorkoutSummaryView(session: session, workoutVM: viewModel)
         }
     }
 }

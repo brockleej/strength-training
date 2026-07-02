@@ -55,6 +55,9 @@ struct TodayView: View {
             .background(Color.uplift.bgElev)
             .scrollIndicators(.hidden)
             .navigationBarHidden(true)
+            .navigationDestination(item: $workoutVM.summaryDetailSession) { session in
+                SessionDetailView(session: session)
+            }
         }
         .onAppear {
             todayVM.syncSelection(suspended: workoutVM.suspendedSession, mostRecent: mostRecent)
