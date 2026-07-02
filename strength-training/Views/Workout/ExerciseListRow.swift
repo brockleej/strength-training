@@ -15,7 +15,9 @@ struct ExerciseListRow: View {
     }
 
     let name: String
-    let subtitle: String     // WorkoutFormat.rowSubtitle output
+    let lastSets: Int?        // last session's working-set count
+    let targetWeight: Double? // progression target (fallback: recent avg weight)
+    let targetReps: Int?      // recent avg reps
     let state: RowState
 
     private var isActive: Bool { state == .active }
@@ -30,9 +32,8 @@ struct ExerciseListRow: View {
                     .kerning(-0.2)
                     .foregroundStyle(Color.uplift.fg)
                     .strikethrough(isCompleted, color: Color.uplift.fgDim)
-                Text(subtitle)
+                subtitleText
                     .font(.uplift.mono(12, weight: .medium))
-                    .foregroundStyle(Color.uplift.fgMuted)
             }
             Spacer(minLength: 8)
             if isActive {
@@ -56,6 +57,30 @@ struct ExerciseListRow: View {
         .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityText)
+    }
+
+    private var subtitleText: Text {
+        guard targetWeight != nil || targetReps != nil else {
+            return Text("—").foregroundColor(.uplift.fgMuted)
+        }
+        let setsPrefix: Text = lastSets.map { Text("\($0) sets · ").foregroundColor(.uplift.fgMuted) } ?? Text("")
+        if let targetWeight, let targetReps {
+            return setsPrefix + PairText.pair(weight: targetWeight, reps: targetReps, font: .uplift.mono(12, weight: .medium))
+        } else if let targetReps {
+            return setsPrefix + Text("\(targetReps)").foregroundColor(.uplift.repsTint)
+        }
+        return setsPrefix + Text("—").foregroundColor(.uplift.fgMuted)
+    }
+
+    private var accessibilitySubtitle: String {
+        if targetWeight == nil && targetReps == nil { return "no history" }
+        let setsPart = lastSets.map { "\($0) sets, " } ?? ""
+        if let targetWeight, let targetReps {
+            return "\(setsPart)\(StepperLogic.format(targetWeight)) pounds by \(targetReps)"
+        } else if let targetReps {
+            return "\(setsPart)\(targetReps) reps"
+        }
+        return "no history"
     }
 
     @ViewBuilder
@@ -87,16 +112,16 @@ struct ExerciseListRow: View {
         case .active: stateText = "current exercise"
         case .pending(let n): stateText = "number \(n)"
         }
-        return "\(name), \(subtitle == "—" ? "no history" : subtitle), \(stateText)"
+        return "\(name), \(accessibilitySubtitle), \(stateText)"
     }
 }
 
 #Preview("ExerciseListRow") {
     VStack(spacing: 8) {
-        ExerciseListRow(name: "Back Squat", subtitle: "4 × 5 · 225 lb", state: .completed)
-        ExerciseListRow(name: "Walking Lunge", subtitle: "3 × 12 · 40 lb", state: .active)
-        ExerciseListRow(name: "Leg Press", subtitle: "3 × 10 · 360 lb", state: .pending(number: 4))
-        ExerciseListRow(name: "Nordic Curl", subtitle: "—", state: .pending(number: 5))
+        ExerciseListRow(name: "Back Squat", lastSets: 4, targetWeight: 225, targetReps: 5, state: .completed)
+        ExerciseListRow(name: "Walking Lunge", lastSets: 3, targetWeight: 40, targetReps: 12, state: .active)
+        ExerciseListRow(name: "Leg Press", lastSets: 3, targetWeight: 360, targetReps: 10, state: .pending(number: 4))
+        ExerciseListRow(name: "Nordic Curl", lastSets: nil, targetWeight: nil, targetReps: nil, state: .pending(number: 5))
     }
     .padding(20)
     .background(Color.uplift.bgElev)

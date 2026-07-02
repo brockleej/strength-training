@@ -146,7 +146,7 @@ struct PRCelebrationView: View {
                     .tracking(0.4)
                     .foregroundStyle(Color.uplift.fgMuted)
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Num("\(StepperLogic.format(context.previousWeight)) × \(context.previousReps)", size: 22, weight: .semibold)
+                    PairText.pair(weight: context.previousWeight, reps: context.previousReps, font: .uplift.display(22, weight: .semibold))
                     Text(context.previousDateLabel)
                         .font(.uplift.text(12, weight: .medium))
                         .foregroundStyle(Color.uplift.fgDim)

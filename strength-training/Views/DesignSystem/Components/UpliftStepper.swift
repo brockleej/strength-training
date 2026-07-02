@@ -25,6 +25,8 @@ struct UpliftStepper: View {
     let range: ClosedRange<Double>
     var targetDelta: String? = nil     // "+5 lb" / "+1" — non-nil = target dress
     var onUserEdit: (() -> Void)? = nil
+    var icon: String? = nil            // corner glyph, e.g. "scalemass.fill"
+    var iconTint: Color = .uplift.fgMuted
 
     @State private var holdTask: Task<Void, Never>?
 
@@ -54,6 +56,15 @@ struct UpliftStepper: View {
         .overlay {
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .strokeBorder(isTarget ? Color.uplift.accent.opacity(0.55) : .clear, lineWidth: 1)
+        }
+        .overlay(alignment: .topLeading) {
+            if let icon {
+                Image(systemName: icon)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(iconTint)
+                    .padding(8)
+                    .accessibilityHidden(true)
+            }
         }
         .animation(.easeInOut(duration: 0.2), value: isTarget)
         .onDisappear { stopHold() }
@@ -146,10 +157,12 @@ struct UpliftStepper: View {
     @Previewable @State var reps: Double = 5
 
     VStack(spacing: 20) {
-        // Neutral pair (interactive)
+        // Neutral pair (interactive), with corner icons
         HStack(spacing: 10) {
-            UpliftStepper(label: "Weight", unit: "lb", value: $weight, step: 5, range: 0...1000)
-            UpliftStepper(label: "Reps", value: $reps, step: 1, range: 1...100)
+            UpliftStepper(label: "Weight", unit: "lb", value: $weight, step: 5, range: 0...1000,
+                          icon: "scalemass.fill", iconTint: .uplift.weightTint)
+            UpliftStepper(label: "Reps", value: $reps, step: 1, range: 1...100,
+                          icon: "repeat", iconTint: .uplift.fgMuted)
         }
         // Weight-bump target dress
         HStack(spacing: 10) {

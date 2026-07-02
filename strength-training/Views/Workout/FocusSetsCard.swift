@@ -74,7 +74,7 @@ struct FocusSetsCard: View {
             Spacer()
             Text(StepperLogic.format(set.weightLbs))
                 .font(.uplift.mono(14, weight: .semibold))
-                .foregroundStyle(Color.uplift.fg)
+                .foregroundStyle(Color.uplift.weightTint)
                 .frame(width: 64, alignment: .trailing)
             Text("\(set.reps)")
                 .font(.uplift.mono(14, weight: .semibold))

@@ -43,6 +43,10 @@ extension Color {
         static let accentDeep = Color(hex: 0x3D9DDB)
         static let onAccent = Color(hex: 0x001220)      // content on accent fills
 
+        // Metric identity (weight × reps pairs, app-wide)
+        static let weightTint = Color(hex: 0x5AB8F5)   // = accent ice
+        static let repsTint = Color(hex: 0xFFFFFF)     // = fg
+
         // Day types (vivid)
         static let armsInk = Color(hex: 0xFF4D88)
         static let armsWash = Color(hex: 0xFF4D88, opacity: 0.14)

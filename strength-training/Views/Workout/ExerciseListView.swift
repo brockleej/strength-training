@@ -216,9 +216,12 @@ struct ExerciseListView: View {
                         )
                         .onAppear { activeExerciseID = exercise.id }
                     } label: {
+                        let rowData = rowData(for: exercise)
                         ExerciseListRow(
                             name: exercise.name,
-                            subtitle: subtitle(for: exercise),
+                            lastSets: rowData.lastSets,
+                            targetWeight: rowData.targetWeight,
+                            targetReps: rowData.targetReps,
                             state: rowState(for: exercise, number: index + 1)
                         )
                     }
@@ -310,7 +313,7 @@ struct ExerciseListView: View {
         return .pending(number: number)
     }
 
-    private func subtitle(for exercise: Exercise) -> String {
+    private func rowData(for exercise: Exercise) -> (lastSets: Int?, targetWeight: Double?, targetReps: Int?) {
         let modeRaw = workoutVM.selectedMode.rawValue
         let lastRecord = exercise.recordsArray
             .filter { $0.trainingMode.rawValue == modeRaw && $0.session?.isCompleted == true }
@@ -318,10 +321,10 @@ struct ExerciseListView: View {
         let lastSets = lastRecord.map { $0.setsArray.filter { !$0.isWarmup }.count }
         let recent = workoutVM.recentAverage(for: exercise, mode: workoutVM.selectedMode)
         let target = workoutVM.suggestion(for: exercise, mode: workoutVM.selectedMode)?.targetWeight
-        return WorkoutFormat.rowSubtitle(
+        return (
             lastSets: (lastSets ?? 0) > 0 ? lastSets : nil,
-            reps: recent?.reps,
-            weight: target ?? recent?.weight
+            targetWeight: target ?? recent?.weight,
+            targetReps: recent?.reps
         )
     }
 }

@@ -24,6 +24,16 @@ struct PrevSessionsStrip: View {
                 .padding(.horizontal, 20)
             }
             .defaultScrollAnchor(.trailing)
+            .mask {
+                LinearGradient(
+                    stops: [
+                        .init(color: .clear, location: 0),
+                        .init(color: .black, location: 0.10),
+                        .init(color: .black, location: 1),
+                    ],
+                    startPoint: .leading, endPoint: .trailing
+                )
+            }
         }
     }
 
@@ -33,13 +43,11 @@ struct PrevSessionsStrip: View {
                 .textCase(.uppercase)
                 .font(.uplift.text(10, weight: .bold))
                 .tracking(0.4)
-                .foregroundStyle(Color.uplift.fgMuted)
+                .foregroundStyle(Color.uplift.fgDim)
             VStack(alignment: .leading, spacing: 3) {
-                ForEach(Array(entry.lines.enumerated()), id: \.offset) { _, line in
-                    Text(line)
-                        .font(.uplift.mono(12, weight: .semibold))
+                ForEach(Array(entry.runs.enumerated()), id: \.offset) { _, run in
+                    PairText.pair(weight: run.weight, reps: run.reps, font: .uplift.mono(12, weight: .semibold))
                         .kerning(-0.2)
-                        .foregroundStyle(Color.uplift.fg)
                 }
             }
         }
@@ -48,10 +56,14 @@ struct PrevSessionsStrip: View {
         .frame(width: 112, alignment: .leading)
         .background {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color.uplift.surface1)
+                .fill(Color.uplift.surface1.opacity(0.45))
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .strokeBorder(Color.uplift.hairline, lineWidth: 0.5)
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(entry.dateLabel): \(entry.lines.joined(separator: ", "))")
+        .accessibilityLabel("\(entry.dateLabel): \(entry.linesAccessibility)")
     }
 
     private var emptyState: some View {
@@ -72,11 +84,13 @@ struct PrevSessionsStrip: View {
 #Preview("PrevSessionsStrip") {
     VStack(spacing: 16) {
         PrevSessionsStrip(entries: [
-            .init(id: UUID(), dateLabel: "9 wk ago", lines: ["210 × 5 · 5 · 5"]),
-            .init(id: UUID(), dateLabel: "7 wk ago", lines: ["215 × 5 · 5"]),
-            .init(id: UUID(), dateLabel: "5 wk ago", lines: ["220 × 5 · 5", "225 × 3"]),
-            .init(id: UUID(), dateLabel: "3 wk ago", lines: ["225 × 5 · 5 · 5"]),
-            .init(id: UUID(), dateLabel: "Yesterday", lines: ["225 × 5 · 5", "230 × 3", "235 × 1"]),
+            .init(id: UUID(), dateLabel: "9 wk ago", runs: [.init(weight: 210, reps: [5, 5, 5])]),
+            .init(id: UUID(), dateLabel: "7 wk ago", runs: [.init(weight: 215, reps: [5, 5])]),
+            .init(id: UUID(), dateLabel: "5 wk ago", runs: [.init(weight: 220, reps: [5, 5]), .init(weight: 225, reps: [3])]),
+            .init(id: UUID(), dateLabel: "3 wk ago", runs: [.init(weight: 225, reps: [5, 5, 5])]),
+            .init(id: UUID(), dateLabel: "Yesterday", runs: [
+                .init(weight: 225, reps: [5, 5]), .init(weight: 230, reps: [3]), .init(weight: 235, reps: [1]),
+            ]),
         ])
         PrevSessionsStrip(entries: [])
     }

@@ -8,24 +8,6 @@ import XCTest
 
 final class WorkoutFormatTests: XCTestCase {
 
-    // MARK: - row subtitle
-
-    func test_subtitle_full() {
-        XCTAssertEqual(WorkoutFormat.rowSubtitle(lastSets: 3, reps: 12, weight: 40), "3 × 12 · 40 lb")
-    }
-
-    func test_subtitle_noWeight() {
-        XCTAssertEqual(WorkoutFormat.rowSubtitle(lastSets: 3, reps: 12, weight: nil), "3 × 12")
-    }
-
-    func test_subtitle_weightOnly() {
-        XCTAssertEqual(WorkoutFormat.rowSubtitle(lastSets: nil, reps: nil, weight: 225), "225 lb")
-    }
-
-    func test_subtitle_none() {
-        XCTAssertEqual(WorkoutFormat.rowSubtitle(lastSets: nil, reps: nil, weight: nil), "—")
-    }
-
     // MARK: - elapsed
 
     func test_elapsed_minutesSeconds() {
@@ -46,9 +28,5 @@ final class WorkoutFormatTests: XCTestCase {
 
     func test_elapsed_negative_clampsToZero() {
         XCTAssertEqual(WorkoutFormat.elapsed(-5), "0:00")
-    }
-
-    func test_subtitle_setsWithoutReps_dropsSetsPart() {
-        XCTAssertEqual(WorkoutFormat.rowSubtitle(lastSets: 3, reps: nil, weight: 40), "40 lb")
     }
 }

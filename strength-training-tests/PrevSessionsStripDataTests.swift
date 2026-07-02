@@ -22,32 +22,34 @@ final class PrevSessionsStripDataTests: XCTestCase {
         calendar.date(byAdding: .day, value: -n, to: now)!
     }
 
-    // MARK: - runLines (consecutive same-weight grouping)
+    // MARK: - runs (consecutive same-weight grouping)
 
-    func test_runLines_uniformWeight_singleLine() {
-        let lines = PrevSessionsStripData.runLines(for: [
+    func test_runs_uniformWeight_singleRun() {
+        let runs = PrevSessionsStripData.runs(for: [
             .init(weight: 225, reps: 5), .init(weight: 225, reps: 5), .init(weight: 225, reps: 4),
         ])
-        XCTAssertEqual(lines, ["225 × 5 · 5 · 4"])
+        XCTAssertEqual(runs, [.init(weight: 225, reps: [5, 5, 4])])
     }
 
-    func test_runLines_weightChange_breaksLine() {
-        let lines = PrevSessionsStripData.runLines(for: [
+    func test_runs_weightChange_breaksRun() {
+        let runs = PrevSessionsStripData.runs(for: [
             .init(weight: 225, reps: 5), .init(weight: 225, reps: 5), .init(weight: 230, reps: 3),
         ])
-        XCTAssertEqual(lines, ["225 × 5 · 5", "230 × 3"])
+        XCTAssertEqual(runs, [.init(weight: 225, reps: [5, 5]), .init(weight: 230, reps: [3])])
     }
 
-    func test_runLines_nonAdjacentSameWeight_staysSeparate() {
-        let lines = PrevSessionsStripData.runLines(for: [
+    func test_runs_nonAdjacentSameWeight_staysSeparate() {
+        let runs = PrevSessionsStripData.runs(for: [
             .init(weight: 225, reps: 5), .init(weight: 230, reps: 3), .init(weight: 225, reps: 8),
         ])
-        XCTAssertEqual(lines, ["225 × 5", "230 × 3", "225 × 8"])
+        XCTAssertEqual(runs, [
+            .init(weight: 225, reps: [5]), .init(weight: 230, reps: [3]), .init(weight: 225, reps: [8]),
+        ])
     }
 
-    func test_runLines_halfPoundWeights() {
-        let lines = PrevSessionsStripData.runLines(for: [.init(weight: 47.5, reps: 12)])
-        XCTAssertEqual(lines, ["47.5 × 12"])
+    func test_runs_halfPoundWeights() {
+        let runs = PrevSessionsStripData.runs(for: [.init(weight: 47.5, reps: 12)])
+        XCTAssertEqual(runs, [.init(weight: 47.5, reps: [12])])
     }
 
     // MARK: - relativeLabel
@@ -72,8 +74,8 @@ final class PrevSessionsStripDataTests: XCTestCase {
         let entries = PrevSessionsStripData.entries(from: sessions, now: now, calendar: calendar)
         // 11 non-empty sessions, capped to the 10 MOST RECENT, oldest-first order preserved
         XCTAssertEqual(entries.count, 10)
-        XCTAssertEqual(entries.first?.lines, ["211 × 5"])   // 11 days ago survives the cap
-        XCTAssertEqual(entries.last?.lines, ["201 × 5"])    // most recent is LAST (right-most)
+        XCTAssertEqual(entries.first?.runs, [.init(weight: 211, reps: [5])])   // 11 days ago survives the cap
+        XCTAssertEqual(entries.last?.runs, [.init(weight: 201, reps: [5])])    // most recent is LAST (right-most)
         XCTAssertEqual(entries.last?.dateLabel, "Yesterday")
         _ = sessions.removeLast()
     }

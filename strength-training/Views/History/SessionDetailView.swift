@@ -265,7 +265,7 @@ private struct LiftCard: View {
             VStack(alignment: .trailing, spacing: 2) {
                 Text("\(StepperLogic.format(topWeight)) lb")
                     .font(.uplift.mono(14, weight: .semibold))
-                    .foregroundStyle(Color.uplift.fg)
+                    .foregroundStyle(Color.uplift.weightTint)
                 trendLine
             }
             Image(systemName: "chevron.right")
@@ -318,9 +318,7 @@ private struct LiftCard: View {
                     .background(Capsule().fill(Color.uplift.customBadge.opacity(0.16)))
             }
             Spacer()
-            Text("\(StepperLogic.format(set.weightLbs)) × \(set.reps)")
-                .font(.uplift.mono(13, weight: .semibold))
-                .foregroundStyle(Color.uplift.fg)
+            PairText.pair(weight: set.weightLbs, reps: set.reps, font: .uplift.mono(13, weight: .semibold))
         }
         .padding(.vertical, 9)
         .accessibilityElement(children: .ignore)

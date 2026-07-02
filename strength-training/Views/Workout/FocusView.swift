@@ -169,13 +169,15 @@ struct FocusView: View {
                 label: "Weight", unit: "lb",
                 value: $vm.weight, step: 5, range: 0...1000,
                 targetDelta: focusVM.weightDelta,
-                onUserEdit: { focusVM.userEdited() }
+                onUserEdit: { focusVM.userEdited() },
+                icon: "scalemass.fill", iconTint: .uplift.weightTint
             )
             UpliftStepper(
                 label: "Reps",
                 value: $vm.reps, step: 1, range: 1...100,
                 targetDelta: focusVM.repsDelta,
-                onUserEdit: { focusVM.userEdited() }
+                onUserEdit: { focusVM.userEdited() },
+                icon: "repeat", iconTint: .uplift.fgMuted
             )
         }
         .padding(.horizontal, 12)

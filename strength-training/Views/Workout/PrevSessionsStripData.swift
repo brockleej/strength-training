@@ -23,10 +23,25 @@ enum PrevSessionsStripData {
         let sets: [SetPair]
     }
 
+    struct Run: Equatable {
+        let weight: Double
+        let reps: [Int]
+    }
+
     struct Entry: Identifiable, Equatable {
         let id: UUID          // session/record id
         let dateLabel: String // "3 wk ago" — rendered uppercase by the card
-        let lines: [String]   // one line per consecutive same-weight run
+        let runs: [Run]       // one run per consecutive same-weight streak
+
+        /// "20 pounds by 15, 9 reps" style a11y string, one clause per run.
+        var linesAccessibility: String {
+            runs
+                .map { run in
+                    let reps = run.reps.map(String.init).joined(separator: ", ")
+                    return "\(StepperLogic.format(run.weight)) pounds by \(reps) reps"
+                }
+                .joined(separator: ", ")
+        }
     }
 
     /// Oldest-first entries, capped to the 10 most recent non-empty sessions.
@@ -42,21 +57,20 @@ enum PrevSessionsStripData {
                 Entry(
                     id: session.id,
                     dateLabel: relativeLabel(for: session.date, now: now, calendar: calendar),
-                    lines: runLines(for: session.sets)
+                    runs: runs(for: session.sets)
                 )
             }
     }
 
-    /// "225 × 5 · 5" per consecutive same-weight run, preserving set order.
-    static func runLines(for sets: [SetPair]) -> [String] {
-        var lines: [String] = []
+    /// One run per consecutive same-weight streak, preserving set order.
+    static func runs(for sets: [SetPair]) -> [Run] {
+        var result: [Run] = []
         var runWeight: Double?
         var runReps: [Int] = []
 
         func flush() {
             guard let weight = runWeight, !runReps.isEmpty else { return }
-            let reps = runReps.map(String.init).joined(separator: " · ")
-            lines.append("\(StepperLogic.format(weight)) × \(reps)")
+            result.append(Run(weight: weight, reps: runReps))
         }
 
         for set in sets {
@@ -69,7 +83,7 @@ enum PrevSessionsStripData {
             }
         }
         flush()
-        return lines
+        return result
     }
 
     /// Compact relative label: Today / Yesterday / N days ago / N wk ago / N mo ago.

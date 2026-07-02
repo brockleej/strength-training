@@ -133,7 +133,7 @@ private struct DrillDownContent: View {
                         .tracking(0.3)
                         .foregroundStyle(Color.uplift.fgMuted)
                     HStack(alignment: .firstTextBaseline, spacing: 6) {
-                        Num("\(StepperLogic.format(best.weight)) × \(best.reps)", size: 22, weight: .semibold)
+                        PairText.pair(weight: best.weight, reps: best.reps, font: .uplift.display(22, weight: .semibold))
                         Text(PrevSessionsStripData.relativeLabel(for: best.date).lowercased())
                             .font(.uplift.text(12, weight: .medium))
                             .foregroundStyle(Color.uplift.fgDim)
@@ -262,9 +262,7 @@ private struct DrillDownContent: View {
                             .foregroundStyle(Color.uplift.fgMuted)
                     }
                     Spacer()
-                    Text("\(StepperLogic.format(session.topWeight)) × \(session.topReps)")
-                        .font(.uplift.mono(14, weight: .semibold))
-                        .foregroundStyle(Color.uplift.fg)
+                    PairText.pair(weight: session.topWeight, reps: session.topReps, font: .uplift.mono(14, weight: .semibold))
                 }
                 .padding(13)
                 .background {
