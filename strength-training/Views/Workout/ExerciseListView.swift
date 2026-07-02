@@ -278,7 +278,7 @@ struct ExerciseListView: View {
             }
             .buttonStyle(.plain)
         }
-        .padding(.bottom, 4)
+        .padding(.bottom, 12)
     }
 
     private var overflowMenu: some View {

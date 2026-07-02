@@ -218,7 +218,7 @@ struct FocusView: View {
             }
             .buttonStyle(.plain)
         }
-        .padding(.bottom, 4)
+        .padding(.bottom, 12)
     }
 
     // MARK: - Actions

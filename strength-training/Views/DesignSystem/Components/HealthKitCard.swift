@@ -37,29 +37,12 @@ struct HealthKitCard: View {
     }
 
     private var sourceBadge: some View {
-        HStack(spacing: 8) {
-            RoundedRectangle(cornerRadius: 6, style: .continuous)
-                .fill(Color.uplift.ahGreen)
-                .frame(width: 22, height: 22)
-                .overlay {
-                    Image(systemName: "heart.fill")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(.white)
-                        .accessibilityHidden(true)   // decorative — badge text carries the label
-                }
-            VStack(alignment: .leading, spacing: 1) {
-                Text("APPLE HEALTH")
-                    .font(.uplift.text(9, weight: .bold))
-                    .tracking(0.5)
-                    .foregroundStyle(Color.uplift.ahGreen)
-                Text("Workout · live")
-                    .font(.uplift.text(10, weight: .medium))
-                    .foregroundStyle(Color.uplift.fgMuted)
-            }
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .background(Color.uplift.ahGreen.opacity(0.14))
+        ActivityRingsGlyph()
+            .frame(width: 26, height: 26)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(Color.uplift.ahGreen.opacity(0.14))
+            .accessibilityLabel("Apple Health live workout")
     }
 
     private func tile(icon: String, iconColor: Color, value: String, unit: String?, pulses: Bool = false) -> some View {
@@ -104,6 +87,26 @@ struct HealthKitCard: View {
             .fill(Color.uplift.ahGreen.opacity(0.22))
             .frame(width: 0.5)
             .padding(.vertical, 8)
+    }
+}
+
+/// Miniature Activity-rings nod: three concentric arcs in the Fitness colors.
+private struct ActivityRingsGlyph: View {
+    var body: some View {
+        ZStack {
+            ring(color: Color(hex: 0xFA114F), inset: 0)     // move
+            ring(color: Color(hex: 0x92E82A), inset: 6)     // exercise
+            ring(color: Color(hex: 0x1EEAEF), inset: 12)    // stand
+        }
+        .accessibilityHidden(true)
+    }
+
+    private func ring(color: Color, inset: CGFloat) -> some View {
+        Circle()
+            .trim(from: 0.08, to: 1)
+            .stroke(color, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
+            .rotationEffect(.degrees(-90))
+            .padding(inset / 2)
     }
 }
 
