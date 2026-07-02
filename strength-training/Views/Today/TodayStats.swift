@@ -79,4 +79,11 @@ enum TodayStats {
         formatter.locale = Locale(identifier: "en_US")
         return formatter.string(from: NSNumber(value: lbs.rounded())) ?? String(Int(lbs.rounded()))
     }
+
+    /// "9,840" below 10k; "187k" (rounded) at 10k and above — for tight strips.
+    static func formatCompactVolume(_ lbs: Double) -> String {
+        lbs >= 10_000
+            ? "\(Int((lbs / 1000).rounded()))k"
+            : formatVolume(lbs)
+    }
 }

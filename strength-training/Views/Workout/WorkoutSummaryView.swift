@@ -61,8 +61,8 @@ struct WorkoutSummaryView: View {
 
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 20) {
                 BigStat(label: "Duration", value: durationText, unit: durationText == "—" ? nil : "min")
-                BigStat(label: "Volume", value: TodayStats.formatVolume(volume), unit: "lb")
-                BigStat(label: "Sets", value: "\(setCount)")
+                BigStat(label: "Volume", value: TodayStats.formatVolume(SessionMath.volume(of: session)), unit: "lb")
+                BigStat(label: "Sets", value: "\(SessionMath.setCount(of: session))")
                 BigStat(label: "PRs", value: "\(prCount)", tone: prCount > 0 ? .uplift.pr : .uplift.fg)
             }
             .padding(18)
@@ -123,43 +123,10 @@ struct WorkoutSummaryView: View {
         return "\(max(1, Int((stats.duration / 60).rounded())))"
     }
 
-    private var volume: Double {
-        session.exerciseRecordsArray
-            .flatMap { $0.setsArray }
-            .reduce(0) { $0 + $1.weightLbs * Double($1.reps) }
-    }
-
-    private var setCount: Int {
-        session.exerciseRecordsArray.reduce(0) { $0 + $1.setsArray.count }
-    }
-
     /// e1RM PR count — same rule as TodayView's Yesterday card (session is
     /// completed by now, so its own sets participate in the all-time scan).
     private var prCount: Int {
-        var counted = Set<UUID>()
-        var count = 0
-        for record in session.exerciseRecordsArray {
-            guard let exerciseID = record.exercise?.id, !counted.contains(exerciseID) else { continue }
-            let sessionBest = session.exerciseRecordsArray
-                .filter { $0.exercise?.id == exerciseID }
-                .flatMap { $0.setsArray }
-                .filter { !$0.isWarmup }
-                .map { E1RM.estimate(weightLbs: $0.weightLbs, reps: $0.reps) }
-                .max() ?? 0
-            guard sessionBest > 0 else { continue }
-            let allTimeBest = completedSessions
-                .flatMap { $0.exerciseRecordsArray }
-                .filter { $0.exercise?.id == exerciseID }
-                .flatMap { $0.setsArray }
-                .filter { !$0.isWarmup }
-                .map { E1RM.estimate(weightLbs: $0.weightLbs, reps: $0.reps) }
-                .max() ?? 0
-            if sessionBest >= allTimeBest {
-                counted.insert(exerciseID)
-                count += 1
-            }
-        }
-        return count
+        SessionMath.e1RMPRCount(for: session, allSessions: completedSessions)
     }
 }
 

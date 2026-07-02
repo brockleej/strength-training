@@ -92,4 +92,23 @@ final class TodayStatsTests: XCTestCase {
         XCTAssertTrue(cells[6].isToday)
         XCTAssertTrue(cells[0..<6].allSatisfy { !$0.isToday })
     }
+
+    // MARK: - formatCompactVolume
+
+    func test_compactVolume_underTenThousand_isExact() {
+        XCTAssertEqual(TodayStats.formatCompactVolume(9840), "9,840")
+    }
+
+    func test_compactVolume_tenThousandAndUp_usesK() {
+        XCTAssertEqual(TodayStats.formatCompactVolume(12840), "13k")
+        XCTAssertEqual(TodayStats.formatCompactVolume(187_400), "187k")
+    }
+
+    func test_compactVolume_zero() {
+        XCTAssertEqual(TodayStats.formatCompactVolume(0), "0")
+    }
+
+    func test_compactVolume_roundsK() {
+        XCTAssertEqual(TodayStats.formatCompactVolume(186_501), "187k")
+    }
 }

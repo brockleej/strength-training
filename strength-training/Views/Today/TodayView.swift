@@ -229,9 +229,9 @@ struct TodayView: View {
             } label: {
                 YesterdayCard(
                     dayType: recent.dayType,
-                    volumeText: TodayStats.formatVolume(volume(of: recent)),
-                    setCount: setCount(of: recent),
-                    prCount: e1RMPRCount(for: recent)
+                    volumeText: TodayStats.formatVolume(SessionMath.volume(of: recent)),
+                    setCount: SessionMath.setCount(of: recent),
+                    prCount: SessionMath.e1RMPRCount(for: recent, allSessions: completedSessions)
                 )
             }
             .buttonStyle(.plain)
@@ -243,56 +243,11 @@ struct TodayView: View {
             SectionHeader("This week")
             ThisWeekCard(
                 sessionCount: weekSessions.count,
-                volumeText: TodayStats.formatVolume(weekSessions.reduce(0) { $0 + volume(of: $1) }),
-                setCount: weekSessions.reduce(0) { $0 + setCount(of: $1) },
+                volumeText: TodayStats.formatVolume(weekSessions.reduce(0) { $0 + SessionMath.volume(of: $1) }),
+                setCount: weekSessions.reduce(0) { $0 + SessionMath.setCount(of: $1) },
                 cells: TodayStats.weekCells(sessions: weekSessions.map { ($0.date, $0.dayType) })
             )
         }
-    }
-
-    // MARK: - Session math
-
-    private func volume(of session: WorkoutSession) -> Double {
-        session.exerciseRecordsArray
-            .flatMap { $0.setsArray }
-            .reduce(0) { $0 + $1.weightLbs * Double($1.reps) }
-    }
-
-    private func setCount(of session: WorkoutSession) -> Int {
-        session.exerciseRecordsArray.reduce(0) { $0 + $1.setsArray.count }
-    }
-
-    /// Exercises in this session whose best estimated 1RM ties or beats the
-    /// all-time best across all completed sessions (Epley, warmups excluded).
-    /// Same formula/threshold as SessionDetailView's PR badge, but counted per
-    /// EXERCISE (cross-mode best, deduped) — SessionDetailView badges per
-    /// record (per mode), so counts can differ for multi-mode sessions.
-    /// Uses the shared `E1RM.estimate`.
-    private func e1RMPRCount(for session: WorkoutSession) -> Int {
-        var counted = Set<UUID>()
-        var count = 0
-        for record in session.exerciseRecordsArray {
-            guard let exerciseID = record.exercise?.id, !counted.contains(exerciseID) else { continue }
-            let sessionBest = session.exerciseRecordsArray
-                .filter { $0.exercise?.id == exerciseID }
-                .flatMap { $0.setsArray }
-                .filter { !$0.isWarmup }
-                .map { E1RM.estimate(weightLbs: $0.weightLbs, reps: $0.reps) }
-                .max() ?? 0
-            guard sessionBest > 0 else { continue }
-            let allTimeBest = completedSessions
-                .flatMap { $0.exerciseRecordsArray }
-                .filter { $0.exercise?.id == exerciseID }
-                .flatMap { $0.setsArray }
-                .filter { !$0.isWarmup }
-                .map { E1RM.estimate(weightLbs: $0.weightLbs, reps: $0.reps) }
-                .max() ?? 0
-            if sessionBest >= allTimeBest {
-                counted.insert(exerciseID)
-                count += 1
-            }
-        }
-        return count
     }
 }
 
