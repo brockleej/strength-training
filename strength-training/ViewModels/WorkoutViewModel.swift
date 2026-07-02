@@ -32,8 +32,6 @@ final class WorkoutViewModel {
         set { _suspendedSession = newValue }
     }
     var selectedMode: TrainingMode = .highWeightLowReps
-    var showDeleteHint = false
-    private var deleteHintShownThisSession = false
     var sessionPendingEffortRating: WorkoutSession?
     /// Set after a workout is finished (and effort rating handled) to trigger navigation to its detail.
     var completedSessionToReview: WorkoutSession?
@@ -224,7 +222,7 @@ final class WorkoutViewModel {
         guard let session = activeSession, !session.isCompleted else { return }
         session.isCompleted = true
         let capturedSession = session
-        // Don't nil activeSession here — keep the ActiveWorkoutView visible as a
+        // Don't nil activeSession here — keep the workout screen visible as a
         // stable backdrop while the effort-rating sheet shows. ContentView clears
         // activeSession after switching to the History tab so no intermediate
         // screens flash.
@@ -300,19 +298,6 @@ final class WorkoutViewModel {
         }
     }
 
-    /// Show the delete-set hint once per session, auto-hiding after 5 seconds.
-    func showDeleteHintIfNeeded() {
-        guard !deleteHintShownThisSession else { return }
-        deleteHintShownThisSession = true
-        Task { @MainActor in
-            // Delay so the hint reads as a distinct event from the set appearing
-            try? await Task.sleep(for: .milliseconds(600))
-            withAnimation(.easeInOut(duration: 0.4)) { showDeleteHint = true }
-            try? await Task.sleep(for: .seconds(5))
-            withAnimation(.easeInOut(duration: 0.6)) { showDeleteHint = false }
-        }
-    }
-
     // MARK: - Set Logging
 
     func addSet(exercise: Exercise, weight: Double, reps: Int) {
@@ -325,7 +310,6 @@ final class WorkoutViewModel {
         modelContext.insert(set)
         try? modelContext.save()
         HapticService.setLogged()
-        showDeleteHintIfNeeded()
     }
 
     func deleteSet(_ set: SetRecord, from exercise: Exercise) {
