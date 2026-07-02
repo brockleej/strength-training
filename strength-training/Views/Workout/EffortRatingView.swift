@@ -42,11 +42,11 @@ struct EffortRatingView: View {
                 } label: {
                     Image(systemName: "checkmark")
                         .font(.footnote.bold())
-                        .foregroundStyle(selectedRating != nil ? .white : .secondary)
+                        .foregroundStyle(selectedRating != nil ? Color.uplift.onAccent : Color.uplift.fgDim)
                         .frame(width: 30, height: 30)
                         .background {
                             if selectedRating != nil {
-                                Circle().fill(Color.accentColor)
+                                Circle().fill(Color.uplift.accent)
                             } else {
                                 Circle().fill(.ultraThinMaterial)
                             }
@@ -59,7 +59,8 @@ struct EffortRatingView: View {
             .padding(.top, 8)
 
             Text("Rate Your Effort")
-                .font(.title2.bold())
+                .font(.uplift.display(22, weight: .bold))
+                .foregroundStyle(Color.uplift.fg)
 
             Spacer()
 
@@ -77,7 +78,7 @@ struct EffortRatingView: View {
                         let isSelected = selectedRating == index
 
                         RoundedRectangle(cornerRadius: 8)
-                            .fill(isSelected ? effortColor(for: index) : Color(.systemFill))
+                            .fill(isSelected ? EffortScale.color(for: index) : Color.uplift.surface2)
                             .frame(width: barWidth, height: height)
                             .overlay(alignment: .center) {
                                 if isSelected {
@@ -89,7 +90,7 @@ struct EffortRatingView: View {
 
                         if sectionBreaks.contains(index) {
                             Circle()
-                                .fill(Color(.tertiaryLabel))
+                                .fill(Color.uplift.fgDim)
                                 .frame(width: dotSize, height: dotSize)
                         }
                     }
@@ -114,14 +115,14 @@ struct EffortRatingView: View {
             // Label
             HStack {
                 if let rating = selectedRating {
-                    Text("\(rating)")
-                        .font(.body.bold().monospacedDigit())
-                    Text(effortLabel(for: rating))
-                        .font(.body)
+                    Num(rating, size: 20)
+                    Text(EffortScale.label(for: rating))
+                        .font(.uplift.text(15, weight: .medium))
+                        .foregroundStyle(Color.uplift.fg)
                 } else {
                     Text("Rate your effort")
                         .font(.body)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.uplift.fgMuted)
                 }
 
                 Spacer()
@@ -133,7 +134,8 @@ struct EffortRatingView: View {
             Button("Skip") {
                 onSkip()
             }
-            .foregroundStyle(.secondary)
+            .font(.uplift.text(14, weight: .medium))
+            .foregroundStyle(Color.uplift.fgMuted)
             .padding(.bottom, 12)
         }
         .background(backgroundGradient)
@@ -156,25 +158,6 @@ struct EffortRatingView: View {
 
     // MARK: - Styling
 
-    private func effortColor(for rating: Int) -> Color {
-        switch rating {
-        case 1...3: return .green
-        case 4...6: return .yellow
-        case 7, 8: return .orange
-        default: return .red
-        }
-    }
-
-    private func effortLabel(for rating: Int) -> String {
-        switch rating {
-        case 1...3: return "Easy"
-        case 4...6: return "Moderate"
-        case 7, 8: return "Hard"
-        case 9, 10: return "All Out"
-        default: return ""
-        }
-    }
-
     /// Section boundaries: after bar 3, 6, and 8
     private let sectionBreaks: Set<Int> = [3, 6, 8]
 
@@ -182,12 +165,12 @@ struct EffortRatingView: View {
         if let rating = selectedRating {
             return AnyShapeStyle(
                 LinearGradient(
-                    colors: [effortColor(for: rating).opacity(0.3), Color(.systemBackground)],
+                    colors: [EffortScale.color(for: rating).opacity(0.3), Color.uplift.bgElev],
                     startPoint: .top,
                     endPoint: .bottom
                 )
             )
         }
-        return AnyShapeStyle(Color(.systemBackground))
+        return AnyShapeStyle(Color.uplift.bgElev)
     }
 }

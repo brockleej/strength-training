@@ -66,9 +66,9 @@ struct SessionDetailView: View {
                             HStack(spacing: 4) {
                                 Text("\(effort)/10")
                                     .monospacedDigit()
-                                Text(effortLabel(for: effort))
+                                Text(EffortScale.label(for: effort))
                                     .font(.caption)
-                                    .foregroundStyle(effortColor(for: effort))
+                                    .foregroundStyle(EffortScale.color(for: effort))
                             }
                         } label: {
                             Label("Effort", systemImage: "figure.strengthtraining.functional")
@@ -173,24 +173,6 @@ struct SessionDetailView: View {
         return String(format: "%d:%02d", minutes, seconds)
     }
 
-    private func effortColor(for rating: Int) -> Color {
-        switch rating {
-        case 1...3: return .green
-        case 4...6: return .yellow
-        case 7, 8: return .orange
-        default: return .red
-        }
-    }
-
-    private func effortLabel(for rating: Int) -> String {
-        switch rating {
-        case 1...3: return "Easy"
-        case 4...6: return "Moderate"
-        case 7, 8: return "Hard"
-        case 9, 10: return "All Out"
-        default: return ""
-        }
-    }
 }
 
 // MARK: - Exercise Header with Trend & PR Indicators
