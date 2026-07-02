@@ -68,17 +68,20 @@ struct ExerciseListRow: View {
             return setsPrefix + PairText.pair(weight: targetWeight, reps: targetReps, font: .uplift.mono(12, weight: .medium))
         } else if let targetReps {
             return setsPrefix + Text("\(targetReps)").foregroundColor(.uplift.repsTint)
+        } else if let targetWeight {
+            return setsPrefix + Text(StepperLogic.format(targetWeight)).foregroundColor(.uplift.weightTint)
         }
         return setsPrefix + Text("—").foregroundColor(.uplift.fgMuted)
     }
 
     private var accessibilitySubtitle: String {
-        if targetWeight == nil && targetReps == nil { return "no history" }
         let setsPart = lastSets.map { "\($0) sets, " } ?? ""
         if let targetWeight, let targetReps {
             return "\(setsPart)\(StepperLogic.format(targetWeight)) pounds by \(targetReps)"
         } else if let targetReps {
             return "\(setsPart)\(targetReps) reps"
+        } else if let targetWeight {
+            return "\(setsPart)\(StepperLogic.format(targetWeight)) pounds"
         }
         return "no history"
     }
