@@ -9,6 +9,24 @@ import Foundation
 import SwiftData
 
 struct SeedData {
+    /// One-time, idempotent display-name corrections for seeded exercises.
+    /// Runs on every launch and after every backup restore — existing records
+    /// keep their relationships (rename only), and restoring an old backup
+    /// re-applies the fix on the spot.
+    static func migrateExerciseNames(context: ModelContext) {
+        let renames = ["Hip Abduction (Inner)": "Hip Adduction (Inner)"]
+        let descriptor = FetchDescriptor<Exercise>()
+        guard let all = try? context.fetch(descriptor) else { return }
+        var changed = false
+        for exercise in all {
+            if let newName = renames[exercise.name] {
+                exercise.name = newName
+                changed = true
+            }
+        }
+        if changed { try? context.save() }
+    }
+
     /// Removes duplicate exercises (same name + dayType), keeping the one with the most history.
     /// Records from duplicates are reassigned to the kept exercise before deletion.
     static func deduplicateExercises(context: ModelContext) {
@@ -62,7 +80,7 @@ struct SeedData {
             ("Glute", "Glutes"),
             ("Back Extension", "Lower Back"),
             ("Hip Abduction (Glute)", "Glutes"),
-            ("Hip Abduction (Inner)", "Adductors"),
+            ("Hip Adduction (Inner)", "Adductors"),
             ("Seated Leg Press", "Quads"),
             ("Seated Leg Curl", "Hamstrings"),
             ("Abdominal", "Core")

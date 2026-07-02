@@ -169,5 +169,9 @@ struct BackupService {
         }
 
         try context.save()
+
+        // Old backups may still contain pre-rename exercise names —
+        // re-apply the idempotent migration so restored data is corrected immediately.
+        SeedData.migrateExerciseNames(context: context)
     }
 }

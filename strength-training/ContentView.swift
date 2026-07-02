@@ -42,6 +42,7 @@ struct ContentView: View {
             }
         }
         .onAppear {
+            SeedData.migrateExerciseNames(context: modelContext)
             SeedData.deduplicateExercises(context: modelContext)
             SeedData.seedIfNeeded(context: modelContext)
             if workoutViewModel == nil {
