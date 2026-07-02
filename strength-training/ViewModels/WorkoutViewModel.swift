@@ -241,8 +241,8 @@ final class WorkoutViewModel {
         session.isCompleted = true
         let capturedSession = session
         // Don't nil activeSession here — keep the workout screen visible as a
-        // stable backdrop while the effort-rating sheet shows. ContentView clears
-        // activeSession after switching to the History tab so no intermediate
+        // stable backdrop while the effort-rating sheet and summary cover show.
+        // The summary's Done/View Details handlers clear it so no intermediate
         // screens flash.
         try? modelContext.save()
         HapticService.workoutCompleted()
