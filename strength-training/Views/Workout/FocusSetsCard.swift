@@ -89,44 +89,69 @@ struct FocusSetsCard: View {
     }
 }
 
-/// Swipe-left-to-delete for rows living inside a card (outside a List).
-/// Drag past the threshold reveals a destructive zone; release deletes.
+/// Swipe-left-to-reveal-delete for rows living inside a card (outside a List).
+/// A left drag reveals a tappable trash button; the delete only commits on
+/// tap (reveal-then-tap — prevents accidental full-swipe deletions mid-workout).
+/// Vertical-dominant drags are ignored so the enclosing ScrollView keeps them.
 private struct SwipeToDeleteModifier: ViewModifier {
     let onDelete: () -> Void
 
     @State private var offsetX: CGFloat = 0
-    private let threshold: CGFloat = -72
+    @State private var isRevealed = false
+    private let revealWidth: CGFloat = 64
 
     func body(content: Content) -> some View {
         content
             .offset(x: offsetX)
             .background(alignment: .trailing) {
                 if offsetX < -4 {
-                    HStack {
-                        Spacer()
+                    Button {
+                        close()
+                        onDelete()   // haptic fires inside WorkoutViewModel.deleteSet
+                    } label: {
                         Image(systemName: "trash.fill")
                             .font(.system(size: 15, weight: .semibold))
                             .foregroundStyle(Color.uplift.down)
-                            .padding(.trailing, 16)
+                            .frame(width: revealWidth, height: 44)
+                            .contentShape(Rectangle())
                     }
-                    .opacity(min(1, Double(-offsetX / -threshold)))
+                    .buttonStyle(.plain)
+                    .opacity(min(1, Double(offsetX / -revealWidth)))
+                    .accessibilityLabel("Delete set")
                 }
             }
             .gesture(
                 DragGesture(minimumDistance: 20)
                     .onChanged { value in
-                        // Horizontal-dominant left drags only
+                        // Horizontal-dominant drags only — vertical stays with the scroll
                         guard abs(value.translation.width) > abs(value.translation.height) else { return }
-                        offsetX = min(0, value.translation.width)
+                        let base: CGFloat = isRevealed ? -revealWidth : 0
+                        offsetX = min(0, max(-revealWidth, base + value.translation.width))
                     }
                     .onEnded { value in
-                        if value.translation.width <= threshold {
-                            onDelete()
+                        withAnimation(.easeOut(duration: 0.2)) {
+                            if !isRevealed, value.translation.width < -revealWidth / 2 {
+                                isRevealed = true
+                                offsetX = -revealWidth
+                            } else if isRevealed, value.translation.width > revealWidth / 2 {
+                                close()
+                            } else {
+                                offsetX = isRevealed ? -revealWidth : 0
+                            }
                         }
-                        withAnimation(.easeOut(duration: 0.2)) { offsetX = 0 }
                     }
             )
+            .onTapGesture {
+                if isRevealed {
+                    withAnimation(.easeOut(duration: 0.2)) { close() }
+                }
+            }
             .accessibilityAction(named: "Delete") { onDelete() }
+    }
+
+    private func close() {
+        isRevealed = false
+        offsetX = 0
     }
 }
 
