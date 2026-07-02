@@ -42,6 +42,7 @@ struct HealthKitCard: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
             .background(Color.uplift.ahGreen.opacity(0.14))
+            .accessibilityElement()   // glyph is decorative-only; expose the badge itself
             .accessibilityLabel("Apple Health live workout")
     }
 

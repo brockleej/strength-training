@@ -52,6 +52,16 @@ final class PrevSessionsStripDataTests: XCTestCase {
         XCTAssertEqual(runs, [.init(weight: 47.5, reps: [12])])
     }
 
+    // MARK: - linesAccessibility
+
+    func test_linesAccessibility_oneClausePerRun() {
+        let entry = PrevSessionsStripData.Entry(
+            id: UUID(), dateLabel: "3 wk ago",
+            runs: [.init(weight: 20, reps: [15, 15]), .init(weight: 25, reps: [9])]
+        )
+        XCTAssertEqual(entry.linesAccessibility, "20 pounds by 15, 15 reps, 25 pounds by 9 reps")
+    }
+
     // MARK: - relativeLabel
 
     func test_relativeLabel_daysAndWeeksAndMonths() {
