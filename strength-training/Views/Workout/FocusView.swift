@@ -224,8 +224,24 @@ struct FocusView: View {
     private func currentPrefill() -> FocusTargetLogic.Prefill {
         FocusTargetLogic.prefill(
             suggestion: workoutVM.suggestion(for: exercise, mode: workoutVM.selectedMode),
-            recent: workoutVM.recentAverage(for: exercise, mode: workoutVM.selectedMode)
+            recent: workoutVM.recentAverage(for: exercise, mode: workoutVM.selectedMode),
+            lastBest: lastSessionBestSet()
         )
+    }
+
+    /// Best (heaviest) non-warmup set of the most recent completed session in
+    /// the current mode — the dress baseline (mirrors the algorithm's
+    /// heaviest-set convention).
+    private func lastSessionBestSet() -> (weight: Double, reps: Int)? {
+        let modeRaw = workoutVM.selectedMode.rawValue
+        let lastRecord = exercise.recordsArray
+            .filter { $0.trainingMode.rawValue == modeRaw && $0.session?.isCompleted == true }
+            .max { ($0.session?.date ?? .distantPast) < ($1.session?.date ?? .distantPast) }
+        guard let best = lastRecord?.setsArray
+            .filter({ !$0.isWarmup })
+            .max(by: { $0.weightLbs < $1.weightLbs })
+        else { return nil }
+        return (best.weightLbs, best.reps)
     }
 
     private func logSet(_ focusVM: FocusViewModel) {

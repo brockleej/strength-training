@@ -18,7 +18,15 @@ enum FocusTargetLogic {
         let repsDelta: String?     // "+1"    → reps stepper target dress
     }
 
-    static func prefill(suggestion: ProgressionSuggestion?, recent: RecentAverage?) -> Prefill {
+    /// Derives stepper prefill + target dress. The dress baselines on the LAST
+    /// completed session's best set (what the user actually lifted), never the
+    /// rolling average — a snapped target that doesn't beat the last session
+    /// is not presented as an increase.
+    static func prefill(
+        suggestion: ProgressionSuggestion?,
+        recent: RecentAverage?,
+        lastBest: (weight: Double, reps: Int)?
+    ) -> Prefill {
         guard let suggestion else {
             return Prefill(weight: recent?.weight ?? 0, reps: recent?.reps ?? 10,
                            weightDelta: nil, repsDelta: nil)
@@ -26,13 +34,13 @@ enum FocusTargetLogic {
 
         var weightDelta: String?
         var repsDelta: String?
-        if let recent {
+        if let lastBest {
             switch suggestion.basis {
             case .consistent:
-                let delta = suggestion.targetWeight - recent.weight
+                let delta = suggestion.targetWeight - lastBest.weight
                 if delta > 0 { weightDelta = "+\(StepperLogic.format(delta)) lb" }
             case .improving:
-                let delta = suggestion.targetReps - recent.reps
+                let delta = suggestion.targetReps - lastBest.reps
                 if delta > 0 { repsDelta = "+\(delta)" }
             case .notEnoughData:
                 break
