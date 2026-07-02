@@ -7,19 +7,19 @@ import SwiftUI
 
 /// HealthKitCard fed by the live workout service. Renders only while a
 /// HealthKit session is active or has accumulated time (same visibility
-/// rule as the old metrics banner). Ticks via TimelineView every second.
+/// rule as the old metrics banner). The @Observable service already ticks
+/// elapsedSeconds/heartRate/activeCalories once per second, so reading them
+/// here re-renders the card without any extra clock.
 struct LiveHealthKitCard: View {
     let service: HealthKitWorkoutService
 
     var body: some View {
         if service.isSessionActive || service.elapsedSeconds > 0 {
-            TimelineView(.periodic(from: .now, by: 1)) { _ in
-                HealthKitCard(
-                    bpm: service.heartRate.map { Int($0.rounded()) },
-                    kcal: Int(service.activeCalories.rounded()),
-                    elapsed: WorkoutFormat.elapsed(service.elapsedSeconds)
-                )
-            }
+            HealthKitCard(
+                bpm: service.heartRate.map { Int($0.rounded()) },
+                kcal: Int(service.activeCalories.rounded()),
+                elapsed: WorkoutFormat.elapsed(service.elapsedSeconds)
+            )
         }
     }
 }
