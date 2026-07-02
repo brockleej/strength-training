@@ -261,7 +261,10 @@ struct TodayView: View {
 
     /// Exercises in this session whose best estimated 1RM ties or beats the
     /// all-time best across all completed sessions (Epley, warmups excluded).
-    /// Mirrors SessionDetailView's PR-badge rule; deduped per exercise.
+    /// Same formula/threshold as SessionDetailView's PR badge, but counted per
+    /// EXERCISE (cross-mode best, deduped) — SessionDetailView badges per
+    /// record (per mode), so counts can differ for multi-mode sessions.
+    /// A shared e1RM service lands in Phase 3; both call sites adopt it then.
     private func e1RMPRCount(for session: WorkoutSession) -> Int {
         func e1rm(_ set: SetRecord) -> Double {
             set.weightLbs * (1 + Double(set.reps) / 30)
