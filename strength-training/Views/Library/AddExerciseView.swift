@@ -2,8 +2,6 @@
 //  AddExerciseView.swift
 //  strength-training
 //
-//  Created by Daniel Kuhlwein on 2026-02-21.
-//
 
 import SwiftUI
 import SwiftData
@@ -20,37 +18,105 @@ struct AddExerciseView: View {
     @State private var dayType: DayType = .arms
     @State private var muscleGroup = ""
 
+    private var trimmedName: String {
+        name.trimmingCharacters(in: .whitespaces)
+    }
+
     var body: some View {
-        NavigationStack {
-            Form {
-                Section("Exercise Details") {
-                    TextField("Exercise Name", text: $name)
+        VStack(alignment: .leading, spacing: 0) {
+            Capsule()
+                .fill(Color.uplift.fgFaint)
+                .frame(width: 36, height: 5)
+                .frame(maxWidth: .infinity)
+                .padding(.top, 8)
+                .padding(.bottom, 14)
 
-                    Picker("Day Type", selection: $dayType) {
-                        ForEach(DayType.allCases.filter { $0 != .fullBody }) { type in
-                            Text(type.rawValue).tag(type)
-                        }
-                    }
+            HStack {
+                Button("Cancel") { dismiss() }
+                    .font(.uplift.text(16, weight: .medium))
+                    .foregroundStyle(Color.uplift.fgMuted)
+                Spacer()
+                Text("New exercise")
+                    .font(.uplift.text(16, weight: .semibold))
+                    .foregroundStyle(Color.uplift.fg)
+                Spacer()
+                Button("Add") { addExercise() }
+                    .font(.uplift.text(16, weight: .semibold))
+                    .foregroundStyle(trimmedName.isEmpty ? Color.uplift.fgDim : Color.uplift.accent)
+                    .disabled(trimmedName.isEmpty)
+            }
+            .padding(.horizontal, 16)
+            .padding(.bottom, 18)
 
-                    TextField("Muscle Group (optional)", text: $muscleGroup)
+            VStack(alignment: .leading, spacing: 18) {
+                field(label: "Name") {
+                    TextField("e.g. Hammer Curl", text: $name)
+                        .font(.uplift.text(16, weight: .medium))
+                        .foregroundStyle(Color.uplift.fg)
+                        .autocorrectionDisabled()
                 }
-            }
-            .navigationTitle("New Exercise")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    formLabel("Day type")
+                    UpliftSegmentedControl(
+                        segments: [
+                            UpliftSegment(id: DayType.arms.rawValue, label: "Arms", ink: .uplift.armsInk),
+                            UpliftSegment(id: DayType.legs.rawValue, label: "Legs", ink: .uplift.legsInk),
+                        ],
+                        selection: Binding(
+                            get: { dayType.rawValue },
+                            set: { dayType = DayType(rawValue: $0) ?? .arms }
+                        )
+                    )
                 }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Add") {
-                        addExercise()
-                    }
-                    .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
+
+                field(label: "Muscle group", optional: true) {
+                    TextField("e.g. Biceps", text: $muscleGroup)
+                        .font(.uplift.text(16, weight: .medium))
+                        .foregroundStyle(Color.uplift.fg)
+                        .autocorrectionDisabled()
                 }
+
+                Text("New exercises appear at the bottom of their day type's section.")
+                    .font(.uplift.text(12, weight: .medium))
+                    .foregroundStyle(Color.uplift.fgDim)
+                    .padding(.horizontal, 4)
             }
-            .onAppear {
-                dayType = preselectedDayType == .fullBody ? .arms : preselectedDayType
-            }
+            .padding(.horizontal, 20)
+
+            Spacer()
+        }
+        .background(Color.uplift.bgElev)
+        .presentationDetents([.medium])
+        .presentationDragIndicator(.hidden)
+        .onAppear {
+            dayType = preselectedDayType == .fullBody ? .arms : preselectedDayType
+        }
+    }
+
+    private func formLabel(_ text: String, optional: Bool = false) -> some View {
+        (
+            Text(text.uppercased())
+                .font(.uplift.text(11, weight: .bold))
+            + Text(optional ? "  (OPTIONAL)" : "")
+                .font(.uplift.text(11, weight: .medium))
+                .foregroundColor(Color.uplift.fgDim)
+        )
+        .tracking(0.6)
+        .foregroundStyle(Color.uplift.fgMuted)
+        .padding(.horizontal, 4)
+    }
+
+    private func field(label: String, optional: Bool = false, @ViewBuilder content: () -> some View) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            formLabel(label, optional: optional)
+            content()
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
+                .background {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(Color.uplift.surface1)
+                }
         }
     }
 
@@ -61,7 +127,7 @@ struct AddExerciseView: View {
             .first?.sortOrder ?? -1
 
         let exercise = Exercise(
-            name: name.trimmingCharacters(in: .whitespaces),
+            name: trimmedName,
             dayType: dayType,
             muscleGroup: muscleGroup.trimmingCharacters(in: .whitespaces),
             sortOrder: maxOrder + 1,
