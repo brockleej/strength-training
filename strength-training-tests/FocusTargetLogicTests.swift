@@ -65,4 +65,15 @@ final class FocusTargetLogicTests: XCTestCase {
         )
         XCTAssertEqual(p.weightDelta, "+2.5 lb")
     }
+
+    func test_suggestionWithoutBaseline_prefillsWithoutDress() {
+        let p = FocusTargetLogic.prefill(
+            suggestion: ProgressionSuggestion(targetWeight: 230, targetReps: 5, basis: .consistent),
+            recent: nil
+        )
+        XCTAssertEqual(p.weight, 230)
+        XCTAssertEqual(p.reps, 5)
+        XCTAssertNil(p.weightDelta)   // no baseline → no delta to show
+        XCTAssertNil(p.repsDelta)
+    }
 }

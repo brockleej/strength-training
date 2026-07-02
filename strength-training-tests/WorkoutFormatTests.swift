@@ -43,4 +43,12 @@ final class WorkoutFormatTests: XCTestCase {
     func test_elapsed_zero() {
         XCTAssertEqual(WorkoutFormat.elapsed(0), "0:00")
     }
+
+    func test_elapsed_negative_clampsToZero() {
+        XCTAssertEqual(WorkoutFormat.elapsed(-5), "0:00")
+    }
+
+    func test_subtitle_setsWithoutReps_dropsSetsPart() {
+        XCTAssertEqual(WorkoutFormat.rowSubtitle(lastSets: 3, reps: nil, weight: 40), "40 lb")
+    }
 }
