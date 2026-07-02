@@ -13,7 +13,7 @@ struct WorkoutTabView: View {
     var body: some View {
         Group {
             if viewModel.activeSession != nil {
-                ActiveWorkoutView(viewModel: viewModel)
+                ExerciseListView(workoutVM: viewModel)
             } else {
                 TodayView(workoutVM: viewModel)
             }
