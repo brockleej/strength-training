@@ -43,11 +43,11 @@ struct SettingsView: View {
                             }
                         case true?:
                             Label("Apple Health Connected", systemImage: "checkmark.circle.fill")
-                                .foregroundStyle(.green)
+                                .foregroundStyle(Color.uplift.ahGreen)
                         case false?:
                             VStack(alignment: .leading, spacing: 4) {
                                 Label("Apple Health Not Authorized", systemImage: "exclamationmark.triangle")
-                                    .foregroundStyle(.orange)
+                                    .foregroundStyle(Color.uplift.customBadge)
                                 Text("Open Settings > Privacy > Health to grant access.")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
@@ -58,43 +58,52 @@ struct SettingsView: View {
                             .foregroundStyle(.secondary)
                     }
                 } header: {
-                    Text("Health")
+                    sectionHeader("Health")
                 } footer: {
-                    Text("When connected, workouts are saved to Apple Health for Activity Ring credit and fitness tracking.")
+                    sectionFooter("When connected, workouts are saved to Apple Health for Activity Ring credit and fitness tracking.")
                 }
+                .listRowBackground(Color.uplift.surface1)
 
                 Section {
-                    Picker("Aggressiveness", selection: $aggressiveness) {
-                        ForEach(ProgressionAggressiveness.allCases) { mode in
-                            Text(mode.rawValue).tag(mode.rawValue)
-                        }
-                    }
-                    .pickerStyle(.segmented)
+                    UpliftSegmentedControl(
+                        segments: ProgressionAggressiveness.allCases.map { mode in
+                            UpliftSegment(id: mode.rawValue, label: mode.rawValue)
+                        },
+                        selection: $aggressiveness
+                    )
+                    .listRowInsets(EdgeInsets())
+                    .padding(.vertical, 4)
+                    .listRowBackground(Color.clear)
                 } header: {
-                    Text("Progressive Overload")
+                    sectionHeader("Progressive Overload")
                 } footer: {
-                    Text("Moderate recommends a weight increase after 2 consistent sessions. Conservative requires 3.")
+                    sectionFooter("Moderate recommends a weight increase after 2 consistent sessions. Conservative requires 3.")
                 }
+                .listRowBackground(Color.uplift.surface1)
 
                 iCloudSyncSection
 
                 Section {
                     Button(action: exportBackup) {
                         Label("Export Backup", systemImage: "square.and.arrow.up")
+                            .foregroundStyle(Color.uplift.accent)
                     }
 
                     Button {
                         isImporting = true
                     } label: {
                         Label("Restore from Backup", systemImage: "square.and.arrow.down")
-                            .foregroundStyle(.orange)
+                            .foregroundStyle(Color.uplift.customBadge)
                     }
                 } header: {
-                    Text("Data Management")
+                    sectionHeader("Data Management")
                 } footer: {
-                    Text("Export a complete backup of your data as a JSON file for safekeeping or to transfer to another device. Restoring replaces all current data.")
+                    sectionFooter("Export a complete backup of your data as a JSON file for safekeeping or to transfer to another device. Restoring replaces all current data.")
                 }
+                .listRowBackground(Color.uplift.surface1)
             }
+            .scrollContentBackground(.hidden)
+            .background(Color.uplift.bgElev)
             .navigationTitle("Settings")
             .fileImporter(
                 isPresented: $isImporting,
@@ -148,7 +157,7 @@ struct SettingsView: View {
                 } else if let error = cloudKitSyncService.syncError {
                     VStack(alignment: .leading, spacing: 4) {
                         Label("Sync Error", systemImage: "exclamationmark.icloud")
-                            .foregroundStyle(.orange)
+                            .foregroundStyle(Color.uplift.customBadge)
                         Text(error)
                             .font(.caption)
                             .foregroundStyle(.secondary)
@@ -156,7 +165,7 @@ struct SettingsView: View {
                 } else {
                     HStack {
                         Label("iCloud Sync Active", systemImage: "checkmark.icloud.fill")
-                            .foregroundStyle(.green)
+                            .foregroundStyle(Color.uplift.ahGreen)
                         Spacer()
                         if let lastSync = cloudKitSyncService.lastSyncDate {
                             Text(lastSync, style: .relative)
@@ -169,7 +178,7 @@ struct SettingsView: View {
             case .noAccount:
                 VStack(alignment: .leading, spacing: 4) {
                     Label("iCloud Not Signed In", systemImage: "icloud.slash")
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(Color.uplift.customBadge)
                     Text("Sign in to iCloud in Settings to sync your workout data across devices.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -192,10 +201,27 @@ struct SettingsView: View {
                     .foregroundStyle(.secondary)
             }
         } header: {
-            Text("iCloud Sync")
+            sectionHeader("iCloud Sync")
         } footer: {
-            Text("Your workout data automatically syncs to iCloud and is available across all your devices. Data persists even if you uninstall the app.")
+            sectionFooter("Your workout data automatically syncs to iCloud and is available across all your devices. Data persists even if you uninstall the app.")
         }
+        .listRowBackground(Color.uplift.surface1)
+    }
+
+    // MARK: - Section text styling
+
+    private func sectionHeader(_ text: String) -> some View {
+        Text(text)
+            .textCase(.uppercase)
+            .font(.uplift.text(11, weight: .bold))
+            .tracking(0.6)
+            .foregroundStyle(Color.uplift.fgMuted)
+    }
+
+    private func sectionFooter(_ text: String) -> some View {
+        Text(text)
+            .font(.uplift.text(12, weight: .medium))
+            .foregroundStyle(Color.uplift.fgDim)
     }
 
     // MARK: - Actions
