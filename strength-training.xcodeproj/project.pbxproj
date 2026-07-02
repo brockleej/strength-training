@@ -10,6 +10,7 @@
 		023DF2513891F3465C785A7B /* LoaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E75D110844E6FE14A1B67FD5 /* LoaderView.swift */; };
 		058F457680F9F458E2562E70 /* ProgressionParameters.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7455DAD78FC12D62CD5226C5 /* ProgressionParameters.swift */; };
 		06EAF8373D2C66680087860B /* BackupModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C9B1F409EF0053F85ACE816 /* BackupModels.swift */; };
+		08F2D596CD1C0AF37A4D316E /* E1RMDetectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C13DB8B2815F5DFA66CB019 /* E1RMDetectionTests.swift */; };
 		172DA18BD502793ABA69F1B4 /* ProgressionTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC5ED87967CB436716AA1EF1 /* ProgressionTypes.swift */; };
 		22F976653D7F36A7EB48172F /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 895B32CADD7EDFED27265A07 /* AppState.swift */; };
 		2334F6309DF8766B63363CB5 /* ProgressionTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC5ED87967CB436716AA1EF1 /* ProgressionTypes.swift */; };
@@ -82,6 +83,7 @@
 		165BF58640500A519020F992 /* ParameterPanel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ParameterPanel.swift; sourceTree = "<group>"; };
 		22DFB812A881562839943F79 /* UpliftTokensTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = UpliftTokensTests.swift; sourceTree = "<group>"; };
 		2375B8872C6A1C21691DF866 /* ProgressionLabApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ProgressionLabApp.swift; sourceTree = "<group>"; };
+		2C13DB8B2815F5DFA66CB019 /* E1RMDetectionTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = E1RMDetectionTests.swift; sourceTree = "<group>"; };
 		30709EE3E70A2B4579A1E994 /* RecentFilesStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecentFilesStore.swift; sourceTree = "<group>"; };
 		32C7938965779BE5D2C32989 /* DashboardView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
 		42F6226112928C7FE996EAB2 /* ConfigArtifactReader.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ConfigArtifactReader.swift; sourceTree = "<group>"; };
@@ -256,6 +258,7 @@
 				84E0B9265A12EFB99615DBA6 /* PrevSessionsStripDataTests.swift */,
 				D469A75D83D9297C0A3174B3 /* FocusTargetLogicTests.swift */,
 				EB1C5CC453A0B417B4B47C31 /* WorkoutFormatTests.swift */,
+				2C13DB8B2815F5DFA66CB019 /* E1RMDetectionTests.swift */,
 			);
 			path = "strength-training-tests";
 			sourceTree = "<group>";
@@ -557,6 +560,7 @@
 				F10E09BC7B41DF904051DC08 /* PrevSessionsStripDataTests.swift in Sources */,
 				93349D7552961CAD8C765FB7 /* FocusTargetLogicTests.swift in Sources */,
 				52260489A0E5F8F397C552CE /* WorkoutFormatTests.swift in Sources */,
+				08F2D596CD1C0AF37A4D316E /* E1RMDetectionTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
