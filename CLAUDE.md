@@ -66,8 +66,9 @@ xcodebuild test -scheme ProgressionLab -destination 'platform=macOS'
 Models/        -> SwiftData @Model classes (Exercise, WorkoutSession, ExerciseRecord, SetRecord)
                -> Enums, ProgressionTypes, BackupModels, SeedData
 ViewModels/    -> @Observable classes managing state per feature
-Views/         -> SwiftUI views, organized by feature (Workout, History, Progress, Library, Settings, Components)
-Services/      -> BackupService, CloudKitSyncService, HealthKitWorkoutService, ProgressionService, HapticService
+Views/         -> SwiftUI views by feature (DesignSystem, Today, Workout, History, Progress, Library, Settings)
+Services/      -> BackupService, CloudKitSyncService, HealthKitWorkoutService, ProgressionService,
+                  HapticService, E1RM, PRDetection, SessionMath, EffortScale
 Utilities/     -> PreviewSampleData (preview helpers only)
 ```
 
@@ -82,24 +83,15 @@ Utilities/     -> PreviewSampleData (preview helpers only)
 
 ## SwiftUI Conventions
 
-### Expansion Panel Animation Pattern
+### Design System ("Refined Native")
 
-The project uses a custom curtain-reveal pattern for expandable rows (e.g., `ExerciseRowView`). Key rules to preserve this behavior:
+All screens compose the shared design system in `Views/DesignSystem/` — do not introduce ad-hoc styling:
 
-1. **Keep the row header static** — never move it or re-layout it during animation. The header must stay in a fixed position in the view hierarchy regardless of expanded state.
-2. **Reveal content with frame clipping**, not opacity or conditional rendering:
-   ```swift
-   expandedContent
-       .frame(height: isExpanded ? nil : 0)
-       .clipped()
-   ```
-3. **Chevron rotation** via `rotationEffect`:
-   ```swift
-   Image(systemName: "chevron.down")
-       .rotationEffect(.degrees(isExpanded ? 180 : 0))
-       .animation(.easeInOut, value: isExpanded)
-   ```
-4. The content should reveal *behind* the header (curtain effect), not overlay it.
+- **Colors:** `Color.uplift.*` tokens only (surfaces, foregrounds, ice accent, day-type inks/washes, semantic up/down/pr, Apple-Health greens). Never hardcode hex values outside `Tokens.swift`.
+- **Typography:** `Font.uplift.display/text/mono`. Hero/stat numerals use the `Num` component (SF Pro Display + tabular digits); small data numerals and live-ticking values use `Font.uplift.mono`.
+- **Components:** `DayChip`, `UpliftStepper`, `UpliftSegmentedControl`, `GlassHeader`, `PillBottomBar`, `SectionHeader`, `HealthKitCard`, `Stat`/`SummaryStat`/`BigStat`, `FilterChip`, `SearchField`, `CircleButton`.
+- **Appearance:** the app is locked to dark (`.preferredColorScheme(.dark)` + ice `.tint` in `ContentView`). Cards use continuous-corner rounded rectangles (14–20pt).
+- **Shared math:** the Epley estimate lives in `E1RM.estimate` and per-session aggregates in `SessionMath` — never re-inline the formula.
 
 ### Previews
 
