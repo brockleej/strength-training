@@ -35,12 +35,17 @@ struct ContentView: View {
                         SettingsView(healthKitService: healthKitService, cloudKitSyncService: cloudKitSyncService)
                     }
                 }
-                .tint(Color.uplift.accent)
-                .preferredColorScheme(.dark)
             } else {
-                ProgressView()
+                // Mirrors the UILaunchScreen (LaunchBackground + LaunchGlyph) so the
+                // handoff from the system launch screen is seamless.
+                ZStack {
+                    Color.uplift.bgElev.ignoresSafeArea()
+                    Image("LaunchGlyph")
+                }
             }
         }
+        .tint(Color.uplift.accent)
+        .preferredColorScheme(.dark)
         .onAppear {
             SeedData.migrateExerciseNames(context: modelContext)
             SeedData.deduplicateExercises(context: modelContext)
