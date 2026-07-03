@@ -40,7 +40,7 @@ struct HealthKitCard: View {
         ActivityRingsGlyph()
             .frame(width: 26, height: 26)
             .padding(.horizontal, 12)
-            .padding(.vertical, 10)
+            .frame(maxHeight: .infinity)   // wash runs flush to the card's edges
             .background(Color.uplift.ahGreen.opacity(0.14))
             .accessibilityElement()   // glyph is decorative-only; expose the badge itself
             .accessibilityLabel("Apple Health live workout")

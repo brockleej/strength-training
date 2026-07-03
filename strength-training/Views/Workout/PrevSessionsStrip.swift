@@ -25,10 +25,12 @@ struct PrevSessionsStrip: View {
             }
             .defaultScrollAnchor(.trailing)
             .mask {
+                // Long leading fade: older cards stay mostly hidden — full
+                // opacity only over the trailing (most recent) quarter.
                 LinearGradient(
                     stops: [
                         .init(color: .clear, location: 0),
-                        .init(color: .black, location: 0.10),
+                        .init(color: .black, location: 0.75),
                         .init(color: .black, location: 1),
                     ],
                     startPoint: .leading, endPoint: .trailing
