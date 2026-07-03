@@ -13,7 +13,9 @@ import SwiftUI
 ///   "↑ TARGET <LABEL>" overline (green arrow, accent text), accent value,
 ///   green delta line ("+5 lb") replacing the hint.
 ///
-/// The −/+ buttons are never accent-filled (deliberate design decision).
+/// The −/+ buttons are never solid accent; in the target dress they take an
+/// accent wash so they sit within the accent-washed card instead of reading
+/// as mismatched gray.
 /// Hold-to-repeat: fires once on press, then repeats every 80ms after a
 /// 400ms warm-up. Each fire ticks `HapticService.stepperTick()` and calls
 /// `onUserEdit` — the parent clears `targetDelta` there.
@@ -40,6 +42,7 @@ struct UpliftStepper: View {
                 VStack(spacing: 4) {
                     Num(StepperLogic.format(value), size: 40,
                         color: isTarget ? .uplift.accent : .uplift.fg)
+                        .minimumScaleFactor(0.55)   // 3+ digit values shrink to fit
                     hintLine
                 }
                 .frame(maxWidth: .infinity)
@@ -82,6 +85,10 @@ struct UpliftStepper: View {
                 .tracking(0.4)
                 .foregroundStyle(isTarget ? Color.uplift.accent : Color.uplift.fgMuted)
         }
+        .lineLimit(1)
+        .minimumScaleFactor(0.8)
+        // Keep the (longer) target label clear of the corner icon
+        .padding(.horizontal, icon == nil ? 0 : 28)
     }
 
     private var fullLabel: String {
@@ -108,9 +115,9 @@ struct UpliftStepper: View {
         // state machine fully drives tap-once + hold-to-repeat.
         Image(systemName: symbol)
             .font(.system(size: 18, weight: .medium))
-            .foregroundStyle(Color.uplift.fg)
+            .foregroundStyle(isTarget ? Color.uplift.accent : Color.uplift.fg)
             .frame(width: 44, height: 44)
-            .background { Circle().fill(Color.uplift.surface2) }
+            .background { Circle().fill(isTarget ? Color.uplift.accentSoft : Color.uplift.surface2) }
             .contentShape(Circle())
             .accessibilityLabel(symbol == "plus" ? "Increase \(label)" : "Decrease \(label)")
             .accessibilityValue(StepperLogic.format(value))
@@ -164,17 +171,21 @@ struct UpliftStepper: View {
             UpliftStepper(label: "Reps", value: $reps, step: 1, range: 1...100,
                           icon: "repeat", iconTint: .uplift.fgMuted)
         }
-        // Weight-bump target dress
+        // Weight-bump target dress (icons on, like FocusView)
         HStack(spacing: 10) {
             UpliftStepper(label: "Weight", unit: "lb", value: .constant(230), step: 5,
-                          range: 0...1000, targetDelta: "+5 lb")
-            UpliftStepper(label: "Reps", value: .constant(5), step: 1, range: 1...100)
+                          range: 0...1000, targetDelta: "+5 lb",
+                          icon: "scalemass.fill", iconTint: .uplift.weightTint)
+            UpliftStepper(label: "Reps", value: .constant(5), step: 1, range: 1...100,
+                          icon: "repeat", iconTint: .uplift.fgMuted)
         }
-        // Rep-bump target dress
+        // Rep-bump target dress + a 3-digit value (scale-to-fit)
         HStack(spacing: 10) {
-            UpliftStepper(label: "Weight", unit: "lb", value: .constant(47.5), step: 2.5, range: 0...1000)
+            UpliftStepper(label: "Weight", unit: "lb", value: .constant(142.5), step: 2.5, range: 0...1000,
+                          icon: "scalemass.fill", iconTint: .uplift.weightTint)
             UpliftStepper(label: "Reps", value: .constant(11), step: 1, range: 1...100,
-                          targetDelta: "+1")
+                          targetDelta: "+1",
+                          icon: "repeat", iconTint: .uplift.fgMuted)
         }
     }
     .padding(20)
