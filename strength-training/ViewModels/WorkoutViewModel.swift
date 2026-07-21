@@ -62,7 +62,7 @@ final class WorkoutViewModel {
 
     private enum PendingAction {
         case cancelOnly
-        case replaceWith(DayType)
+        case replaceWith(DayType, RotationTrack)
     }
 
     init(modelContext: ModelContext, healthKitService: HealthKitWorkoutService) {
@@ -114,10 +114,15 @@ final class WorkoutViewModel {
         }
     }
 
-    func startSession(dayType: DayType) {
+    func startSession(dayType: DayType, rotationTrack: RotationTrack? = nil) {
         // Resume a suspended session of the same type
-        if let suspended = suspendedSession, suspended.dayType == dayType {
+        if let suspended = suspendedSession, suspended.day == dayType {
             activeSession = suspended
+            // Honor the track chosen on Today if the user flipped A/B before resume.
+            if let rotationTrack {
+                suspended.track = rotationTrack
+                try? modelContext.save()
+            }
             suspendedSession = nil
             healthKitService.resumeWorkout()
             return
@@ -130,12 +135,38 @@ final class WorkoutViewModel {
             }
             suspendedSession = nil
         }
-        let session = WorkoutSession(dayType: dayType)
+        let track = rotationTrack ?? suggestedRotationTrack(for: dayType)
+        let session = WorkoutSession(dayType: dayType, rotationTrack: track)
         modelContext.insert(session)
         try? modelContext.save()
         activeSession = session
         celebratedExerciseIDsThisSession = []
         startHealthKitWorkout()
+    }
+
+    /// Alternate A↔B from the last completed session of this day type (any day).
+    func suggestedRotationTrack(for dayType: DayType) -> RotationTrack {
+        let descriptor = FetchDescriptor<WorkoutSession>(
+            sortBy: [SortDescriptor(\WorkoutSession.date, order: .reverse)]
+        )
+        let sessions = (try? modelContext.fetch(descriptor)) ?? []
+        // Prefer last completed session that was explicitly A or B for this day.
+        if let last = sessions.first(where: {
+            $0.isCompleted && $0.day == dayType && ($0.track == .a || $0.track == .b)
+        }) {
+            return last.track.suggestedNext
+        }
+        // Fall back: any completed session for this day (including All).
+        if let last = sessions.first(where: { $0.isCompleted && $0.day == dayType }) {
+            return last.track.suggestedNext
+        }
+        return .a
+    }
+
+    func setSessionRotationTrack(_ track: RotationTrack) {
+        guard let session = activeSession else { return }
+        session.track = track
+        try? modelContext.save()
     }
 
     /// Move the active session to the background without completing it.
@@ -147,7 +178,7 @@ final class WorkoutViewModel {
 
     /// Discard the suspended session and immediately start a new one.
     /// HealthKit disposal follows the >= 5 min threshold logic.
-    func abandonSuspendedAndStart(dayType: DayType) {
+    func abandonSuspendedAndStart(dayType: DayType, rotationTrack: RotationTrack = .a) {
         if let suspended = suspendedSession {
             modelContext.delete(suspended)
             try? modelContext.save()
@@ -155,7 +186,7 @@ final class WorkoutViewModel {
         }
         // Delay to let the first confirmation dialog dismiss before potentially showing the HealthKit one.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
-            self?.resolveHealthKitDisposal(.replaceWith(dayType))
+            self?.resolveHealthKitDisposal(.replaceWith(dayType, rotationTrack))
         }
     }
 
@@ -226,8 +257,8 @@ final class WorkoutViewModel {
         switch action {
         case .cancelOnly:
             break
-        case .replaceWith(let dayType):
-            let session = WorkoutSession(dayType: dayType)
+        case .replaceWith(let dayType, let rotationTrack):
+            let session = WorkoutSession(dayType: dayType, rotationTrack: rotationTrack)
             modelContext.insert(session)
             try? modelContext.save()
             activeSession = session
@@ -301,20 +332,37 @@ final class WorkoutViewModel {
     // MARK: - Exercises
 
     func exercises(for dayType: DayType) -> [Exercise] {
-        // Fetch all exercises then filter in Swift — avoids #Predicate enum comparison issues
+        // Fetch all exercises then filter in Swift — avoids #Predicate string pitfalls
         let descriptor = FetchDescriptor<Exercise>(
             sortBy: [SortDescriptor(\Exercise.sortOrder)]
         )
         let all = (try? modelContext.fetch(descriptor)) ?? []
-        if dayType == .fullBody { return all }
-        return all.filter { $0.dayType == dayType }
+        if dayType.includesAllExercises { return all }
+        return all.filter { $0.belongs(to: dayType) }
     }
 
     /// Eagerly create this exercise's record in the current session so it
     /// appears in the exercise list before any set is logged (used by the
     /// add-exercise picker for cross-day-type additions).
     func addExerciseToSession(_ exercise: Exercise) {
+        activeSession?.unsuppressExercise(id: exercise.id)
         _ = findOrCreateRecord(for: exercise)
+        try? modelContext.save()
+    }
+
+    /// Remove from this workout only (does not delete the library exercise).
+    /// Hides auto-listed day exercises and deletes this session's sets/record.
+    func removeExerciseFromSession(_ exercise: Exercise) {
+        guard let session = activeSession else { return }
+        let records = session.exerciseRecordsArray.filter { $0.exercise?.id == exercise.id }
+        for record in records {
+            for set in record.setsArray {
+                modelContext.delete(set)
+            }
+            modelContext.delete(record)
+        }
+        session.suppressExercise(id: exercise.id)
+        try? modelContext.save()
     }
 
     /// The set holding the all-time best e1RM for this exercise across
@@ -380,17 +428,29 @@ final class WorkoutViewModel {
 
     // MARK: - Set Logging
 
-    func addSet(exercise: Exercise, weight: Double, reps: Int) {
+    func addSet(exercise: Exercise, weight: Double, reps: Int, isWarmup: Bool = false) {
         let record = findOrCreateRecord(for: exercise)
         let setNumber = record.setsArray.count + 1
-        let set = SetRecord(setNumber: setNumber, weightLbs: weight, reps: reps)
+        let set = SetRecord(setNumber: setNumber, weightLbs: weight, reps: reps, isWarmup: isWarmup)
         set.exerciseRecord = record
         if record.sets == nil { record.sets = [] }
         record.sets?.append(set)
         modelContext.insert(set)
         try? modelContext.save()
         HapticService.setLogged()
-        checkForPR(exercise: exercise, weight: weight, reps: reps)
+        if !isWarmup {
+            checkForPR(exercise: exercise, weight: weight, reps: reps)
+        }
+    }
+
+    /// Correct weight/reps (and warm-up flag) on an existing set. Does not re-fire PR celebration.
+    func updateSet(_ set: SetRecord, weight: Double, reps: Int, isWarmup: Bool = false) {
+        set.weightLbs = weight
+        set.reps = max(1, reps)
+        set.isWarmup = isWarmup
+        set.completedAt = .now
+        try? modelContext.save()
+        HapticService.setLogged()
     }
 
     func deleteSet(_ set: SetRecord, from exercise: Exercise) {

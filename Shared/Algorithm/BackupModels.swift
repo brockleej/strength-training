@@ -22,6 +22,32 @@ struct ExerciseBackup: Codable {
     let sortOrder: Int
     let isCustom: Bool
     let notes: String
+    /// "" / "A" / "B" — optional for older backups.
+    let rotationTrack: String?
+    /// Comma-separated extra day names — optional for older backups.
+    let extraDayTypes: String?
+
+    init(
+        id: UUID,
+        name: String,
+        dayType: String,
+        muscleGroup: String,
+        sortOrder: Int,
+        isCustom: Bool,
+        notes: String,
+        rotationTrack: String? = nil,
+        extraDayTypes: String? = nil
+    ) {
+        self.id = id
+        self.name = name
+        self.dayType = dayType
+        self.muscleGroup = muscleGroup
+        self.sortOrder = sortOrder
+        self.isCustom = isCustom
+        self.notes = notes
+        self.rotationTrack = rotationTrack
+        self.extraDayTypes = extraDayTypes
+    }
 }
 
 struct WorkoutSessionBackup: Codable {
@@ -31,6 +57,26 @@ struct WorkoutSessionBackup: Codable {
     let notes: String
     let isCompleted: Bool
     let exerciseRecords: [ExerciseRecordBackup]
+    /// "" / "A" / "B" — optional for older backups.
+    let rotationTrack: String?
+
+    init(
+        id: UUID,
+        date: Date,
+        dayType: String,
+        notes: String,
+        isCompleted: Bool,
+        exerciseRecords: [ExerciseRecordBackup],
+        rotationTrack: String? = nil
+    ) {
+        self.id = id
+        self.date = date
+        self.dayType = dayType
+        self.notes = notes
+        self.isCompleted = isCompleted
+        self.exerciseRecords = exerciseRecords
+        self.rotationTrack = rotationTrack
+    }
 }
 
 struct ExerciseRecordBackup: Codable {

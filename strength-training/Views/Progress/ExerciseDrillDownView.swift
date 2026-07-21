@@ -64,20 +64,22 @@ private struct DrillDownContent: View {
         HStack(spacing: 16) {
             ZStack {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(exercise.dayType.upliftWash)
-                Image(systemName: exercise.dayType.systemImage)
+                    .fill(exercise.day.upliftWash)
+                Image(systemName: exercise.day.systemImage)
                     .font(.system(size: 40, weight: .medium))
-                    .foregroundStyle(exercise.dayType.upliftInk)
+                    .foregroundStyle(exercise.day.upliftInk)
             }
             .frame(width: 80, height: 80)
             .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text("\(exercise.dayType.rawValue)")
+                Text(exercise.isUnassigned
+                     ? "Unassigned"
+                     : exercise.dayTypeNames.joined(separator: " · "))
                     .textCase(.uppercase)
                     .font(.uplift.text(11, weight: .semibold))
                     .tracking(0.4)
-                    .foregroundStyle(exercise.dayType.upliftInk)
+                    .foregroundStyle(exercise.day.upliftInk)
                 Text(exercise.name)
                     .font(.uplift.display(22, weight: .bold))
                     .kerning(-0.5)
@@ -86,10 +88,10 @@ private struct DrillDownContent: View {
                     if !exercise.muscleGroup.isEmpty {
                         Text(exercise.muscleGroup)
                             .font(.uplift.text(11, weight: .semibold))
-                            .foregroundStyle(exercise.dayType.upliftInk)
+                            .foregroundStyle(exercise.day.upliftInk)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 3)
-                            .background(Capsule().fill(exercise.dayType.upliftWash))
+                            .background(Capsule().fill(exercise.day.upliftWash))
                     }
                     Text("\(viewModel.totalSessions) session\(viewModel.totalSessions == 1 ? "" : "s")\(lastTrainedSuffix)")
                         .font(.uplift.text(11, weight: .medium))

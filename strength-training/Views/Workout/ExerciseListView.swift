@@ -20,42 +20,112 @@ struct ExerciseListView: View {
     @State private var showAddPicker = false
     @State private var showAddExerciseSheet = false
     @State private var pendingCreateNew = false
+    @State private var dayCatalog = DayTypeRegistry.shared
+    @State private var editingExercise: Exercise?
+    @State private var exercisePendingRemoval: Exercise?
+    @State private var showDayPlanEditor = false
 
     private var dayType: DayType {
-        workoutVM.activeSession?.dayType ?? .arms
+        workoutVM.activeSession?.day ?? dayCatalog.defaultSelection
     }
 
-    /// Session list = the day type's library exercises + any cross-day
-    /// exercises pulled in via the picker (their records exist eagerly).
-    private func exercises(in section: DayType) -> [Exercise] {
-        let base = allExercises.filter { $0.dayType == section }
-        let extraIDs = Set(
-            (workoutVM.activeSession?.exerciseRecordsArray ?? [])
-                .compactMap { $0.exercise }
-                .filter { $0.dayType == section }
-                .map(\.id)
-        )
-        // base already covers own-day exercises; extras matter only when the
-        // section is NOT the session's day type (cross-day additions)
-        if section == dayType || dayType == .fullBody {
-            return base
-        }
-        return base.filter { extraIDs.contains($0.id) }
+    private var sessionTrack: RotationTrack {
+        workoutVM.activeSession?.track ?? .a
     }
 
-    /// Ordered sections: own day type (or Arms+Legs for Full Body), plus a
-    /// cross-day section when the picker pulled exercises in.
+    private var suppressedIDs: Set<UUID> {
+        workoutVM.activeSession?.suppressedExerciseIDs ?? []
+    }
+
+    /// Library exercises for a day tag, filtered by A/B week and session hides.
+    private func libraryExercises(for section: DayType) -> [Exercise] {
+        allExercises
+            .filter {
+                $0.belongs(to: section)
+                    && $0.track.isVisible(whenSessionTrack: sessionTrack)
+                    && !suppressedIDs.contains($0.id)
+            }
+            .sorted {
+                let lhs = $0.sortIndex(for: section)
+                let rhs = $1.sortIndex(for: section)
+                if lhs != rhs { return lhs < rhs }
+                return $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+            }
+    }
+
+    /// Exercises already pulled into this session (eager records), any day tag.
+    private var sessionExercises: [Exercise] {
+        (workoutVM.activeSession?.exerciseRecordsArray ?? [])
+            .compactMap(\.exercise)
+            .filter { !suppressedIDs.contains($0.id) }
+    }
+
+    /// Ordered sections: own day (or all tags for Full Body-style), plus any
+    /// cross-day / orphan-tag exercises the picker added this session.
     private var sections: [(dayType: DayType, exercises: [Exercise])] {
-        if dayType == .fullBody {
-            return [(.arms, exercises(in: .arms)), (.legs, exercises(in: .legs))]
+        if dayType.includesAllExercises {
+            return groupedLibrarySections(from: allExercises)
         }
-        let other: DayType = dayType == .arms ? .legs : .arms
-        let crossDay = exercises(in: other)
-        var result: [(DayType, [Exercise])] = [(dayType, exercises(in: dayType))]
-        if !crossDay.isEmpty {
-            result.append((other, crossDay))
+
+        var result: [(DayType, [Exercise])] = []
+        let own = libraryExercises(for: dayType)
+        let ownIDs = Set(own.map(\.id))
+        let extras = sessionExercises.filter { !ownIDs.contains($0.id) }
+
+        // Lead with today's day type when it has exercises, or when the session
+        // is still empty (so the empty state is clearly "Push day" not orphan tags).
+        if !own.isEmpty || extras.isEmpty {
+            result.append((dayType, own))
+        }
+
+        let byDay = Dictionary(grouping: extras) { $0.day }
+        for day in orderedDayTypes(Set(byDay.keys.map(\.rawValue))) {
+            guard let list = byDay[day], !list.isEmpty else { continue }
+            result.append((day, list.sorted { $0.sortOrder < $1.sortOrder }))
         }
         return result
+    }
+
+    /// Full-body / catch-all: library exercises visible for this A/B week.
+    private func groupedLibrarySections(from exercises: [Exercise]) -> [(DayType, [Exercise])] {
+        let visible = exercises.filter {
+            $0.track.isVisible(whenSessionTrack: sessionTrack)
+                && !suppressedIDs.contains($0.id)
+        }
+        // Place multi-day exercises under each membership for full-body browsing.
+        var byDay: [String: [Exercise]] = [:]
+        for exercise in visible {
+            for name in exercise.dayTypeNames {
+                byDay[name, default: []].append(exercise)
+            }
+        }
+        return orderedDayTypes(Set(byDay.keys)).compactMap { day in
+            guard let list = byDay[day.rawValue], !list.isEmpty else { return nil }
+            let sorted = list.sorted {
+                let lhs = $0.sortIndex(for: day)
+                let rhs = $1.sortIndex(for: day)
+                if lhs != rhs { return lhs < rhs }
+                return $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+            }
+            return (day, sorted)
+        }
+    }
+
+    /// Catalog homes first (current day leading), then orphan tags A→Z.
+    private func orderedDayTypes(_ names: Set<String>) -> [DayType] {
+        var ordered: [DayType] = []
+        var seen = Set<String>()
+        func append(_ day: DayType) {
+            guard names.contains(day.rawValue), !seen.contains(day.rawValue) else { return }
+            ordered.append(day)
+            seen.insert(day.rawValue)
+        }
+        append(dayType)
+        for home in dayCatalog.exerciseHomeDays { append(home) }
+        for name in names.sorted() where !seen.contains(name) {
+            ordered.append(DayType(rawValue: name))
+        }
+        return ordered
     }
 
     private var flatExercises: [Exercise] {
@@ -80,6 +150,7 @@ struct ExerciseListView: View {
                             .padding(.horizontal, 20)
                         titleSection
                         progressBar
+                        rotationToggle
                         modeToggle
                         exerciseListSection
                         addExerciseRow
@@ -126,14 +197,48 @@ struct ExerciseListView: View {
                 AddExercisePicker(
                     currentDayType: dayType,
                     excludedIDs: Set(flatExercises.map(\.id)),
-                    onPick: { exercise in
+                    onPick: { exercise, assignToCurrentDay in
+                        if assignToCurrentDay {
+                            exercise.addDayType(dayType, atEndOf: allExercises)
+                            try? workoutVM.modelContext.save()
+                        }
                         workoutVM.addExerciseToSession(exercise)
                     },
                     onCreateNew: { pendingCreateNew = true }
                 )
             }
             .sheet(isPresented: $showAddExerciseSheet) {
-                AddExerciseView(preselectedDayType: dayType == .fullBody ? .arms : dayType)
+                AddExerciseView(
+                    preselectedDayType: dayType.includesAllExercises
+                        ? (dayCatalog.exerciseHomeDays.first ?? .arms)
+                        : dayType
+                )
+            }
+            .sheet(item: $editingExercise) { exercise in
+                EditExerciseView(exercise: exercise)
+            }
+            .sheet(isPresented: $showDayPlanEditor) {
+                DayPlanEditorView(dayType: dayType)
+            }
+            .confirmationDialog(
+                "Remove \(exercisePendingRemoval?.name ?? "exercise")?",
+                isPresented: Binding(
+                    get: { exercisePendingRemoval != nil },
+                    set: { if !$0 { exercisePendingRemoval = nil } }
+                ),
+                titleVisibility: .visible
+            ) {
+                Button("Remove from this workout", role: .destructive) {
+                    if let exercise = exercisePendingRemoval {
+                        workoutVM.removeExerciseFromSession(exercise)
+                    }
+                    exercisePendingRemoval = nil
+                }
+                Button("Cancel", role: .cancel) {
+                    exercisePendingRemoval = nil
+                }
+            } message: {
+                Text("Stays in your library. You can add it back anytime. Sets logged this session for this exercise will be deleted.")
             }
         }
     }
@@ -148,6 +253,14 @@ struct ExerciseListView: View {
                     .font(.uplift.display(28, weight: .bold))
                     .kerning(-0.6)
                     .foregroundStyle(Color.uplift.fg)
+                if sessionTrack != .every, let badge = sessionTrack.badge {
+                    Text(badge)
+                        .font(.uplift.text(13, weight: .bold))
+                        .foregroundStyle(Color.uplift.accent)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Capsule().fill(Color.uplift.accent.opacity(0.16)))
+                }
             }
             (
                 Text("\(completedCount) of \(flatExercises.count)")
@@ -159,6 +272,30 @@ struct ExerciseListView: View {
         }
         .padding(.horizontal, 20)
         .padding(.top, 14)
+        .padding(.bottom, 12)
+    }
+
+    /// A / B / All — available on every day type mid-workout.
+    private var rotationToggle: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("WEEK ROTATION")
+                .font(.uplift.text(11, weight: .semibold))
+                .tracking(0.4)
+                .foregroundStyle(Color.uplift.fgMuted)
+            UpliftSegmentedControl(
+                segments: RotationTrack.sessionFilters.map { track in
+                    UpliftSegment(id: track.storageKey, label: track.sessionFilterLabel)
+                },
+                selection: Binding(
+                    get: { sessionTrack.storageKey },
+                    set: { workoutVM.setSessionRotationTrack(RotationTrack(storageKey: $0)) }
+                )
+            )
+            Text("Every day supports A/B. Switch here anytime; All shows both.")
+                .font(.uplift.text(11, weight: .medium))
+                .foregroundStyle(Color.uplift.fgDim)
+        }
+        .padding(.horizontal, 20)
         .padding(.bottom, 12)
     }
 
@@ -222,10 +359,24 @@ struct ExerciseListView: View {
                             lastSets: rowData.lastSets,
                             targetWeight: rowData.targetWeight,
                             targetReps: rowData.targetReps,
-                            state: rowState(for: exercise, number: index + 1)
+                            state: rowState(for: exercise, number: index + 1),
+                            trackBadge: exercise.track.badge,
+                            lastSessionSummary: rowData.lastSessionSummary
                         )
                     }
                     .buttonStyle(.plain)
+                    .contextMenu {
+                        Button {
+                            editingExercise = exercise
+                        } label: {
+                            Label("Edit exercise", systemImage: "pencil")
+                        }
+                        Button(role: .destructive) {
+                            exercisePendingRemoval = exercise
+                        } label: {
+                            Label("Remove from workout", systemImage: "minus.circle")
+                        }
+                    }
                 }
             }
         }
@@ -234,7 +385,10 @@ struct ExerciseListView: View {
 
     private var addExerciseRow: some View {
         Button {
-            if dayType == .fullBody {
+            // Always open the library picker so exercises tagged under an old
+            // split (e.g. Arms after switching to Push) remain reachable.
+            // Full Body still uses the picker when the library is non-empty.
+            if allExercises.isEmpty {
                 showAddExerciseSheet = true
             } else {
                 showAddPicker = true
@@ -283,6 +437,11 @@ struct ExerciseListView: View {
 
     private var overflowMenu: some View {
         Menu {
+            Button {
+                showDayPlanEditor = true
+            } label: {
+                Label("Reorder / edit day plan", systemImage: "arrow.up.arrow.down")
+            }
             Button(role: .destructive) {
                 // Cancel = suspend first, then run the existing destructive flow
                 // from Today (which owns the confirmation dialogs).
@@ -313,19 +472,37 @@ struct ExerciseListView: View {
         return .pending(number: number)
     }
 
-    private func rowData(for exercise: Exercise) -> (lastSets: Int?, targetWeight: Double?, targetReps: Int?) {
+    private func rowData(for exercise: Exercise) -> (
+        lastSets: Int?,
+        targetWeight: Double?,
+        targetReps: Int?,
+        lastSessionSummary: String?
+    ) {
         let modeRaw = workoutVM.selectedMode.rawValue
         let lastRecord = exercise.recordsArray
             .filter { $0.trainingMode.rawValue == modeRaw && $0.session?.isCompleted == true }
             .max { ($0.session?.date ?? .distantPast) < ($1.session?.date ?? .distantPast) }
-        let lastSets = lastRecord.map { $0.setsArray.filter { !$0.isWarmup }.count }
+        let lastSetsAll = lastRecord.map { $0.setsArray.count }
+        let summary = lastRecord.map { Self.formatLastSessionSets($0.setsArray) }
         let recent = workoutVM.recentAverage(for: exercise, mode: workoutVM.selectedMode)
         let target = workoutVM.suggestion(for: exercise, mode: workoutVM.selectedMode)?.targetWeight
         return (
-            lastSets: (lastSets ?? 0) > 0 ? lastSets : nil,
+            lastSets: (lastSetsAll ?? 0) > 0 ? lastSetsAll : nil,
             targetWeight: target ?? recent?.weight,
-            targetReps: recent?.reps
+            targetReps: recent?.reps,
+            lastSessionSummary: summary
         )
+    }
+
+    /// "135×5 · 225×4 · 305×5 · 305×5 · 305×5" — full last-session recipe.
+    private static func formatLastSessionSets(_ sets: [SetRecord]) -> String {
+        let ordered = sets.sorted { $0.setNumber < $1.setNumber }
+        guard !ordered.isEmpty else { return "" }
+        return ordered.map { set in
+            let piece = "\(StepperLogic.format(set.weightLbs))×\(set.reps)"
+            return set.isWarmup ? "\(piece)w" : piece
+        }
+        .joined(separator: " · ")
     }
 }
 

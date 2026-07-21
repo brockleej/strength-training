@@ -15,8 +15,10 @@ let previewContainer: ModelContainer = {
         WorkoutSession.self,
         ExerciseRecord.self,
         SetRecord.self,
+        SplitDay.self,
         configurations: config
     )
     SeedData.seedIfNeeded(context: container.mainContext)
+    DayTypeRegistry.shared.reload(context: container.mainContext)
     return container
 }()

@@ -102,7 +102,7 @@
 		8CC4D1E291A947627897B17B /* ReplayEngine.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ReplayEngine.swift; sourceTree = "<group>"; };
 		8EB559FDE4D121DA2D8342FB /* AlgorithmInput.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AlgorithmInput.swift; sourceTree = "<group>"; };
 		8EE03F51930E877B27379EF2 /* backup-with-orphans.json */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.json; path = "backup-with-orphans.json"; sourceTree = "<group>"; };
-		8F65F06B7DAEC56D1511479D /* progression-lab-tests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "progression-lab-tests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		8F65F06B7DAEC56D1511479D /* progression-lab-tests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; name = "progression-lab-tests.xctest"; path = progression_lab_tests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		978F4F3D2BE8A98E61F6B83C /* ExerciseModeReplay.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ExerciseModeReplay.swift; sourceTree = "<group>"; };
 		9BB09AE52C260DDF439056CC /* ProgressionServiceParityTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ProgressionServiceParityTests.swift; sourceTree = "<group>"; };
 		9C9B1F409EF0053F85ACE816 /* BackupModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BackupModels.swift; sourceTree = "<group>"; };
@@ -211,7 +211,6 @@
 				F99BAA364B2D2DBD347ACC68 /* SimulationStoreTests.swift */,
 				DDFCFE81F28301E70314A05D /* ConfigArtifactRoundTripTests.swift */,
 			);
-			name = "progression-lab-tests";
 			path = "progression-lab-tests";
 			sourceTree = "<group>";
 		};
@@ -222,7 +221,6 @@
 				8EE03F51930E877B27379EF2 /* backup-with-orphans.json */,
 				6F62C644CB9B4CFF6875CF58 /* unsupported-version.json */,
 			);
-			name = Fixtures;
 			path = Fixtures;
 			sourceTree = "<group>";
 		};
@@ -233,7 +231,6 @@
 				8CC4D1E291A947627897B17B /* ReplayEngine.swift */,
 				B3E6DCDC4270F67C50095A9A /* SimulationStore.swift */,
 			);
-			name = Simulation;
 			path = Simulation;
 			sourceTree = "<group>";
 		};
@@ -273,7 +270,6 @@
 				F5781434F825A1387BC87CAD /* ReplayTable.swift */,
 				DA1089E656CA94B6914585FB /* ExerciseDetailView.swift */,
 			);
-			name = ExerciseDetail;
 			path = ExerciseDetail;
 			sourceTree = "<group>";
 		};
@@ -292,7 +288,6 @@
 				450F037775C1159761CB6A2E /* ConfigArtifactWriter.swift */,
 				42F6226112928C7FE996EAB2 /* ConfigArtifactReader.swift */,
 			);
-			name = Artifact;
 			path = Artifact;
 			sourceTree = "<group>";
 		};
@@ -312,7 +307,6 @@
 				E90D8161F780FCDA4CBDA8C4 /* ExerciseDashboardRow.swift */,
 				32C7938965779BE5D2C32989 /* DashboardView.swift */,
 			);
-			name = Dashboard;
 			path = Dashboard;
 			sourceTree = "<group>";
 		};
@@ -618,7 +612,7 @@
 				CODE_SIGN_ENTITLEMENTS = "progression-lab/ProgressionLab.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				DEVELOPMENT_TEAM = V8227YC5UT;
+				DEVELOPMENT_TEAM = 53AH938CUW;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
@@ -644,7 +638,7 @@
 				CODE_SIGN_ENTITLEMENTS = "progression-lab/ProgressionLab.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				DEVELOPMENT_TEAM = V8227YC5UT;
+				DEVELOPMENT_TEAM = 53AH938CUW;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
@@ -827,7 +821,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = WG7BK7C4BG;
+				DEVELOPMENT_TEAM = 53AH938CUW;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "strength-training/Info.plist";
@@ -844,7 +838,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.danielkuhlwein.strengthtraining;
+				PRODUCT_BUNDLE_IDENTIFIER = com.lee.lift2026;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -866,7 +860,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = WG7BK7C4BG;
+				DEVELOPMENT_TEAM = 53AH938CUW;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "strength-training/Info.plist";
@@ -883,7 +877,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.danielkuhlwein.strengthtraining;
+				PRODUCT_BUNDLE_IDENTIFIER = com.lee.lift2026;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;

@@ -32,7 +32,10 @@ struct SessionDetailView: View {
             VStack(alignment: .leading, spacing: 0) {
                 hero
                 statsCard
-                if !prNames.isEmpty {
+                if let comparison = SessionMath.comparison(for: session, among: completedSessions) {
+                    SessionComparisonCard(comparison: comparison)
+                        .padding(.top, 8)
+                } else if !prNames.isEmpty {
                     prCallout
                         .padding(.top, 8)
                 }
@@ -67,19 +70,19 @@ struct SessionDetailView: View {
     private var hero: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 10) {
-                DayChip(dayType: session.dayType, size: .sm)
+                DayChip(dayType: session.day, size: .sm)
                 VStack(alignment: .leading, spacing: 1) {
-                    Text("\(session.dayType.rawValue) day")
+                    Text("\(session.day.rawValue) day")
                         .textCase(.uppercase)
                         .font(.uplift.text(11, weight: .semibold))
                         .tracking(0.4)
-                        .foregroundStyle(session.dayType.upliftInk)
+                        .foregroundStyle(session.day.upliftInk)
                     Text(session.date.formatted(.dateTime.weekday(.wide).month(.wide).day().hour().minute()))
                         .font(.uplift.text(12, weight: .medium))
                         .foregroundStyle(Color.uplift.fgMuted)
                 }
             }
-            Text(session.dayType.rawValue)
+            Text(session.day.rawValue)
                 .font(.uplift.display(30, weight: .bold))
                 .kerning(-0.7)
                 .foregroundStyle(Color.uplift.fg)

@@ -47,18 +47,21 @@ struct ContentView: View {
         .tint(Color.uplift.accent)
         .preferredColorScheme(.dark)
         .onAppear {
+            // Keep launch work light: seed + VM first so the tab UI appears.
+            // Never call CloudKit here — without iCloud entitlements it can hang.
             SeedData.migrateExerciseNames(context: modelContext)
             SeedData.deduplicateExercises(context: modelContext)
+            // Fresh install seeds; existing installs top up any missing catalog lifts.
             SeedData.seedIfNeeded(context: modelContext)
+            DayTypeRegistry.shared.reload(context: modelContext)
             if workoutViewModel == nil {
                 workoutViewModel = WorkoutViewModel(modelContext: modelContext, healthKitService: healthKitService)
             }
+            healthKitService.checkAuthorization()
         }
-        .task {
-            if healthKitService.isAvailable && healthKitService.authorizationStatus == nil {
-                _ = await healthKitService.requestAuthorization()
-            }
-        }
+        // Don't auto-prompt HealthKit on cold launch — that dialog can stall the
+        // first frame. Settings (and starting a workout) request access instead.
+
     }
 }
 

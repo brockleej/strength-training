@@ -6,10 +6,11 @@
 import SwiftUI
 
 /// Logged-sets table for the Focus screen: SET | WEIGHT | REPS header, one
-/// mono row per set, swipe-left to delete. Shows only logged sets — the
-/// steppers + Log set button below carry the "next set".
+/// mono row per set. Tap a row to edit in the steppers; swipe-left to delete.
 struct FocusSetsCard: View {
     let sets: [SetRecord]              // sorted ascending by setNumber
+    var selectedSetID: UUID? = nil
+    let onSelect: (SetRecord) -> Void
     let onDelete: (SetRecord) -> Void
 
     var body: some View {
@@ -22,6 +23,12 @@ struct FocusSetsCard: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.vertical, 12)
             } else {
+                Text("Tap a set to edit · swipe to delete")
+                    .font(.uplift.text(11, weight: .medium))
+                    .foregroundStyle(Color.uplift.fgDim)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.bottom, 6)
+
                 ForEach(Array(sets.enumerated()), id: \.element.id) { index, set in
                     row(set)
                     if index < sets.count - 1 {
@@ -57,13 +64,18 @@ struct FocusSetsCard: View {
     }
 
     private func row(_ set: SetRecord) -> some View {
-        HStack {
+        let isSelected = selectedSetID == set.id
+        return HStack {
             HStack(spacing: 8) {
                 ZStack {
-                    Circle().fill(Color.uplift.up.opacity(0.16))
-                    Image(systemName: "checkmark")
+                    Circle().fill(
+                        isSelected
+                            ? Color.uplift.accent.opacity(0.22)
+                            : Color.uplift.up.opacity(0.16)
+                    )
+                    Image(systemName: isSelected ? "pencil" : "checkmark")
                         .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(Color.uplift.up)
+                        .foregroundStyle(isSelected ? Color.uplift.accent : Color.uplift.up)
                 }
                 .frame(width: 22, height: 22)
                 .accessibilityHidden(true)
@@ -72,6 +84,14 @@ struct FocusSetsCard: View {
                     .foregroundStyle(Color.uplift.fg)
             }
             Spacer()
+            if set.isWarmup {
+                Text("W")
+                    .font(.uplift.text(10, weight: .bold))
+                    .foregroundStyle(Color.uplift.customBadge)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 2)
+                    .background(Capsule().fill(Color.uplift.customBadge.opacity(0.16)))
+            }
             Text(StepperLogic.format(set.weightLbs))
                 .font(.uplift.mono(14, weight: .semibold))
                 .foregroundStyle(Color.uplift.weightTint)
@@ -82,82 +102,21 @@ struct FocusSetsCard: View {
                 .frame(width: 48, alignment: .trailing)
         }
         .padding(.vertical, 10)
+        .padding(.horizontal, 6)
+        .background {
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(isSelected ? Color.uplift.accent.opacity(0.10) : Color.clear)
+        }
         .contentShape(Rectangle())
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Set \(set.setNumber), \(StepperLogic.format(set.weightLbs)) pounds, \(set.reps) reps")
-        .swipeToDelete { onDelete(set) }
-    }
-}
-
-/// Swipe-left-to-reveal-delete for rows living inside a card (outside a List).
-/// A left drag reveals a tappable trash button; the delete only commits on
-/// tap (reveal-then-tap — prevents accidental full-swipe deletions mid-workout).
-/// Vertical-dominant drags are ignored so the enclosing ScrollView keeps them.
-private struct SwipeToDeleteModifier: ViewModifier {
-    let onDelete: () -> Void
-
-    @State private var offsetX: CGFloat = 0
-    @State private var isRevealed = false
-    private let revealWidth: CGFloat = 64
-
-    func body(content: Content) -> some View {
-        content
-            .offset(x: offsetX)
-            .background(alignment: .trailing) {
-                if offsetX < -4 {
-                    Button {
-                        close()
-                        onDelete()   // haptic fires inside WorkoutViewModel.deleteSet
-                    } label: {
-                        Image(systemName: "trash.fill")
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(Color.uplift.down)
-                            .frame(width: revealWidth, height: 44)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .opacity(min(1, Double(offsetX / -revealWidth)))
-                    .accessibilityLabel("Delete set")
-                }
-            }
-            .gesture(
-                DragGesture(minimumDistance: 20)
-                    .onChanged { value in
-                        // Horizontal-dominant drags only — vertical stays with the scroll
-                        guard abs(value.translation.width) > abs(value.translation.height) else { return }
-                        let base: CGFloat = isRevealed ? -revealWidth : 0
-                        offsetX = min(0, max(-revealWidth, base + value.translation.width))
-                    }
-                    .onEnded { value in
-                        withAnimation(.easeOut(duration: 0.2)) {
-                            if !isRevealed, value.translation.width < -revealWidth / 2 {
-                                isRevealed = true
-                                offsetX = -revealWidth
-                            } else if isRevealed, value.translation.width > revealWidth / 2 {
-                                close()
-                            } else {
-                                offsetX = isRevealed ? -revealWidth : 0
-                            }
-                        }
-                    }
-            )
-            .onTapGesture {
-                if isRevealed {
-                    withAnimation(.easeOut(duration: 0.2)) { close() }
-                }
-            }
-            .accessibilityAction(named: "Delete") { onDelete() }
-    }
-
-    private func close() {
-        isRevealed = false
-        offsetX = 0
-    }
-}
-
-extension View {
-    func swipeToDelete(onDelete: @escaping () -> Void) -> some View {
-        modifier(SwipeToDeleteModifier(onDelete: onDelete))
+        .accessibilityLabel(
+            isSelected
+                ? "Set \(set.setNumber), editing, \(StepperLogic.format(set.weightLbs)) pounds, \(set.reps) reps\(set.isWarmup ? ", warmup" : ""), double tap to cancel"
+                : "Set \(set.setNumber), \(StepperLogic.format(set.weightLbs)) pounds, \(set.reps) reps\(set.isWarmup ? ", warmup" : ""), double tap to edit"
+        )
+        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+        // Focus sets: reveal-then-tap (safer mid-workout than full-swipe commit).
+        .swipeToDelete(fullSwipeDeletes: false, onDelete: { onDelete(set) }, onTap: { onSelect(set) })
     }
 }
 
@@ -170,9 +129,11 @@ extension View {
                 let c = SetRecord(setNumber: 3, weightLbs: 230, reps: 3)
                 return [a, b, c]
             }(),
+            selectedSetID: nil,
+            onSelect: { _ in },
             onDelete: { _ in }
         )
-        FocusSetsCard(sets: [], onDelete: { _ in })
+        FocusSetsCard(sets: [], onSelect: { _ in }, onDelete: { _ in })
     }
     .padding(20)
     .background(Color.uplift.bgElev)

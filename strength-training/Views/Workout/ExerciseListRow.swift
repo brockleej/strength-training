@@ -15,10 +15,13 @@ struct ExerciseListRow: View {
     }
 
     let name: String
-    let lastSets: Int?        // last session's working-set count
+    let lastSets: Int?        // last session's set count (all sets)
     let targetWeight: Double? // progression target (fallback: recent avg weight)
     let targetReps: Int?      // recent avg reps
     let state: RowState
+    var trackBadge: String? = nil  // "A" / "B" week label
+    /// Compact last-session recipe, e.g. "135×5 · 225×4 · 305×5 · 305×5".
+    var lastSessionSummary: String? = nil
 
     private var isActive: Bool { state == .active }
     private var isCompleted: Bool { state == .completed }
@@ -26,12 +29,29 @@ struct ExerciseListRow: View {
     var body: some View {
         HStack(spacing: 12) {
             statusCircle
-            VStack(alignment: .leading, spacing: 2) {
-                Text(name)
-                    .font(.uplift.text(15, weight: .semibold))
-                    .kerning(-0.2)
-                    .foregroundStyle(Color.uplift.fg)
-                    .strikethrough(isCompleted, color: Color.uplift.fgDim)
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 6) {
+                    Text(name)
+                        .font(.uplift.text(15, weight: .semibold))
+                        .kerning(-0.2)
+                        .foregroundStyle(Color.uplift.fg)
+                        .strikethrough(isCompleted, color: Color.uplift.fgDim)
+                    if let trackBadge {
+                        Text(trackBadge)
+                            .font(.uplift.text(10, weight: .bold))
+                            .foregroundStyle(Color.uplift.accent)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1)
+                            .background(Capsule().fill(Color.uplift.accent.opacity(0.16)))
+                    }
+                }
+                if let lastSessionSummary, !lastSessionSummary.isEmpty {
+                    Text(lastSessionSummary)
+                        .font(.uplift.mono(11, weight: .medium))
+                        .foregroundStyle(Color.uplift.fgMuted)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.85)
+                }
                 subtitleText
                     .font(.uplift.mono(12, weight: .medium))
             }
@@ -75,15 +95,20 @@ struct ExerciseListRow: View {
     }
 
     private var accessibilitySubtitle: String {
-        let setsPart = lastSets.map { "\($0) sets, " } ?? ""
-        if let targetWeight, let targetReps {
-            return "\(setsPart)\(StepperLogic.format(targetWeight)) pounds by \(targetReps)"
-        } else if let targetReps {
-            return "\(setsPart)\(targetReps) reps"
-        } else if let targetWeight {
-            return "\(setsPart)\(StepperLogic.format(targetWeight)) pounds"
+        var parts: [String] = []
+        if let lastSessionSummary, !lastSessionSummary.isEmpty {
+            parts.append("last time \(lastSessionSummary)")
         }
-        return "no history"
+        let setsPart = lastSets.map { "\($0) sets" }
+        if let setsPart { parts.append(setsPart) }
+        if let targetWeight, let targetReps {
+            parts.append("target \(StepperLogic.format(targetWeight)) pounds by \(targetReps)")
+        } else if let targetReps {
+            parts.append("target \(targetReps) reps")
+        } else if let targetWeight {
+            parts.append("target \(StepperLogic.format(targetWeight)) pounds")
+        }
+        return parts.isEmpty ? "no history" : parts.joined(separator: ", ")
     }
 
     @ViewBuilder

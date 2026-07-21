@@ -101,7 +101,7 @@ struct ThisWeekCard: View {
             .init(letter: "W", trained: .legs, isToday: true),
             .init(letter: "T", trained: nil, isToday: false),
             .init(letter: "F", trained: .arms, isToday: false),
-            .init(letter: "S", trained: .fullBody, isToday: false),
+            .init(letter: "S", trained: .arms, isToday: false),
             .init(letter: "S", trained: nil, isToday: false),
         ]
     )

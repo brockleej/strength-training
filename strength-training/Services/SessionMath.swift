@@ -95,4 +95,88 @@ enum SessionMath {
         }
         return count
     }
+
+    // MARK: - vs previous session
+
+    /// Snapshot used on Workout Summary / Session Detail for “vs last time”.
+    struct SessionComparison: Equatable {
+        /// Prior completed session of the same day type (prefer same A/B track).
+        let previous: WorkoutSession
+        let volume: Double
+        let setCount: Int
+        let volumeDelta: Double
+        let setDelta: Int
+        /// True when previous matched rotation track (A/B), not just day type.
+        let matchedRotation: Bool
+        let prNames: [String]
+
+        var volumeDeltaPercent: Double? {
+            guard previousVolume > 0 else { return nil }
+            return (volumeDelta / previousVolume) * 100
+        }
+
+        private var previousVolume: Double { volume - volumeDelta }
+    }
+
+    /// Most recent completed session before `session` on the same day type.
+    /// Prefers same rotation track (A/B); falls back to any prior of that day.
+    static func previousComparableSession(
+        to session: WorkoutSession,
+        among completed: [WorkoutSession]
+    ) -> (session: WorkoutSession, matchedRotation: Bool)? {
+        let sameDay = completed.filter {
+            $0.id != session.id
+                && $0.isCompleted
+                && $0.dayType == session.dayType
+                && $0.date < session.date
+        }
+        .sorted { $0.date > $1.date }
+
+        guard !sameDay.isEmpty else { return nil }
+
+        let track = session.track
+        if track == .a || track == .b,
+           let sameTrack = sameDay.first(where: { $0.track == track }) {
+            return (sameTrack, true)
+        }
+        if let any = sameDay.first {
+            return (any, false)
+        }
+        return nil
+    }
+
+    static func comparison(
+        for session: WorkoutSession,
+        among completed: [WorkoutSession]
+    ) -> SessionComparison? {
+        guard let prior = previousComparableSession(to: session, among: completed) else {
+            return nil
+        }
+        let vol = volume(of: session)
+        let sets = setCount(of: session)
+        let prevVol = volume(of: prior.session)
+        let prevSets = setCount(of: prior.session)
+        return SessionComparison(
+            previous: prior.session,
+            volume: vol,
+            setCount: sets,
+            volumeDelta: vol - prevVol,
+            setDelta: sets - prevSets,
+            matchedRotation: prior.matchedRotation,
+            prNames: e1RMPRExerciseNames(for: session, allSessions: completed)
+        )
+    }
+
+    static func formatSignedVolume(_ delta: Double) -> String {
+        let absText = TodayStats.formatVolume(abs(delta))
+        if delta > 0 { return "+\(absText)" }
+        if delta < 0 { return "−\(absText)" }
+        return absText
+    }
+
+    static func formatSignedCount(_ delta: Int) -> String {
+        if delta > 0 { return "+\(delta)" }
+        if delta < 0 { return "−\(abs(delta))" }
+        return "0"
+    }
 }

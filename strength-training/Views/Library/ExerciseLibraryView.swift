@@ -11,13 +11,36 @@ struct ExerciseLibraryView: View {
     @Query(sort: \Exercise.sortOrder) private var allExercises: [Exercise]
     @State private var showAddSheet = false
     @State private var searchText = ""
+    @State private var dayCatalog = DayTypeRegistry.shared
+    @State private var editingExercise: Exercise?
+    @State private var editFocusDay: DayType?
+
+    private func matchesSearch(_ exercise: Exercise) -> Bool {
+        searchText.isEmpty
+            || exercise.name.localizedCaseInsensitiveContains(searchText)
+            || exercise.muscleGroup.localizedCaseInsensitiveContains(searchText)
+    }
 
     private func exercises(for dayType: DayType) -> [Exercise] {
         allExercises.filter { exercise in
-            exercise.dayType == dayType
-                && (searchText.isEmpty
-                    || exercise.name.localizedCaseInsensitiveContains(searchText))
+            exercise.belongs(to: dayType) && matchesSearch(exercise)
         }
+    }
+
+    private var unassignedExercises: [Exercise] {
+        allExercises
+            .filter { $0.isUnassigned && matchesSearch($0) }
+            .sorted {
+                $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+            }
+    }
+
+    private var sectionDays: [DayType] {
+        var days = dayCatalog.exerciseHomeDays
+        let known = Set(days.map(\.rawValue))
+        let orphanNames = Set(allExercises.flatMap(\.dayTypeNames)).subtracting(known)
+        days.append(contentsOf: orphanNames.sorted().map { DayType(rawValue: $0) })
+        return days
     }
 
     var body: some View {
@@ -28,51 +51,27 @@ struct ExerciseLibraryView: View {
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets(top: 4, leading: 20, bottom: 4, trailing: 20))
 
-                ForEach(DayType.allCases.filter { $0 != .fullBody }) { dayType in
+                Text("Tap to edit. Lifts with no day live under Unassigned. Swipe to remove from a day or delete.")
+                    .font(.uplift.text(12, weight: .medium))
+                    .foregroundStyle(Color.uplift.fgDim)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 8, trailing: 20))
+
+                ForEach(sectionDays) { dayType in
                     let matching = exercises(for: dayType)
                     if !matching.isEmpty {
-                        Section {
-                            ForEach(matching) { exercise in
-                                LibraryRow(exercise: exercise)
-                                    .listRowBackground(
-                                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                            .fill(Color.uplift.surface1)
-                                            .padding(.vertical, 2)
-                                            .padding(.horizontal, 20)
-                                    )
-                                    .listRowSeparator(.hidden)
-                                    .listRowInsets(EdgeInsets(top: 12, leading: 34, bottom: 12, trailing: 34))
-                            }
-                            .onDelete { indexSet in
-                                for index in indexSet {
-                                    let exercise = matching[index]
-                                    if exercise.isCustom {
-                                        modelContext.delete(exercise)
-                                    }
-                                }
-                                try? modelContext.save()
-                            }
-                        } header: {
-                            HStack(spacing: 8) {
-                                Circle()
-                                    .fill(dayType.upliftInk)
-                                    .frame(width: 8, height: 8)
-                                Text(dayType.rawValue)
-                                    .textCase(.uppercase)
-                                    .font(.uplift.text(11, weight: .bold))
-                                    .tracking(0.6)
-                                    .foregroundStyle(Color.uplift.fg)
-                                Spacer()
-                                Text("\(matching.count)")
-                                    .font(.uplift.mono(12, weight: .semibold))
-                                    .foregroundStyle(Color.uplift.fgDim)
-                            }
-                        }
+                        librarySection(dayType: dayType, matching: matching)
                     }
                 }
 
+                if !unassignedExercises.isEmpty {
+                    librarySection(dayType: .unassigned, matching: unassignedExercises, isUnassigned: true)
+                }
+
                 if !searchText.isEmpty,
-                   DayType.allCases.filter({ $0 != .fullBody }).allSatisfy({ exercises(for: $0).isEmpty }) {
+                   sectionDays.allSatisfy({ exercises(for: $0).isEmpty }),
+                   unassignedExercises.isEmpty {
                     Text("No matches")
                         .font(.uplift.text(13, weight: .medium))
                         .foregroundStyle(Color.uplift.fgDim)
@@ -100,40 +99,159 @@ struct ExerciseLibraryView: View {
             .sheet(isPresented: $showAddSheet) {
                 AddExerciseView()
             }
+            .sheet(item: $editingExercise, onDismiss: { editFocusDay = nil }) { exercise in
+                EditExerciseView(exercise: exercise, focusDay: editFocusDay)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func librarySection(
+        dayType: DayType,
+        matching: [Exercise],
+        isUnassigned: Bool = false
+    ) -> some View {
+        Section {
+            ForEach(matching) { exercise in
+                Button {
+                    editFocusDay = isUnassigned ? nil : dayType
+                    editingExercise = exercise
+                } label: {
+                    LibraryRow(exercise: exercise, sectionDay: isUnassigned ? nil : dayType)
+                }
+                .buttonStyle(.plain)
+                .listRowBackground(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(Color.uplift.surface1)
+                        .padding(.vertical, 2)
+                        .padding(.horizontal, 20)
+                )
+                .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets(top: 12, leading: 34, bottom: 12, trailing: 34))
+                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                    if !isUnassigned {
+                        Button("Remove day") {
+                            exercise.removeDayType(dayType)
+                            try? modelContext.save()
+                        }
+                        .tint(Color.uplift.customBadge)
+                    }
+                    Button("Delete", role: .destructive) {
+                        modelContext.delete(exercise)
+                        try? modelContext.save()
+                    }
+                }
+                .contextMenu {
+                    Button {
+                        editFocusDay = isUnassigned ? nil : dayType
+                        editingExercise = exercise
+                    } label: {
+                        Label("Edit", systemImage: "pencil")
+                    }
+                    if !isUnassigned {
+                        Button {
+                            exercise.removeDayType(dayType)
+                            try? modelContext.save()
+                        } label: {
+                            Label("Remove from \(dayType.rawValue)", systemImage: "minus.circle")
+                        }
+                    }
+                    Button(role: .destructive) {
+                        modelContext.delete(exercise)
+                        try? modelContext.save()
+                    } label: {
+                        Label("Delete from library", systemImage: "trash")
+                    }
+                }
+            }
+        } header: {
+            HStack(spacing: 8) {
+                Circle()
+                    .fill(dayType.upliftInk)
+                    .frame(width: 8, height: 8)
+                Text(dayType.rawValue)
+                    .textCase(.uppercase)
+                    .font(.uplift.text(11, weight: .bold))
+                    .tracking(0.6)
+                    .foregroundStyle(Color.uplift.fg)
+                Spacer()
+                Text("\(matching.count)")
+                    .font(.uplift.mono(12, weight: .semibold))
+                    .foregroundStyle(Color.uplift.fgDim)
+            }
         }
     }
 }
 
 private struct LibraryRow: View {
     let exercise: Exercise
+    var sectionDay: DayType? = nil
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            HStack(spacing: 8) {
-                Text(exercise.name)
-                    .font(.uplift.text(15, weight: .semibold))
-                    .kerning(-0.2)
-                    .foregroundStyle(Color.uplift.fg)
-                if exercise.isCustom {
-                    Text("Custom")
-                        .textCase(.uppercase)
-                        .font(.uplift.text(9, weight: .bold))
-                        .tracking(0.4)
-                        .foregroundStyle(Color.uplift.customBadge)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(Capsule().fill(Color.uplift.customBadge.opacity(0.16)))
+        HStack(spacing: 10) {
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 8) {
+                    Text(exercise.name)
+                        .font(.uplift.text(15, weight: .semibold))
+                        .kerning(-0.2)
+                        .foregroundStyle(Color.uplift.fg)
+                    if let badge = exercise.track.badge {
+                        Text(badge)
+                            .font(.uplift.text(9, weight: .bold))
+                            .foregroundStyle(Color.uplift.accent)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1)
+                            .background(Capsule().fill(Color.uplift.accent.opacity(0.16)))
+                    }
+                    if exercise.isCustom {
+                        Text("Custom")
+                            .textCase(.uppercase)
+                            .font(.uplift.text(9, weight: .bold))
+                            .tracking(0.4)
+                            .foregroundStyle(Color.uplift.customBadge)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Capsule().fill(Color.uplift.customBadge.opacity(0.16)))
+                    }
+                }
+                HStack(spacing: 6) {
+                    if !exercise.muscleGroup.isEmpty {
+                        Text(exercise.muscleGroup)
+                            .font(.uplift.text(12, weight: .medium))
+                            .foregroundStyle(Color.uplift.fgMuted)
+                    }
+                    if exercise.isUnassigned {
+                        Text("Unassigned")
+                            .font(.uplift.text(11, weight: .medium))
+                            .foregroundStyle(Color.uplift.fgDim)
+                    } else if exercise.dayTypeNames.count > 1 {
+                        Text(exercise.dayTypeNames.joined(separator: " · "))
+                            .font(.uplift.text(11, weight: .medium))
+                            .foregroundStyle(Color.uplift.fgDim)
+                            .lineLimit(1)
+                    }
                 }
             }
-            if !exercise.muscleGroup.isEmpty {
-                Text(exercise.muscleGroup)
-                    .font(.uplift.text(12, weight: .medium))
-                    .foregroundStyle(Color.uplift.fgMuted)
-            }
+            Spacer(minLength: 0)
+            Image(systemName: "chevron.right")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(Color.uplift.fgDim)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .deleteDisabled(!exercise.isCustom)
+        .contentShape(Rectangle())
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(exercise.name)\(exercise.isCustom ? ", custom" : "")\(exercise.muscleGroup.isEmpty ? "" : ", \(exercise.muscleGroup)")")
+        .accessibilityLabel(accessibilityLabel)
+        .accessibilityAddTraits(.isButton)
+    }
+
+    private var accessibilityLabel: String {
+        var parts = [exercise.name]
+        if let badge = exercise.track.badge { parts.append("week \(badge)") }
+        if !exercise.muscleGroup.isEmpty { parts.append(exercise.muscleGroup) }
+        if exercise.dayTypeNames.count > 1 {
+            parts.append("days \(exercise.dayTypeNames.joined(separator: ", "))")
+        }
+        parts.append("edit")
+        return parts.joined(separator: ", ")
     }
 }

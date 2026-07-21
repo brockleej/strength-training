@@ -32,11 +32,13 @@ struct BackupService {
             ExerciseBackup(
                 id: e.id,
                 name: e.name,
-                dayType: e.dayType.rawValue,
+                dayType: e.dayType,
                 muscleGroup: e.muscleGroup,
                 sortOrder: e.sortOrder,
                 isCustom: e.isCustom,
-                notes: e.notes
+                notes: e.notes,
+                rotationTrack: e.rotationTrack,
+                extraDayTypes: e.extraDayTypes
             )
         }
 
@@ -44,7 +46,7 @@ struct BackupService {
             WorkoutSessionBackup(
                 id: s.id,
                 date: s.date,
-                dayType: s.dayType.rawValue,
+                dayType: s.dayType,
                 notes: s.notes,
                 isCompleted: s.isCompleted,
                 exerciseRecords: s.exerciseRecordsArray
@@ -70,7 +72,8 @@ struct BackupService {
                                     )
                                 }
                         )
-                    }
+                    },
+                rotationTrack: s.rotationTrack
             )
         }
 
@@ -113,25 +116,34 @@ struct BackupService {
 
         // Re-insert exercises, building an ID → Exercise map for linking records
         var exerciseMap: [UUID: Exercise] = [:]
+        var dayTypeNames = Set<String>()
         for eb in backup.exercises {
-            guard let dayType = DayType(rawValue: eb.dayType) else { continue }
+            let dayType = DayType(rawValue: eb.dayType)
+            dayTypeNames.insert(eb.dayType)
             let exercise = Exercise(
                 name: eb.name,
                 dayType: dayType,
                 muscleGroup: eb.muscleGroup,
                 sortOrder: eb.sortOrder,
-                isCustom: eb.isCustom
+                isCustom: eb.isCustom,
+                rotationTrack: RotationTrack(storage: eb.rotationTrack)
             )
             exercise.id = eb.id
             exercise.notes = eb.notes
+            exercise.extraDayTypes = eb.extraDayTypes ?? ""
             context.insert(exercise)
             exerciseMap[eb.id] = exercise
         }
 
         // Re-insert sessions → exercise records → sets
         for sb in backup.sessions {
-            guard let dayType = DayType(rawValue: sb.dayType) else { continue }
-            let session = WorkoutSession(dayType: dayType, date: sb.date)
+            dayTypeNames.insert(sb.dayType)
+            let dayType = DayType(rawValue: sb.dayType)
+            let session = WorkoutSession(
+                dayType: dayType,
+                date: sb.date,
+                rotationTrack: RotationTrack(storage: sb.rotationTrack ?? RotationTrack.a.rawValue)
+            )
             session.id = sb.id
             session.notes = sb.notes
             session.isCompleted = sb.isCompleted
@@ -173,5 +185,13 @@ struct BackupService {
         // Old backups may still contain pre-rename exercise names —
         // re-apply the idempotent migration so restored data is corrected immediately.
         SeedData.migrateExerciseNames(context: context)
+
+        // Keep the user's split (or seed bro-split), and ensure any historical
+        // day-type names from the backup still resolve for chips / filters.
+        SeedData.seedSplitDaysIfNeeded(context: context)
+        Task { @MainActor in
+            DayTypeRegistry.shared.ensureDaysExist(names: dayTypeNames, context: context)
+            DayTypeRegistry.shared.reload(context: context)
+        }
     }
 }

@@ -370,8 +370,8 @@ final class ProgressDashboardViewModel {
 
     func exercisesGroupedByDayType() -> [(DayType, [Exercise])] {
         let all = allExercises()
-        return [DayType.arms, DayType.legs].compactMap { dayType in
-            let exercises = all.filter { $0.dayType == dayType }
+        return DayTypeRegistry.shared.exerciseHomeDays.compactMap { dayType in
+            let exercises = all.filter { $0.belongs(to: dayType) }
             return exercises.isEmpty ? nil : (dayType, exercises)
         }
     }

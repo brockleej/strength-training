@@ -13,11 +13,21 @@ struct DayPickerCard: View {
     let lastDuration: String?      // "52 min" — appended as "· 52 min last time"
     let isSelected: Bool
     let inProgressCount: Int?      // non-nil → suspended-session badge
+    /// 1-based position in the user's weekly day order (Settings → Training Split).
+    var weekPosition: Int? = nil
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
             HStack(spacing: 14) {
+                if let weekPosition {
+                    Text("\(weekPosition)")
+                        .font(.uplift.mono(14, weight: .bold))
+                        .foregroundStyle(Color.uplift.fgDim)
+                        .frame(width: 18, alignment: .center)
+                        .accessibilityHidden(true)
+                }
+
                 DayChip(dayType: dayType, size: .md)
 
                 VStack(alignment: .leading, spacing: 2) {
@@ -92,7 +102,10 @@ struct DayPickerCard: View {
     }
 
     private var accessibilityText: String {
-        var parts = [dayType.rawValue, dayType.subtitle]
+        var parts: [String] = []
+        if let weekPosition { parts.append("day \(weekPosition) of week") }
+        parts.append(dayType.rawValue)
+        parts.append(dayType.subtitle)
         if let lastDuration { parts.append("\(lastDuration) last time") }
         if let inProgressCount {
             let plural = inProgressCount == 1 ? "" : "s"

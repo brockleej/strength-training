@@ -39,6 +39,7 @@ struct HistoryListView: View {
 private struct HistoryContent: View {
     @Bindable var viewModel: HistoryViewModel
     let sessions: [WorkoutSession]
+    @State private var dayCatalog = DayTypeRegistry.shared
 
     var body: some View {
         let grouped = viewModel.groupedSessions(from: sessions)
@@ -132,7 +133,7 @@ private struct HistoryContent: View {
                 FilterChip(label: "All", isSelected: viewModel.filterDayType == nil) {
                     viewModel.filterDayType = nil
                 }
-                ForEach(DayType.allCases) { dayType in
+                ForEach(dayCatalog.activeDays) { dayType in
                     FilterChip(label: dayType.rawValue, isSelected: viewModel.filterDayType == dayType) {
                         viewModel.filterDayType = dayType
                     }
@@ -148,11 +149,11 @@ private struct HistorySessionRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            DayChip(dayType: session.dayType, size: .sm)
+            DayChip(dayType: session.day, size: .sm)
 
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 8) {
-                    Text(session.dayType.rawValue)
+                    Text(session.day.rawValue)
                         .font(.uplift.text(15, weight: .semibold))
                         .kerning(-0.2)
                         .foregroundStyle(Color.uplift.fg)
@@ -186,7 +187,7 @@ private struct HistorySessionRow: View {
     }
 
     private var rowAccessibilityLabel: String {
-        var label = "\(session.dayType.rawValue), \(session.date.formatted(.dateTime.weekday(.wide).month(.wide).day()))"
+        var label = "\(session.day.rawValue), \(session.date.formatted(.dateTime.weekday(.wide).month(.wide).day()))"
         label += ", \(TodayStats.formatVolume(SessionMath.volume(of: session))) pounds, \(SessionMath.setCount(of: session)) sets"
         if prCount > 0 {
             label += ", \(prCount) personal record\(prCount == 1 ? "" : "s")"

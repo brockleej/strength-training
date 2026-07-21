@@ -155,8 +155,8 @@ private struct ProgressDashboardContent: View {
 
     private var liftProgressionSection: some View {
         let rows = viewModel.liftProgression()
-        let grouped = [DayType.arms, DayType.legs].compactMap { dayType -> (DayType, [ProgressDashboardViewModel.LiftProgress])? in
-            let matching = rows.filter { $0.exercise.dayType == dayType }
+        let grouped = DayTypeRegistry.shared.exerciseHomeDays.compactMap { dayType -> (DayType, [ProgressDashboardViewModel.LiftProgress])? in
+            let matching = rows.filter { $0.exercise.belongs(to: dayType) }
             return matching.isEmpty ? nil : (dayType, matching)
         }
         return VStack(alignment: .leading, spacing: 8) {

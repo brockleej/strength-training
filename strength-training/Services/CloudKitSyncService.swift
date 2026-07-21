@@ -9,6 +9,15 @@ import CoreData
 
 @Observable
 final class CloudKitSyncService {
+    /// When false (local Personal Team / no iCloud entitlement), never call
+    /// CloudKit APIs — `CKContainer.default().accountStatus()` can hang forever
+    /// without a configured iCloud container.
+    static var isEnabled: Bool {
+        // Mirror strength_trainingApp ModelConfiguration(cloudKitDatabase:).
+        // Flip both when re-enabling iCloud after a paid Developer Program enrollment.
+        false
+    }
+
     private(set) var accountStatus: CKAccountStatus = .couldNotDetermine
     private(set) var isSyncing = false
     private(set) var lastSyncDate: Date?
@@ -18,6 +27,12 @@ final class CloudKitSyncService {
 
     init() {
         lastSyncDate = UserDefaults.standard.object(forKey: "lastCloudKitSyncDate") as? Date
+        guard Self.isEnabled else {
+            // Distinct from "still checking" so Settings can show local-only copy.
+            accountStatus = .couldNotDetermine
+            syncError = nil
+            return
+        }
         setupObservers()
         Task { await checkAccountStatus() }
     }
@@ -29,6 +44,10 @@ final class CloudKitSyncService {
     // MARK: - Account Status
 
     func checkAccountStatus() async {
+        guard Self.isEnabled else {
+            await MainActor.run { self.accountStatus = .couldNotDetermine }
+            return
+        }
         do {
             let status = try await CKContainer.default().accountStatus()
             await MainActor.run { self.accountStatus = status }

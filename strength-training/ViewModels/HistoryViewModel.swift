@@ -21,7 +21,7 @@ final class HistoryViewModel {
     func groupedSessions(from sessions: [WorkoutSession]) -> [(String, [WorkoutSession])] {
         let filtered: [WorkoutSession]
         if let filter = filterDayType {
-            filtered = sessions.filter { $0.dayType == filter }
+            filtered = sessions.filter { $0.day == filter }
         } else {
             filtered = sessions
         }

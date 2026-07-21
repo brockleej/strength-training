@@ -47,7 +47,7 @@ extension Color {
         static let weightTint = Color(hex: 0x5AB8F5)   // = accent ice
         static let repsTint = Color(hex: 0xFFFFFF)     // = fg
 
-        // Day types (vivid)
+        // Day types (vivid defaults — live day colors come from DayType.upliftInk)
         static let armsInk = Color(hex: 0xFF4D88)
         static let armsWash = Color(hex: 0xFF4D88, opacity: 0.14)
         static let legsInk = Color(hex: 0x3F9CFF)
@@ -72,25 +72,5 @@ extension Color {
 
         // Misc
         static let customBadge = Color(hex: 0xFF9F0A)   // library CUSTOM tag
-    }
-}
-
-extension DayType {
-    /// Vivid identity color for this day type.
-    var upliftInk: Color {
-        switch self {
-        case .arms: .uplift.armsInk
-        case .legs: .uplift.legsInk
-        case .fullBody: .uplift.fullInk
-        }
-    }
-
-    /// 14%-opacity wash used behind chips and tags.
-    var upliftWash: Color {
-        switch self {
-        case .arms: .uplift.armsWash
-        case .legs: .uplift.legsWash
-        case .fullBody: .uplift.fullWash
-        }
     }
 }
