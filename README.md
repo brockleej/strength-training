@@ -13,7 +13,19 @@
 ---
 
 > [!NOTE]
-> **IronLog** is a personal strength-training app for logging lifts, tracking progressive overload, and watching body-composition trends over time. Data lives on-device by default (SwiftData). Export a JSON backup anytime. Fork it, use it, or contribute if it’s useful to you.
+> **IronLog** is a **hobby project** I ([Lee Brock](https://github.com/brockleej)) build for my own workout tracking and metrics. The product shape—freeform splits, assisted lifts, rest timer habits, body measurements / FFMI, gym pass, and the dark “refined native” UI—reflects **how I actually train**, not a generic fitness checklist. Data lives on-device by default (SwiftData). Export a JSON backup anytime. If you find it useful, feel free to use it, fork it, or contribute.
+
+## Acknowledgments & authors
+
+This project stands on a strong foundation. **Significant gratitude** goes to **[Daniel Kuhlwein](https://github.com/danielkuhlwein)** for the **initial app**: the overall organization, MVVM + SwiftData architecture, progression engine, design-system direction, HealthKit/CloudKit wiring, and the framework that made IronLog possible to extend. Much of the structure you see in this repo still traces back to that work.
+
+### Authors
+
+| Author | Role |
+| --- | --- |
+| **[Daniel Kuhlwein](https://github.com/danielkuhlwein)** | Original app, organization, and framework |
+| **[Lee Brock](https://github.com/brockleej)** | Maintainer; IronLog branding, training-style features, body metrics, and ongoing product direction |
+| **[Grok](https://x.ai)** (xAI) | Co-author / pair-programming collaborator on features, refactors, docs, and day-to-day development |
 
 ## Screenshots
 
@@ -175,6 +187,10 @@ Contributions welcome:
 - MVVM + `@Observable` — see [CLAUDE.md](CLAUDE.md) for architecture notes
 - Direct pushes to `main` ship to TestFlight automatically — prefer a PR when you want review first
 
+Please keep the tone of the project in mind: this is a personal training log first. Features that match real gym workflows are preferred over generic “fitness app” checklists.
+
 ## License
 
 MIT — do whatever you want with it.
+
+Upstream roots and inspiration live in the original strength-training work by Daniel Kuhlwein; this fork continues that lineage as **IronLog**.
