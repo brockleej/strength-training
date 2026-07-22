@@ -2,7 +2,7 @@
 //  Tokens.swift
 //  strength-training
 //
-//  UpLift v2 "Refined Native" color palette.
+//  IronLog "Refined Native" color palette (design tokens still use Color.uplift.*).
 //  Source of truth: uplift-redesign/project/v2/tokens2.jsx
 //
 

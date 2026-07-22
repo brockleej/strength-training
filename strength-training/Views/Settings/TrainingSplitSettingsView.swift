@@ -4,6 +4,7 @@
 //
 //  Configure the user's training split: presets (bro, PPL, …) plus
 //  add / rename / reorder / delete custom day types.
+//  Reorder uses the global long-press-drag pattern (no Edit mode).
 //
 
 import SwiftUI
@@ -18,80 +19,45 @@ struct TrainingSplitSettingsView: View {
     @State private var editingDay: SplitDay?
     @State private var pendingPreset: SplitPreset?
     @State private var showPresetConfirm = false
-    @State private var editMode: EditMode = .inactive
+    @State private var dayPendingDelete: SplitDay?
+    @State private var orderedIDs: [UUID] = []
+    @State private var draggingID: UUID?
+    @AppStorage(SplitSchedulePreferences.modeKey)
+    private var scheduleModeRaw: String = SplitScheduleMode.rolling.rawValue
+
+    private var displayedDays: [SplitDay] {
+        let byID = Dictionary(uniqueKeysWithValues: splitDays.map { ($0.id, $0) })
+        var seen = Set<UUID>()
+        var result: [SplitDay] = []
+        for id in orderedIDs {
+            if let day = byID[id], seen.insert(id).inserted {
+                result.append(day)
+            }
+        }
+        for day in splitDays where seen.insert(day.id).inserted {
+            result.append(day)
+        }
+        return result
+    }
 
     var body: some View {
-        List {
-            Section {
-                ForEach(SplitPreset.allCases) { preset in
-                    Button {
-                        pendingPreset = preset
-                        showPresetConfirm = true
-                    } label: {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(preset.rawValue)
-                                .font(.uplift.text(15, weight: .semibold))
-                                .foregroundStyle(Color.uplift.fg)
-                            Text(preset.detail)
-                                .font(.uplift.text(12, weight: .medium))
-                                .foregroundStyle(Color.uplift.fgMuted)
-                        }
-                    }
-                }
-            } header: {
-                sectionHeader("Presets")
-            } footer: {
-                sectionFooter("Applying a preset replaces your day list. Exercises keep their current day tags — reassign them in the library if needed.")
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                scheduleModeSection
+                presetsSection
+                daysSection
             }
-            .listRowBackground(Color.uplift.surface1)
-
-            Section {
-                ForEach(Array(splitDays.enumerated()), id: \.element.id) { index, day in
-                    dayRow(day, weekPosition: index + 1)
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            // Don't open editor while reordering.
-                            guard editMode == .inactive else { return }
-                            editingDay = day
-                        }
-                }
-                .onDelete(perform: delete)
-                .onMove(perform: move)
-
-                if editMode == .inactive {
-                    Button {
-                        showAddSheet = true
-                    } label: {
-                        Label("Add day", systemImage: "plus")
-                            .foregroundStyle(Color.uplift.accent)
-                    }
-                }
-            } header: {
-                sectionHeader("Your days · weekly order")
-            } footer: {
-                sectionFooter(
-                    editMode.isEditing
-                        ? "Drag the handles on the right to match the order you train (e.g. Push → Pull → Legs → Posterior Chain)."
-                        : "This order is how days appear on Today. Tap Edit, then drag to reorder — e.g. easier days first, harder days later in the week."
-                )
-            }
-            .listRowBackground(Color.uplift.surface1)
+            .padding(.horizontal, 20)
+            .padding(.top, 12)
+            .padding(.bottom, 28)
         }
-        .scrollContentBackground(.hidden)
         .background(Color.uplift.bgElev)
         .navigationTitle("Training Split")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button(editMode.isEditing ? "Done" : "Edit") {
-                    withAnimation {
-                        editMode = editMode.isEditing ? .inactive : .active
-                    }
-                }
-                .fontWeight(.semibold)
-            }
+        .onAppear { syncOrderedIDs() }
+        .onChange(of: splitDays.map(\.id)) { _, _ in
+            if draggingID == nil { syncOrderedIDs() }
         }
-        .environment(\.editMode, $editMode)
         .sheet(isPresented: $showAddSheet) {
             SplitDayEditorSheet(existing: nil) { name, image, subtitle, hex, all in
                 DayTypeRegistry.shared.upsert(
@@ -103,6 +69,7 @@ struct TrainingSplitSettingsView: View {
                     includesAllExercises: all,
                     context: modelContext
                 )
+                syncOrderedIDs()
             }
         }
         .sheet(item: $editingDay) { day in
@@ -116,6 +83,7 @@ struct TrainingSplitSettingsView: View {
                     includesAllExercises: all,
                     context: modelContext
                 )
+                syncOrderedIDs()
             }
         }
         .confirmationDialog(
@@ -127,6 +95,7 @@ struct TrainingSplitSettingsView: View {
                 Button("Apply \(preset.rawValue)", role: .destructive) {
                     DayTypeRegistry.shared.applyPreset(preset, context: modelContext)
                     pendingPreset = nil
+                    syncOrderedIDs()
                 }
             }
             Button("Cancel", role: .cancel) {
@@ -135,11 +104,121 @@ struct TrainingSplitSettingsView: View {
         } message: {
             Text("Your day list will be replaced. Existing exercises keep their day tags. You can reorder afterward.")
         }
+        .confirmationDialog(
+            "Delete \(dayPendingDelete?.name ?? "day")?",
+            isPresented: Binding(
+                get: { dayPendingDelete != nil },
+                set: { if !$0 { dayPendingDelete = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button(ListMutationCopy.deleteDay, role: .destructive) {
+                if let day = dayPendingDelete {
+                    DayTypeRegistry.shared.delete(id: day.id, context: modelContext)
+                }
+                dayPendingDelete = nil
+                syncOrderedIDs()
+            }
+            Button("Cancel", role: .cancel) {
+                dayPendingDelete = nil
+            }
+        } message: {
+            Text("Removes this day from your split. Exercises keep their tags and can be reassigned in the library.")
+        }
+    }
+
+    // MARK: - Sections
+
+    private var scheduleModeSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            sectionHeader("Split schedule")
+            UpliftSegmentedControl(
+                segments: SplitScheduleMode.allCases.map {
+                    UpliftSegment(id: $0.rawValue, label: $0.shortTitle)
+                },
+                selection: $scheduleModeRaw
+            )
+            sectionFooter(
+                (SplitScheduleMode(rawValue: scheduleModeRaw) ?? .rolling).detail
+                + " Same control lives under Settings → Training."
+            )
+        }
+    }
+
+    private var presetsSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            sectionHeader("Presets")
+            VStack(spacing: 8) {
+                ForEach(SplitPreset.allCases) { preset in
+                    Button {
+                        pendingPreset = preset
+                        showPresetConfirm = true
+                    } label: {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(preset.rawValue)
+                                .font(.uplift.text(15, weight: .semibold))
+                                .foregroundStyle(Color.uplift.fg)
+                            Text(preset.detail)
+                                .font(.uplift.text(12, weight: .medium))
+                                .foregroundStyle(Color.uplift.fgMuted)
+                                .multilineTextAlignment(.leading)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(14)
+                        .background {
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .fill(Color.uplift.surface1)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            sectionFooter("Applying a preset replaces your day list. Exercises keep their current day tags — reassign them in the library if needed.")
+        }
+    }
+
+    private var daysSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            sectionHeader("Your days · weekly order")
+            Text(ListMutationCopy.reorderAndRemove + " Tap to edit.")
+                .font(.uplift.text(13, weight: .medium))
+                .foregroundStyle(Color.uplift.fgMuted)
+
+            if displayedDays.isEmpty {
+                EmptyListState(
+                    title: "No days yet",
+                    systemImage: "calendar",
+                    description: "Add a day or apply a preset above.",
+                    actionTitle: ListMutationCopy.addDay,
+                    action: { showAddSheet = true }
+                )
+            } else {
+                VStack(spacing: 8) {
+                    ForEach(Array(displayedDays.enumerated()), id: \.element.id) { index, day in
+                        dayRow(day, weekPosition: index + 1)
+                            .reorderDropTarget(
+                                id: day.id,
+                                orderedIDs: $orderedIDs,
+                                draggingID: $draggingID,
+                                onReorder: persistOrder
+                            )
+                    }
+                }
+            }
+
+            if !displayedDays.isEmpty {
+                AddItemRow(title: ListMutationCopy.addDay) {
+                    showAddSheet = true
+                }
+                .padding(.top, 4)
+            }
+
+            sectionFooter("This order is how days appear on Today — e.g. easier days first, harder days later in the week.")
+        }
     }
 
     private func dayRow(_ day: SplitDay, weekPosition: Int) -> some View {
         HStack(spacing: 12) {
-            // Week position — makes "order I train" obvious
             Text("\(weekPosition)")
                 .font(.uplift.mono(13, weight: .bold))
                 .foregroundStyle(Color.uplift.fgDim)
@@ -165,25 +244,35 @@ struct TrainingSplitSettingsView: View {
 
             Spacer(minLength: 8)
 
-            if editMode == .inactive {
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(Color.uplift.fgDim)
-            }
+            Image(systemName: "chevron.right")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(Color.uplift.fgDim)
         }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(draggingID == day.id ? Color.uplift.surface2 : Color.uplift.surface1)
+        }
+        .reorderDragSource(id: day.id, displayName: day.name, draggingID: $draggingID)
+        .swipeToDelete(fullSwipeDeletes: false, onDelete: {
+            // Soft reveal only; hard delete requires confirm (T2/T3).
+            dayPendingDelete = day
+        }, onTap: {
+            editingDay = day
+        })
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(weekPosition). \(day.name)")
-        .accessibilityHint(editMode.isEditing ? "Drag to reorder" : "Double tap to edit")
+        .accessibilityHint("Long press and drag to reorder, swipe left to delete, double tap to edit")
     }
 
-    private func delete(_ offsets: IndexSet) {
-        for index in offsets {
-            DayTypeRegistry.shared.delete(id: splitDays[index].id, context: modelContext)
-        }
+    private func syncOrderedIDs() {
+        orderedIDs = splitDays.map(\.id)
     }
 
-    private func move(_ source: IndexSet, to destination: Int) {
-        DayTypeRegistry.shared.move(from: source, to: destination, context: modelContext)
+    private func persistOrder() {
+        DayTypeRegistry.shared.applyOrder(ids: orderedIDs, context: modelContext)
     }
 
     private func sectionHeader(_ text: String) -> some View {
@@ -313,7 +402,6 @@ private struct SplitDayEditorSheet: View {
                 } else {
                     let index = DayTypeRegistry.shared.activeDays.count
                     colorHex = DayTypePalette.ink(at: index)
-                    // Sensible default icon for a new custom day
                     systemImage = DayTypePalette.iconChoices[index % DayTypePalette.iconChoices.count].symbol
                 }
             }

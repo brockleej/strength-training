@@ -12,6 +12,10 @@ struct AddExerciseView: View {
     @Query(sort: \Exercise.sortOrder, order: .reverse) private var allExercises: [Exercise]
 
     var preselectedDayType: DayType = .arms
+    /// When embedded in `AddExerciseSheet`, hide sheet chrome and cancel title.
+    var embedded: Bool = false
+    /// Called after the exercise is inserted and saved (before dismiss).
+    var onCreated: ((Exercise) -> Void)? = nil
 
     @State private var name = ""
     @State private var selectedDayNames: Set<String> = []
@@ -28,34 +32,37 @@ struct AddExerciseView: View {
         return homes.isEmpty ? [.arms, .legs] : homes
     }
 
+    private var canAdd: Bool {
+        !trimmedName.isEmpty && !selectedDayNames.isEmpty
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Capsule()
-                .fill(Color.uplift.fgFaint)
-                .frame(width: 36, height: 5)
-                .frame(maxWidth: .infinity)
-                .padding(.top, 8)
-                .padding(.bottom, 14)
+            if !embedded {
+                Capsule()
+                    .fill(Color.uplift.fgFaint)
+                    .frame(width: 36, height: 5)
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 8)
+                    .padding(.bottom, 14)
 
-            HStack {
-                Button("Cancel") { dismiss() }
-                    .font(.uplift.text(16, weight: .medium))
-                    .foregroundStyle(Color.uplift.fgMuted)
-                Spacer()
-                Text("New exercise")
-                    .font(.uplift.text(16, weight: .semibold))
-                    .foregroundStyle(Color.uplift.fg)
-                Spacer()
-                Button("Add") { addExercise() }
-                    .font(.uplift.text(16, weight: .semibold))
-                    .foregroundStyle(
-                        (trimmedName.isEmpty || selectedDayNames.isEmpty)
-                            ? Color.uplift.fgDim : Color.uplift.accent
-                    )
-                    .disabled(trimmedName.isEmpty || selectedDayNames.isEmpty)
+                HStack {
+                    Button("Cancel") { dismiss() }
+                        .font(.uplift.text(16, weight: .medium))
+                        .foregroundStyle(Color.uplift.fgMuted)
+                    Spacer()
+                    Text("New exercise")
+                        .font(.uplift.text(16, weight: .semibold))
+                        .foregroundStyle(Color.uplift.fg)
+                    Spacer()
+                    Button("Add") { addExercise() }
+                        .font(.uplift.text(16, weight: .semibold))
+                        .foregroundStyle(canAdd ? Color.uplift.accent : Color.uplift.fgDim)
+                        .disabled(!canAdd)
+                }
+                .padding(.horizontal, 16)
+                .padding(.bottom, 18)
             }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 18)
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
@@ -121,14 +128,33 @@ struct AddExerciseView: View {
                             .foregroundStyle(Color.uplift.fg)
                             .autocorrectionDisabled()
                     }
+
+                    if embedded {
+                        Button {
+                            addExercise()
+                        } label: {
+                            Text("Create exercise")
+                                .font(.uplift.text(15, weight: .semibold))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 14)
+                                .background(
+                                    canAdd ? Color.uplift.accent : Color.uplift.surface2,
+                                    in: RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                )
+                                .foregroundStyle(canAdd ? Color.uplift.onAccent : Color.uplift.fgDim)
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(!canAdd)
+                        .padding(.top, 4)
+                    }
                 }
                 .padding(.horizontal, 20)
                 .padding(.bottom, 24)
+                .padding(.top, embedded ? 10 : 0)
             }
         }
         .background(Color.uplift.bgElev)
-        .presentationDetents([.medium, .large])
-        .presentationDragIndicator(.hidden)
+        .modifier(AddExerciseStandaloneChrome(enabled: !embedded))
         .onAppear {
             let seed: DayType
             if preselectedDayType.includesAllExercises {
@@ -200,6 +226,22 @@ struct AddExerciseView: View {
         )
         modelContext.insert(exercise)
         try? modelContext.save()
-        dismiss()
+        onCreated?(exercise)
+        if !embedded {
+            dismiss()
+        }
+    }
+}
+
+private struct AddExerciseStandaloneChrome: ViewModifier {
+    let enabled: Bool
+    func body(content: Content) -> some View {
+        if enabled {
+            content
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.hidden)
+        } else {
+            content
+        }
     }
 }

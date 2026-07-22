@@ -4,11 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 > **Note:** This is a Swift/iOS project. Global instructions referencing Angular/TypeScript best practices do **not** apply here.
 
-# UpLift (Strength Training iOS App)
+# IronLog (Strength Training iOS App)
 
 ## Project Overview
 
-UpLift is a native iOS fitness tracking app built with SwiftUI and SwiftData. Users log gym workouts, track sets/reps/weight, and visualize progress over time. Workout data syncs automatically to iCloud via CloudKit, and HealthKit integration allows starting/stopping Apple Fitness workouts directly from within the app.
+IronLog is a native iOS strength-training app built with SwiftUI and SwiftData. Users log gym workouts, track sets/reps/weight, rest timers, assisted lifts, and body metrics (Navy BF% → FFMI). Data is local-first (CloudKit optional when a paid team is available); HealthKit can start/stop Apple Fitness workouts on device.
 
 - **Language:** Swift 6
 - **Platform:** iOS 26.2+ (minimum deployment target)
@@ -63,12 +63,12 @@ xcodebuild test -scheme ProgressionLab -destination 'platform=macOS'
 **MVVM** with SwiftUI's `@Observable` macro.
 
 ```
-Models/        -> SwiftData @Model classes (Exercise, WorkoutSession, ExerciseRecord, SetRecord)
-               -> Enums, ProgressionTypes, BackupModels, SeedData
-ViewModels/    -> @Observable classes managing state per feature
+Models/        -> SwiftData @Model classes (Exercise, WorkoutSession, ExerciseRecord, SetRecord,
+                  SplitDay, BodyMetricEntry) + day/rotation types, SeedData
+ViewModels/    -> @Observable classes managing state per feature (incl. BodyMetricsViewModel)
 Views/         -> SwiftUI views by feature (DesignSystem, Today, Workout, History, Progress, Library, Settings)
-Services/      -> BackupService, CloudKitSyncService, HealthKitWorkoutService, ProgressionService,
-                  HapticService, E1RM, PRDetection, SessionMath, EffortScale
+Services/      -> Backup, progression, E1RM, PRs, rest timer, body composition (Navy/FFMI),
+                  HealthKit, CloudKit status, gym pass, split schedule
 Utilities/     -> PreviewSampleData (preview helpers only)
 ```
 
@@ -77,7 +77,7 @@ Utilities/     -> PreviewSampleData (preview helpers only)
 - **State:** Use `@Observable` for ViewModels. Use `@Query` for reactive SwiftData reads. Use `@Bindable` for mutable ViewModel bindings. Use `@State` for local view state only.
 - **Dependency injection:** Pass `ModelContext` via initializer into ViewModels — never access it directly from views.
 - **SwiftData relationships:** Always define cascade delete rules on parent-side relationships.
-- **CloudKit sync:** SwiftData is configured with CloudKit integration for automatic iCloud backup. The `CloudKitSyncService` manages sync status monitoring.
+- **CloudKit sync:** This build uses a local-only store (`cloudKitDatabase: .none`). `CloudKitSyncService` can monitor sync when CloudKit is re-enabled with a paid team.
 - **HealthKit:** `HealthKitWorkoutService` handles authorization, starting/stopping Apple Fitness workouts, and saving workout metadata. Always check authorization status before performing HealthKit operations.
 - **Adding a new SwiftData `@Model`:** the model must be registered in the `Schema([...])` array in `strength_trainingApp.swift` and also added to `PreviewSampleData`. Forgetting either causes runtime crashes — the schema in the app entry point is the source of truth for what CloudKit syncs.
 
@@ -89,9 +89,23 @@ All screens compose the shared design system in `Views/DesignSystem/` — do not
 
 - **Colors:** `Color.uplift.*` tokens only (surfaces, foregrounds, ice accent, day-type inks/washes, semantic up/down/pr, Apple-Health greens). Never hardcode hex values outside `Tokens.swift`.
 - **Typography:** `Font.uplift.display/text/mono`. Hero/stat numerals use the `Num` component (SF Pro Display + tabular digits); small data numerals and live-ticking values use `Font.uplift.mono`.
-- **Components:** `DayChip`, `UpliftStepper`, `UpliftSegmentedControl`, `GlassHeader`, `PillBottomBar`, `SectionHeader`, `HealthKitCard`, `Stat`/`SummaryStat`/`BigStat`, `FilterChip`, `SearchField`, `CircleButton`.
+- **Components:** `DayChip`, `UpliftStepper`, `UpliftSegmentedControl`, `GlassHeader`, `PillBottomBar`, `SectionHeader`, `HealthKitCard`, `Stat`/`SummaryStat`/`BigStat`, `FilterChip`, `SearchField`, `CircleButton`, `AddItemRow`, `EmptyListState`, `swipeToDelete`, reorder helpers in `ListMutationPatterns.swift`.
 - **Appearance:** the app is locked to dark (`.preferredColorScheme(.dark)` + ice `.tint` in `ContentView`). Cards use continuous-corner rounded rectangles (14–20pt).
 - **Shared math:** the Epley estimate lives in `E1RM.estimate` and per-session aggregates in `SessionMath` — never re-inline the formula.
+
+### List mutation patterns
+
+Keep remove / reorder / add **identical** across ordered lists (day plan, training split days, etc.):
+
+| Action | Pattern |
+|--------|---------|
+| **Remove (soft)** | Verb **Remove** (from day / workout). Swipe reveals trash, then tap — `swipeToDelete(fullSwipeDeletes: false)` or List `allowsFullSwipe: false`. No confirm for soft unassign/session hide. |
+| **Delete (hard)** | Verb **Delete** (library exercise, workout history, day type). Always **confirmation dialog** with a one-line consequence. Never full-swipe-commit hard deletes. |
+| **Reorder** | Long-press + drag whole row (no Edit/Done, no system move handles). Shared `UUIDListDropDelegate` / `reorderDragSource` / `reorderDropTarget`. Hint: `ListMutationCopy.reorderAndRemove`. |
+| **Add to context** | Dashed `AddItemRow` (“Add exercise” / “Add day”). Exercise-in-context uses `AddExerciseSheet` (Library \| New). Library toolbar `+` is create-only. |
+| **Empty lists** | `EmptyListState` with optional primary `AddItemRow`. |
+
+Copy constants live in `ListMutationCopy` — do not invent parallel labels.
 
 ### Previews
 

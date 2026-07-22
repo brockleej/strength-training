@@ -43,6 +43,8 @@ private struct ProgressDashboardContent: View {
                     .padding(.top, 14)
                 strengthScoreCard
                     .padding(.top, 8)
+                BodyMetricsCard()
+                    .padding(.top, 8)
                 PRsThisMonthCard(prs: viewModel.prsThisMonth)
                     .padding(.top, 8)
                 SectionHeader("Muscle group volume")

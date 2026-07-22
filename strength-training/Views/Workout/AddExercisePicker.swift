@@ -16,7 +16,10 @@ struct AddExercisePicker: View {
     let excludedIDs: Set<UUID>
     /// Called with the exercise and whether to also pin it to the current day.
     let onPick: (Exercise, Bool) -> Void
-    let onCreateNew: () -> Void
+    /// When embedded in `AddExerciseSheet`, hide sheet chrome / detents.
+    var embedded: Bool = false
+    /// Day-plan mode: always pin and hide the optional toggle.
+    var forceAssignToDay: Bool = false
 
     @Environment(\.dismiss) private var dismiss
     @State private var searchText = ""
@@ -60,26 +63,32 @@ struct AddExercisePicker: View {
         }
     }
 
+    private var showAssignToggle: Bool {
+        !forceAssignToDay && !currentDayType.includesAllExercises
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Capsule()
-                .fill(Color.uplift.fgFaint)
-                .frame(width: 36, height: 5)
-                .frame(maxWidth: .infinity)
-                .padding(.top, 8)
-                .padding(.bottom, 12)
+            if !embedded {
+                Capsule()
+                    .fill(Color.uplift.fgFaint)
+                    .frame(width: 36, height: 5)
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 8)
+                    .padding(.bottom, 12)
 
-            Text("Add exercise")
-                .font(.uplift.display(20, weight: .bold))
-                .kerning(-0.4)
-                .foregroundStyle(Color.uplift.fg)
-                .padding(.horizontal, 20)
+                Text("Add exercise")
+                    .font(.uplift.display(20, weight: .bold))
+                    .kerning(-0.4)
+                    .foregroundStyle(Color.uplift.fg)
+                    .padding(.horizontal, 20)
+            }
 
             Text("Full library · \(candidates.count) available")
                 .font(.uplift.text(13, weight: .medium))
                 .foregroundStyle(Color.uplift.fgMuted)
                 .padding(.horizontal, 20)
-                .padding(.top, 2)
+                .padding(.top, embedded ? 8 : 2)
 
             // Grouping control
             UpliftSegmentedControl(
@@ -99,7 +108,7 @@ struct AddExercisePicker: View {
                 .padding(.top, 10)
 
             // Pin to current day (builds Posterior Chain / Push library over time)
-            if !currentDayType.includesAllExercises {
+            if showAssignToggle {
                 Toggle(isOn: $assignToCurrentDay) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Also add to \(currentDayType.rawValue) day")
@@ -114,23 +123,6 @@ struct AddExercisePicker: View {
                 .padding(.horizontal, 20)
                 .padding(.top, 10)
             }
-
-            Button {
-                dismiss()
-                onCreateNew()
-            } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: "plus")
-                        .font(.system(size: 14, weight: .semibold))
-                    Text("New exercise")
-                        .font(.uplift.text(14, weight: .semibold))
-                }
-                .foregroundStyle(Color.uplift.accent)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 12)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
 
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
@@ -164,9 +156,7 @@ struct AddExercisePicker: View {
             }
         }
         .background(Color.uplift.bgElev)
-        .presentationDetents([.large, .medium])
-        .presentationDragIndicator(.hidden)
-        .presentationContentInteraction(.scrolls)
+        .modifier(StandaloneSheetChrome(enabled: !embedded))
     }
 
     // MARK: - Rows
@@ -191,8 +181,10 @@ struct AddExercisePicker: View {
 
     private func exerciseRow(_ exercise: Exercise) -> some View {
         Button {
+            let assign = forceAssignToDay
+                || (assignToCurrentDay && !currentDayType.includesAllExercises)
             dismiss()
-            onPick(exercise, assignToCurrentDay && !currentDayType.includesAllExercises)
+            onPick(exercise, assign)
         } label: {
             HStack(spacing: 10) {
                 DayChip(dayType: exercise.day, size: .sm)
@@ -313,12 +305,26 @@ struct AddExercisePicker: View {
     ]
 }
 
+/// Presentation chrome only when the picker is shown as its own sheet.
+private struct StandaloneSheetChrome: ViewModifier {
+    let enabled: Bool
+    func body(content: Content) -> some View {
+        if enabled {
+            content
+                .presentationDetents([.large, .medium])
+                .presentationDragIndicator(.hidden)
+                .presentationContentInteraction(.scrolls)
+        } else {
+            content
+        }
+    }
+}
+
 #Preview("AddExercisePicker") {
     AddExercisePicker(
         currentDayType: .push,
         excludedIDs: [],
-        onPick: { _, _ in },
-        onCreateNew: {}
+        onPick: { _, _ in }
     )
     .modelContainer(previewContainer)
     .preferredColorScheme(.dark)

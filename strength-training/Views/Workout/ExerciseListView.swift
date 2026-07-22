@@ -17,13 +17,24 @@ struct ExerciseListView: View {
     /// Last exercise opened in Focus this session — drives the active row.
     @State private var activeExerciseID: UUID?
     @State private var showFinishConfirmation = false
-    @State private var showAddPicker = false
-    @State private var showAddExerciseSheet = false
-    @State private var pendingCreateNew = false
+    @State private var showAddSheet = false
     @State private var dayCatalog = DayTypeRegistry.shared
     @State private var editingExercise: Exercise?
     @State private var exercisePendingRemoval: Exercise?
     @State private var showDayPlanEditor = false
+    /// Shared secondary line for all rows: last recipe (default) or progression target.
+    @AppStorage("exerciseListSecondaryMode") private var secondaryModeRaw: String =
+        ExerciseListRow.SecondaryMode.recipe.rawValue
+    @AppStorage("exerciseListSecondaryTipSeen") private var secondaryTipSeen = false
+
+    private var secondaryMode: ExerciseListRow.SecondaryMode {
+        ExerciseListRow.SecondaryMode(rawValue: secondaryModeRaw) ?? .recipe
+    }
+
+    /// Mid-workout A/B filter only when the catalog uses rotation labels.
+    private var hasABLabeledLifts: Bool {
+        allExercises.contains { $0.track == .a || $0.track == .b }
+    }
 
     private var dayType: DayType {
         workoutVM.activeSession?.day ?? dayCatalog.defaultSelection
@@ -146,12 +157,19 @@ struct ExerciseListView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
                         Color.clear.frame(height: 56)
-                        LiveHealthKitCard(service: workoutVM.healthKitService)
-                            .padding(.horizontal, 20)
+                        if workoutVM.isRevisitingSavedSession {
+                            editingBanner
+                        } else {
+                            LiveHealthKitCard(service: workoutVM.healthKitService)
+                                .padding(.horizontal, 20)
+                        }
                         titleSection
                         progressBar
-                        rotationToggle
+                        if hasABLabeledLifts {
+                            rotationToggle
+                        }
                         modeToggle
+                        secondaryLineTip
                         exerciseListSection
                         addExerciseRow
                     }
@@ -179,23 +197,26 @@ struct ExerciseListView: View {
             }
             .navigationBarHidden(true)
             .confirmationDialog(
-                "Finish Workout?",
+                workoutVM.isRevisitingSavedSession ? "Save changes?" : "Finish Workout?",
                 isPresented: $showFinishConfirmation,
                 titleVisibility: .visible
             ) {
-                Button("Finish Workout") { workoutVM.finishSession() }
+                Button(workoutVM.isRevisitingSavedSession ? "Save Changes" : "Finish Workout") {
+                    workoutVM.finishSession()
+                }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("You completed \(completedCount) exercise\(completedCount == 1 ? "" : "s") this session.")
-            }
-            .sheet(isPresented: $showAddPicker, onDismiss: {
-                if pendingCreateNew {
-                    pendingCreateNew = false
-                    showAddExerciseSheet = true
+                if workoutVM.isRevisitingSavedSession {
+                    Text("Updates this saved workout. \(completedCount) exercise\(completedCount == 1 ? "" : "s") currently have sets.")
+                } else {
+                    Text("You completed \(completedCount) exercise\(completedCount == 1 ? "" : "s") this session.")
                 }
-            }) {
-                AddExercisePicker(
-                    currentDayType: dayType,
+            }
+            .sheet(isPresented: $showAddSheet) {
+                AddExerciseSheet(
+                    currentDayType: dayType.includesAllExercises
+                        ? (dayCatalog.exerciseHomeDays.first ?? dayType)
+                        : dayType,
                     excludedIDs: Set(flatExercises.map(\.id)),
                     onPick: { exercise, assignToCurrentDay in
                         if assignToCurrentDay {
@@ -204,14 +225,9 @@ struct ExerciseListView: View {
                         }
                         workoutVM.addExerciseToSession(exercise)
                     },
-                    onCreateNew: { pendingCreateNew = true }
-                )
-            }
-            .sheet(isPresented: $showAddExerciseSheet) {
-                AddExerciseView(
-                    preselectedDayType: dayType.includesAllExercises
-                        ? (dayCatalog.exerciseHomeDays.first ?? .arms)
-                        : dayType
+                    onCreated: { exercise in
+                        workoutVM.addExerciseToSession(exercise)
+                    }
                 )
             }
             .sheet(item: $editingExercise) { exercise in
@@ -228,7 +244,7 @@ struct ExerciseListView: View {
                 ),
                 titleVisibility: .visible
             ) {
-                Button("Remove from this workout", role: .destructive) {
+                Button(ListMutationCopy.removeFromWorkout, role: .destructive) {
                     if let exercise = exercisePendingRemoval {
                         workoutVM.removeExerciseFromSession(exercise)
                     }
@@ -244,6 +260,35 @@ struct ExerciseListView: View {
     }
 
     // MARK: - Sections
+
+    private var editingBanner: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "pencil.line")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(Color.uplift.accent)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Editing saved workout")
+                    .font(.uplift.text(14, weight: .semibold))
+                    .foregroundStyle(Color.uplift.fg)
+                Text("Adjust sets or add a missed lift, then Save Changes.")
+                    .font(.uplift.text(12, weight: .medium))
+                    .foregroundStyle(Color.uplift.fgMuted)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(14)
+        .background {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color.uplift.accent.opacity(0.12))
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .strokeBorder(Color.uplift.accent.opacity(0.35), lineWidth: 1)
+        }
+        .padding(.horizontal, 20)
+        .padding(.bottom, 8)
+        .accessibilityElement(children: .combine)
+    }
 
     private var titleSection: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -269,6 +314,11 @@ struct ExerciseListView: View {
                     .font(.uplift.text(13, weight: .medium))
             )
             .foregroundStyle(Color.uplift.fgMuted)
+            if workoutVM.isRevisitingSavedSession, let date = workoutVM.activeSession?.date {
+                Text(date.formatted(.dateTime.weekday(.wide).month(.abbreviated).day()))
+                    .font(.uplift.text(12, weight: .medium))
+                    .foregroundStyle(Color.uplift.fgDim)
+            }
         }
         .padding(.horizontal, 20)
         .padding(.top, 14)
@@ -345,23 +395,23 @@ struct ExerciseListView: View {
                 }
                 ForEach(Array(section.exercises.enumerated()), id: \.element.id) { index, exercise in
                     NavigationLink {
-                        FocusView(
+                        FocusFlowView(
                             workoutVM: workoutVM,
-                            exercise: exercise,
-                            liftIndex: (flatExercises.firstIndex(where: { $0.id == exercise.id }) ?? 0) + 1,
-                            totalLifts: flatExercises.count
+                            exercises: flatExercises,
+                            startIndex: flatExercises.firstIndex(where: { $0.id == exercise.id }) ?? 0
                         )
                         .onAppear { activeExerciseID = exercise.id }
                     } label: {
                         let rowData = rowData(for: exercise)
                         ExerciseListRow(
                             name: exercise.name,
-                            lastSets: rowData.lastSets,
-                            targetWeight: rowData.targetWeight,
-                            targetReps: rowData.targetReps,
                             state: rowState(for: exercise, number: index + 1),
                             trackBadge: exercise.track.badge,
-                            lastSessionSummary: rowData.lastSessionSummary
+                            lastSessionSummary: rowData.lastSessionSummary,
+                            targetWeight: rowData.targetWeight,
+                            targetReps: rowData.targetReps,
+                            secondaryMode: secondaryMode,
+                            onToggleSecondary: toggleSecondaryMode
                         )
                     }
                     .buttonStyle(.plain)
@@ -371,10 +421,18 @@ struct ExerciseListView: View {
                         } label: {
                             Label("Edit exercise", systemImage: "pencil")
                         }
+                        Button {
+                            toggleSecondaryMode()
+                        } label: {
+                            Label(
+                                secondaryMode == .recipe ? "Show progression target" : "Show last session",
+                                systemImage: secondaryMode == .recipe ? "arrow.up.right" : "clock.arrow.circlepath"
+                            )
+                        }
                         Button(role: .destructive) {
                             exercisePendingRemoval = exercise
                         } label: {
-                            Label("Remove from workout", systemImage: "minus.circle")
+                            Label(ListMutationCopy.removeFromWorkout, systemImage: "minus.circle")
                         }
                     }
                 }
@@ -383,33 +441,54 @@ struct ExerciseListView: View {
         .padding(.horizontal, 20)
     }
 
-    private var addExerciseRow: some View {
-        Button {
-            // Always open the library picker so exercises tagged under an old
-            // split (e.g. Arms after switching to Push) remain reachable.
-            // Full Body still uses the picker when the library is non-empty.
-            if allExercises.isEmpty {
-                showAddExerciseSheet = true
-            } else {
-                showAddPicker = true
+    private var secondaryLineTip: some View {
+        Group {
+            if !secondaryTipSeen, !flatExercises.isEmpty {
+                HStack(alignment: .top, spacing: 10) {
+                    Image(systemName: "hand.tap")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Color.uplift.accent)
+                    Text("Tap Last under a lift to switch between last session and progression target.")
+                        .font(.uplift.text(12, weight: .medium))
+                        .foregroundStyle(Color.uplift.fgMuted)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 0)
+                    Button {
+                        secondaryTipSeen = true
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(Color.uplift.fgDim)
+                            .frame(width: 28, height: 28)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Dismiss tip")
+                }
+                .padding(12)
+                .background {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(Color.uplift.accent.opacity(0.10))
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 10)
             }
-        } label: {
-            HStack(spacing: 8) {
-                Image(systemName: "plus")
-                    .font(.system(size: 15, weight: .semibold))
-                Text("Add exercise")
-                    .font(.uplift.text(15, weight: .semibold))
-            }
-            .foregroundStyle(Color.uplift.fgMuted)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
-            .background {
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .strokeBorder(Color.uplift.fgFaint, style: StrokeStyle(lineWidth: 1, dash: [5, 4]))
-            }
-            .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
-        .buttonStyle(.plain)
+    }
+
+    private func toggleSecondaryMode() {
+        secondaryTipSeen = true
+        withAnimation(.easeInOut(duration: 0.15)) {
+            secondaryModeRaw = secondaryMode == .recipe
+                ? ExerciseListRow.SecondaryMode.target.rawValue
+                : ExerciseListRow.SecondaryMode.recipe.rawValue
+        }
+    }
+
+    private var addExerciseRow: some View {
+        AddItemRow(title: ListMutationCopy.addExercise) {
+            showAddSheet = true
+        }
         .padding(.horizontal, 20)
         .padding(.top, 8)
     }
@@ -422,7 +501,7 @@ struct ExerciseListView: View {
                 HStack(spacing: 6) {
                     Image(systemName: "checkmark")
                         .font(.system(size: 16, weight: .semibold))
-                    Text("Finish Workout")
+                    Text(workoutVM.isRevisitingSavedSession ? "Save Changes" : "Finish Workout")
                         .font(.uplift.text(15, weight: .semibold))
                 }
                 .frame(maxWidth: .infinity)
@@ -473,23 +552,17 @@ struct ExerciseListView: View {
     }
 
     private func rowData(for exercise: Exercise) -> (
-        lastSets: Int?,
         targetWeight: Double?,
         targetReps: Int?,
         lastSessionSummary: String?
     ) {
-        let modeRaw = workoutVM.selectedMode.rawValue
-        let lastRecord = exercise.recordsArray
-            .filter { $0.trainingMode.rawValue == modeRaw && $0.session?.isCompleted == true }
-            .max { ($0.session?.date ?? .distantPast) < ($1.session?.date ?? .distantPast) }
-        let lastSetsAll = lastRecord.map { $0.setsArray.count }
+        let lastRecord = exercise.lastCompletedRecord(mode: workoutVM.selectedMode)
         let summary = lastRecord.map { Self.formatLastSessionSets($0.setsArray) }
+        let suggestion = workoutVM.suggestion(for: exercise, mode: workoutVM.selectedMode)
         let recent = workoutVM.recentAverage(for: exercise, mode: workoutVM.selectedMode)
-        let target = workoutVM.suggestion(for: exercise, mode: workoutVM.selectedMode)?.targetWeight
         return (
-            lastSets: (lastSetsAll ?? 0) > 0 ? lastSetsAll : nil,
-            targetWeight: target ?? recent?.weight,
-            targetReps: recent?.reps,
+            targetWeight: suggestion?.targetWeight ?? recent?.weight,
+            targetReps: suggestion?.targetReps ?? recent?.reps,
             lastSessionSummary: summary
         )
     }

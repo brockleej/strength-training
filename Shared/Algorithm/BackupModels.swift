@@ -95,5 +95,31 @@ struct SetRecordBackup: Codable {
     let weightLbs: Double
     let reps: Int
     let isWarmup: Bool
+    /// Optional for older backups that predate this field.
+    let isEachSide: Bool?
+    let isAssisted: Bool?
     let completedAt: Date
+
+    init(
+        id: UUID,
+        setNumber: Int,
+        weightLbs: Double,
+        reps: Int,
+        isWarmup: Bool,
+        isEachSide: Bool = false,
+        isAssisted: Bool = false,
+        completedAt: Date
+    ) {
+        self.id = id
+        self.setNumber = setNumber
+        self.weightLbs = weightLbs
+        self.reps = reps
+        self.isWarmup = isWarmup
+        self.isEachSide = isEachSide
+        self.isAssisted = isAssisted
+        self.completedAt = completedAt
+    }
+
+    var resolvedEachSide: Bool { isEachSide ?? false }
+    var resolvedAssisted: Bool { isAssisted ?? false }
 }

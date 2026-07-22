@@ -115,7 +115,7 @@ struct EditExerciseView: View {
                         Button {
                             showRemoveDayConfirm = true
                         } label: {
-                            Text("Remove from \(focusDay.rawValue)")
+                            Text(ListMutationCopy.removeFromDay(focusDay.rawValue))
                                 .font(.uplift.text(15, weight: .semibold))
                                 .foregroundStyle(Color.uplift.customBadge)
                                 .frame(maxWidth: .infinity)
@@ -132,7 +132,7 @@ struct EditExerciseView: View {
                     Button(role: .destructive) {
                         showDeleteConfirm = true
                     } label: {
-                        Text("Delete from library")
+                        Text(ListMutationCopy.deleteFromLibrary)
                             .font(.uplift.text(15, weight: .semibold))
                             .foregroundStyle(Color.uplift.down)
                             .frame(maxWidth: .infinity)
@@ -163,7 +163,7 @@ struct EditExerciseView: View {
             isPresented: $showDeleteConfirm,
             titleVisibility: .visible
         ) {
-            Button("Delete from library", role: .destructive) {
+            Button(ListMutationCopy.deleteFromLibrary, role: .destructive) {
                 modelContext.delete(exercise)
                 try? modelContext.save()
                 dismiss()
@@ -177,7 +177,7 @@ struct EditExerciseView: View {
             isPresented: $showRemoveDayConfirm,
             titleVisibility: .visible
         ) {
-            Button("Remove from day", role: .destructive) {
+            Button(ListMutationCopy.removeFromDay(focusDay?.rawValue ?? "day"), role: .destructive) {
                 if let focusDay {
                     selectedDayNames.remove(focusDay.rawValue)
                     save()

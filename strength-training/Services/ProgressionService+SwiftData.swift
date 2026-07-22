@@ -39,8 +39,10 @@ extension ProgressionService {
             .compactMap { record in
                 guard let sessionDate = record.session?.date else { return nil }
                 let sets = record.setsArray.map { swiftDataSet in
+                    // Assisted: feed effective load (BW − assist) so progression
+                    // tracks harder work as assistance drops — never negative.
                     SetSnapshot(
-                        weightLbs: swiftDataSet.weightLbs,
+                        weightLbs: swiftDataSet.effectiveLoadLbs(),
                         reps: swiftDataSet.reps,
                         isWarmup: swiftDataSet.isWarmup,
                         completedAt: swiftDataSet.completedAt

@@ -1,7 +1,7 @@
 <div align="center">
-  <img src="docs/screenshots/app_icon.png" alt="UpLift Icon" width="120" />
-  <h1>UpLift</h1>
-  <em>Your gym, your data, your progress.<br>A native iOS workout tracker built with SwiftUI.</em>
+  <img src="docs/screenshots/app_icon.png" alt="IronLog Icon" width="120" />
+  <h1>IronLog</h1>
+  <em>Your gym, your data, your progress.<br>A native iOS strength tracker built with SwiftUI.</em>
   <br><br>
 
   <img src="https://img.shields.io/badge/Platform-iOS_26.2+-000000?style=flat-square&logo=apple&logoColor=white" />
@@ -13,7 +13,7 @@
 ---
 
 > [!NOTE]
-> UpLift is a personal project built for my own gym sessions. It tracks sets, reps, and weight across Arms and Legs days, charts your progress over time, and syncs everything to iCloud so you never lose your training history. If you find it useful, feel free to use it, fork it, or contribute.
+> **IronLog** is a personal strength-training app for logging lifts, tracking progressive overload, and watching body-composition trends over time. Data lives on-device by default (SwiftData). Export a JSON backup anytime. Fork it, use it, or contribute if it’s useful to you.
 
 ## Screenshots
 
@@ -26,19 +26,33 @@
 
 ## Features
 
-- **Workout sessions** — start an Arms or Legs day and log exercises as you go
-- **Set logging** — record weight and reps with quick increment/decrement controls
-- **Training modes** — toggle between Strength (heavy/low reps) and Endurance (light/high reps) per session
-- **Last session reference** — automatically surfaces your best set from the previous session so you know what to beat
-- **Progressive overload** — built-in progression algorithms suggest your next target weight and reps
-- **Exercise library** — 19 built-in exercises across Arms and Legs days, plus support for custom exercises
-- **Workout history** — browse past sessions grouped by month, filterable by day type
-- **Progress charts** — visualize estimated 1RM trends, top set trends, volume per session, muscle group breakdowns, and mode splits over customizable time ranges
-- **Dashboard cards** — PRs this month, strength score, and volume score at a glance
-- **HealthKit integration** — automatically starts and stops an Apple Fitness workout when you begin and end a session, with effort rating selection from within the app
-- **iCloud sync** — automatic CloudKit data sync keeps your workout history safe and available across all your devices
-- **Haptic feedback** — subtle haptic cues for key interactions
-- **Offline-first** — all data is stored locally using SwiftData; no account or internet connection required
+### Training
+- **Freeform training splits** — define day types (Push/Pull/Legs, Upper/Lower, custom names) and assign exercises per day
+- **Rolling or strict weekly schedule** — advance through the split after each workout, or stick to a Mon–Sun plan
+- **Focus workout UI** — log sets with steppers, training mode (strength / endurance), and last-session reference
+- **Supersets & multi-exercise flow** — move between exercises in a session without losing place
+- **Assisted lifts** — mark sets as assisted (e.g. pull-ups/dips); tonnage uses body weight − assist (never negative)
+- **Rest timer** — global defaults plus per-exercise on/off (handy for supersets); optional countdown sounds
+- **Progressive overload** — built-in suggestions for next weight/reps from recent history
+- **PR detection** — celebrate e1RM, top-set weight, and rep PRs
+
+### Progress & body
+- **Dashboard** — volume, strength score (e1RM), PRs this month, muscle-group volume, mode split, lift progression
+- **Body metrics** — log weight, waist, neck, chest, arm, hips (sex-aware labels and Navy formula requirements)
+- **Muscularity index** — US Navy body-fat estimate → **FFMI** with bands (Light → Elite); trends and charts
+- **Height & sex** in Settings for composition math; weight syncs for assisted lifts
+
+### Everyday gym
+- **Gym pass** — store membership barcode/ID and show a bright scan-friendly pass from Today
+- **HealthKit** — start/stop Apple Fitness workouts and rate effort (device required)
+- **JSON backup** — export / restore full workout data
+- **Design system** — dark “Refined Native” UI (ice accent, tabular stats, shared components)
+- **Offline-first** — SwiftData local store; no account required
+
+### Data & sync
+- **Local by default** in this build (`cloudKitDatabase: .none`) — Personal Team cannot provision CloudKit
+- **CloudKit path remains in code** — can be re-enabled with a paid Apple Developer Program team
+- **Export backup** recommended for safekeeping when iCloud sync is off
 
 ## How It Works
 
@@ -46,127 +60,120 @@
 graph LR
     A["SwiftUI Views"] --> B["ViewModels"]
     B --> C["SwiftData Models"]
-    C --> D["CloudKit"]
-    B --> E["HealthKit"]
     B --> F["ProgressionService"]
+    B --> G["BodyCompositionMath"]
+    B --> E["HealthKit"]
+    C --> D["Local store / optional CloudKit"]
 
-    style A fill:#1a1a2e,stroke:#e94560,color:#fff
-    style B fill:#1a1a2e,stroke:#e94560,color:#fff
+    style A fill:#1a1a2e,stroke:#7dd3fc,color:#fff
+    style B fill:#1a1a2e,stroke:#7dd3fc,color:#fff
     style C fill:#1a1a2e,stroke:#0f3460,color:#fff
     style D fill:#1a1a2e,stroke:#0f3460,color:#fff
     style E fill:#1a1a2e,stroke:#0f3460,color:#fff
     style F fill:#1a1a2e,stroke:#0f3460,color:#fff
+    style G fill:#1a1a2e,stroke:#0f3460,color:#fff
 ```
 
-1. **Views** render the UI and delegate user actions to **ViewModels**
-2. **ViewModels** manage state, coordinate business logic, and read/write **SwiftData Models**
-3. **SwiftData** persists everything locally and syncs to **iCloud via CloudKit** automatically
-4. **HealthKit** integration starts/stops Apple Fitness workouts alongside your in-app sessions
-5. **ProgressionService** analyzes your history and suggests next-session targets
+1. **Views** render UI and send actions to **ViewModels** (`@Observable`)
+2. **ViewModels** own feature state and talk to **SwiftData** via injected `ModelContext`
+3. **Services** handle progression, E1RM, PRs, rest timer, body composition, HealthKit, and backup
+4. **Design system** under `Views/DesignSystem/` provides tokens, typography, and shared components
 
 ## Getting Started
 
 ### Prerequisites
 
 - Xcode 16+
-- iOS 26.2+
-- An Apple Developer account (for signing and running on a real device)
+- iOS 26.2+ simulator or device
+- Apple Developer account for device signing / TestFlight
 
 ### Build & Run
 
 ```bash
-# Clone the repo
-git clone https://github.com/danielkuhlwein/strength-training.git
+# Clone
+git clone https://github.com/brockleej/strength-training.git
 cd strength-training
 
 # Open in Xcode
 open strength-training.xcodeproj
+
+# Or build for simulator
+xcodebuild -scheme strength-training -destination 'platform=iOS Simulator,name=iPhone 17'
 ```
 
-In Xcode, select your **signing team** under the project target's Signing & Capabilities tab, then build and run on a simulator or device.
+Select your **signing team** under the app target → Signing & Capabilities, then run.
 
-> **Note:** HealthKit features require a physical device. iCloud sync requires an iCloud account and the CloudKit entitlement — contributors will need to configure their own iCloud container or disable the entitlement for local-only development.
+### Tests
 
-## TestFlight & Beta Testing
+```bash
+xcodebuild test -scheme strength-training -destination 'platform=iOS Simulator,name=iPhone 17'
+```
 
-UpLift is continuously deployed via **Xcode Cloud**. Every push to `main` triggers an automated build-and-release workflow that distributes a new test build to **TestFlight** for internal testers.
+### ProgressionLab (macOS)
 
-If you'd like to be added to the list of internal beta testers, feel free to [open an issue](https://github.com/danielkuhlwein/strength-training/issues) or reach out directly.
+Local-only macOS tool for visualizing/tuning the progression algorithm (separate scheme; not shipped to TestFlight).
+
+```bash
+xcodebuild -scheme ProgressionLab -destination 'platform=macOS' build
+xcodebuild test -scheme ProgressionLab -destination 'platform=macOS'
+```
+
+See [docs/superpowers/specs/2026-05-03-progression-lab-design.md](docs/superpowers/specs/2026-05-03-progression-lab-design.md).
+
+### Local-dev caveats
+
+- **HealthKit** needs a physical device
+- **CloudKit** needs a paid team + entitlements; this repo currently uses a **local-only** store
+- Use **Settings → Export Backup** before reinstalls or when switching devices without iCloud
+
+## TestFlight
+
+**Xcode Cloud** deploys every push to `main` to TestFlight for internal testers. Treat `main` as a release branch.
+
+To request beta access, [open an issue](https://github.com/brockleej/strength-training/issues).
 
 <details>
-<summary><strong>Project Structure</strong></summary>
+<summary><strong>Project structure</strong></summary>
 
 ```
 strength-training/
-├── Models/                        # SwiftData @Model classes
-│   ├── Exercise.swift             # Exercise definitions
-│   ├── WorkoutSession.swift       # Workout session container
-│   ├── ExerciseRecord.swift       # Per-exercise records within a session
-│   ├── SetRecord.swift            # Individual set data (weight, reps)
-│   ├── Enums.swift                # Shared enumerations
-│   ├── ProgressionTypes.swift     # Progression algorithm types
-│   ├── BackupModels.swift         # Import/export models
-│   └── SeedData.swift             # Default exercise library
-├── ViewModels/                    # @Observable state managers
-│   ├── WorkoutViewModel.swift     # Active workout logic
-│   ├── HistoryViewModel.swift     # History browsing and filtering
-│   ├── ProgressDashboardViewModel.swift
-│   └── ExerciseDrillDownViewModel.swift
+├── Models/                 # SwiftData @Model types
+│   ├── Exercise, WorkoutSession, ExerciseRecord, SetRecord
+│   ├── SplitDay, BodyMetricEntry
+│   └── SeedData, day/rotation types
+├── ViewModels/             # @Observable feature VMs
+│   ├── WorkoutViewModel, HistoryViewModel
+│   ├── ProgressDashboardViewModel, BodyMetricsViewModel
+│   └── ExerciseDrillDownViewModel
 ├── Views/
-│   ├── Workout/                   # Active workout UI
-│   │   ├── WorkoutTabView.swift
-│   │   ├── ActiveWorkoutView.swift
-│   │   ├── ExerciseRowView.swift
-│   │   ├── SetInputView.swift
-│   │   ├── EffortRatingView.swift
-│   │   ├── TrainingModePickerView.swift
-│   │   ├── WorkoutDayPickerView.swift
-│   │   └── WorkoutMetricsBannerView.swift
-│   ├── History/                   # Past session browsing
-│   │   ├── HistoryListView.swift
-│   │   └── SessionDetailView.swift
-│   ├── Progress/                  # Charts and analytics
-│   │   ├── ProgressDashboardView.swift
-│   │   ├── ExerciseDrillDownView.swift
-│   │   ├── E1RMTrendChart.swift
-│   │   ├── TopSetTrendChart.swift
-│   │   ├── VolumePerSessionChart.swift
-│   │   ├── MuscleGroupVolumeChart.swift
-│   │   ├── ModeSplitChart.swift
-│   │   ├── PRsThisMonthCard.swift
-│   │   ├── StrengthScoreCard.swift
-│   │   └── VolumeScoreCard.swift
-│   ├── Library/                   # Exercise management
-│   │   ├── ExerciseLibraryView.swift
-│   │   └── AddExerciseView.swift
-│   ├── Settings/                  # App settings
-│   │   └── SettingsView.swift
-│   └── Components/                # Shared UI components
-│       └── ProgressionBanner.swift
+│   ├── Today/              # Home, day picker, week strip
+│   ├── Workout/            # Focus flow, sets, supersets, assist
+│   ├── History/            # Sessions list + detail
+│   ├── Progress/           # Charts, body metrics, muscularity
+│   ├── Library/            # Exercises & day plan editor
+│   ├── Settings/           # Split, rest timer, body profile, gym pass, backup
+│   └── DesignSystem/       # Tokens, typography, shared components
 ├── Services/
-│   ├── HealthKitWorkoutService.swift  # Apple Fitness workout integration
-│   ├── CloudKitSyncService.swift      # iCloud data sync monitoring
-│   ├── ProgressionService.swift       # Overload suggestion algorithms
-│   ├── BackupService.swift            # Data import/export
-│   └── HapticService.swift            # Haptic feedback engine
-├── Utilities/
-│   └── PreviewSampleData.swift        # SwiftUI preview data
-├── Assets.xcassets/                   # Images, colors, app icon
-├── Info.plist
-├── PrivacyInfo.xcprivacy
-└── strength-training.entitlements
+│   ├── Progression, E1RM, PRDetection, SessionMath
+│   ├── Rest timer + sounds, body composition (Navy BF% → FFMI)
+│   ├── HealthKit, CloudKit status, backup, gym barcode
+├── Utilities/              # Preview sample data
+├── strength_training.icon/ # App icon (Icon Composer)
+└── LaunchScreen.storyboard
+Shared/
+└── Algorithm/              # Shared progression types (app + ProgressionLab)
 ```
 
 </details>
 
 ## Contributing
 
-Contributions are welcome! Please follow these guidelines:
+Contributions welcome:
 
-- Use **conventional commits** (`feat:`, `fix:`, `refactor:`, etc.)
-- Open a **pull request** against `main` — direct pushes are restricted
-- Keep PRs focused — one feature or fix per PR
-- The project uses MVVM with `@Observable` — see `CLAUDE.md` for architecture details
+- Conventional commits (`feat:`, `fix:`, `refactor:`, …)
+- Focused PRs (one feature/fix each)
+- MVVM + `@Observable` — see [CLAUDE.md](CLAUDE.md) for architecture notes
+- Direct pushes to `main` ship to TestFlight automatically — prefer a PR when you want review first
 
 ## License
 

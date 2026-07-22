@@ -14,11 +14,16 @@ struct FocusView: View {
     let exercise: Exercise
     let liftIndex: Int      // 1-based position in the session list
     let totalLifts: Int
+    var hasNext: Bool = false
+    var hasPrevious: Bool = false
+    var onNext: (() -> Void)? = nil
+    var onPrevious: (() -> Void)? = nil
 
     @Environment(\.dismiss) private var dismiss
     @State private var focusVM: FocusViewModel?
     @State private var showEditExercise = false
     @State private var showRemoveConfirm = false
+    @State private var historyExpanded = false
 
     private var loggedSets: [SetRecord] {
         (workoutVM.currentRecord(for: exercise)?.setsArray ?? [])
@@ -49,23 +54,14 @@ struct FocusView: View {
     }
 
     private var lastCompletedRecord: ExerciseRecord? {
-        let modeRaw = workoutVM.selectedMode.rawValue
-        return exercise.recordsArray
-            .filter { $0.trainingMode.rawValue == modeRaw && $0.session?.isCompleted == true }
-            .max { ($0.session?.date ?? .distantPast) < ($1.session?.date ?? .distantPast) }
+        exercise.lastCompletedRecord(mode: workoutVM.selectedMode)
     }
 
-    /// Older sessions (excluding the most recent) for the horizontal strip —
-    /// full sets including warmups so history matches what you logged.
+    /// Older sessions (excluding the most recent) for the collapsible History strip.
     private var historyEntries: [PrevSessionsStripData.Entry] {
-        let modeRaw = workoutVM.selectedMode.rawValue
         let lastID = lastCompletedRecord?.id
-        let sessions = exercise.recordsArray
-            .filter {
-                $0.trainingMode.rawValue == modeRaw
-                    && $0.session?.isCompleted == true
-                    && $0.id != lastID
-            }
+        let sessions = exercise.completedRecords(mode: workoutVM.selectedMode)
+            .filter { $0.id != lastID }
             .sorted { ($0.session?.date ?? .distantPast) < ($1.session?.date ?? .distantPast) }
             .map { record in
                 PrevSessionsStripData.SessionSets(
@@ -100,18 +96,7 @@ struct FocusView: View {
                         .padding(.bottom, 12)
                     }
                     if !historyEntries.isEmpty {
-                        Text("Earlier sessions")
-                            .textCase(.uppercase)
-                            .font(.uplift.text(11, weight: .semibold))
-                            .tracking(0.4)
-                            .foregroundStyle(Color.uplift.fgDim)
-                            .padding(.horizontal, 20)
-                            .padding(.bottom, 6)
-                        PrevSessionsStrip(entries: historyEntries)
-                            .padding(.bottom, 14)
-                    } else if lastSessionReference == nil {
-                        PrevSessionsStrip(entries: [])
-                            .padding(.bottom, 14)
+                        historyDisclosure
                     }
                     if let focusVM {
                         Text("This session")
@@ -192,11 +177,15 @@ struct FocusView: View {
         }
         .onAppear {
             if focusVM == nil {
-                focusVM = FocusViewModel(prefill: currentPrefill())
+                focusVM = makeFocusVM()
             }
         }
         .onChange(of: workoutVM.selectedMode) {
             focusVM?.apply(prefill: currentPrefill())
+        }
+        .onChange(of: exercise.id) { _, _ in
+            focusVM = makeFocusVM()
+            historyExpanded = false
         }
         .sheet(isPresented: $showEditExercise) {
             EditExerciseView(
@@ -209,7 +198,7 @@ struct FocusView: View {
             isPresented: $showRemoveConfirm,
             titleVisibility: .visible
         ) {
-            Button("Remove from this workout", role: .destructive) {
+            Button(ListMutationCopy.removeFromWorkout, role: .destructive) {
                 workoutVM.removeExerciseFromSession(exercise)
                 dismiss()
             }
@@ -234,6 +223,42 @@ struct FocusView: View {
                     .font(.uplift.text(11, weight: .semibold))
                     .tracking(0.4)
                     .foregroundStyle(exercise.day.upliftInk)
+                Spacer(minLength: 0)
+                if hasNext || hasPrevious {
+                    HStack(spacing: 8) {
+                        if hasPrevious {
+                            Button {
+                                onPrevious?()
+                            } label: {
+                                Image(systemName: "chevron.left")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundStyle(Color.uplift.fgMuted)
+                                    .frame(width: 36, height: 36)
+                                    .background(Circle().fill(Color.uplift.surface1))
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("Previous exercise")
+                        }
+                        if hasNext {
+                            Button {
+                                onNext?()
+                            } label: {
+                                HStack(spacing: 4) {
+                                    Text("Next")
+                                        .font(.uplift.text(13, weight: .semibold))
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 12, weight: .bold))
+                                }
+                                .foregroundStyle(Color.uplift.onAccent)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 9)
+                                .background(Capsule().fill(Color.uplift.accent))
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("Next exercise")
+                        }
+                    }
+                }
             }
             Text(exercise.name)
                 .font(.uplift.display(30, weight: .bold))
@@ -264,7 +289,7 @@ struct FocusView: View {
             Button(role: .destructive) {
                 showRemoveConfirm = true
             } label: {
-                Label("Remove from workout", systemImage: "minus.circle")
+                Label(ListMutationCopy.removeFromWorkout, systemImage: "minus.circle")
             }
         } label: {
             // Matches CircleButton visuals; Menu owns the tap.
@@ -281,21 +306,43 @@ struct FocusView: View {
         .accessibilityLabel("More options")
     }
 
+    private func makeFocusVM() -> FocusViewModel {
+        let sessionLast = loggedSets.last
+        let prefersAssist = sessionLast == nil
+            && ExerciseAssistPreferences.prefersAssist(for: exercise.id)
+        return FocusViewModel(prefill: currentPrefill(), prefersAssist: prefersAssist)
+    }
+
     private func stepperFooter(_ focusVM: FocusViewModel) -> some View {
         @Bindable var vm = focusVM
         return HStack(spacing: 10) {
             UpliftStepper(
-                label: "Weight", unit: "lb",
-                value: $vm.weight, step: 5, range: 0...1000,
-                targetDelta: focusVM.weightDelta,
+                label: vm.isAssisted ? "Assist" : "Weight",
+                unit: "lb",
+                value: $vm.weight, step: focusVM.weightStep, range: 0...1000,
+                targetDelta: vm.isAssisted ? nil : focusVM.weightDelta,
                 onUserEdit: { focusVM.userEdited() },
-                icon: "scalemass.fill", iconTint: .uplift.weightTint
+                onStepHintTap: { focusVM.cycleWeightStep() },
+                flagTitle: "Assist",
+                flagIsOn: vm.isAssisted,
+                onFlagTap: {
+                    vm.isAssisted.toggle()
+                    ExerciseAssistPreferences.setPrefersAssist(vm.isAssisted, for: exercise.id)
+                    focusVM.userEdited()
+                },
+                flagAccessibilityHint: "Assisted bodyweight lift. Enter machine assistance; tonnage uses body weight minus assist.",
+                icon: "scalemass.fill",
+                iconTint: .uplift.weightTint
             )
             UpliftStepper(
                 label: "Reps",
                 value: $vm.reps, step: 1, range: 1...100,
                 targetDelta: focusVM.repsDelta,
                 onUserEdit: { focusVM.userEdited() },
+                flagTitle: "Sides",
+                flagIsOn: vm.isEachSide,
+                onFlagTap: { vm.isEachSide.toggle() },
+                flagAccessibilityHint: "Marks reps as left and right — volume counts both sides",
                 icon: "repeat", iconTint: .uplift.fgMuted
             )
         }
@@ -306,9 +353,9 @@ struct FocusView: View {
         @Bindable var vm = focusVM
 
         return VStack(spacing: 12) {
-            restTimerCard(vm)
+            restTimerCard()
 
-            // Warm toggle + Log / Update
+            // Warm + Log / Update
             VStack(spacing: 8) {
                 HStack(spacing: 10) {
                     Button {
@@ -377,48 +424,54 @@ struct FocusView: View {
         .padding(.bottom, 12)
     }
 
-    /// Large rest timer strip: big countdown, on/off, +30s / Skip while resting.
-    private func restTimerCard(_ vm: FocusViewModel) -> some View {
-        VStack(spacing: 12) {
+    /// Countdown is session-wide; on/off is remembered per exercise (supersets).
+    private func restTimerCard() -> some View {
+        @Bindable var wvm = workoutVM
+        // Read epoch so toggles refresh the card.
+        let _ = wvm.restTimerPreferenceEpoch
+        let timerOn = wvm.isRestTimerEnabled(for: exercise)
+        // Show live countdown even on a timer-off lift (you may still be resting
+        // from the end of a previous super-set).
+        let showCountdown = wvm.isResting
+
+        return VStack(spacing: 12) {
             Button {
-                vm.toggleRestTimer()
+                wvm.toggleRestTimer(for: exercise)
             } label: {
                 HStack(spacing: 14) {
-                    Image(systemName: vm.isRestTimerEnabled
-                          ? (vm.isResting ? "timer" : "timer.circle.fill")
+                    Image(systemName: timerOn
+                          ? (showCountdown ? "timer" : "timer.circle.fill")
                           : "timer.circle")
                         .font(.system(size: 28, weight: .semibold))
                         .foregroundStyle(
-                            vm.isResting
+                            showCountdown
                                 ? Color.uplift.accent
-                                : (vm.isRestTimerEnabled ? Color.uplift.fg : Color.uplift.fgDim)
+                                : (timerOn ? Color.uplift.fg : Color.uplift.fgDim)
                         )
                         .frame(width: 36)
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(vm.isRestTimerEnabled ? "Rest" : "Rest off")
+                        Text(timerOn ? "Rest · this lift" : "Rest off · this lift")
                             .font(.uplift.text(12, weight: .semibold))
                             .tracking(0.3)
                             .textCase(.uppercase)
                             .foregroundStyle(Color.uplift.fgMuted)
 
-                        if vm.isRestTimerEnabled {
-                            if vm.isResting {
-                                TimelineView(.periodic(from: .now, by: 1)) { context in
-                                    Text(timeString(from: max(0, vm.restEndDate?.timeIntervalSince(context.date) ?? 0)))
-                                        .font(.uplift.mono(34, weight: .bold))
-                                        .monospacedDigit()
-                                        .foregroundStyle(Color.uplift.fg)
-                                        .contentTransition(.numericText())
-                                }
-                            } else {
-                                Text(timeString(from: vm.targetRestSeconds))
+                        if showCountdown {
+                            TimelineView(.periodic(from: .now, by: 1)) { context in
+                                Text(timeString(from: max(0, wvm.restEndDate?.timeIntervalSince(context.date) ?? 0)))
                                     .font(.uplift.mono(34, weight: .bold))
                                     .monospacedDigit()
-                                    .foregroundStyle(Color.uplift.fgMuted)
+                                    .foregroundStyle(Color.uplift.fg)
+                                    .contentTransition(.numericText())
                             }
+                        } else if timerOn {
+                            Text(timeString(from: wvm.targetRestSeconds))
+                                .font(.uplift.mono(34, weight: .bold))
+                                .monospacedDigit()
+                                .foregroundStyle(Color.uplift.fgMuted)
                         } else {
-                            Text("Tap to enable")
+                            Text("No rest after sets")
                                 .font(.uplift.text(18, weight: .semibold))
                                 .foregroundStyle(Color.uplift.fgDim)
                         }
@@ -431,23 +484,24 @@ struct FocusView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background {
                     RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .fill(vm.isResting ? Color.uplift.accent.opacity(0.14) : Color.uplift.surface1)
+                        .fill(showCountdown ? Color.uplift.accent.opacity(0.14) : Color.uplift.surface1)
                 }
                 .overlay {
                     RoundedRectangle(cornerRadius: 18, style: .continuous)
                         .strokeBorder(
-                            vm.isResting ? Color.uplift.accent.opacity(0.35) : Color.uplift.hairline,
+                            showCountdown ? Color.uplift.accent.opacity(0.35) : Color.uplift.hairline,
                             lineWidth: 1
                         )
                 }
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(restAccessibilityLabel(vm))
+            .accessibilityLabel(restAccessibilityLabel(timerOn: timerOn))
+            .accessibilityHint("Remembers on or off for this exercise only — use off during a superset, on for the last lift")
 
-            if vm.isResting {
+            if showCountdown {
                 HStack(spacing: 10) {
                     Button {
-                        vm.addRestTime(30)
+                        wvm.addRestTime(30)
                     } label: {
                         Text("+30s")
                             .font(.uplift.text(16, weight: .semibold))
@@ -462,7 +516,7 @@ struct FocusView: View {
                     .buttonStyle(.plain)
 
                     Button {
-                        vm.skipRest()
+                        wvm.skipRest()
                     } label: {
                         Text("Skip rest")
                             .font(.uplift.text(16, weight: .semibold))
@@ -481,12 +535,14 @@ struct FocusView: View {
         .padding(.horizontal, 16)
     }
 
-    private func restAccessibilityLabel(_ vm: FocusViewModel) -> String {
-        if !vm.isRestTimerEnabled { return "Rest timer off, tap to enable" }
-        if vm.isResting {
-            return "Resting, \(timeString(from: vm.remainingRestSeconds)) remaining, tap to disable"
+    private func restAccessibilityLabel(timerOn: Bool) -> String {
+        if workoutVM.isResting {
+            return "Resting, \(timeString(from: workoutVM.remainingRestSeconds)) remaining. Timer for this lift is \(timerOn ? "on" : "off"). Tap to toggle this lift."
         }
-        return "Rest timer ready, \(timeString(from: vm.targetRestSeconds)), tap to disable"
+        if timerOn {
+            return "Rest on for this lift, \(timeString(from: workoutVM.targetRestSeconds)), tap to turn off for this lift"
+        }
+        return "Rest off for this lift, tap to turn on for this lift"
     }
 
     private func timeString(from seconds: TimeInterval) -> String {
@@ -499,45 +555,110 @@ struct FocusView: View {
     // MARK: - Actions
 
     private func currentPrefill() -> FocusTargetLogic.Prefill {
-        FocusTargetLogic.prefill(
+        // Prefer the last set already logged this session (same exercise) so
+        // supersets restore weight/reps when you hop back.
+        let sessionLast: FocusTargetLogic.SessionLastSet? = {
+            guard let last = loggedSets.last else { return nil }
+            return FocusTargetLogic.SessionLastSet(
+                weight: last.weightLbs,
+                reps: last.reps,
+                isWarmup: last.isWarmup,
+                isEachSide: last.isEachSide,
+                isAssisted: last.isAssisted
+            )
+        }()
+        return FocusTargetLogic.prefill(
             suggestion: workoutVM.suggestion(for: exercise, mode: workoutVM.selectedMode),
             recent: workoutVM.recentAverage(for: exercise, mode: workoutVM.selectedMode),
-            lastBest: lastSessionBestSet()
+            lastBest: lastSessionBestSet(),
+            sessionLast: sessionLast
         )
     }
 
-    /// Best (heaviest) set of the most recent completed session in the current
-    /// mode — the dress baseline. Sets are passed as-logged (warmups included),
-    /// matching the algorithm's `bestSet` convention via FocusTargetLogic.lastBest.
+    /// Best working set of the most recent completed session — dress baseline
+    /// (warmups excluded; matches ProgressionService.bestSet).
     private func lastSessionBestSet() -> (weight: Double, reps: Int)? {
-        let modeRaw = workoutVM.selectedMode.rawValue
-        let lastRecord = exercise.recordsArray
-            .filter { $0.trainingMode.rawValue == modeRaw && $0.session?.isCompleted == true }
-            .max { ($0.session?.date ?? .distantPast) < ($1.session?.date ?? .distantPast) }
-        guard let sets = lastRecord?.setsArray.map({ (weight: $0.weightLbs, reps: $0.reps) })
-        else { return nil }
+        guard let lastRecord = lastCompletedRecord else { return nil }
+        // Use effective load so assisted progress (less assist) tracks correctly.
+        let sets = lastRecord.setsArray.map {
+            (weight: $0.effectiveLoadLbs(), reps: $0.reps, isWarmup: $0.isWarmup)
+        }
         return FocusTargetLogic.lastBest(from: sets)
     }
 
+    private var historyDisclosure: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    historyExpanded.toggle()
+                }
+            } label: {
+                HStack(spacing: 8) {
+                    Text("History")
+                        .textCase(.uppercase)
+                        .font(.uplift.text(11, weight: .semibold))
+                        .tracking(0.4)
+                        .foregroundStyle(Color.uplift.fgDim)
+                    Text("\(historyEntries.count)")
+                        .font(.uplift.mono(11, weight: .semibold))
+                        .foregroundStyle(Color.uplift.fgFaint)
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(Color.uplift.fgDim)
+                        .rotationEffect(.degrees(historyExpanded ? 90 : 0))
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 8)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("History, \(historyEntries.count) earlier sessions")
+            .accessibilityHint(historyExpanded ? "Collapse" : "Expand earlier sessions")
+
+            if historyExpanded {
+                PrevSessionsStrip(entries: historyEntries)
+                    .padding(.bottom, 14)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+        .padding(.bottom, historyExpanded ? 0 : 6)
+    }
+
     private func commitSet(_ focusVM: FocusViewModel) {
-        let weight = focusVM.weight
-        let reps = max(1, Int(focusVM.reps))
+        // Snap to half-pound grid so 0.5 steps stay clean.
+        let weight = (focusVM.weight * 2).rounded() / 2
+        let reps = max(1, Int(focusVM.reps.rounded()))
         let isWarmup = focusVM.isWarmup
+        let isEachSide = focusVM.isEachSide
+        let isAssisted = focusVM.isAssisted
+        focusVM.weight = weight
+        ExerciseAssistPreferences.setPrefersAssist(isAssisted, for: exercise.id)
 
         if let editingID = focusVM.editingSetID,
            let set = loggedSets.first(where: { $0.id == editingID }) {
-            // Correct an existing set — no PR celebration, no rest-timer restart.
-            workoutVM.updateSet(set, weight: weight, reps: reps, isWarmup: isWarmup)
+            workoutVM.updateSet(
+                set,
+                weight: weight,
+                reps: reps,
+                isWarmup: isWarmup,
+                isEachSide: isEachSide,
+                isAssisted: isAssisted
+            )
             focusVM.clearSelectionAfterSave()
             return
         }
 
-        workoutVM.addSet(exercise: exercise, weight: weight, reps: reps, isWarmup: isWarmup)
+        workoutVM.addSet(
+            exercise: exercise,
+            weight: weight,
+            reps: reps,
+            isWarmup: isWarmup,
+            isEachSide: isEachSide,
+            isAssisted: isAssisted
+        )
         focusVM.setLogged()
-        // Keep Warm on after a warm-up log (ramp sets); clear after a working set.
-        if !isWarmup {
-            focusVM.isWarmup = false
-        }
+        workoutVM.startRestAfterSet(for: exercise)
     }
 }
 

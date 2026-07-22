@@ -16,7 +16,7 @@ enum SessionMath {
     static func volume(of session: WorkoutSession) -> Double {
         session.exerciseRecordsArray
             .flatMap { $0.setsArray }
-            .reduce(0) { $0 + $1.weightLbs * Double($1.reps) }
+            .reduce(0) { $0 + $1.volumeContribution }
     }
 
     static func setCount(of session: WorkoutSession) -> Int {

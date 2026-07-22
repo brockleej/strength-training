@@ -8,6 +8,8 @@ import SwiftData
 
 struct HistoryListView: View {
     @Environment(\.modelContext) private var modelContext
+    var workoutVM: WorkoutViewModel?
+
     @Query(filter: #Predicate<WorkoutSession> { $0.isCompleted == true },
            sort: \WorkoutSession.date, order: .reverse)
     private var sessions: [WorkoutSession]
@@ -25,7 +27,7 @@ struct HistoryListView: View {
             }
             .navigationTitle("History")
             .navigationDestination(for: WorkoutSession.self) { session in
-                SessionDetailView(session: session)
+                SessionDetailView(session: session, workoutVM: workoutVM)
             }
         }
         .onAppear {
@@ -40,6 +42,7 @@ private struct HistoryContent: View {
     @Bindable var viewModel: HistoryViewModel
     let sessions: [WorkoutSession]
     @State private var dayCatalog = DayTypeRegistry.shared
+    @State private var sessionPendingDelete: WorkoutSession?
 
     var body: some View {
         let grouped = viewModel.groupedSessions(from: sessions)
@@ -59,10 +62,10 @@ private struct HistoryContent: View {
             }
 
             if grouped.isEmpty {
-                ContentUnavailableView(
-                    "No Workouts Yet",
+                EmptyListState(
+                    title: "No workouts yet",
                     systemImage: "dumbbell",
-                    description: Text("Complete a workout to see it here.")
+                    description: "Complete a workout to see it here."
                 )
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
@@ -84,10 +87,10 @@ private struct HistoryContent: View {
                             )
                             .listRowSeparator(.hidden)
                             .listRowInsets(EdgeInsets(top: 12, leading: 34, bottom: 12, trailing: 34))
-                        }
-                        .onDelete { indexSet in
-                            for index in indexSet {
-                                viewModel.deleteSession(monthSessions[index])
+                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                Button(ListMutationCopy.deleteWorkout, role: .destructive) {
+                                    sessionPendingDelete = session
+                                }
                             }
                         }
                     } header: {
@@ -103,6 +106,28 @@ private struct HistoryContent: View {
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
         .background(Color.uplift.bgElev)
+        .confirmationDialog(
+            "Delete this workout?",
+            isPresented: Binding(
+                get: { sessionPendingDelete != nil },
+                set: { if !$0 { sessionPendingDelete = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button(ListMutationCopy.deleteWorkout, role: .destructive) {
+                if let session = sessionPendingDelete {
+                    viewModel.deleteSession(session)
+                }
+                sessionPendingDelete = nil
+            }
+            Button("Cancel", role: .cancel) {
+                sessionPendingDelete = nil
+            }
+        } message: {
+            if let session = sessionPendingDelete {
+                Text("Deletes your \(session.day.rawValue) session from \(session.date.formatted(.dateTime.month(.abbreviated).day())). This can’t be undone.")
+            }
+        }
     }
 
     // MARK: - Summary strip (current calendar month, unfiltered)

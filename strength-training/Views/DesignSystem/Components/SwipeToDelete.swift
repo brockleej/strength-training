@@ -2,8 +2,8 @@
 //  SwipeToDelete.swift
 //  strength-training
 //
-//  Horizontal swipe-to-delete that works even when a List is in edit mode
-//  (system .swipeActions are disabled then). Used by Focus sets + day plan.
+//  Horizontal swipe-to-remove. Default is reveal-then-tap (safer; matches
+//  global list-mutation rules). fullSwipeDeletes is opt-in only.
 //
 
 import SwiftUI
@@ -12,7 +12,8 @@ struct SwipeToDeleteModifier: ViewModifier {
     let onDelete: () -> Void
     var onTap: (() -> Void)? = nil
     /// If true, a strong swipe past the threshold commits delete immediately.
-    var fullSwipeDeletes: Bool = true
+    /// Global default is false (reveal trash, then tap).
+    var fullSwipeDeletes: Bool = false
 
     @State private var offsetX: CGFloat = 0
     @State private var isRevealed = false
@@ -36,7 +37,7 @@ struct SwipeToDeleteModifier: ViewModifier {
                     }
                     .buttonStyle(.plain)
                     .opacity(min(1, Double(offsetX / -revealWidth)))
-                    .accessibilityLabel("Delete")
+                    .accessibilityLabel("Remove")
                 }
             }
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
@@ -73,7 +74,7 @@ struct SwipeToDeleteModifier: ViewModifier {
                     onTap?()
                 }
             }
-            .accessibilityAction(named: "Delete") { onDelete() }
+            .accessibilityAction(named: "Remove") { onDelete() }
     }
 
     private func commitDelete() {
@@ -88,8 +89,9 @@ struct SwipeToDeleteModifier: ViewModifier {
 }
 
 extension View {
+    /// Soft remove: swipe reveals trash; tap to confirm (unless fullSwipeDeletes).
     func swipeToDelete(
-        fullSwipeDeletes: Bool = true,
+        fullSwipeDeletes: Bool = false,
         onDelete: @escaping () -> Void,
         onTap: (() -> Void)? = nil
     ) -> some View {

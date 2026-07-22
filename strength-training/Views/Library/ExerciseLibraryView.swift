@@ -14,6 +14,7 @@ struct ExerciseLibraryView: View {
     @State private var dayCatalog = DayTypeRegistry.shared
     @State private var editingExercise: Exercise?
     @State private var editFocusDay: DayType?
+    @State private var exercisePendingDelete: Exercise?
 
     private func matchesSearch(_ exercise: Exercise) -> Bool {
         searchText.isEmpty
@@ -51,7 +52,7 @@ struct ExerciseLibraryView: View {
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets(top: 4, leading: 20, bottom: 4, trailing: 20))
 
-                Text("Tap to edit. Lifts with no day live under Unassigned. Swipe to remove from a day or delete.")
+                Text(ListMutationCopy.librarySwipe)
                     .font(.uplift.text(12, weight: .medium))
                     .foregroundStyle(Color.uplift.fgDim)
                     .listRowBackground(Color.clear)
@@ -69,7 +70,17 @@ struct ExerciseLibraryView: View {
                     librarySection(dayType: .unassigned, matching: unassignedExercises, isUnassigned: true)
                 }
 
-                if !searchText.isEmpty,
+                if allExercises.isEmpty {
+                    EmptyListState(
+                        title: "No exercises yet",
+                        systemImage: "figure.strengthtraining.traditional",
+                        description: "Create a lift to build your library.",
+                        actionTitle: ListMutationCopy.addExercise,
+                        action: { showAddSheet = true }
+                    )
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                } else if !searchText.isEmpty,
                    sectionDays.allSatisfy({ exercises(for: $0).isEmpty }),
                    unassignedExercises.isEmpty {
                     Text("No matches")
@@ -93,7 +104,7 @@ struct ExerciseLibraryView: View {
                             .font(.system(size: 15, weight: .semibold))
                             .foregroundStyle(Color.uplift.fg)
                     }
-                    .accessibilityLabel("Add exercise")
+                    .accessibilityLabel(ListMutationCopy.addExercise)
                 }
             }
             .sheet(isPresented: $showAddSheet) {
@@ -101,6 +112,27 @@ struct ExerciseLibraryView: View {
             }
             .sheet(item: $editingExercise, onDismiss: { editFocusDay = nil }) { exercise in
                 EditExerciseView(exercise: exercise, focusDay: editFocusDay)
+            }
+            .confirmationDialog(
+                "Delete \(exercisePendingDelete?.name ?? "exercise")?",
+                isPresented: Binding(
+                    get: { exercisePendingDelete != nil },
+                    set: { if !$0 { exercisePendingDelete = nil } }
+                ),
+                titleVisibility: .visible
+            ) {
+                Button(ListMutationCopy.deleteFromLibrary, role: .destructive) {
+                    if let exercise = exercisePendingDelete {
+                        modelContext.delete(exercise)
+                        try? modelContext.save()
+                    }
+                    exercisePendingDelete = nil
+                }
+                Button("Cancel", role: .cancel) {
+                    exercisePendingDelete = nil
+                }
+            } message: {
+                Text("Removes it from all days. Past workout history that referenced it may show a missing exercise.")
             }
         }
     }
@@ -128,17 +160,16 @@ struct ExerciseLibraryView: View {
                 )
                 .listRowSeparator(.hidden)
                 .listRowInsets(EdgeInsets(top: 12, leading: 34, bottom: 12, trailing: 34))
-                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                     if !isUnassigned {
-                        Button("Remove day") {
+                        Button(ListMutationCopy.removeFromDay(dayType.rawValue)) {
                             exercise.removeDayType(dayType)
                             try? modelContext.save()
                         }
                         .tint(Color.uplift.customBadge)
                     }
-                    Button("Delete", role: .destructive) {
-                        modelContext.delete(exercise)
-                        try? modelContext.save()
+                    Button(ListMutationCopy.deleteFromLibrary, role: .destructive) {
+                        exercisePendingDelete = exercise
                     }
                 }
                 .contextMenu {
@@ -153,14 +184,13 @@ struct ExerciseLibraryView: View {
                             exercise.removeDayType(dayType)
                             try? modelContext.save()
                         } label: {
-                            Label("Remove from \(dayType.rawValue)", systemImage: "minus.circle")
+                            Label(ListMutationCopy.removeFromDay(dayType.rawValue), systemImage: "minus.circle")
                         }
                     }
                     Button(role: .destructive) {
-                        modelContext.delete(exercise)
-                        try? modelContext.save()
+                        exercisePendingDelete = exercise
                     } label: {
-                        Label("Delete from library", systemImage: "trash")
+                        Label(ListMutationCopy.deleteFromLibrary, systemImage: "trash")
                     }
                 }
             }

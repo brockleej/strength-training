@@ -23,7 +23,7 @@ struct ContentView: View {
                         WorkoutTabView(viewModel: vm)
                     }
                     Tab("History", systemImage: "clock", value: "history") {
-                        HistoryListView()
+                        HistoryListView(workoutVM: vm)
                     }
                     Tab("Progress", systemImage: "chart.line.uptrend.xyaxis", value: "progress") {
                         ProgressDashboardView()
@@ -36,11 +36,24 @@ struct ContentView: View {
                     }
                 }
             } else {
-                // Mirrors the UILaunchScreen (LaunchBackground + LaunchGlyph) so the
-                // handoff from the system launch screen is seamless.
+                // Mirrors LaunchScreen.storyboard so the handoff is seamless.
                 ZStack {
                     Color.uplift.bgElev.ignoresSafeArea()
-                    Image("LaunchGlyph")
+                    VStack(spacing: 18) {
+                        Image("LaunchGlyph")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 132, height: 63)
+                        Text("IronLog")
+                            .font(.system(size: 34, weight: .bold, design: .default))
+                            .tracking(-0.6)
+                            .foregroundStyle(Color.uplift.accent)
+                        Text("STRENGTH · PHYSIQUE")
+                            .font(.system(size: 11, weight: .medium))
+                            .tracking(1.2)
+                            .foregroundStyle(Color.uplift.fgDim)
+                    }
+                    .offset(y: -12)
                 }
             }
         }
@@ -58,6 +71,11 @@ struct ContentView: View {
                 workoutViewModel = WorkoutViewModel(modelContext: modelContext, healthKitService: healthKitService)
             }
             healthKitService.checkAuthorization()
+        }
+        .onChange(of: workoutViewModel?.wantsFocusOnWorkoutTab) { _, wants in
+            guard wants == true else { return }
+            selectedTab = "workout"
+            workoutViewModel?.wantsFocusOnWorkoutTab = false
         }
         // Don't auto-prompt HealthKit on cold launch — that dialog can stall the
         // first frame. Settings (and starting a workout) request access instead.

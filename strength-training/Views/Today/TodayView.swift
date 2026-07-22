@@ -27,7 +27,17 @@ struct TodayView: View {
     )
     private var completedSessions: [WorkoutSession]
 
+    @Query private var allExercises: [Exercise]
+
     private var mostRecent: WorkoutSession? { completedSessions.first }
+
+    /// Show A/B week control only when at least one lift is labeled A or B.
+    private var hasABLabeledLifts: Bool {
+        allExercises.contains { exercise in
+            let track = exercise.track
+            return track == .a || track == .b
+        }
+    }
 
     private var weekSessions: [WorkoutSession] {
         var cal = Calendar.current
@@ -45,8 +55,10 @@ struct TodayView: View {
                         .padding(.top, 20)
                         .padding(.bottom, 10)
                     dayPicker
-                    rotationPicker
-                        .padding(.top, 14)
+                    if hasABLabeledLifts {
+                        rotationPicker
+                            .padding(.top, 14)
+                    }
                     startButton
                         .padding(.top, 14)
                     editDayPlanLink
@@ -63,19 +75,15 @@ struct TodayView: View {
             .scrollIndicators(.hidden)
             .navigationBarHidden(true)
             .navigationDestination(item: $workoutVM.summaryDetailSession) { session in
-                SessionDetailView(session: session)
+                SessionDetailView(session: session, workoutVM: workoutVM)
             }
             .sheet(isPresented: $showDayPlanEditor) {
                 DayPlanEditorView(dayType: todayVM.selectedDayType)
             }
         }
-        .onAppear {
-            todayVM.syncSelection(
-                suspended: workoutVM.suspendedSession,
-                mostRecent: mostRecent,
-                suggestedTrack: { workoutVM.suggestedRotationTrack(for: $0) }
-            )
-        }
+        .onAppear { resyncDaySelection() }
+        .onChange(of: completedSessions.count) { _, _ in resyncDaySelection() }
+        .onChange(of: workoutVM.suspendedSession?.id) { _, _ in resyncDaySelection() }
         .task {
             await todayVM.fetchLastDurations(
                 sessions: completedSessions,
@@ -139,6 +147,65 @@ struct TodayView: View {
             let dayName = workoutVM.suspendedSession?.day.rawValue ?? "current"
             Text("Your \(dayName) Day workout has \(count) exercise\(count == 1 ? "" : "s") in progress. Starting a new workout will discard it.")
         }
+        .confirmationDialog(
+            incompleteWeekTitle,
+            isPresented: Binding(
+                get: { todayVM.incompleteWeekPrompt != nil },
+                set: { if !$0 { todayVM.dismissIncompleteWeekPrompt() } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button("Finish remaining (strict weekly)") {
+                todayVM.continueIncompleteWeek()
+                refreshTrackForSelection()
+            }
+            Button("Restart week (strict weekly)") {
+                todayVM.restartSplitThisWeek()
+                refreshTrackForSelection()
+            }
+            Button("Switch to rolling splits") {
+                todayVM.switchToRollingFromIncompletePrompt(
+                    orderedDays: dayCatalog.activeDays,
+                    completedSessions: completedSessions
+                )
+                refreshTrackForSelection()
+            }
+            Button("Not now", role: .cancel) {
+                todayVM.dismissIncompleteWeekPrompt()
+            }
+        } message: {
+            Text(incompleteWeekMessage)
+        }
+    }
+
+    private func refreshTrackForSelection() {
+        todayVM.selectDayType(
+            todayVM.selectedDayType,
+            suspended: workoutVM.suspendedSession,
+            suggestedTrack: { workoutVM.suggestedRotationTrack(for: $0) }
+        )
+    }
+
+    private func resyncDaySelection() {
+        todayVM.syncSelection(
+            suspended: workoutVM.suspendedSession,
+            completedSessions: completedSessions,
+            orderedDays: dayCatalog.activeDays,
+            suggestedTrack: { workoutVM.suggestedRotationTrack(for: $0) }
+        )
+    }
+
+    private var incompleteWeekTitle: String {
+        "Last week’s split incomplete"
+    }
+
+    private var incompleteWeekMessage: String {
+        guard let prompt = todayVM.incompleteWeekPrompt else {
+            return "Finish remaining days, restart the week, or switch to rolling splits in Settings."
+        }
+        let done = prompt.previousCompleted.joined(separator: ", ")
+        let left = prompt.remaining.joined(separator: ", ")
+        return "Last week: \(done). Still open: \(left). Your choice updates Schedule in Settings (strict weekly vs rolling)."
     }
 
     // MARK: - Sections
@@ -198,7 +265,8 @@ struct TodayView: View {
                     lastDuration: todayVM.lastDurations[dayType],
                     isSelected: todayVM.selectedDayType == dayType,
                     inProgressCount: suspendedBadgeCount(for: dayType),
-                    weekPosition: dayCatalog.activeDays.count > 1 ? index + 1 : nil
+                    weekPosition: dayCatalog.activeDays.count > 1 ? index + 1 : nil,
+                    isCompletedInCycle: cycleCompletedDayNames.contains(dayType.rawValue)
                 ) {
                     todayVM.selectDayType(
                         dayType,
@@ -207,6 +275,28 @@ struct TodayView: View {
                     )
                 }
             }
+        }
+    }
+
+    /// Days already done in the current schedule window (this week, or carryover targets done).
+    private var cycleCompletedDayNames: Set<String> {
+        let cycle = SplitScheduleLogic.cycleDays(from: dayCatalog.activeDays)
+        let cycleNames = Set(cycle.map(\.rawValue))
+        switch SplitSchedulePreferences.mode {
+        case .rolling:
+            // Light hint: most recent session’s day only (not a full “done” checklist).
+            return []
+        case .weekly:
+            var cal = Calendar.current
+            cal.firstWeekday = 2
+            guard let week = cal.dateInterval(of: .weekOfYear, for: .now) else { return [] }
+            let thisWeek = Set(
+                completedSessions
+                    .filter { week.contains($0.date) && cycleNames.contains($0.day.rawValue) }
+                    .map(\.day.rawValue)
+            )
+            // Carryover days not yet done stay unchecked; completed carryover counts as done.
+            return thisWeek
         }
     }
 
@@ -261,7 +351,7 @@ struct TodayView: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Edit \(todayVM.selectedDayType.rawValue) exercise list")
-        .accessibilityHint("Add, remove, or reorder exercises without starting a workout")
+        .accessibilityHint("Edit this day's exercise list without starting a workout")
     }
 
     private var startButton: some View {
@@ -325,7 +415,7 @@ struct TodayView: View {
         if let recent = mostRecent {
             SectionHeader(TodayStats.relativeDayLabel(for: recent.date))
             NavigationLink {
-                SessionDetailView(session: recent)
+                SessionDetailView(session: recent, workoutVM: workoutVM)
             } label: {
                 YesterdayCard(
                     dayType: recent.day,

@@ -15,6 +15,8 @@ struct DayPickerCard: View {
     let inProgressCount: Int?      // non-nil → suspended-session badge
     /// 1-based position in the user's weekly day order (Settings → Training Split).
     var weekPosition: Int? = nil
+    /// Weekly mode: already trained this calendar week.
+    var isCompletedInCycle: Bool = false
     let action: () -> Void
 
     var body: some View {
@@ -23,7 +25,7 @@ struct DayPickerCard: View {
                 if let weekPosition {
                     Text("\(weekPosition)")
                         .font(.uplift.mono(14, weight: .bold))
-                        .foregroundStyle(Color.uplift.fgDim)
+                        .foregroundStyle(isCompletedInCycle ? Color.uplift.up : Color.uplift.fgDim)
                         .frame(width: 18, alignment: .center)
                         .accessibilityHidden(true)
                 }
@@ -31,10 +33,20 @@ struct DayPickerCard: View {
                 DayChip(dayType: dayType, size: .md)
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(dayType.rawValue)
-                        .font(.uplift.display(19, weight: .semibold))
-                        .kerning(-0.3)
-                        .foregroundStyle(Color.uplift.fg)
+                    HStack(spacing: 8) {
+                        Text(dayType.rawValue)
+                            .font(.uplift.display(19, weight: .semibold))
+                            .kerning(-0.3)
+                            .foregroundStyle(Color.uplift.fg)
+                        if isCompletedInCycle {
+                            Text("Done")
+                                .font(.uplift.text(10, weight: .bold))
+                                .foregroundStyle(Color.uplift.up)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Capsule().fill(Color.uplift.up.opacity(0.16)))
+                        }
+                    }
                     subtitle
                     if let inProgressCount {
                         Text("\(inProgressCount) exercise\(inProgressCount == 1 ? "" : "s") in progress")
@@ -53,6 +65,10 @@ struct DayPickerCard: View {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.system(size: 22))
                         .foregroundStyle(Color.uplift.accent)
+                } else if isCompletedInCycle {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 22))
+                        .foregroundStyle(Color.uplift.up.opacity(0.55))
                 } else {
                     Circle()
                         .strokeBorder(Color.uplift.fgFaint, lineWidth: 1.5)
@@ -107,6 +123,7 @@ struct DayPickerCard: View {
         parts.append(dayType.rawValue)
         parts.append(dayType.subtitle)
         if let lastDuration { parts.append("\(lastDuration) last time") }
+        if isCompletedInCycle { parts.append("done this week") }
         if let inProgressCount {
             let plural = inProgressCount == 1 ? "" : "s"
             parts.append("\(inProgressCount) exercise\(plural) in progress")

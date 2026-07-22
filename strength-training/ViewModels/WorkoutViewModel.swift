@@ -53,6 +53,126 @@ final class WorkoutViewModel {
     private var celebratedExerciseIDsThisSession: Set<UUID> = []
     let healthKitService: HealthKitWorkoutService
 
+    // MARK: - Session rest timer (countdown survives Focus navigation / supersets)
+    // On/off is per-exercise so you can rest only after the last lift in a superset.
+
+    var targetRestSeconds: Double = Double(RestTimerPreferences.targetSeconds)
+    /// Absolute end of the current countdown; nil when not resting.
+    var restEndDate: Date? = nil {
+        didSet { syncRestCountdownMonitor() }
+    }
+    /// Bumped when a per-exercise rest on/off changes so Focus re-renders.
+    var restTimerPreferenceEpoch: Int = 0
+
+    /// True when the active session was reopened from History for edits (no new HealthKit workout).
+    var isRevisitingSavedSession: Bool = false
+    /// ContentView flips to the Workout tab when this becomes true.
+    var wantsFocusOnWorkoutTab: Bool = false
+
+    /// Whole seconds already announced (5…1) so we don’t double-beep.
+    private var announcedRestSeconds: Set<Int> = []
+    private var restDoneAnnounced = false
+    private var restMonitorTask: Task<Void, Never>?
+
+    var isResting: Bool {
+        guard let end = restEndDate else { return false }
+        return end > .now
+    }
+
+    var remainingRestSeconds: TimeInterval {
+        guard let end = restEndDate else { return 0 }
+        return max(0, end.timeIntervalSinceNow)
+    }
+
+    /// Per-exercise preference (persists across sessions for that lift).
+    func isRestTimerEnabled(for exercise: Exercise) -> Bool {
+        RestTimerPreferences.isEnabled(forExercise: exercise.id)
+    }
+
+    /// After logging a set on `exercise` — only starts rest if that lift has timer on.
+    func startRestAfterSet(for exercise: Exercise) {
+        if isRestTimerEnabled(for: exercise) {
+            RestTimerSoundService.prepareIfNeeded()
+            restEndDate = Date.now.addingTimeInterval(targetRestSeconds)
+        }
+        // Timer off for this exercise: leave any active countdown running
+        // (e.g. you hopped to a mid-superset lift while still resting from the last group).
+    }
+
+    /// Toggle rest auto-start for this exercise only; remembers the choice next time.
+    func toggleRestTimer(for exercise: Exercise) {
+        let next = !isRestTimerEnabled(for: exercise)
+        RestTimerPreferences.setEnabled(next, forExercise: exercise.id)
+        restTimerPreferenceEpoch &+= 1
+        // Turning off on this lift cancels a running countdown (you’re not resting).
+        if !next {
+            restEndDate = nil
+        }
+    }
+
+    func addRestTime(_ seconds: Double = 30) {
+        if let current = restEndDate {
+            // Extending rest — allow the countdown window to fire again later.
+            announcedRestSeconds = []
+            restDoneAnnounced = false
+            restEndDate = current.addingTimeInterval(seconds)
+        } else {
+            RestTimerSoundService.prepareIfNeeded()
+            restEndDate = Date.now.addingTimeInterval(seconds)
+        }
+    }
+
+    func skipRest() {
+        restEndDate = nil
+    }
+
+    // MARK: - Rest countdown audio monitor
+
+    private func syncRestCountdownMonitor() {
+        restMonitorTask?.cancel()
+        restMonitorTask = nil
+        announcedRestSeconds = []
+        restDoneAnnounced = false
+
+        guard restEndDate != nil else { return }
+
+        restMonitorTask = Task { @MainActor [weak self] in
+            while !Task.isCancelled {
+                guard let self else { return }
+                self.pollRestCountdownAudio()
+                if self.restEndDate == nil { return }
+                try? await Task.sleep(for: .milliseconds(100))
+            }
+        }
+    }
+
+    private func pollRestCountdownAudio() {
+        guard let end = restEndDate else { return }
+        let remaining = end.timeIntervalSinceNow
+
+        if remaining <= 0 {
+            if !restDoneAnnounced {
+                restDoneAnnounced = true
+                RestTimerSoundService.playComplete()
+                // Clear so UI stops “resting”; keep a beat so the long chirp isn’t cut.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
+                    if let end = self?.restEndDate, end.timeIntervalSinceNow <= 0 {
+                        self?.restEndDate = nil
+                    }
+                }
+            }
+            return
+        }
+
+        // Ceiling whole seconds still left: 5.01 → 6 until drop below 5.0… we want
+        // tick when we *enter* each second band 5…1 (first time remaining ≤ N).
+        let whole = Int(ceil(remaining - 0.001))
+        guard whole >= 1, whole <= RestTimerSoundService.tickWindow else { return }
+        guard !announcedRestSeconds.contains(whole) else { return }
+        announcedRestSeconds.insert(whole)
+        RestTimerSoundService.playCountdownTick(remainingWholeSeconds: whole)
+    }
+
     // MARK: - Cancel / Abandon Workout State
 
     var showCancelConfirmation = false
@@ -124,9 +244,15 @@ final class WorkoutViewModel {
                 try? modelContext.save()
             }
             suspendedSession = nil
-            healthKitService.resumeWorkout()
+            // Historical re-open never had a live HK session.
+            if isRevisitingSavedSession {
+                // keep flag; no HK resume
+            } else {
+                healthKitService.resumeWorkout()
+            }
             return
         }
+        isRevisitingSavedSession = false
         // Silently discard a suspended session that has no sets
         if let suspended = suspendedSession {
             if !suspended.exerciseRecordsArray.contains(where: { !$0.setsArray.isEmpty }) {
@@ -271,12 +397,22 @@ final class WorkoutViewModel {
         guard let session = activeSession, !session.isCompleted else { return }
         session.isCompleted = true
         let capturedSession = session
+        let wasRevisit = isRevisitingSavedSession
+        isRevisitingSavedSession = false
+        restEndDate = nil
         // Don't nil activeSession here — keep the workout screen visible as a
         // stable backdrop while the effort-rating sheet and summary cover show.
         // The summary's Done/View Details handlers clear it so no intermediate
         // screens flash.
         try? modelContext.save()
         HapticService.workoutCompleted()
+
+        // Re-saving a historical workout: no new HealthKit session / effort prompt.
+        if wasRevisit {
+            sessionPendingSummary = capturedSession
+            return
+        }
+
         Task {
             let uuid = await healthKitService.endWorkout()
             capturedSession.healthKitWorkoutUUID = uuid
@@ -287,6 +423,55 @@ final class WorkoutViewModel {
                 sessionPendingSummary = capturedSession
             }
         }
+    }
+
+    /// Re-open a completed (or already-active) session for set edits / skipped lifts.
+    /// Parks any in-progress session, skips a new HealthKit workout, and requests the Workout tab.
+    @discardableResult
+    func reopenSessionForEditing(_ session: WorkoutSession) -> Bool {
+        if activeSession?.id == session.id {
+            wantsFocusOnWorkoutTab = true
+            return true
+        }
+
+        parkLiveSessionForReopen()
+
+        session.isCompleted = false
+        try? modelContext.save()
+        activeSession = session
+        isRevisitingSavedSession = true
+        celebratedExerciseIDsThisSession = []
+        restEndDate = nil
+        wantsFocusOnWorkoutTab = true
+        return true
+    }
+
+    /// Suspend or discard whatever is currently live so a saved session can become active.
+    private func parkLiveSessionForReopen() {
+        if let active = activeSession {
+            let hasSets = active.exerciseRecordsArray.contains { !$0.setsArray.isEmpty }
+            if hasSets {
+                // Prefer suspending; if a suspended session already exists, complete it.
+                if let previous = suspendedSession, previous.id != active.id {
+                    if previous.exerciseRecordsArray.contains(where: { !$0.setsArray.isEmpty }) {
+                        previous.isCompleted = true
+                    } else {
+                        modelContext.delete(previous)
+                    }
+                }
+                suspendedSession = active
+                if healthKitService.isSessionActive {
+                    healthKitService.pauseWorkout()
+                }
+            } else {
+                modelContext.delete(active)
+                if healthKitService.isSessionActive {
+                    Task { _ = await healthKitService.endWorkout() }
+                }
+            }
+            activeSession = nil
+        }
+        try? modelContext.save()
     }
 
     func saveEffortRating(_ rating: Int) {
@@ -321,12 +506,14 @@ final class WorkoutViewModel {
     func dismissSummaryToToday() {
         sessionPendingSummary = nil
         activeSession = nil
+        isRevisitingSavedSession = false
     }
 
     func dismissSummaryToDetail() {
         summaryDetailSession = sessionPendingSummary
         sessionPendingSummary = nil
         activeSession = nil
+        isRevisitingSavedSession = false
     }
 
     // MARK: - Exercises
@@ -372,9 +559,11 @@ final class WorkoutViewModel {
         for record in exercise.recordsArray where record.session?.isCompleted == true {
             let sessionDate = record.session?.date ?? .distantPast
             for set in record.setsArray where !set.isWarmup {
-                let e1rm = E1RM.estimate(weightLbs: set.weightLbs, reps: set.reps)
+                let load = set.effectiveLoadLbs()
+                guard load > 0 else { continue }
+                let e1rm = E1RM.estimate(weightLbs: load, reps: set.reps)
                 if best == nil || e1rm > best!.e1RM {
-                    best = .init(weight: set.weightLbs, reps: set.reps, e1RM: e1rm, date: sessionDate)
+                    best = .init(weight: load, reps: set.reps, e1RM: e1rm, date: sessionDate)
                 }
             }
         }
@@ -428,26 +617,53 @@ final class WorkoutViewModel {
 
     // MARK: - Set Logging
 
-    func addSet(exercise: Exercise, weight: Double, reps: Int, isWarmup: Bool = false) {
+    func addSet(
+        exercise: Exercise,
+        weight: Double,
+        reps: Int,
+        isWarmup: Bool = false,
+        isEachSide: Bool = false,
+        isAssisted: Bool = false
+    ) {
         let record = findOrCreateRecord(for: exercise)
         let setNumber = record.setsArray.count + 1
-        let set = SetRecord(setNumber: setNumber, weightLbs: weight, reps: reps, isWarmup: isWarmup)
+        let set = SetRecord(
+            setNumber: setNumber,
+            weightLbs: weight,
+            reps: reps,
+            isWarmup: isWarmup,
+            isEachSide: isEachSide,
+            isAssisted: isAssisted
+        )
         set.exerciseRecord = record
         if record.sets == nil { record.sets = [] }
         record.sets?.append(set)
         modelContext.insert(set)
         try? modelContext.save()
         HapticService.setLogged()
-        if !isWarmup {
-            checkForPR(exercise: exercise, weight: weight, reps: reps)
+        // Don't re-fire PR celebrations while fixing up an old session.
+        if !isWarmup && !isRevisitingSavedSession {
+            let load = set.effectiveLoadLbs()
+            if load > 0 {
+                checkForPR(exercise: exercise, weight: load, reps: reps)
+            }
         }
     }
 
-    /// Correct weight/reps (and warm-up flag) on an existing set. Does not re-fire PR celebration.
-    func updateSet(_ set: SetRecord, weight: Double, reps: Int, isWarmup: Bool = false) {
+    /// Correct weight/reps (and flags) on an existing set. Does not re-fire PR celebration.
+    func updateSet(
+        _ set: SetRecord,
+        weight: Double,
+        reps: Int,
+        isWarmup: Bool = false,
+        isEachSide: Bool = false,
+        isAssisted: Bool = false
+    ) {
         set.weightLbs = weight
         set.reps = max(1, reps)
         set.isWarmup = isWarmup
+        set.isEachSide = isEachSide
+        set.isAssisted = isAssisted
         set.completedAt = .now
         try? modelContext.save()
         HapticService.setLogged()

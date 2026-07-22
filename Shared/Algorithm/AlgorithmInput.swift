@@ -29,8 +29,8 @@ struct SetSnapshot: Equatable {
 /// before constructing the snapshot. The algorithm assumes this invariant
 /// and does not re-check.
 ///
-/// Sets are stored as-logged. The algorithm does not filter on `isWarmup`
-/// (warmup sets are eligible for "best set" today — see ProgressionService docs).
+/// Sets are stored as-logged. Progression picks best set among non-warmup
+/// sets only (see `ProgressionService.bestSet`).
 struct ExerciseRecordSnapshot: Equatable {
     let trainingMode: TrainingMode
     let sessionDate: Date

@@ -68,6 +68,8 @@ struct BackupService {
                                         weightLbs: s.weightLbs,
                                         reps: s.reps,
                                         isWarmup: s.isWarmup,
+                                        isEachSide: s.isEachSide,
+                                        isAssisted: s.isAssisted,
                                         completedAt: s.completedAt
                                     )
                                 }
@@ -168,7 +170,9 @@ struct BackupService {
                         setNumber: setb.setNumber,
                         weightLbs: setb.weightLbs,
                         reps: setb.reps,
-                        isWarmup: setb.isWarmup
+                        isWarmup: setb.isWarmup,
+                        isEachSide: setb.resolvedEachSide,
+                        isAssisted: setb.resolvedAssisted
                     )
                     set.id = setb.id
                     set.completedAt = setb.completedAt

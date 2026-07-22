@@ -176,6 +176,17 @@ final class DayTypeRegistry {
         reload(context: context)
     }
 
+    /// Persist order from a long-press-drag list (same pattern as day-plan exercises).
+    func applyOrder(ids: [UUID], context: ModelContext) {
+        let rows = (try? context.fetch(FetchDescriptor<SplitDay>())) ?? []
+        let byID = Dictionary(uniqueKeysWithValues: rows.map { ($0.id, $0) })
+        for (index, id) in ids.enumerated() {
+            byID[id]?.sortOrder = index
+        }
+        try? context.save()
+        reload(context: context)
+    }
+
     // MARK: - Private
 
     private func reindex() {

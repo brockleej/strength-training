@@ -30,6 +30,22 @@ final class Exercise {
 
     var recordsArray: [ExerciseRecord] { records ?? [] }
 
+    // MARK: - History helpers
+
+    /// Most recent completed session record for this exercise in the given mode.
+    func lastCompletedRecord(mode: TrainingMode) -> ExerciseRecord? {
+        recordsArray
+            .filter { $0.trainingMode == mode && $0.session?.isCompleted == true }
+            .max { ($0.session?.date ?? .distantPast) < ($1.session?.date ?? .distantPast) }
+    }
+
+    /// Completed records for mode, newest-first (excludes incomplete sessions).
+    func completedRecords(mode: TrainingMode) -> [ExerciseRecord] {
+        recordsArray
+            .filter { $0.trainingMode == mode && $0.session?.isCompleted == true }
+            .sorted { ($0.session?.date ?? .distantPast) > ($1.session?.date ?? .distantPast) }
+    }
+
     // MARK: - Per-day order
 
     func sortIndex(for day: DayType) -> Int {

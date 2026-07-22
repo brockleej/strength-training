@@ -87,6 +87,26 @@ final class FocusTargetLogicTests: XCTestCase {
         XCTAssertNil(p.repsDelta)
     }
 
+    func test_sessionLast_overridesSuggestion_forSupersets() {
+        let p = FocusTargetLogic.prefill(
+            suggestion: suggestion(230, 5, .consistent),
+            recent: RecentAverage(weight: 225, reps: 5, sessionCount: 4),
+            lastBest: (weight: 225, reps: 5),
+            sessionLast: FocusTargetLogic.SessionLastSet(
+                weight: 40,
+                reps: 12,
+                isWarmup: false,
+                isEachSide: true,
+                isAssisted: false
+            )
+        )
+        XCTAssertEqual(p.weight, 40)
+        XCTAssertEqual(p.reps, 12)
+        XCTAssertTrue(p.isEachSide)
+        XCTAssertNil(p.weightDelta)
+        XCTAssertNil(p.repsDelta)
+    }
+
     func test_suggestionWithoutLastBest_staysNeutral() {
         let p = FocusTargetLogic.prefill(
             suggestion: suggestion(230, 5, .consistent),
@@ -110,7 +130,9 @@ final class FocusTargetLogicTests: XCTestCase {
 
     func test_lastBest_picksHeaviestSet() {
         let best = FocusTargetLogic.lastBest(from: [
-            (weight: 135, reps: 10), (weight: 185, reps: 6), (weight: 155, reps: 8)
+            (weight: 135, reps: 10, isWarmup: false),
+            (weight: 185, reps: 6, isWarmup: false),
+            (weight: 155, reps: 8, isWarmup: false),
         ])
         XCTAssertEqual(best?.weight, 185)
         XCTAssertEqual(best?.reps, 6)
@@ -120,12 +142,25 @@ final class FocusTargetLogicTests: XCTestCase {
         // Same convention as ProgressionService.bestSet: max(by: <) keeps the
         // FIRST occurrence of the max weight on ties.
         let best = FocusTargetLogic.lastBest(from: [
-            (weight: 225, reps: 5), (weight: 225, reps: 3)
+            (weight: 225, reps: 5, isWarmup: false),
+            (weight: 225, reps: 3, isWarmup: false),
         ])
         XCTAssertEqual(best?.reps, 5)
     }
 
     func test_lastBest_emptySets_returnsNil() {
-        XCTAssertNil(FocusTargetLogic.lastBest(from: []))
+        let empty: [(weight: Double, reps: Int, isWarmup: Bool)] = []
+        XCTAssertNil(FocusTargetLogic.lastBest(from: empty))
+    }
+
+    func test_lastBest_excludesWarmups() {
+        let sets: [(weight: Double, reps: Int, isWarmup: Bool)] = [
+            (weight: 225, reps: 1, isWarmup: true),
+            (weight: 185, reps: 5, isWarmup: false),
+            (weight: 135, reps: 8, isWarmup: false),
+        ]
+        let best = FocusTargetLogic.lastBest(from: sets)
+        XCTAssertEqual(best?.weight, 185)
+        XCTAssertEqual(best?.reps, 5)
     }
 }

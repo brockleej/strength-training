@@ -195,8 +195,8 @@ final class ProgressionServicePureFunctionTests: XCTestCase {
 
     // MARK: - Warmup handling
 
-    func test_warmupSetsAreEligibleForBestSet() {
-        // A warmup set at higher weight should still win bestSet (current behavior).
+    func test_warmupSetsAreExcludedFromBestSet() {
+        // Heavy warmup must not drive progression — working set wins.
         let date = Date()
         let record = ExerciseRecordSnapshot(
             trainingMode: .highWeightLowReps,
@@ -211,7 +211,24 @@ final class ProgressionServicePureFunctionTests: XCTestCase {
             mode: .highWeightLowReps,
             params: .productionModerate
         )
-        XCTAssertEqual(suggestion?.targetWeight, 100)
-        XCTAssertEqual(suggestion?.targetReps, 1)
+        XCTAssertEqual(suggestion?.targetWeight, 50)
+        XCTAssertEqual(suggestion?.targetReps, 8)
+    }
+
+    func test_warmupOnlySession_returnsNil() {
+        let date = Date()
+        let record = ExerciseRecordSnapshot(
+            trainingMode: .highWeightLowReps,
+            sessionDate: date,
+            sets: [
+                SetSnapshot(weightLbs: 100, reps: 1, isWarmup: true, completedAt: date),
+            ]
+        )
+        let suggestion = ProgressionService.suggestion(
+            records: [record],
+            mode: .highWeightLowReps,
+            params: .productionModerate
+        )
+        XCTAssertNil(suggestion)
     }
 }

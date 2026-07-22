@@ -27,11 +27,26 @@ struct SettingsView: View {
     @AppStorage("progressionAggressiveness")
     private var aggressiveness: String = ProgressionAggressiveness.moderate.rawValue
 
+    @AppStorage(SplitSchedulePreferences.modeKey)
+    private var splitScheduleModeRaw: String = SplitScheduleMode.rolling.rawValue
+
     @AppStorage(RestTimerPreferences.enabledKey)
     private var restTimerEnabled: Bool = RestTimerPreferences.defaultEnabled
 
     @AppStorage(RestTimerPreferences.secondsKey)
     private var restTimerSeconds: Int = RestTimerPreferences.defaultSeconds
+
+    @AppStorage(RestTimerPreferences.soundEnabledKey)
+    private var restTimerSoundEnabled: Bool = RestTimerPreferences.defaultSoundEnabled
+
+    @AppStorage(BodyWeightPreferences.poundsKey)
+    private var bodyWeightPounds: Double = 0
+
+    @AppStorage(BodyProfilePreferences.heightInchesKey)
+    private var heightInches: Double = 0
+
+    @AppStorage(BodyProfilePreferences.sexKey)
+    private var sexRaw: String = BiologicalSex.male.rawValue
 
     @AppStorage(GymMembershipPreferences.codeKey)
     private var gymCode: String = ""
@@ -104,10 +119,28 @@ struct SettingsView: View {
                     } label: {
                         Label("Training Split", systemImage: "calendar")
                     }
+
+                    // Primary control for how Today advances through the split.
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Split schedule")
+                            .font(.uplift.text(15, weight: .semibold))
+                            .foregroundStyle(Color.uplift.fg)
+                        UpliftSegmentedControl(
+                            segments: SplitScheduleMode.allCases.map {
+                                UpliftSegment(id: $0.rawValue, label: $0.shortTitle)
+                            },
+                            selection: $splitScheduleModeRaw
+                        )
+                        Text((SplitScheduleMode(rawValue: splitScheduleModeRaw) ?? .rolling).detail)
+                            .font(.uplift.text(12, weight: .medium))
+                            .foregroundStyle(Color.uplift.fgDim)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(.vertical, 4)
                 } header: {
                     sectionHeader("Training")
                 } footer: {
-                    sectionFooter("Choose a bro split, push/pull/legs, or define your own day types.")
+                    sectionFooter("Rolling always picks the next day after your last workout. Strict weekly tracks Mon–Sun and can prompt when last week was incomplete.")
                 }
                 .listRowBackground(Color.uplift.surface1)
 
@@ -155,12 +188,79 @@ struct SettingsView: View {
                 .listRowBackground(Color.uplift.surface1)
 
                 Section {
+                    HStack {
+                        Label("Weight", systemImage: "scalemass.fill")
+                            .font(.uplift.text(15, weight: .medium))
+                            .foregroundStyle(Color.uplift.fg)
+                        Spacer()
+                        TextField("lb", value: $bodyWeightPounds, format: .number.precision(.fractionLength(0...1)))
+                            .font(.uplift.mono(15, weight: .semibold))
+                            .foregroundStyle(Color.uplift.accent)
+                            .multilineTextAlignment(.trailing)
+                            .keyboardType(.decimalPad)
+                            .frame(width: 72)
+                        Text("lb")
+                            .font(.uplift.text(13, weight: .medium))
+                            .foregroundStyle(Color.uplift.fgDim)
+                    }
+
+                    HStack {
+                        Label("Height", systemImage: "ruler")
+                            .font(.uplift.text(15, weight: .medium))
+                            .foregroundStyle(Color.uplift.fg)
+                        Spacer()
+                        // Feet
+                        TextField("ft", value: heightFeetBinding, format: .number)
+                            .font(.uplift.mono(15, weight: .semibold))
+                            .foregroundStyle(Color.uplift.accent)
+                            .multilineTextAlignment(.trailing)
+                            .keyboardType(.numberPad)
+                            .frame(width: 36)
+                        Text("ft")
+                            .font(.uplift.text(13, weight: .medium))
+                            .foregroundStyle(Color.uplift.fgDim)
+                        TextField("in", value: heightInchesRemainderBinding, format: .number)
+                            .font(.uplift.mono(15, weight: .semibold))
+                            .foregroundStyle(Color.uplift.accent)
+                            .multilineTextAlignment(.trailing)
+                            .keyboardType(.numberPad)
+                            .frame(width: 36)
+                        Text("in")
+                            .font(.uplift.text(13, weight: .medium))
+                            .foregroundStyle(Color.uplift.fgDim)
+                    }
+
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Sex (Navy formula)")
+                            .font(.uplift.text(15, weight: .medium))
+                            .foregroundStyle(Color.uplift.fg)
+                        UpliftSegmentedControl(
+                            segments: BiologicalSex.allCases.map {
+                                UpliftSegment(id: $0.rawValue, label: $0.title)
+                            },
+                            selection: $sexRaw
+                        )
+                    }
+                    .padding(.vertical, 4)
+                } header: {
+                    sectionHeader("Body profile")
+                } footer: {
+                    sectionFooter("Weight powers assisted lifts and muscularity. Height + sex unlock Navy body-fat % and FFMI on Progress → Body. Male: waist at navel + neck (no hips). Female: waist (narrowest) + hips + neck. Estimates are for trends only—not medical diagnosis.")
+                }
+                .listRowBackground(Color.uplift.surface1)
+
+                Section {
                     Toggle(isOn: $restTimerEnabled) {
                         Label("Rest timer", systemImage: "timer")
                     }
                     .tint(Color.uplift.accent)
 
                     if restTimerEnabled {
+                        Toggle(isOn: $restTimerSoundEnabled) {
+                            Label("Countdown sounds", systemImage: "speaker.wave.2.fill")
+                        }
+                        .tint(Color.uplift.accent)
+
                         VStack(alignment: .leading, spacing: 10) {
                             HStack {
                                 Text("Default rest")
@@ -206,7 +306,7 @@ struct SettingsView: View {
                 } header: {
                     sectionHeader("Rest Timer")
                 } footer: {
-                    sectionFooter("Starts after each logged set on the Focus screen. You can still turn it off mid-session.")
+                    sectionFooter("Default for lifts that haven’t been customized. On Focus, rest on/off is per exercise (handy for supersets: off mid-circuit, on for the last lift). Last 5s: rising ticks; zero: go chirp. Sounds work with ringer off; turn them off for haptics only.")
                 }
                 .listRowBackground(Color.uplift.surface1)
 
@@ -352,6 +452,37 @@ struct SettingsView: View {
             )
         }
         .listRowBackground(Color.uplift.surface1)
+    }
+
+    // MARK: - Height (ft / in) bindings
+
+    private var heightFeetBinding: Binding<Int> {
+        Binding(
+            get: {
+                guard heightInches > 0 else { return 0 }
+                return Int(heightInches.rounded()) / 12
+            },
+            set: { feet in
+                let inches = max(0, min(11, Int(heightInches.rounded()) % 12))
+                let total = max(0, feet) * 12 + inches
+                heightInches = total > 0 ? Double(total) : 0
+            }
+        )
+    }
+
+    private var heightInchesRemainderBinding: Binding<Int> {
+        Binding(
+            get: {
+                guard heightInches > 0 else { return 0 }
+                return Int(heightInches.rounded()) % 12
+            },
+            set: { inchesPart in
+                let feet = max(0, Int(heightInches.rounded()) / 12)
+                let clamped = max(0, min(11, inchesPart))
+                let total = feet * 12 + clamped
+                heightInches = total > 0 ? Double(total) : 0
+            }
+        )
     }
 
     // MARK: - Section text styling

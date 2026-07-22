@@ -16,6 +16,7 @@ let previewContainer: ModelContainer = {
         ExerciseRecord.self,
         SetRecord.self,
         SplitDay.self,
+        BodyMetricEntry.self,
         configurations: config
     )
     SeedData.seedIfNeeded(context: container.mainContext)

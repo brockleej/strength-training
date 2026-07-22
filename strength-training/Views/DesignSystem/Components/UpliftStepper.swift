@@ -27,6 +27,13 @@ struct UpliftStepper: View {
     let range: ClosedRange<Double>
     var targetDelta: String? = nil     // "+5 lb" / "+1" — non-nil = target dress
     var onUserEdit: (() -> Void)? = nil
+    /// Tap the ± step hint to cycle step size (e.g. 5 → 1 → 0.5).
+    var onStepHintTap: (() -> Void)? = nil
+    /// Optional compact flag under the value (e.g. “Sides” on the reps tile).
+    var flagTitle: String? = nil
+    var flagIsOn: Bool = false
+    var onFlagTap: (() -> Void)? = nil
+    var flagAccessibilityHint: String? = nil
     var icon: String? = nil            // corner glyph, e.g. "scalemass.fill"
     var iconTint: Color = .uplift.fgMuted
 
@@ -44,6 +51,9 @@ struct UpliftStepper: View {
                         color: isTarget ? .uplift.accent : .uplift.fg)
                         .minimumScaleFactor(0.55)   // 3+ digit values shrink to fit
                     hintLine
+                    if let flagTitle, let onFlagTap {
+                        flagChip(title: flagTitle, isOn: flagIsOn, action: onFlagTap)
+                    }
                 }
                 .frame(maxWidth: .infinity)
                 holdButton(symbol: "plus") { adjust(by: +1) }
@@ -70,7 +80,35 @@ struct UpliftStepper: View {
             }
         }
         .animation(.easeInOut(duration: 0.2), value: isTarget)
+        .animation(.easeInOut(duration: 0.15), value: flagIsOn)
         .onDisappear { stopHold() }
+    }
+
+    private func flagChip(title: String, isOn: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.uplift.text(10, weight: .bold))
+                .tracking(0.3)
+                .foregroundStyle(isOn ? Color.uplift.accent : Color.uplift.fgDim)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background {
+                    Capsule()
+                        .fill(isOn ? Color.uplift.accent.opacity(0.18) : Color.uplift.surface2)
+                }
+                .overlay {
+                    Capsule()
+                        .strokeBorder(
+                            isOn ? Color.uplift.accent.opacity(0.45) : Color.uplift.hairline,
+                            lineWidth: 1
+                        )
+                }
+        }
+        .buttonStyle(.plain)
+        .padding(.top, 2)
+        .accessibilityLabel(isOn ? "\(title) on" : "\(title) off")
+        .accessibilityHint(flagAccessibilityHint ?? "")
+        .accessibilityAddTraits(isOn ? [.isSelected] : [])
     }
 
     private var labelRow: some View {
@@ -102,6 +140,18 @@ struct UpliftStepper: View {
             Text(targetDelta)
                 .font(.uplift.mono(11, weight: .semibold))
                 .foregroundStyle(Color.uplift.up)
+        } else if let onStepHintTap {
+            Button(action: onStepHintTap) {
+                Text("± \(StepperLogic.format(step)) · tap")
+                    .font(.uplift.text(10, weight: .medium))
+                    .tracking(0.3)
+                    .foregroundStyle(Color.uplift.accent)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Weight step \(StepperLogic.format(step)) pounds, tap to change step")
         } else {
             Text("± \(StepperLogic.format(step))")
                 .font(.uplift.text(10, weight: .medium))

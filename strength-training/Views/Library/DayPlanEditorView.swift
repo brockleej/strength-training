@@ -3,13 +3,11 @@
 //  strength-training
 //
 //  Edit a day's exercise roster without starting a workout.
-//  Clean rows (no move-handle chrome); long-press/drag a row to reorder.
-//  Swipe left to remove. Tap to edit details.
+//  Global list patterns: long-press reorder, swipe-to-remove, Add exercise row.
 //
 
 import SwiftUI
 import SwiftData
-internal import UniformTypeIdentifiers
 
 struct DayPlanEditorView: View {
     let dayType: DayType
@@ -21,8 +19,6 @@ struct DayPlanEditorView: View {
 
     @State private var trackFilter: RotationTrack = .every
     @State private var showAddPicker = false
-    @State private var showAddExerciseSheet = false
-    @State private var pendingCreateNew = false
     @State private var editingExercise: Exercise?
     @State private var orderedIDs: [UUID] = []
     @State private var draggingID: UUID?
@@ -65,7 +61,7 @@ struct DayPlanEditorView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    Text("Long-press and drag a row to reorder. Swipe left to remove from this day. Tap to edit.")
+                    Text(ListMutationCopy.reorderAndRemove + " Tap to edit.")
                         .font(.uplift.text(13, weight: .medium))
                         .foregroundStyle(Color.uplift.fgMuted)
 
@@ -97,46 +93,33 @@ struct DayPlanEditorView: View {
                     .padding(.top, 4)
 
                     if displayedExercises.isEmpty {
-                        ContentUnavailableView(
-                            "No exercises on this day",
-                            systemImage: "list.bullet.rectangle",
-                            description: Text("Add from the library. Unassigned lifts live under Exercises → Unassigned.")
+                        EmptyListState(
+                            title: "No exercises on this day",
+                            description: "Add lifts from your library. Unassigned lifts live under Exercises → Unassigned.",
+                            actionTitle: ListMutationCopy.addExercise,
+                            action: { showAddPicker = true }
                         )
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 40)
                     } else {
                         VStack(spacing: 8) {
                             ForEach(Array(displayedExercises.enumerated()), id: \.element.id) { index, exercise in
                                 planRow(exercise, index: index)
-                                    .onDrop(
-                                        of: [.plainText],
-                                        delegate: DayPlanDropDelegate(
-                                            targetID: exercise.id,
-                                            orderedIDs: $orderedIDs,
-                                            draggingID: $draggingID,
-                                            onReorder: persistCurrentOrder
-                                        )
+                                    .reorderDropTarget(
+                                        id: exercise.id,
+                                        orderedIDs: $orderedIDs,
+                                        draggingID: $draggingID,
+                                        onReorder: persistCurrentOrder
                                     )
                             }
                         }
                     }
 
-                    Button {
-                        showAddPicker = true
-                    } label: {
-                        Label("Add from library", systemImage: "plus.circle.fill")
-                            .font(.uplift.text(15, weight: .semibold))
-                            .foregroundStyle(Color.uplift.accent)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                            .background {
-                                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                    .fill(Color.uplift.surface1)
-                            }
+                    if !displayedExercises.isEmpty {
+                        AddItemRow(title: ListMutationCopy.addExercise) {
+                            showAddPicker = true
+                        }
+                        .padding(.top, 8)
                     }
-                    .buttonStyle(.plain)
-                    .padding(.top, 8)
-                    .padding(.bottom, 24)
+                    Color.clear.frame(height: 24)
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 12)
@@ -156,14 +139,8 @@ struct DayPlanEditorView: View {
                     syncOrderedIDsFromStore()
                 }
             }
-            .sheet(isPresented: $showAddPicker, onDismiss: {
-                if pendingCreateNew {
-                    pendingCreateNew = false
-                    showAddExerciseSheet = true
-                }
-                syncOrderedIDsFromStore()
-            }) {
-                AddExercisePicker(
+            .sheet(isPresented: $showAddPicker, onDismiss: syncOrderedIDsFromStore) {
+                AddExerciseSheet(
                     currentDayType: dayType,
                     excludedIDs: Set(dayExercisesSorted.map(\.id)),
                     onPick: { exercise, _ in
@@ -171,11 +148,11 @@ struct DayPlanEditorView: View {
                         try? modelContext.save()
                         syncOrderedIDsFromStore()
                     },
-                    onCreateNew: { pendingCreateNew = true }
+                    onCreated: { _ in
+                        syncOrderedIDsFromStore()
+                    },
+                    assignAlways: true
                 )
-            }
-            .sheet(isPresented: $showAddExerciseSheet, onDismiss: syncOrderedIDsFromStore) {
-                AddExerciseView(preselectedDayType: dayType)
             }
             .sheet(item: $editingExercise, onDismiss: syncOrderedIDsFromStore) { exercise in
                 EditExerciseView(exercise: exercise, focusDay: dayType)
@@ -221,18 +198,8 @@ struct DayPlanEditorView: View {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .fill(draggingID == exercise.id ? Color.uplift.surface2 : Color.uplift.surface1)
         }
-        // Whole row is the drag source — no separate handle chrome.
-        .onDrag {
-            draggingID = exercise.id
-            return NSItemProvider(object: exercise.id.uuidString as NSString)
-        } preview: {
-            Text(exercise.name)
-                .font(.uplift.text(14, weight: .semibold))
-                .foregroundStyle(Color.uplift.fg)
-                .padding(12)
-                .background(Color.uplift.surface2, in: RoundedRectangle(cornerRadius: 12))
-        }
-        .swipeToDelete(fullSwipeDeletes: true, onDelete: {
+        .reorderDragSource(id: exercise.id, displayName: exercise.name, draggingID: $draggingID)
+        .swipeToDelete(fullSwipeDeletes: false, onDelete: {
             removeExercise(exercise)
         }, onTap: {
             editingExercise = exercise
@@ -258,46 +225,6 @@ struct DayPlanEditorView: View {
         exercise.removeDayType(dayType)
         try? modelContext.save()
         syncOrderedIDsFromStore()
-    }
-}
-
-// MARK: - Drag reorder
-
-private struct DayPlanDropDelegate: DropDelegate {
-    let targetID: UUID
-    @Binding var orderedIDs: [UUID]
-    @Binding var draggingID: UUID?
-    let onReorder: () -> Void
-
-    func validateDrop(info: DropInfo) -> Bool {
-        draggingID != nil
-    }
-
-    func dropEntered(info: DropInfo) {
-        guard let draggingID,
-              draggingID != targetID,
-              let from = orderedIDs.firstIndex(of: draggingID),
-              let to = orderedIDs.firstIndex(of: targetID),
-              from != to
-        else { return }
-
-        withAnimation(.easeInOut(duration: 0.15)) {
-            orderedIDs.move(
-                fromOffsets: IndexSet(integer: from),
-                toOffset: to > from ? to + 1 : to
-            )
-        }
-        onReorder()
-    }
-
-    func dropUpdated(info: DropInfo) -> DropProposal? {
-        DropProposal(operation: .move)
-    }
-
-    func performDrop(info: DropInfo) -> Bool {
-        draggingID = nil
-        onReorder()
-        return true
     }
 }
 

@@ -45,6 +45,7 @@
 		C1702C911A282B1D864CF718 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AA363F8D7BCEA2FCDE96CCEE /* Cocoa.framework */; };
 		C313AB84BBB7C618881DB9C7 /* BackupLoaderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FE94BB865292C869CD64F4F /* BackupLoaderTests.swift */; };
 		C6BC791F18CDB317248A0634 /* ProgressionServicePureFunctionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A284E56C056FDF4F4E7CE02C /* ProgressionServicePureFunctionTests.swift */; };
+		D9F5A2B30C1E5F708B2D4E6F /* SplitScheduleLogicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8E4F1A29B0D4E6F8A1C3D5E /* SplitScheduleLogicTests.swift */; };
 		DD4064CC113170BDC4CA230E /* ReplayTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5781434F825A1387BC87CAD /* ReplayTable.swift */; };
 		DD41F85ED9D23F809FE149E0 /* TodayStatsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A045484DE02168813131AA /* TodayStatsTests.swift */; };
 		E03682C16B5A7E61108A1231 /* UpliftTokensTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22DFB812A881562839943F79 /* UpliftTokensTests.swift */; };
@@ -59,6 +60,7 @@
 		F1575293D208883B22818EF3 /* ParameterPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 165BF58640500A519020F992 /* ParameterPanel.swift */; };
 		F782886371C54BEC655F1D47 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32C7938965779BE5D2C32989 /* DashboardView.swift */; };
 		FD8D7B4D50F612D4C3DC32C0 /* ExerciseDashboardRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = E90D8161F780FCDA4CBDA8C4 /* ExerciseDashboardRow.swift */; };
+B2C3D4E5F60718293A4B5C6D /* BodyCompositionMathTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B5C /* BodyCompositionMathTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -112,6 +114,7 @@
 		B3E6DCDC4270F67C50095A9A /* SimulationStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SimulationStore.swift; sourceTree = "<group>"; };
 		C29E8DFE676157D4AD6A2D25 /* minimal-backup.json */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.json; path = "minimal-backup.json"; sourceTree = "<group>"; };
 		C4513366655FE67F2A44DEB5 /* StepperLogicTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StepperLogicTests.swift; sourceTree = "<group>"; };
+		C8E4F1A29B0D4E6F8A1C3D5E /* SplitScheduleLogicTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SplitScheduleLogicTests.swift; sourceTree = "<group>"; };
 		D469A75D83D9297C0A3174B3 /* FocusTargetLogicTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FocusTargetLogicTests.swift; sourceTree = "<group>"; };
 		D7F178DC244F07C15EE63542 /* Sparkline.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Sparkline.swift; sourceTree = "<group>"; };
 		D831F8CB0728963D5B3EAFD0 /* ProgressionLab.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ProgressionLab.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -129,6 +132,7 @@
 		FC046B453D9070D004742173 /* ConfigArtifact.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ConfigArtifact.swift; sourceTree = "<group>"; };
 		FC5ED87967CB436716AA1EF1 /* ProgressionTypes.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ProgressionTypes.swift; sourceTree = "<group>"; };
 		FCD72FE4DBC5F2CB9BEB771B /* strength-training-tests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; name = "strength-training-tests.xctest"; path = strength_training_tests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+A1B2C3D4E5F60718293A4B5C /* BodyCompositionMathTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BodyCompositionMathTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -256,9 +260,11 @@
 				77A045484DE02168813131AA /* TodayStatsTests.swift */,
 				84E0B9265A12EFB99615DBA6 /* PrevSessionsStripDataTests.swift */,
 				D469A75D83D9297C0A3174B3 /* FocusTargetLogicTests.swift */,
+				C8E4F1A29B0D4E6F8A1C3D5E /* SplitScheduleLogicTests.swift */,
 				EB1C5CC453A0B417B4B47C31 /* WorkoutFormatTests.swift */,
 				2C13DB8B2815F5DFA66CB019 /* E1RMDetectionTests.swift */,
 				A9D1927AD35565C0B0F0CB4D /* EffortScaleTests.swift */,
+				A1B2C3D4E5F60718293A4B5C /* BodyCompositionMathTests.swift */,
 			);
 			path = "strength-training-tests";
 			sourceTree = "<group>";
@@ -556,9 +562,11 @@
 				DD41F85ED9D23F809FE149E0 /* TodayStatsTests.swift in Sources */,
 				F10E09BC7B41DF904051DC08 /* PrevSessionsStripDataTests.swift in Sources */,
 				93349D7552961CAD8C765FB7 /* FocusTargetLogicTests.swift in Sources */,
+				D9F5A2B30C1E5F708B2D4E6F /* SplitScheduleLogicTests.swift in Sources */,
 				52260489A0E5F8F397C552CE /* WorkoutFormatTests.swift in Sources */,
 				08F2D596CD1C0AF37A4D316E /* E1RMDetectionTests.swift in Sources */,
 				E817E9DE7E0C2E2F33F7A626 /* EffortScaleTests.swift in Sources */,
+				B2C3D4E5F60718293A4B5C6D /* BodyCompositionMathTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -825,7 +833,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "strength-training/Info.plist";
-				INFOPLIST_KEY_CFBundleDisplayName = UpLift;
+				INFOPLIST_KEY_CFBundleDisplayName = IronLog;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "View workout metrics like calories and heart rate during your workouts.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Save your strength training workouts to Apple Health for Activity Ring credit and fitness tracking.";
@@ -864,7 +872,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "strength-training/Info.plist";
-				INFOPLIST_KEY_CFBundleDisplayName = UpLift;
+				INFOPLIST_KEY_CFBundleDisplayName = IronLog;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "View workout metrics like calories and heart rate during your workouts.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Save your strength training workouts to Apple Health for Activity Ring credit and fitness tracking.";

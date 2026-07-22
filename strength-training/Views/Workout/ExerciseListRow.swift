@@ -7,6 +7,9 @@ import SwiftUI
 
 /// One exercise in the in-workout overview list.
 /// pending = numbered circle · active (last-visited) = accent dress · completed = check + strikethrough.
+///
+/// Secondary line shows either last-session recipe or progression target;
+/// parent owns the shared toggle (tap the line to flip).
 struct ExerciseListRow: View {
     enum RowState: Equatable {
         case pending(number: Int)
@@ -14,14 +17,20 @@ struct ExerciseListRow: View {
         case completed
     }
 
+    enum SecondaryMode: String {
+        case recipe
+        case target
+    }
+
     let name: String
-    let lastSets: Int?        // last session's set count (all sets)
-    let targetWeight: Double? // progression target (fallback: recent avg weight)
-    let targetReps: Int?      // recent avg reps
     let state: RowState
-    var trackBadge: String? = nil  // "A" / "B" week label
-    /// Compact last-session recipe, e.g. "135×5 · 225×4 · 305×5 · 305×5".
+    var trackBadge: String? = nil
+    /// Compact last-session recipe, e.g. "135×5 · 225×4 · 305×5".
     var lastSessionSummary: String? = nil
+    var targetWeight: Double? = nil
+    var targetReps: Int? = nil
+    var secondaryMode: SecondaryMode = .recipe
+    var onToggleSecondary: (() -> Void)? = nil
 
     private var isActive: Bool { state == .active }
     private var isCompleted: Bool { state == .completed }
@@ -45,15 +54,7 @@ struct ExerciseListRow: View {
                             .background(Capsule().fill(Color.uplift.accent.opacity(0.16)))
                     }
                 }
-                if let lastSessionSummary, !lastSessionSummary.isEmpty {
-                    Text(lastSessionSummary)
-                        .font(.uplift.mono(11, weight: .medium))
-                        .foregroundStyle(Color.uplift.fgMuted)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.85)
-                }
-                subtitleText
-                    .font(.uplift.mono(12, weight: .medium))
+                secondaryLine
             }
             Spacer(minLength: 8)
             if isActive {
@@ -75,40 +76,138 @@ struct ExerciseListRow: View {
                 .strokeBorder(isActive ? Color.uplift.accent : .clear, lineWidth: 1.5)
         }
         .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .accessibilityElement(children: .ignore)
+        .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityText)
     }
 
-    private var subtitleText: Text {
-        guard targetWeight != nil || targetReps != nil else {
-            return Text("—").foregroundColor(.uplift.fgMuted)
-        }
-        let setsPrefix: Text = lastSets.map { Text("\($0) sets · ").foregroundColor(.uplift.fgMuted) } ?? Text("")
-        if let targetWeight, let targetReps {
-            return setsPrefix + PairText.pair(weight: targetWeight, reps: targetReps, font: .uplift.mono(12, weight: .medium))
-        } else if let targetReps {
-            return setsPrefix + Text("\(targetReps)").foregroundColor(.uplift.repsTint)
-        } else if let targetWeight {
-            return setsPrefix + Text(StepperLogic.format(targetWeight)).foregroundColor(.uplift.weightTint)
-        }
-        return setsPrefix + Text("—").foregroundColor(.uplift.fgMuted)
+    @ViewBuilder
+    private var secondaryLine: some View {
+        let content = secondaryContent
+        secondaryLabel(content)
+            .contentShape(Rectangle())
+            .accessibilityLabel(content.accessibility)
+            .accessibilityHint(
+                onToggleSecondary == nil
+                    ? ""
+                    : (secondaryMode == .recipe
+                        ? "Shows last session. Activate to show progression target."
+                        : "Shows progression target. Activate to show last session.")
+            )
+            .accessibilityAddTraits(onToggleSecondary == nil ? [] : .isButton)
+            // highPriorityGesture wins over parent NavigationLink for this strip only.
+            .highPriorityGesture(
+                TapGesture().onEnded {
+                    onToggleSecondary?()
+                }
+            )
     }
 
-    private var accessibilitySubtitle: String {
-        var parts: [String] = []
-        if let lastSessionSummary, !lastSessionSummary.isEmpty {
-            parts.append("last time \(lastSessionSummary)")
+    private func secondaryLabel(_ content: SecondaryContent) -> some View {
+        HStack(spacing: 6) {
+            if content.hasContent {
+                Text(content.modeLabel)
+                    .font(.uplift.text(10, weight: .semibold))
+                    .foregroundStyle(Color.uplift.fgDim)
+                    .textCase(.uppercase)
+                    .tracking(0.3)
+            }
+            Group {
+                if let attributed = content.attributed {
+                    attributed
+                } else {
+                    Text(content.plain ?? "—")
+                        .foregroundStyle(Color.uplift.fgMuted)
+                }
+            }
+            .font(.uplift.mono(12, weight: .medium))
+            .lineLimit(2)
+            .minimumScaleFactor(0.85)
         }
-        let setsPart = lastSets.map { "\($0) sets" }
-        if let setsPart { parts.append(setsPart) }
+    }
+
+    private struct SecondaryContent {
+        var plain: String?
+        var attributed: Text?
+        var modeLabel: String
+        var accessibility: String
+        var hasContent: Bool
+    }
+
+    private var secondaryContent: SecondaryContent {
+        switch secondaryMode {
+        case .recipe:
+            if let lastSessionSummary, !lastSessionSummary.isEmpty {
+                return SecondaryContent(
+                    plain: lastSessionSummary,
+                    attributed: Text(lastSessionSummary).foregroundColor(.uplift.fgMuted),
+                    modeLabel: "Last",
+                    accessibility: "Last session \(lastSessionSummary)",
+                    hasContent: true
+                )
+            }
+            // No recipe — fall back to target if available
+            return targetContent(modeLabel: "Target", emptyFallback: true)
+        case .target:
+            return targetContent(modeLabel: "Target", emptyFallback: false)
+        }
+    }
+
+    private func targetContent(modeLabel: String, emptyFallback: Bool) -> SecondaryContent {
+        if targetWeight == nil && targetReps == nil {
+            if emptyFallback {
+                return SecondaryContent(
+                    plain: "—",
+                    attributed: Text("—").foregroundColor(.uplift.fgMuted),
+                    modeLabel: "",
+                    accessibility: "No history",
+                    hasContent: false
+                )
+            }
+            // No target: show recipe if we have it when toggled to target
+            if let lastSessionSummary, !lastSessionSummary.isEmpty {
+                return SecondaryContent(
+                    plain: lastSessionSummary,
+                    attributed: Text(lastSessionSummary).foregroundColor(.uplift.fgMuted),
+                    modeLabel: "Last",
+                    accessibility: "Last session \(lastSessionSummary)",
+                    hasContent: true
+                )
+            }
+            return SecondaryContent(
+                plain: "—",
+                attributed: Text("—").foregroundColor(.uplift.fgMuted),
+                modeLabel: "",
+                accessibility: "No target",
+                hasContent: false
+            )
+        }
+
+        let attributed: Text
+        let a11y: String
         if let targetWeight, let targetReps {
-            parts.append("target \(StepperLogic.format(targetWeight)) pounds by \(targetReps)")
+            attributed = PairText.pair(
+                weight: targetWeight,
+                reps: targetReps,
+                font: .uplift.mono(12, weight: .medium)
+            )
+            a11y = "Target \(StepperLogic.format(targetWeight)) pounds by \(targetReps)"
         } else if let targetReps {
-            parts.append("target \(targetReps) reps")
+            attributed = Text("\(targetReps)").foregroundColor(.uplift.repsTint)
+            a11y = "Target \(targetReps) reps"
         } else if let targetWeight {
-            parts.append("target \(StepperLogic.format(targetWeight)) pounds")
+            attributed = Text(StepperLogic.format(targetWeight)).foregroundColor(.uplift.weightTint)
+            a11y = "Target \(StepperLogic.format(targetWeight)) pounds"
+        } else {
+            attributed = Text("—").foregroundColor(.uplift.fgMuted)
+            a11y = "No target"
         }
-        return parts.isEmpty ? "no history" : parts.joined(separator: ", ")
+        return SecondaryContent(
+            plain: nil,
+            attributed: attributed,
+            modeLabel: modeLabel,
+            accessibility: a11y,
+            hasContent: true
+        )
     }
 
     @ViewBuilder
@@ -140,16 +239,33 @@ struct ExerciseListRow: View {
         case .active: stateText = "current exercise"
         case .pending(let n): stateText = "number \(n)"
         }
-        return "\(name), \(accessibilitySubtitle), \(stateText)"
+        return "\(name), \(secondaryContent.accessibility), \(stateText)"
     }
 }
 
 #Preview("ExerciseListRow") {
     VStack(spacing: 8) {
-        ExerciseListRow(name: "Back Squat", lastSets: 4, targetWeight: 225, targetReps: 5, state: .completed)
-        ExerciseListRow(name: "Walking Lunge", lastSets: 3, targetWeight: 40, targetReps: 12, state: .active)
-        ExerciseListRow(name: "Leg Press", lastSets: 3, targetWeight: 360, targetReps: 10, state: .pending(number: 4))
-        ExerciseListRow(name: "Nordic Curl", lastSets: nil, targetWeight: nil, targetReps: nil, state: .pending(number: 5))
+        ExerciseListRow(
+            name: "Back Squat",
+            state: .completed,
+            lastSessionSummary: "135×5 · 225×4 · 305×5",
+            targetWeight: 310,
+            targetReps: 5,
+            secondaryMode: .recipe
+        )
+        ExerciseListRow(
+            name: "Walking Lunge",
+            state: .active,
+            lastSessionSummary: "40×12 · 40×12",
+            targetWeight: 45,
+            targetReps: 12,
+            secondaryMode: .target
+        )
+        ExerciseListRow(
+            name: "Nordic Curl",
+            state: .pending(number: 5),
+            secondaryMode: .recipe
+        )
     }
     .padding(20)
     .background(Color.uplift.bgElev)

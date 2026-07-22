@@ -8,10 +8,13 @@ import SwiftData
 
 struct SessionDetailView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
     let session: WorkoutSession
+    var workoutVM: WorkoutViewModel? = nil
 
     @State private var healthStats: HealthKitWorkoutStats?
     @State private var loadedStats = false
+    @State private var showReopenConfirm = false
 
     @Query(filter: #Predicate<WorkoutSession> { $0.isCompleted == true },
            sort: \WorkoutSession.date, order: .reverse)
@@ -27,10 +30,18 @@ struct SessionDetailView: View {
         SessionMath.e1RMPRExerciseNames(for: session, allSessions: completedSessions)
     }
 
+    private var canReopen: Bool {
+        workoutVM != nil && session.isCompleted
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 hero
+                if canReopen {
+                    editWorkoutButton
+                        .padding(.bottom, 12)
+                }
                 statsCard
                 if let comparison = SessionMath.comparison(for: session, among: completedSessions) {
                     SessionComparisonCard(comparison: comparison)
@@ -57,12 +68,58 @@ struct SessionDetailView: View {
         .scrollIndicators(.hidden)
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if canReopen {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Edit") {
+                        showReopenConfirm = true
+                    }
+                    .fontWeight(.semibold)
+                }
+            }
+        }
+        .confirmationDialog(
+            "Edit this workout?",
+            isPresented: $showReopenConfirm,
+            titleVisibility: .visible
+        ) {
+            Button("Open for editing") {
+                guard let workoutVM else { return }
+                workoutVM.reopenSessionForEditing(session)
+                dismiss()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Adjust sets, add a skipped lift, then Save Changes. Any in-progress workout is parked until you’re done.")
+        }
         .task {
             guard !loadedStats, let uuid = session.healthKitWorkoutUUID else { return }
             loadedStats = true
             let service = HealthKitWorkoutService()
             healthStats = await service.fetchWorkoutStats(for: uuid)
         }
+    }
+
+    private var editWorkoutButton: some View {
+        Button {
+            showReopenConfirm = true
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "pencil.line")
+                    .font(.system(size: 15, weight: .semibold))
+                Text("Edit workout")
+                    .font(.uplift.text(15, weight: .semibold))
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .background(
+                Color.uplift.accent,
+                in: RoundedRectangle(cornerRadius: 16, style: .continuous)
+            )
+            .foregroundStyle(Color.uplift.onAccent)
+        }
+        .buttonStyle(.plain)
+        .accessibilityHint("Re-open this session to change sets or add exercises")
     }
 
     // MARK: - Sections

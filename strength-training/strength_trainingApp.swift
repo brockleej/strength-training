@@ -19,6 +19,7 @@ struct strength_trainingApp: App {
             ExerciseRecord.self,
             SetRecord.self,
             SplitDay.self,
+            BodyMetricEntry.self,
         ])
         // Local-only store. CloudKit / iCloud requires a paid Apple Developer
         // Program team (Personal teams cannot provision iCloud or Push).

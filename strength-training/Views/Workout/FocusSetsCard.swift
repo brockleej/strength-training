@@ -23,7 +23,7 @@ struct FocusSetsCard: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.vertical, 12)
             } else {
-                Text("Tap a set to edit · swipe to delete")
+                Text(ListMutationCopy.setsSwipe)
                     .font(.uplift.text(11, weight: .medium))
                     .foregroundStyle(Color.uplift.fgDim)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -92,14 +92,30 @@ struct FocusSetsCard: View {
                     .padding(.vertical, 2)
                     .background(Capsule().fill(Color.uplift.customBadge.opacity(0.16)))
             }
-            Text(StepperLogic.format(set.weightLbs))
+            if set.isEachSide {
+                Text("EA")
+                    .font(.uplift.text(10, weight: .bold))
+                    .foregroundStyle(Color.uplift.accent)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 2)
+                    .background(Capsule().fill(Color.uplift.accent.opacity(0.16)))
+            }
+            if set.isAssisted {
+                Text("A")
+                    .font(.uplift.text(10, weight: .bold))
+                    .foregroundStyle(Color.uplift.legsInk)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 2)
+                    .background(Capsule().fill(Color.uplift.legsInk.opacity(0.16)))
+            }
+            Text(set.weightDisplay)
                 .font(.uplift.mono(14, weight: .semibold))
                 .foregroundStyle(Color.uplift.weightTint)
                 .frame(width: 64, alignment: .trailing)
-            Text("\(set.reps)")
+            Text(set.isEachSide ? "\(set.reps)×2" : "\(set.reps)")
                 .font(.uplift.mono(14, weight: .semibold))
                 .foregroundStyle(Color.uplift.fg)
-                .frame(width: 48, alignment: .trailing)
+                .frame(width: 52, alignment: .trailing)
         }
         .padding(.vertical, 10)
         .padding(.horizontal, 6)
@@ -109,14 +125,28 @@ struct FocusSetsCard: View {
         }
         .contentShape(Rectangle())
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(
-            isSelected
-                ? "Set \(set.setNumber), editing, \(StepperLogic.format(set.weightLbs)) pounds, \(set.reps) reps\(set.isWarmup ? ", warmup" : ""), double tap to cancel"
-                : "Set \(set.setNumber), \(StepperLogic.format(set.weightLbs)) pounds, \(set.reps) reps\(set.isWarmup ? ", warmup" : ""), double tap to edit"
-        )
+        .accessibilityLabel(setAccessibilityLabel(set, isSelected: isSelected))
         .accessibilityAddTraits(isSelected ? [.isSelected] : [])
         // Focus sets: reveal-then-tap (safer mid-workout than full-swipe commit).
         .swipeToDelete(fullSwipeDeletes: false, onDelete: { onDelete(set) }, onTap: { onSelect(set) })
+    }
+
+    private func setAccessibilityLabel(_ set: SetRecord, isSelected: Bool) -> String {
+        let weightPart: String
+        if set.isAssisted {
+            weightPart = "\(StepperLogic.format(set.weightLbs)) pounds assistance"
+        } else {
+            weightPart = "\(StepperLogic.format(set.weightLbs)) pounds"
+        }
+        var parts = [
+            "Set \(set.setNumber)",
+            isSelected ? "editing" : nil,
+            weightPart,
+            set.isEachSide ? "\(set.reps) reps each side" : "\(set.reps) reps",
+            set.isWarmup ? "warmup" : nil,
+            isSelected ? "double tap to cancel" : "double tap to edit",
+        ].compactMap { $0 }
+        return parts.joined(separator: ", ")
     }
 }
 
