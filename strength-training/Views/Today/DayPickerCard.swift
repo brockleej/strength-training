@@ -105,16 +105,16 @@ struct DayPickerCard: View {
 
     private var subtitle: some View {
         // muscles in text face; duration suffix in mono, per the design
-        var text = Text(dayType.subtitle)
-            .font(.uplift.text(12, weight: .medium))
-        if let lastDuration {
-            text = text
-                + Text(" · ").font(.uplift.text(12, weight: .medium))
-                + Text("\(lastDuration) last time").font(.uplift.mono(12, weight: .medium))
+        Group {
+            if let lastDuration {
+                Text("\(Text(dayType.subtitle).font(.uplift.text(12, weight: .medium)))\(Text(" · ").font(.uplift.text(12, weight: .medium)))\(Text("\(lastDuration) last time").font(.uplift.mono(12, weight: .medium)))")
+            } else {
+                Text(dayType.subtitle)
+                    .font(.uplift.text(12, weight: .medium))
+            }
         }
-        return text
-            .foregroundStyle(Color.uplift.fgMuted)
-            .lineLimit(2)
+        .foregroundStyle(Color.uplift.fgMuted)
+        .lineLimit(2)
     }
 
     private var accessibilityText: String {

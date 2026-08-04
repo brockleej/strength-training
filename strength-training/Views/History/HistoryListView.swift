@@ -193,17 +193,8 @@ private struct HistorySessionRow: View {
                         .foregroundStyle(Color.uplift.pr)
                     }
                 }
-                (
-                    Text(session.date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()))
-                        .font(.uplift.text(12, weight: .medium))
-                    + Text(" · ").font(.uplift.text(12, weight: .medium))
-                    + Text("\(TodayStats.formatVolume(SessionMath.volume(of: session))) lb")
-                        .font(.uplift.mono(12, weight: .medium))
-                    + Text(" · ").font(.uplift.text(12, weight: .medium))
-                    + Text("\(SessionMath.setCount(of: session)) sets")
-                        .font(.uplift.text(12, weight: .medium))
-                )
-                .foregroundStyle(Color.uplift.fgMuted)
+                Text("\(Text(session.date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())).font(.uplift.text(12, weight: .medium)))\(Text(" · ").font(.uplift.text(12, weight: .medium)))\(Text("\(TodayStats.formatVolume(SessionMath.volume(of: session))) lb").font(.uplift.mono(12, weight: .medium)))\(Text(" · ").font(.uplift.text(12, weight: .medium)))\(Text("\(SessionMath.setCount(of: session)) sets").font(.uplift.text(12, weight: .medium)))")
+                    .foregroundStyle(Color.uplift.fgMuted)
             }
         }
         .padding(.vertical, 2)

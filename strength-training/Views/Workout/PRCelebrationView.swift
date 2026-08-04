@@ -86,12 +86,9 @@ struct PRCelebrationView: View {
                     .foregroundStyle(Color.uplift.fg)
                     .padding(.top, 18)
 
-                (
-                    Text("1RM est. ").font(.uplift.text(13, weight: .medium))
-                    + Text("\(Int(context.e1RM.rounded())) lb").font(.uplift.mono(13, weight: .semibold))
-                )
-                .foregroundStyle(Color.uplift.fgMuted)
-                .padding(.top, 4)
+                Text("\(Text("1RM est. ").font(.uplift.text(13, weight: .medium)))\(Text("\(Int(context.e1RM.rounded())) lb").font(.uplift.mono(13, weight: .semibold)))")
+                    .foregroundStyle(Color.uplift.fgMuted)
+                    .padding(.top, 4)
 
                 deltaCard
                     .padding(.horizontal, 24)

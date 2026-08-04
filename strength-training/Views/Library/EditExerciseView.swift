@@ -232,16 +232,10 @@ struct EditExerciseView: View {
     }
 
     private func formLabel(_ text: String, optional: Bool = false) -> some View {
-        (
-            Text(text.uppercased())
-                .font(.uplift.text(11, weight: .bold))
-            + Text(optional ? "  (OPTIONAL)" : "")
-                .font(.uplift.text(11, weight: .medium))
-                .foregroundColor(Color.uplift.fgDim)
-        )
-        .tracking(0.6)
-        .foregroundStyle(Color.uplift.fgMuted)
-        .padding(.horizontal, 4)
+        Text("\(Text(text.uppercased()).font(.uplift.text(11, weight: .bold)))\(Text(optional ? "  (OPTIONAL)" : "").font(.uplift.text(11, weight: .medium)).foregroundStyle(Color.uplift.fgDim))")
+            .tracking(0.6)
+            .foregroundStyle(Color.uplift.fgMuted)
+            .padding(.horizontal, 4)
     }
 
     private func field(label: String, optional: Bool = false, @ViewBuilder content: () -> some View) -> some View {

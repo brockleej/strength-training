@@ -307,13 +307,8 @@ struct ExerciseListView: View {
                         .background(Capsule().fill(Color.uplift.accent.opacity(0.16)))
                 }
             }
-            (
-                Text("\(completedCount) of \(flatExercises.count)")
-                    .font(.uplift.mono(13, weight: .semibold))
-                + Text(" exercises complete")
-                    .font(.uplift.text(13, weight: .medium))
-            )
-            .foregroundStyle(Color.uplift.fgMuted)
+            Text("\(Text("\(completedCount) of \(flatExercises.count)").font(.uplift.mono(13, weight: .semibold)))\(Text(" exercises complete").font(.uplift.text(13, weight: .medium)))")
+                .foregroundStyle(Color.uplift.fgMuted)
             if workoutVM.isRevisitingSavedSession, let date = workoutVM.activeSession?.date {
                 Text(date.formatted(.dateTime.weekday(.wide).month(.abbreviated).day()))
                     .font(.uplift.text(12, weight: .medium))
