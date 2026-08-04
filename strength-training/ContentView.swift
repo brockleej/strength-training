@@ -44,7 +44,7 @@ struct ContentView: View {
                             .resizable()
                             .scaledToFit()
                             .frame(width: 132, height: 63)
-                        Text("IronLog")
+                        Text("RockLog")
                             .font(.system(size: 34, weight: .bold, design: .default))
                             .tracking(-0.6)
                             .foregroundStyle(Color.uplift.accent)

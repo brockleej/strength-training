@@ -4,11 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 > **Note:** This is a Swift/iOS project. Global instructions referencing Angular/TypeScript best practices do **not** apply here.
 
-# IronLog (Strength Training iOS App)
+# RockLog (Strength Training iOS App)
 
 ## Project Overview
 
-IronLog is a native iOS strength-training app built with SwiftUI and SwiftData. Users log gym workouts, track sets/reps/weight, rest timers, assisted lifts, and body metrics (Navy BF% → FFMI). Data is on-device via SwiftData with optional iCloud/CloudKit sync (`iCloud.com.lee.lift2026`); HealthKit can start/stop Apple Fitness workouts on device.
+RockLog is a native iOS strength-training app built with SwiftUI and SwiftData. Users log gym workouts, track sets/reps/weight, rest timers, assisted lifts, and body metrics (Navy BF% → FFMI). Data is on-device via SwiftData with optional iCloud/CloudKit sync (`iCloud.com.lee.lift2026`); HealthKit can start/stop Apple Fitness workouts on device.
 
 - **Language:** Swift 6
 - **Platform:** iOS 26.2+ (minimum deployment target)

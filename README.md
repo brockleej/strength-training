@@ -1,6 +1,6 @@
 <div align="center">
-  <img src="docs/screenshots/app_icon.png" alt="IronLog Icon" width="120" />
-  <h1>IronLog</h1>
+  <img src="docs/screenshots/app_icon.png" alt="RockLog Icon" width="120" />
+  <h1>RockLog</h1>
   <em>Log the session. Own the data. See the trend.</em>
   <br>
   <em>A native iOS strength tracker — SwiftUI · SwiftData · built for how people actually train.</em>
@@ -17,20 +17,20 @@
 
 ## Origin & credit
 
-**IronLog is a continuation of work started by [Daniel Kuhlwein](https://github.com/danielkuhlwein).**
+**RockLog is a continuation of work started by [Daniel Kuhlwein](https://github.com/danielkuhlwein).**
 
 Daniel designed and shipped the **original strength-training app**: the architecture, core logging model, progression engine, progress visualization direction, HealthKit/CloudKit foundations, backup path, and design-system bones. That is the **previous distro** this repo stands on. Most of the structure you still navigate every day is his.
 
-This fork (**IronLog**) is maintained by [Lee Brock](https://github.com/brockleej) as a personal hobby log — branding, training-style features, and day-to-day polish layered **on top of** that foundation. **Credit for the original product and framework belongs to Daniel.** Lee is not claiming authorship of that core work.
+This fork (**RockLog**) is maintained by [Lee Brock](https://github.com/brockleej) as a personal hobby log — branding, training-style features, and day-to-day polish layered **on top of** that foundation. **Credit for the original product and framework belongs to Daniel.** Lee is not claiming authorship of that core work.
 
 | | Role |
 | --- | --- |
 | **[Daniel Kuhlwein](https://github.com/danielkuhlwein)** | **Original author** — app architecture, core product, progression, HealthKit/CloudKit/backup foundations, design-system direction |
-| **[Lee Brock](https://github.com/brockleej)** | Maintainer of this fork (IronLog branding, freeform training UX, body metrics, gym pass, session-flow polish) |
+| **[Lee Brock](https://github.com/brockleej)** | Maintainer of this fork (RockLog branding, freeform training UX, body metrics, gym pass, session-flow polish) |
 | **[Grok](https://x.ai)** (xAI) | Pair-programming collaborator on later features, refactors, and docs |
 
 > [!NOTE]
-> **IronLog** (this fork) is a hobby project shaped around real gym use: freeform splits, assisted lifts, rest habits, body measurements / FFMI, gym pass, dark UI. Data is on-device (SwiftData) with optional **iCloud sync**. Export a JSON backup anytime.
+> **RockLog** (this fork) is a hobby project shaped around real gym use: freeform splits, assisted lifts, rest habits, body measurements / FFMI, gym pass, dark UI. Data is on-device (SwiftData) with optional **iCloud sync**. Export a JSON backup anytime.
 
 ---
 
@@ -66,7 +66,7 @@ If you are evaluating “who built the app,” start here: **the previous distro
 
 ---
 
-## What’s added or heavily evolved in IronLog (this fork)
+## What’s added or heavily evolved in RockLog (this fork)
 
 Layered on the foundation above for a more freeform, physique-aware gym log:
 
@@ -89,18 +89,18 @@ Layered on the foundation above for a more freeform, physique-aware gym log:
 - Progress dashboard polish and range/lift presentation (built on the original Progress tab)
 
 ### Brand, design, ops
-- **IronLog** name, icon (Icon Composer), launch screen
+- **RockLog** name (App Store: *RockLog* · subtitle e.g. *Strength training gym log*), icon (Icon Composer), launch screen
 - **Uplift / Refined Native** token polish (ice accent, `Num`/mono stats, list mutation patterns)
 - **CloudKit re-enable** for paid team (`iCloud.com.lee.lift2026`), sync status UI, post-import seed dedupe
 - TestFlight / Xcode Cloud oriented workflow notes for this fork’s `main`
 
-Many UI screens still **sit on original ViewModels and services**; IronLog changes are often presentation, product rules, and new models (e.g. body metrics, split days) rather than a greenfield rewrite.
+Many UI screens still **sit on original ViewModels and services**; RockLog changes are often presentation, product rules, and new models (e.g. body metrics, split days) rather than a greenfield rewrite.
 
 ---
 
 ## Why this fork exists
 
-| Problem | Approach in IronLog |
+| Problem | Approach in RockLog |
 | --- | --- |
 | Rigid programs | Freeform splits and day plans |
 | Logging mid-set is awkward | Focus flow, steppers, Done / Next |
@@ -121,29 +121,29 @@ Many UI screens still **sit on original ViewModels and services**; IronLog chang
 
 ### Training session
 - **Today** — day picker, week rotation (A/B/All), resume or start, gym pass  
-  *(day/start session: previous distro · split/rotation/pass: IronLog)*
+  *(day/start session: previous distro · split/rotation/pass: RockLog)*
 - **Exercise list** — overview, recipe/target secondary line, progress by **marked-done** lifts  
-  *(list foundation: previous distro · done tracking: IronLog)*
+  *(list foundation: previous distro · done tracking: RockLog)*
 - **Focus** — weight × reps steppers, strength/endurance mode, last-vs-this, Warm · Log · Done  
-  *(logging core: previous distro · layout / done / last-vs-this: IronLog)*
-- **Rest timer**, **assist**, **each-side** — IronLog
+  *(logging core: previous distro · layout / done / last-vs-this: RockLog)*
+- **Rest timer**, **assist**, **each-side** — RockLog
 - **Progression suggestions**, **PR celebration**, **HealthKit** — previous distro (still central)
 
 ### History
 - List + detail, volume/PR callouts — **previous distro**
-- Safe reopen-for-edit — **IronLog**
+- Safe reopen-for-edit — **RockLog**
 
 ### Progress & body
 - Dashboard, charts, drill-down — **previous distro** (evolved in both)
-- Body metrics + Navy/FFMI — **IronLog**
+- Body metrics + Navy/FFMI — **RockLog**
 
 ### Library & settings
 - Exercise library, backup, HealthKit settings, progression aggressiveness — **previous distro**
-- Freeform split editor, rest timer prefs, body profile, gym pass, iCloud status polish — **IronLog**
+- Freeform split editor, rest timer prefs, body profile, gym pass, iCloud status polish — **RockLog**
 
 ### Design
 - Tokenized dark UI direction — **previous distro**
-- IronLog branding, ice uplift polish, list mutation conventions — **IronLog**
+- RockLog branding, ice uplift polish, list mutation conventions — **RockLog**
 
 ## Architecture
 
@@ -178,6 +178,8 @@ graph LR
 | **DesignSystem** | Shared tokens and components |
 
 **Stack:** Swift 6 · iOS 26.2+ · Xcode 16+ · SwiftUI · SwiftData · Swift Charts · HealthKit · CloudKit  
+**App Store name:** RockLog · **Home screen:** RockLog · **Bundle ID:** `com.lee.lift2026` (unchanged)  
+**Suggested subtitle:** Strength training gym log  
 **Sync (this fork):** `cloudKitDatabase: .automatic`, container `iCloud.com.lee.lift2026`  
 **Icon (this fork):** Icon Composer bundle `strength_training.icon`
 
@@ -233,14 +235,14 @@ Request beta access via [Issues](https://github.com/brockleej/strength-training/
 
 ```
 strength-training/
-├── Models/           # Core graph (original) + SplitDay, BodyMetricEntry (IronLog)
+├── Models/           # Core graph (original) + SplitDay, BodyMetricEntry (RockLog)
 ├── ViewModels/       # Feature VMs (original pattern; new VMs for body metrics, etc.)
 ├── Views/
 │   ├── Today/ Workout/ History/ Progress/ Library/ Settings/
-│   └── DesignSystem/ # Token/component system (original direction, IronLog polish)
-├── Services/         # Progression, HK, backup (original) + rest, body, gym pass (IronLog)
+│   └── DesignSystem/ # Token/component system (original direction, RockLog polish)
+├── Services/         # Progression, HK, backup (original) + rest, body, gym pass (RockLog)
 ├── Utilities/
-├── strength_training.icon/   # IronLog
+├── strength_training.icon/   # RockLog
 └── LaunchScreen.storyboard
 Shared/Algorithm/     # Progression pure core — previous distro
 progression-lab/      # macOS tool — previous distro
@@ -261,4 +263,4 @@ Agent notes: [CLAUDE.md](CLAUDE.md).
 
 MIT — use, fork, and build on it.
 
-**Please preserve credit for the original strength-training work by [Daniel Kuhlwein](https://github.com/danielkuhlwein).** This repository continues that lineage under the name **IronLog**.
+**Please preserve credit for the original strength-training work by [Daniel Kuhlwein](https://github.com/danielkuhlwein).** This repository continues that lineage under the name **RockLog**.
