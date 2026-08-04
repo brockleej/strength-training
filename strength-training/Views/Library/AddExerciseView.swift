@@ -179,10 +179,18 @@ struct AddExerciseView: View {
     }
 
     private func formLabel(_ text: String, optional: Bool = false) -> some View {
-        Text("\(Text(text.uppercased()).font(.uplift.text(11, weight: .bold)))\(Text(optional ? "  (OPTIONAL)" : "").font(.uplift.text(11, weight: .medium)).foregroundStyle(Color.uplift.fgDim))")
-            .tracking(0.6)
-            .foregroundStyle(Color.uplift.fgMuted)
-            .padding(.horizontal, 4)
+        HStack(spacing: 0) {
+            Text(text.uppercased())
+                .font(.uplift.text(11, weight: .bold))
+                .foregroundStyle(Color.uplift.fgMuted)
+            if optional {
+                Text("  (OPTIONAL)")
+                    .font(.uplift.text(11, weight: .medium))
+                    .foregroundStyle(Color.uplift.fgDim)
+            }
+        }
+        .tracking(0.6)
+        .padding(.horizontal, 4)
     }
 
     private func field(label: String, optional: Bool = false, @ViewBuilder content: () -> some View) -> some View {

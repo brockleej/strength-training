@@ -22,8 +22,15 @@ struct ThisWeekCard: View {
                         .font(.uplift.text(16, weight: .medium))
                         .foregroundStyle(Color.uplift.fgMuted)
                 }
-                Text("\(Text("\(volumeText) lb").font(.uplift.mono(12, weight: .medium)))\(Text(" · ").font(.uplift.text(12, weight: .medium)))\(Text("\(setCount) sets").font(.uplift.text(12, weight: .medium)))")
-                    .foregroundStyle(Color.uplift.fgMuted)
+                HStack(spacing: 0) {
+                    Text("\(volumeText) lb")
+                        .font(.uplift.mono(12, weight: .medium))
+                    Text(" · ")
+                        .font(.uplift.text(12, weight: .medium))
+                    Text("\(setCount) sets")
+                        .font(.uplift.text(12, weight: .medium))
+                }
+                .foregroundStyle(Color.uplift.fgMuted)
             }
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(statsAccessibilityLabel)

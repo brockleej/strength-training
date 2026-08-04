@@ -118,7 +118,7 @@ struct FocusSetsCard: View {
         return HStack(spacing: 10) {
             // Set number + status
             HStack(spacing: 6) {
-                if let thisSet {
+                if thisSet != nil {
                     ZStack {
                         Circle().fill(
                             isSelected
@@ -373,7 +373,7 @@ struct FocusSetsCard: View {
         } else {
             weightPart = "\(StepperLogic.format(set.weightLbs)) pounds"
         }
-        var parts = [
+        let parts = [
             "Set \(set.setNumber)",
             isSelected ? "editing" : nil,
             weightPart,

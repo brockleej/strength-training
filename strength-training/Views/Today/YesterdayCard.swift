@@ -22,8 +22,15 @@ struct YesterdayCard: View {
                     .font(.uplift.text(15, weight: .semibold))
                     .kerning(-0.2)
                     .foregroundStyle(Color.uplift.fg)
-                Text("\(Text("\(volumeText) lb").font(.uplift.mono(12, weight: .medium)))\(Text(" · ").font(.uplift.text(12, weight: .medium)))\(Text("\(setCount) sets").font(.uplift.text(12, weight: .medium)))")
-                    .foregroundStyle(Color.uplift.fgMuted)
+                HStack(spacing: 0) {
+                    Text("\(volumeText) lb")
+                        .font(.uplift.mono(12, weight: .medium))
+                    Text(" · ")
+                        .font(.uplift.text(12, weight: .medium))
+                    Text("\(setCount) sets")
+                        .font(.uplift.text(12, weight: .medium))
+                }
+                .foregroundStyle(Color.uplift.fgMuted)
             }
 
             Spacer(minLength: 8)

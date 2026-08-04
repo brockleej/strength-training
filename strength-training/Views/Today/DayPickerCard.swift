@@ -105,12 +105,14 @@ struct DayPickerCard: View {
 
     private var subtitle: some View {
         // muscles in text face; duration suffix in mono, per the design
-        Group {
+        HStack(spacing: 0) {
+            Text(dayType.subtitle)
+                .font(.uplift.text(12, weight: .medium))
             if let lastDuration {
-                Text("\(Text(dayType.subtitle).font(.uplift.text(12, weight: .medium)))\(Text(" · ").font(.uplift.text(12, weight: .medium)))\(Text("\(lastDuration) last time").font(.uplift.mono(12, weight: .medium)))")
-            } else {
-                Text(dayType.subtitle)
+                Text(" · ")
                     .font(.uplift.text(12, weight: .medium))
+                Text("\(lastDuration) last time")
+                    .font(.uplift.mono(12, weight: .medium))
             }
         }
         .foregroundStyle(Color.uplift.fgMuted)
