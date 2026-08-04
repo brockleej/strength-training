@@ -35,7 +35,7 @@
 		7BD31A210861E10FCC130CC8 /* unsupported-version.json in Resources */ = {isa = PBXBuildFile; fileRef = 6F62C644CB9B4CFF6875CF58 /* unsupported-version.json */; };
 		85CBF49126D27BC7C7C68605 /* ConfigArtifact.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC046B453D9070D004742173 /* ConfigArtifact.swift */; };
 		93349D7552961CAD8C765FB7 /* FocusTargetLogicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D469A75D83D9297C0A3174B3 /* FocusTargetLogicTests.swift */; };
-		A3A7A993E817CEC629FC7D7A /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8227BD6A0FFEBA20B7444236 /* Foundation.framework */; };
+		A3A7A993E817CEC629FC7D7A /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8227BD6A0FFEBA20B7444236 /* Foundation.framework */; settings = {ATTRIBUTES = (Required, ); }; };
 		A86332EC74EEB61D502B9A66 /* ProgressionLabApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2375B8872C6A1C21691DF866 /* ProgressionLabApp.swift */; };
 		AB75C1610447582730CCCB17 /* TrainingMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = E15010E72FA7E5AB009EF2FB /* TrainingMode.swift */; };
 		B2C3D4E5F60718293A4B5C6D /* BodyCompositionMathTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B5C /* BodyCompositionMathTests.swift */; };
@@ -104,7 +104,7 @@
 		8CC4D1E291A947627897B17B /* ReplayEngine.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ReplayEngine.swift; sourceTree = "<group>"; };
 		8EB559FDE4D121DA2D8342FB /* AlgorithmInput.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AlgorithmInput.swift; sourceTree = "<group>"; };
 		8EE03F51930E877B27379EF2 /* backup-with-orphans.json */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.json; path = "backup-with-orphans.json"; sourceTree = "<group>"; };
-		8F65F06B7DAEC56D1511479D /* progression-lab-tests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; name = "progression-lab-tests.xctest"; path = progression_lab_tests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		8F65F06B7DAEC56D1511479D /* progression_lab_tests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = progression_lab_tests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		978F4F3D2BE8A98E61F6B83C /* ExerciseModeReplay.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ExerciseModeReplay.swift; sourceTree = "<group>"; };
 		9BB09AE52C260DDF439056CC /* ProgressionServiceParityTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ProgressionServiceParityTests.swift; sourceTree = "<group>"; };
 		9C9B1F409EF0053F85ACE816 /* BackupModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BackupModels.swift; sourceTree = "<group>"; };
@@ -132,7 +132,7 @@
 		F99BAA364B2D2DBD347ACC68 /* SimulationStoreTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SimulationStoreTests.swift; sourceTree = "<group>"; };
 		FC046B453D9070D004742173 /* ConfigArtifact.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ConfigArtifact.swift; sourceTree = "<group>"; };
 		FC5ED87967CB436716AA1EF1 /* ProgressionTypes.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ProgressionTypes.swift; sourceTree = "<group>"; };
-		FCD72FE4DBC5F2CB9BEB771B /* strength-training-tests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; name = "strength-training-tests.xctest"; path = strength_training_tests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		FCD72FE4DBC5F2CB9BEB771B /* strength_training_tests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = strength_training_tests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -363,9 +363,9 @@
 			isa = PBXGroup;
 			children = (
 				E18CFB5F2F4A312400991D60 /* strength-training.app */,
-				FCD72FE4DBC5F2CB9BEB771B /* strength-training-tests.xctest */,
+				FCD72FE4DBC5F2CB9BEB771B /* strength_training_tests.xctest */,
 				D831F8CB0728963D5B3EAFD0 /* ProgressionLab.app */,
-				8F65F06B7DAEC56D1511479D /* progression-lab-tests.xctest */,
+				8F65F06B7DAEC56D1511479D /* progression_lab_tests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -405,7 +405,7 @@
 			);
 			name = "progression-lab-tests";
 			productName = "progression-lab-tests";
-			productReference = 8F65F06B7DAEC56D1511479D /* progression-lab-tests.xctest */;
+			productReference = 8F65F06B7DAEC56D1511479D /* progression_lab_tests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
 		CF2665086E70C7E1BDE1852D /* strength-training-tests */ = {
@@ -423,7 +423,7 @@
 			);
 			name = "strength-training-tests";
 			productName = "strength-training-tests";
-			productReference = FCD72FE4DBC5F2CB9BEB771B /* strength-training-tests.xctest */;
+			productReference = FCD72FE4DBC5F2CB9BEB771B /* strength_training_tests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
 		E18CFB5E2F4A312400991D60 /* strength-training */ = {
@@ -454,7 +454,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 2620;
-				LastUpgradeCheck = 2620;
+				LastUpgradeCheck = 2660;
 				TargetAttributes = {
 					E18CFB5E2F4A312400991D60 = {
 						CreatedOnToolsVersion = 26.2;
@@ -620,6 +620,7 @@
 				CODE_SIGN_ENTITLEMENTS = "progression-lab/ProgressionLab.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = 53AH938CUW;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -646,6 +647,7 @@
 				CODE_SIGN_ENTITLEMENTS = "progression-lab/ProgressionLab.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = 53AH938CUW;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -670,7 +672,7 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CLANG_ENABLE_OBJC_WEAK = NO;
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = V8227YC5UT;
+				DEVELOPMENT_TEAM = 53AH938CUW;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.danielkuhlwein.strengthtrainingtests;
@@ -687,7 +689,7 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CLANG_ENABLE_OBJC_WEAK = NO;
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = V8227YC5UT;
+				DEVELOPMENT_TEAM = 53AH938CUW;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.danielkuhlwein.strengthtrainingtests;
@@ -758,6 +760,7 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -815,6 +818,7 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				VALIDATE_PRODUCT = YES;
 			};
@@ -903,6 +907,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = V8227YC5UT;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
@@ -919,6 +924,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = V8227YC5UT;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
