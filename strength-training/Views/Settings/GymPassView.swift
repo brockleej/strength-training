@@ -17,6 +17,8 @@ struct GymPassView: View {
         GymMembershipPreferences.Format.code128.rawValue
 
     @State private var previousBrightness: CGFloat?
+    /// Screen we adjusted — restore on the same instance (not UIScreen.main).
+    @State private var brightnessScreen: UIScreen?
 
     private var format: GymMembershipPreferences.Format {
         GymMembershipPreferences.Format(rawValue: formatRaw) ?? .code128
@@ -107,15 +109,25 @@ struct GymPassView: View {
     }
 
     private func boostBrightness() {
-        let screen = UIScreen.main
+        guard let screen = Self.foregroundScreen() else { return }
+        brightnessScreen = screen
         previousBrightness = screen.brightness
         screen.brightness = 1.0
     }
 
     private func restoreBrightness() {
-        if let previousBrightness {
-            UIScreen.main.brightness = previousBrightness
+        if let screen = brightnessScreen, let previousBrightness {
+            screen.brightness = previousBrightness
         }
+        brightnessScreen = nil
+        previousBrightness = nil
+    }
+
+    /// iOS 26+: avoid `UIScreen.main` — resolve screen from the active window scene.
+    private static func foregroundScreen() -> UIScreen? {
+        let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+        return scenes.first(where: { $0.activationState == .foregroundActive })?.screen
+            ?? scenes.first?.screen
     }
 }
 
