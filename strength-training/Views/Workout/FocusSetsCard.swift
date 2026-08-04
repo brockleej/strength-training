@@ -114,11 +114,12 @@ struct FocusSetsCard: View {
     }
 
     private func comparisonRow(index: Int, thisSet: SetRecord?, previous: PreviousSet?) -> some View {
+        let hasLoggedSet = thisSet != nil
         let isSelected = thisSet.map { selectedSetID == $0.id } ?? false
         return HStack(spacing: 10) {
             // Set number + status
             HStack(spacing: 6) {
-                if thisSet != nil {
+                if hasLoggedSet {
                     ZStack {
                         Circle().fill(
                             isSelected
@@ -167,8 +168,8 @@ struct FocusSetsCard: View {
             Spacer(minLength: 4)
 
             // This — prominent weight × reps with inline superscript deltas
-            if let thisSet {
-                thisPairLabel(thisSet: thisSet, previous: previous)
+            if let logged = thisSet {
+                thisPairLabel(thisSet: logged, previous: previous)
             } else {
                 Text("·")
                     .font(.uplift.mono(16, weight: .medium))
@@ -183,9 +184,15 @@ struct FocusSetsCard: View {
         }
         .contentShape(Rectangle())
         .modifier(OptionalSwipe(
-            enabled: thisSet != nil,
-            onDelete: { if let thisSet { onDelete(thisSet) } },
-            onTap: { if let thisSet { onSelect(thisSet) } }
+            enabled: hasLoggedSet,
+            onDelete: {
+                guard let logged = thisSet else { return }
+                onDelete(logged)
+            },
+            onTap: {
+                guard let logged = thisSet else { return }
+                onSelect(logged)
+            }
         ))
         .accessibilityElement(children: .combine)
         .accessibilityLabel(comparisonA11y(index: index, thisSet: thisSet, previous: previous, isSelected: isSelected))
