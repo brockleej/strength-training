@@ -56,6 +56,11 @@ final class SetRecord {
         effectiveLoadLbs() * Double(reps) * (isEachSide ? 2 : 1)
     }
 
+    /// Working-set e1RM from effective load (assistance never counts as bar weight).
+    var estimatedE1RM: Double {
+        E1RM.estimate(weightLbs: effectiveLoadLbs(), reps: reps)
+    }
+
     /// Display string for weight column, e.g. "225" or "−100".
     var weightDisplay: String {
         if isAssisted {

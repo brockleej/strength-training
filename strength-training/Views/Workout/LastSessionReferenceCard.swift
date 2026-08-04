@@ -4,7 +4,7 @@
 //
 //  Full set-by-set reference from the previous completed session for this
 //  lift (including warm-up ramps). Tap a row to load weight × reps into the
-//  steppers.
+//  steppers (including assist / each-side flags).
 //
 
 import SwiftUI
@@ -15,12 +15,14 @@ struct LastSessionReferenceCard: View {
         let weight: Double
         let reps: Int
         let isWarmup: Bool
+        var isEachSide: Bool = false
+        var isAssisted: Bool = false
     }
 
     let dateLabel: String
     let sets: [SetLine]
-    /// weight, reps, isWarmup
-    var onSelectSet: ((Double, Int, Bool) -> Void)? = nil
+    /// weight, reps, isWarmup, isEachSide, isAssisted
+    var onSelectSet: ((Double, Int, Bool, Bool, Bool) -> Void)? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -49,7 +51,7 @@ struct LastSessionReferenceCard: View {
             VStack(spacing: 0) {
                 ForEach(Array(sets.enumerated()), id: \.element.id) { index, set in
                     Button {
-                        onSelectSet?(set.weight, set.reps, set.isWarmup)
+                        onSelectSet?(set.weight, set.reps, set.isWarmup, set.isEachSide, set.isAssisted)
                     } label: {
                         HStack(spacing: 10) {
                             Text("\(index + 1)")
@@ -57,14 +59,38 @@ struct LastSessionReferenceCard: View {
                                 .foregroundStyle(Color.uplift.fgDim)
                                 .frame(width: 20, alignment: .leading)
 
-                            PairText.pair(
-                                weight: set.weight,
-                                reps: set.reps,
-                                font: .uplift.mono(14, weight: .semibold)
-                            )
+                            if set.isAssisted {
+                                Text("−\(StepperLogic.format(set.weight)) × \(set.reps)")
+                                    .font(.uplift.mono(14, weight: .semibold))
+                                    .foregroundStyle(Color.uplift.weightTint)
+                            } else {
+                                PairText.pair(
+                                    weight: set.weight,
+                                    reps: set.reps,
+                                    font: .uplift.mono(14, weight: .semibold)
+                                )
+                            }
 
                             if set.isWarmup {
                                 Text("WARM")
+                                    .font(.uplift.text(9, weight: .bold))
+                                    .tracking(0.3)
+                                    .foregroundStyle(Color.uplift.fgDim)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(Capsule().fill(Color.uplift.surface2))
+                            }
+                            if set.isAssisted {
+                                Text("ASSIST")
+                                    .font(.uplift.text(9, weight: .bold))
+                                    .tracking(0.3)
+                                    .foregroundStyle(Color.uplift.fgDim)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(Capsule().fill(Color.uplift.surface2))
+                            }
+                            if set.isEachSide {
+                                Text("EA")
                                     .font(.uplift.text(9, weight: .bold))
                                     .tracking(0.3)
                                     .foregroundStyle(Color.uplift.fgDim)
@@ -83,9 +109,7 @@ struct LastSessionReferenceCard: View {
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel(
-                        "Set \(index + 1), \(StepperLogic.format(set.weight)) pounds by \(set.reps)\(set.isWarmup ? ", warmup" : ""), load into steppers"
-                    )
+                    .accessibilityLabel(accessibilityLabel(for: set, index: index))
 
                     if index < sets.count - 1 {
                         Rectangle()
@@ -106,6 +130,18 @@ struct LastSessionReferenceCard: View {
                 .strokeBorder(Color.uplift.accent.opacity(0.22), lineWidth: 1)
         }
     }
+
+    private func accessibilityLabel(for set: SetLine, index: Int) -> String {
+        var parts = [
+            "Set \(index + 1)",
+            "\(StepperLogic.format(set.weight)) pounds\(set.isAssisted ? " assistance" : "") by \(set.reps)",
+        ]
+        if set.isWarmup { parts.append("warmup") }
+        if set.isAssisted { parts.append("assisted") }
+        if set.isEachSide { parts.append("each side") }
+        parts.append("load into steppers")
+        return parts.joined(separator: ", ")
+    }
 }
 
 #Preview {
@@ -117,10 +153,10 @@ struct LastSessionReferenceCard: View {
             .init(id: 3, weight: 285, reps: 3, isWarmup: true),
             .init(id: 4, weight: 295, reps: 1, isWarmup: true),
             .init(id: 5, weight: 305, reps: 5, isWarmup: false),
-            .init(id: 6, weight: 305, reps: 5, isWarmup: false),
-            .init(id: 7, weight: 305, reps: 5, isWarmup: false),
+            .init(id: 6, weight: 50, reps: 8, isWarmup: false, isAssisted: true),
+            .init(id: 7, weight: 30, reps: 12, isWarmup: false, isEachSide: true),
         ],
-        onSelectSet: { _, _, _ in }
+        onSelectSet: { _, _, _, _, _ in }
     )
     .padding(20)
     .background(Color.uplift.bgElev)

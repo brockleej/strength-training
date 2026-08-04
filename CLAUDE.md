@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-IronLog is a native iOS strength-training app built with SwiftUI and SwiftData. Users log gym workouts, track sets/reps/weight, rest timers, assisted lifts, and body metrics (Navy BF% → FFMI). Data is local-first (CloudKit optional when a paid team is available); HealthKit can start/stop Apple Fitness workouts on device.
+IronLog is a native iOS strength-training app built with SwiftUI and SwiftData. Users log gym workouts, track sets/reps/weight, rest timers, assisted lifts, and body metrics (Navy BF% → FFMI). Data is on-device via SwiftData with optional iCloud/CloudKit sync (`iCloud.com.lee.lift2026`); HealthKit can start/stop Apple Fitness workouts on device.
 
 - **Language:** Swift 6
 - **Platform:** iOS 26.2+ (minimum deployment target)
@@ -56,7 +56,7 @@ xcodebuild test -scheme ProgressionLab -destination 'platform=macOS'
 ### Local-dev caveats
 
 - **HealthKit features require a physical device** — they will not function in the simulator.
-- **CloudKit sync** requires an iCloud account and the CloudKit entitlement. For local-only development, configure your own iCloud container or temporarily disable the entitlement in `strength-training.entitlements`.
+- **CloudKit sync** requires a paid Apple Developer team, the iCloud entitlement, and a signed-in iCloud account on device. Container: `iCloud.com.lee.lift2026`.
 
 ## Architecture
 
@@ -77,7 +77,7 @@ Utilities/     -> PreviewSampleData (preview helpers only)
 - **State:** Use `@Observable` for ViewModels. Use `@Query` for reactive SwiftData reads. Use `@Bindable` for mutable ViewModel bindings. Use `@State` for local view state only.
 - **Dependency injection:** Pass `ModelContext` via initializer into ViewModels — never access it directly from views.
 - **SwiftData relationships:** Always define cascade delete rules on parent-side relationships.
-- **CloudKit sync:** This build uses a local-only store (`cloudKitDatabase: .none`). `CloudKitSyncService` can monitor sync when CloudKit is re-enabled with a paid team.
+- **CloudKit sync:** SwiftData uses `cloudKitDatabase: .automatic` with the `iCloud.com.lee.lift2026` container. `CloudKitSyncService` monitors account status and sync events in Settings.
 - **HealthKit:** `HealthKitWorkoutService` handles authorization, starting/stopping Apple Fitness workouts, and saving workout metadata. Always check authorization status before performing HealthKit operations.
 - **Adding a new SwiftData `@Model`:** the model must be registered in the `Schema([...])` array in `strength_trainingApp.swift` and also added to `PreviewSampleData`. Forgetting either causes runtime crashes — the schema in the app entry point is the source of truth for what CloudKit syncs.
 

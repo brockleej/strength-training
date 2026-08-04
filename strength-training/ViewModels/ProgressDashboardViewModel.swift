@@ -94,7 +94,7 @@ final class ProgressDashboardViewModel {
                 guard let exerciseID = record.exercise?.id else { continue }
                 let workingSets = record.setsArray.filter { !$0.isWarmup }
                 for set in workingSets {
-                    let e1rm = E1RM.estimate(weightLbs: set.weightLbs, reps: set.reps)
+                    let e1rm = set.estimatedE1RM
                     if e1rm > (bestE1RMPerExercise[exerciseID] ?? 0) {
                         bestE1RMPerExercise[exerciseID] = e1rm
                     }
@@ -107,9 +107,9 @@ final class ProgressDashboardViewModel {
 
     // MARK: - Total Volume (headline)
 
-    /// Working-set volume within the selected range.
+    /// Working-set volume within the selected range (effective load; assist + each-side aware).
     var totalVolume: Double {
-        allWorkingSets().reduce(0.0) { $0 + $1.set.weightLbs * Double($1.set.reps) }
+        allWorkingSets().reduce(0.0) { $0 + $1.set.volumeContribution }
     }
 
     /// Percent change vs the equivalent previous window (nil for All or no baseline).
@@ -121,7 +121,7 @@ final class ProgressDashboardViewModel {
             sessions
                 .flatMap { $0.exerciseRecordsArray }
                 .flatMap { $0.setsArray.filter { !$0.isWarmup } }
-                .reduce(0.0) { $0 + $1.weightLbs * Double($1.reps) }
+                .reduce(0.0) { $0 + $1.volumeContribution }
         }
         let current = volume(all.filter { $0.date >= start })
         let previous = volume(all.filter { $0.date >= prevStart && $0.date < start })
@@ -136,7 +136,7 @@ final class ProgressDashboardViewModel {
         for tuple in allWorkingSets() {
             guard let bucket = cal.dateInterval(of: selectedTimeRange.bucketUnit, for: tuple.session.date)?.start
             else { continue }
-            buckets[bucket, default: 0] += tuple.set.weightLbs * Double(tuple.set.reps)
+            buckets[bucket, default: 0] += tuple.set.volumeContribution
         }
         return buckets
             .map { ChartDataPoint(date: $0.key, value: $0.value) }
@@ -168,18 +168,18 @@ final class ProgressDashboardViewModel {
             }
 
             let rangeSets = completed.filter(inRange).flatMap { $0.setsArray.filter { !$0.isWarmup } }
-            guard let topWeight = rangeSets.map(\.weightLbs).max() else { return nil }
+            guard let topWeight = rangeSets.map({ $0.effectiveLoadLbs() }).max() else { return nil }
 
-            let allTimeBest = allSets.map(\.weightLbs).max() ?? 0
+            let allTimeBest = allSets.map { $0.effectiveLoadLbs() }.max() ?? 0
 
             let beforeSets = completed
                 .filter { !inRange($0) }
                 .flatMap { $0.setsArray.filter { !$0.isWarmup } }
-            let baseline = beforeSets.map(\.weightLbs).max()
+            let baseline = beforeSets.map { $0.effectiveLoadLbs() }.max()
             let delta = baseline.map { topWeight - $0 }
 
-            let rangeBestE1RM = rangeSets.map { E1RM.estimate(weightLbs: $0.weightLbs, reps: $0.reps) }.max() ?? 0
-            let allTimeE1RM = allSets.map { E1RM.estimate(weightLbs: $0.weightLbs, reps: $0.reps) }.max() ?? 0
+            let rangeBestE1RM = rangeSets.map(\.estimatedE1RM).max() ?? 0
+            let allTimeE1RM = allSets.map(\.estimatedE1RM).max() ?? 0
 
             return LiftProgress(
                 id: exercise.id,
@@ -233,8 +233,8 @@ final class ProgressDashboardViewModel {
                 let records = session.exerciseRecordsArray.filter { $0.exercise?.id == exercise.id }
                 for record in records {
                     let sets = record.setsArray.filter { !$0.isWarmup }
-                    let sessionBestE1RM = sets.map { E1RM.estimate(weightLbs: $0.weightLbs, reps: $0.reps) }.max() ?? 0
-                    let sessionBestWeight = sets.map(\.weightLbs).max() ?? 0
+                    let sessionBestE1RM = sets.map(\.estimatedE1RM).max() ?? 0
+                    let sessionBestWeight = sets.map { $0.effectiveLoadLbs() }.max() ?? 0
 
                     let isCurrentMonth = session.date >= monthStart
 
@@ -275,7 +275,7 @@ final class ProgressDashboardViewModel {
                 var monthRunningBest: Double = 0
                 for (record, date) in currentRecords {
                     let sets = record.setsArray.filter { !$0.isWarmup }
-                    let best = sets.map { E1RM.estimate(weightLbs: $0.weightLbs, reps: $0.reps) }.max() ?? 0
+                    let best = sets.map(\.estimatedE1RM).max() ?? 0
                     if best > monthRunningBest && monthRunningBest > 0 {
                         prs.append(PersonalRecord(
                             exerciseName: exercise.name,
@@ -293,7 +293,7 @@ final class ProgressDashboardViewModel {
                 var monthRunningBest: Double = 0
                 for (record, date) in currentRecords {
                     let sets = record.setsArray.filter { !$0.isWarmup }
-                    let best = sets.map(\.weightLbs).max() ?? 0
+                    let best = sets.map { $0.effectiveLoadLbs() }.max() ?? 0
                     if best > monthRunningBest && monthRunningBest > 0 {
                         prs.append(PersonalRecord(
                             exerciseName: exercise.name,
@@ -318,7 +318,7 @@ final class ProgressDashboardViewModel {
         for tuple in allWorkingSets() {
             let group = tuple.record.exercise?.muscleGroup ?? "Other"
             guard !group.isEmpty else { continue }
-            volumeByGroup[group, default: 0] += tuple.set.weightLbs * Double(tuple.set.reps)
+            volumeByGroup[group, default: 0] += tuple.set.volumeContribution
         }
 
         return volumeByGroup
@@ -346,7 +346,7 @@ final class ProgressDashboardViewModel {
 
         var volumeByMode: [TrainingMode: Double] = [:]
         for tuple in sets {
-            volumeByMode[tuple.record.trainingMode, default: 0] += tuple.set.weightLbs * Double(tuple.set.reps)
+            volumeByMode[tuple.record.trainingMode, default: 0] += tuple.set.volumeContribution
         }
 
         let total = volumeByMode.values.reduce(0, +)

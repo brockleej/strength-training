@@ -144,7 +144,7 @@ struct ExerciseListView: View {
     }
 
     private var completedCount: Int {
-        flatExercises.filter { hasSets($0) }.count
+        flatExercises.filter { workoutVM.isExerciseDone(for: $0) }.count
     }
 
     private func hasSets(_ exercise: Exercise) -> Bool {
@@ -522,12 +522,18 @@ struct ExerciseListView: View {
                 Label("Reorder / edit day plan", systemImage: "arrow.up.arrow.down")
             }
             Button(role: .destructive) {
-                // Cancel = suspend first, then run the existing destructive flow
-                // from Today (which owns the confirmation dialogs).
-                workoutVM.suspendSession()
+                // Live workouts: park first so the confirm can discard them.
+                // History edit: leave active — confirm re-completes (never deletes).
+                // (suspendSession on a History edit re-completes immediately.)
+                if !workoutVM.isRevisitingSavedSession {
+                    workoutVM.suspendSession()
+                }
                 workoutVM.showCancelConfirmation = true
             } label: {
-                Label("Cancel workout", systemImage: "xmark")
+                Label(
+                    workoutVM.isRevisitingSavedSession ? "Exit editing" : "Cancel workout",
+                    systemImage: "xmark"
+                )
             }
         } label: {
             ZStack {
@@ -546,8 +552,10 @@ struct ExerciseListView: View {
     // MARK: - Row data
 
     private func rowState(for exercise: Exercise, number: Int) -> ExerciseListRow.RowState {
-        if hasSets(exercise) { return .completed }
+        // Completed only when the user marks the lift done — not by set count.
+        if workoutVM.isExerciseDone(for: exercise) { return .completed }
         if exercise.id == activeExerciseID { return .active }
+        if hasSets(exercise) { return .active } // in progress (has sets, not marked done)
         return .pending(number: number)
     }
 
@@ -556,23 +564,38 @@ struct ExerciseListView: View {
         targetReps: Int?,
         lastSessionSummary: String?
     ) {
-        let lastRecord = exercise.lastCompletedRecord(mode: workoutVM.selectedMode)
+        let lastRecord = exercise.lastCompletedRecord(
+            mode: workoutVM.selectedMode,
+            excludingSessionID: workoutVM.activeSession?.id
+        )
         let summary = lastRecord.map { Self.formatLastSessionSets($0.setsArray) }
         let suggestion = workoutVM.suggestion(for: exercise, mode: workoutVM.selectedMode)
         let recent = workoutVM.recentAverage(for: exercise, mode: workoutVM.selectedMode)
+        var target = suggestion?.targetWeight ?? recent?.weight
+        // Progression is effective load; list target should match Assist field when appropriate.
+        let preferAssist = lastRecord?.setsArray.contains(where: { $0.isAssisted && !$0.isWarmup }) == true
+            || ExerciseAssistPreferences.prefersAssist(for: exercise.id)
+        let bw = BodyWeightPreferences.pounds
+        if preferAssist, let effective = target, bw > 0 {
+            target = max(0, bw - effective)
+        }
         return (
-            targetWeight: suggestion?.targetWeight ?? recent?.weight,
+            targetWeight: target,
             targetReps: suggestion?.targetReps ?? recent?.reps,
             lastSessionSummary: summary
         )
     }
 
-    /// "135×5 · 225×4 · 305×5 · 305×5 · 305×5" — full last-session recipe.
+    /// "135×5 · 225×4 · −50×8 · 305×5" — full last-session recipe (assist as −N).
     private static func formatLastSessionSets(_ sets: [SetRecord]) -> String {
         let ordered = sets.sorted { $0.setNumber < $1.setNumber }
         guard !ordered.isEmpty else { return "" }
         return ordered.map { set in
-            let piece = "\(StepperLogic.format(set.weightLbs))×\(set.reps)"
+            let w = set.isAssisted
+                ? "−\(StepperLogic.format(set.weightLbs))"
+                : StepperLogic.format(set.weightLbs)
+            var piece = "\(w)×\(set.reps)"
+            if set.isEachSide { piece += "ea" }
             return set.isWarmup ? "\(piece)w" : piece
         }
         .joined(separator: " · ")

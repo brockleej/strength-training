@@ -34,7 +34,7 @@ enum SessionMath {
                 .filter { $0.exercise?.id == exercise.id }
                 .flatMap { $0.setsArray }
                 .filter { !$0.isWarmup }
-                .map { E1RM.estimate(weightLbs: $0.weightLbs, reps: $0.reps) }
+                .map(\.estimatedE1RM)
                 .max() ?? 0
             guard sessionBest > 0 else { continue }
             let allTimeBest = allSessions
@@ -42,7 +42,7 @@ enum SessionMath {
                 .filter { $0.exercise?.id == exercise.id }
                 .flatMap { $0.setsArray }
                 .filter { !$0.isWarmup }
-                .map { E1RM.estimate(weightLbs: $0.weightLbs, reps: $0.reps) }
+                .map(\.estimatedE1RM)
                 .max() ?? 0
             if sessionBest >= allTimeBest {
                 counted.insert(exercise.id)
@@ -65,7 +65,7 @@ enum SessionMath {
             for record in session.exerciseRecordsArray {
                 guard let exerciseID = record.exercise?.id else { continue }
                 for set in record.setsArray where !set.isWarmup {
-                    let e1rm = E1RM.estimate(weightLbs: set.weightLbs, reps: set.reps)
+                    let e1rm = set.estimatedE1RM
                     if e1rm > best[exerciseID, default: 0] {
                         best[exerciseID] = e1rm
                     }
@@ -85,7 +85,7 @@ enum SessionMath {
                 .filter { $0.exercise?.id == exercise.id }
                 .flatMap { $0.setsArray }
                 .filter { !$0.isWarmup }
-                .map { E1RM.estimate(weightLbs: $0.weightLbs, reps: $0.reps) }
+                .map(\.estimatedE1RM)
                 .max() ?? 0
             guard sessionBest > 0 else { continue }
             if sessionBest >= allTimeBests[exercise.id, default: 0] {

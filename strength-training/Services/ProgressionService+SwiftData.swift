@@ -13,8 +13,12 @@ import SwiftData
 extension ProgressionService {
     /// Compute the rolling average best set across the last `averageWindow` sessions.
     /// Returns nil if the exercise has never been done in this mode.
-    static func recentAverage(for exercise: Exercise, mode: TrainingMode) -> RecentAverage? {
-        let snapshots = snapshotsFromCompletedRecords(of: exercise)
+    static func recentAverage(
+        for exercise: Exercise,
+        mode: TrainingMode,
+        excludingSessionID: UUID? = nil
+    ) -> RecentAverage? {
+        let snapshots = snapshotsFromCompletedRecords(of: exercise, excludingSessionID: excludingSessionID)
         return recentAverage(records: snapshots, mode: mode, window: averageWindow)
     }
 
@@ -23,18 +27,25 @@ extension ProgressionService {
     static func suggestion(
         for exercise: Exercise,
         mode: TrainingMode,
-        aggressiveness: ProgressionAggressiveness
+        aggressiveness: ProgressionAggressiveness,
+        excludingSessionID: UUID? = nil
     ) -> ProgressionSuggestion? {
-        let snapshots = snapshotsFromCompletedRecords(of: exercise)
+        let snapshots = snapshotsFromCompletedRecords(of: exercise, excludingSessionID: excludingSessionID)
         return suggestion(records: snapshots, mode: mode, params: aggressiveness.parameters)
     }
 
     /// Adapts an `Exercise`'s SwiftData records into `ExerciseRecordSnapshot`s
     /// for the pure algorithm. Preserves the existing filters: completed-only
     /// sessions, sorted newest-first by session date.
-    private static func snapshotsFromCompletedRecords(of exercise: Exercise) -> [ExerciseRecordSnapshot] {
+    private static func snapshotsFromCompletedRecords(
+        of exercise: Exercise,
+        excludingSessionID: UUID? = nil
+    ) -> [ExerciseRecordSnapshot] {
         exercise.recordsArray
-            .filter { $0.session?.isCompleted == true }
+            .filter {
+                $0.session?.isCompleted == true
+                    && $0.session?.id != excludingSessionID
+            }
             .sorted { ($0.session?.date ?? .distantPast) > ($1.session?.date ?? .distantPast) }
             .compactMap { record in
                 guard let sessionDate = record.session?.date else { return nil }

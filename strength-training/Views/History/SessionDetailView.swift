@@ -378,23 +378,37 @@ private struct LiftCard: View {
                     .background(Capsule().fill(Color.uplift.customBadge.opacity(0.16)))
             }
             Spacer()
-            PairText.pair(weight: set.weightLbs, reps: set.reps, font: .uplift.mono(13, weight: .semibold))
+            // Assisted sets store assistance in weightLbs; show −N so History matches Focus.
+            if set.isAssisted {
+                Text("\(set.weightDisplay) × \(set.reps)")
+                    .font(.uplift.mono(13, weight: .semibold))
+                    .foregroundStyle(Color.uplift.weightTint)
+            } else {
+                PairText.pair(weight: set.weightLbs, reps: set.reps, font: .uplift.mono(13, weight: .semibold))
+            }
+            if set.isEachSide {
+                Text("ea")
+                    .font(.uplift.text(10, weight: .semibold))
+                    .foregroundStyle(Color.uplift.fgDim)
+            }
         }
         .padding(.vertical, 9)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Set \(set.setNumber)\(set.isWarmup ? ", warmup" : ""), \(StepperLogic.format(set.weightLbs)) pounds, \(set.reps) reps")
+        .accessibilityLabel(
+            "Set \(set.setNumber)\(set.isWarmup ? ", warmup" : "")\(set.isAssisted ? ", assisted" : "")\(set.isEachSide ? ", each side" : ""), \(set.weightDisplay) pounds, \(set.reps) reps"
+        )
     }
 
-    // MARK: - Computations (ported verbatim from the old ExerciseHeaderRow)
+    // MARK: - Computations (effective load for assisted lifts)
 
     private var topWeight: Double {
-        sortedSets.filter { !$0.isWarmup }.map(\.weightLbs).max() ?? 0
+        sortedSets.filter { !$0.isWarmup }.map { $0.effectiveLoadLbs() }.max() ?? 0
     }
 
     private var currentE1RM: Double {
         record.setsArray
             .filter { !$0.isWarmup }
-            .map { E1RM.estimate(weightLbs: $0.weightLbs, reps: $0.reps) }
+            .map(\.estimatedE1RM)
             .max() ?? 0
     }
 
@@ -413,7 +427,7 @@ private struct LiftCard: View {
         guard let prev = previousRecord else { return nil }
         return prev.setsArray
             .filter { !$0.isWarmup }
-            .map { E1RM.estimate(weightLbs: $0.weightLbs, reps: $0.reps) }
+            .map(\.estimatedE1RM)
             .max()
     }
 
@@ -421,7 +435,7 @@ private struct LiftCard: View {
         let completedRecords = record.exercise?.recordsArray.filter { $0.session?.isCompleted == true } ?? []
         return completedRecords
             .flatMap { $0.setsArray.filter { !$0.isWarmup } }
-            .map { E1RM.estimate(weightLbs: $0.weightLbs, reps: $0.reps) }
+            .map(\.estimatedE1RM)
             .max() ?? 0
     }
 

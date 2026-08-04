@@ -61,9 +61,10 @@ struct ContentView: View {
         .preferredColorScheme(.dark)
         .onAppear {
             // Keep launch work light: seed + VM first so the tab UI appears.
-            // Never call CloudKit here — without iCloud entitlements it can hang.
+            // CloudKit account checks run inside CloudKitSyncService, not here.
             SeedData.migrateExerciseNames(context: modelContext)
             SeedData.deduplicateExercises(context: modelContext)
+            SeedData.deduplicateSplitDays(context: modelContext)
             // Fresh install seeds; existing installs top up any missing catalog lifts.
             SeedData.seedIfNeeded(context: modelContext)
             DayTypeRegistry.shared.reload(context: modelContext)
@@ -71,6 +72,11 @@ struct ContentView: View {
                 workoutViewModel = WorkoutViewModel(modelContext: modelContext, healthKitService: healthKitService)
             }
             healthKitService.checkAuthorization()
+        }
+        // Second device often seeds before iCloud import finishes — re-dedupe after sync.
+        .onChange(of: cloudKitSyncService.lastSyncDate) { _, newDate in
+            guard newDate != nil else { return }
+            SeedData.reconcileAfterCloudKitImport(context: modelContext)
         }
         .onChange(of: workoutViewModel?.wantsFocusOnWorkoutTab) { _, wants in
             guard wants == true else { return }

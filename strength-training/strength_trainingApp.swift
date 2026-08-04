@@ -21,12 +21,11 @@ struct strength_trainingApp: App {
             SplitDay.self,
             BodyMetricEntry.self,
         ])
-        // Local-only store. CloudKit / iCloud requires a paid Apple Developer
-        // Program team (Personal teams cannot provision iCloud or Push).
-        // Flip to `.automatic` and restore iCloud entitlements when you enroll.
+        // Private CloudKit database via the iCloud container in
+        // strength-training.entitlements (iCloud.com.lee.lift2026).
         let config = ModelConfiguration(
             schema: schema,
-            cloudKitDatabase: .none
+            cloudKitDatabase: .automatic
         )
         do {
             container = try ModelContainer(for: schema, configurations: [config])

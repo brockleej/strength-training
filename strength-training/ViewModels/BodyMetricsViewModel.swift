@@ -78,9 +78,18 @@ final class BodyMetricsViewModel {
     }
 
     func delete(_ entry: BodyMetricEntry) {
+        let wasWeight = entry.kind == .weight
         modelContext.delete(entry)
         try? modelContext.save()
         reload()
+        // Keep assisted-lift BW in sync when the latest weight log is removed.
+        if wasWeight {
+            if let remaining = latest(.weight)?.value, remaining > 0 {
+                BodyWeightPreferences.pounds = remaining
+            } else {
+                BodyWeightPreferences.pounds = 0
+            }
+        }
     }
 
     /// Weight for composition: latest log, else Settings body weight.

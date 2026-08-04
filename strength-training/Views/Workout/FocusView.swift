@@ -18,6 +18,8 @@ struct FocusView: View {
     var hasPrevious: Bool = false
     var onNext: (() -> Void)? = nil
     var onPrevious: (() -> Void)? = nil
+    /// Mark this lift done and jump to the next unfinished (nil = mark only).
+    var onMarkDoneAndAdvance: (() -> Void)? = nil
 
     @Environment(\.dismiss) private var dismiss
     @State private var focusVM: FocusViewModel?
@@ -30,37 +32,43 @@ struct FocusView: View {
             .sorted { $0.setNumber < $1.setNumber }
     }
 
-    /// Most recent completed session for this lift in the active mode (all sets,
-    /// including warm-up ramps), for the “Last time” reference card.
-    private var lastSessionReference: (dateLabel: String, sets: [LastSessionReferenceCard.SetLine])? {
-        guard let record = lastCompletedRecord else { return nil }
-        let sets = record.setsArray
-            .sorted { $0.setNumber < $1.setNumber }
-            .enumerated()
-            .map { index, set in
-                LastSessionReferenceCard.SetLine(
-                    id: index + 1,
-                    weight: set.weightLbs,
-                    reps: set.reps,
-                    isWarmup: set.isWarmup
-                )
-            }
-        guard !sets.isEmpty else { return nil }
-        let date = record.session?.date ?? .distantPast
-        return (
-            dateLabel: PrevSessionsStripData.relativeLabel(for: date),
-            sets: sets
+    /// Prior completed session for this lift (excludes the active session so
+    /// History-edit mode doesn’t treat the workout you’re editing as “last time”).
+    private var lastCompletedRecord: ExerciseRecord? {
+        exercise.lastCompletedRecord(
+            mode: workoutVM.selectedMode,
+            excludingSessionID: workoutVM.activeSession?.id
         )
     }
 
-    private var lastCompletedRecord: ExerciseRecord? {
-        exercise.lastCompletedRecord(mode: workoutVM.selectedMode)
+    /// Last-session sets for inline comparison in FocusSetsCard.
+    private var previousSetsForCard: [FocusSetsCard.PreviousSet] {
+        guard let record = lastCompletedRecord else { return [] }
+        return record.setsArray
+            .sorted { $0.setNumber < $1.setNumber }
+            .map {
+                FocusSetsCard.PreviousSet(
+                    weight: $0.weightLbs,
+                    reps: $0.reps,
+                    isWarmup: $0.isWarmup,
+                    isEachSide: $0.isEachSide,
+                    isAssisted: $0.isAssisted
+                )
+            }
+    }
+
+    private var previousDateLabel: String? {
+        guard let date = lastCompletedRecord?.session?.date else { return nil }
+        return PrevSessionsStripData.relativeLabel(for: date)
     }
 
     /// Older sessions (excluding the most recent) for the collapsible History strip.
     private var historyEntries: [PrevSessionsStripData.Entry] {
         let lastID = lastCompletedRecord?.id
-        let sessions = exercise.completedRecords(mode: workoutVM.selectedMode)
+        let sessions = exercise.completedRecords(
+            mode: workoutVM.selectedMode,
+            excludingSessionID: workoutVM.activeSession?.id
+        )
             .filter { $0.id != lastID }
             .sorted { ($0.session?.date ?? .distantPast) < ($1.session?.date ?? .distantPast) }
             .map { record in
@@ -80,57 +88,16 @@ struct FocusView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     Color.clear.frame(height: 56)   // glass-header clearance
-                    LiveHealthKitCard(service: workoutVM.healthKitService)
-                        .padding(.horizontal, 20)
-                    titleSection
-                    if let last = lastSessionReference {
-                        LastSessionReferenceCard(
-                            dateLabel: last.dateLabel,
-                            sets: last.sets,
-                            onSelectSet: { weight, reps, isWarmup in
-                                guard let focusVM else { return }
-                                focusVM.loadFromHistory(weight: weight, reps: reps, isWarmup: isWarmup)
-                            }
-                        )
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 12)
+                    if !workoutVM.isRevisitingSavedSession {
+                        LiveHealthKitCard(service: workoutVM.healthKitService)
+                            .padding(.horizontal, 20)
                     }
+                    titleSection
+                    // Sets first (with last-session inline) so logging doesn’t
+                    // require scrolling past a huge “Last time” card.
+                    setsSection
                     if !historyEntries.isEmpty {
                         historyDisclosure
-                    }
-                    if let focusVM {
-                        Text("This session")
-                            .textCase(.uppercase)
-                            .font(.uplift.text(11, weight: .semibold))
-                            .tracking(0.4)
-                            .foregroundStyle(Color.uplift.fgDim)
-                            .padding(.horizontal, 20)
-                            .padding(.bottom, 6)
-                        FocusSetsCard(
-                            sets: loggedSets,
-                            selectedSetID: focusVM.editingSetID,
-                            onSelect: { set in
-                                focusVM.toggleEdit(set: set, prefillIfCancel: currentPrefill())
-                            },
-                            onDelete: { set in
-                                withAnimation(.easeInOut(duration: 0.2)) {
-                                    focusVM.clearEditIfMatching(set, restore: currentPrefill())
-                                    workoutVM.deleteSet(set, from: exercise)
-                                }
-                            }
-                        )
-                        .padding(.horizontal, 20)
-                    } else {
-                        FocusSetsCard(
-                            sets: loggedSets,
-                            onSelect: { _ in },
-                            onDelete: { set in
-                                withAnimation(.easeInOut(duration: 0.2)) {
-                                    workoutVM.deleteSet(set, from: exercise)
-                                }
-                            }
-                        )
-                        .padding(.horizontal, 20)
                     }
                 }
                 .padding(.bottom, 16)
@@ -210,6 +177,60 @@ struct FocusView: View {
 
     // MARK: - Sections
 
+    @ViewBuilder
+    private var setsSection: some View {
+        let prev = previousSetsForCard
+        VStack(alignment: .leading, spacing: 6) {
+            Text(prev.isEmpty ? "This session" : "Sets · last vs this")
+                .textCase(.uppercase)
+                .font(.uplift.text(11, weight: .semibold))
+                .tracking(0.4)
+                .foregroundStyle(Color.uplift.fgDim)
+                .padding(.horizontal, 20)
+
+            if let focusVM {
+                FocusSetsCard(
+                    sets: loggedSets,
+                    previousSets: prev,
+                    previousDateLabel: previousDateLabel,
+                    selectedSetID: focusVM.editingSetID,
+                    onSelect: { set in
+                        focusVM.toggleEdit(set: set, prefillIfCancel: currentPrefill())
+                    },
+                    onDelete: { set in
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            focusVM.clearEditIfMatching(set, restore: currentPrefill())
+                            workoutVM.deleteSet(set, from: exercise)
+                        }
+                    },
+                    onSelectPrevious: { prev in
+                        focusVM.loadFromHistory(
+                            weight: prev.weight,
+                            reps: prev.reps,
+                            isWarmup: prev.isWarmup,
+                            isEachSide: prev.isEachSide,
+                            isAssisted: prev.isAssisted
+                        )
+                    }
+                )
+                .padding(.horizontal, 20)
+            } else {
+                FocusSetsCard(
+                    sets: loggedSets,
+                    previousSets: prev,
+                    previousDateLabel: previousDateLabel,
+                    onDelete: { set in
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            workoutVM.deleteSet(set, from: exercise)
+                        }
+                    }
+                )
+                .padding(.horizontal, 20)
+            }
+        }
+        .padding(.bottom, 8)
+    }
+
     private var titleSection: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 10) {
@@ -255,7 +276,7 @@ struct FocusView: View {
                                 .background(Capsule().fill(Color.uplift.accent))
                             }
                             .buttonStyle(.plain)
-                            .accessibilityLabel("Next exercise")
+                            .accessibilityLabel("Next unfinished exercise")
                         }
                     }
                 }
@@ -307,10 +328,8 @@ struct FocusView: View {
     }
 
     private func makeFocusVM() -> FocusViewModel {
-        let sessionLast = loggedSets.last
-        let prefersAssist = sessionLast == nil
-            && ExerciseAssistPreferences.prefersAssist(for: exercise.id)
-        return FocusViewModel(prefill: currentPrefill(), prefersAssist: prefersAssist)
+        // Prefill already sets isAssisted when assistance is preferred; no second flip.
+        return FocusViewModel(prefill: currentPrefill())
     }
 
     private func stepperFooter(_ focusVM: FocusViewModel) -> some View {
@@ -355,7 +374,7 @@ struct FocusView: View {
         return VStack(spacing: 12) {
             restTimerCard()
 
-            // Warm + Log / Update
+            // Warm + Log / Update + Done (Done matches Warm size, far right)
             VStack(spacing: 8) {
                 HStack(spacing: 10) {
                     Button {
@@ -404,6 +423,8 @@ struct FocusView: View {
                         .foregroundStyle(Color.uplift.onAccent)
                     }
                     .buttonStyle(.plain)
+
+                    doneWithLiftButton
                 }
 
                 if focusVM.isEditingSet {
@@ -422,6 +443,48 @@ struct FocusView: View {
             .padding(.horizontal, 16)
         }
         .padding(.bottom, 12)
+    }
+
+    /// Compact like Warm; far right of the log row. Explicit finish, not set-count.
+    private var doneWithLiftButton: some View {
+        let done = workoutVM.isExerciseDone(for: exercise)
+        return Button {
+            if done {
+                workoutVM.markExerciseNotDone(exercise)
+            } else if let onMarkDoneAndAdvance {
+                onMarkDoneAndAdvance()
+            } else {
+                workoutVM.markExerciseDone(exercise)
+            }
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: done ? "arrow.uturn.backward" : "checkmark.circle.fill")
+                    .font(.system(size: 14, weight: .semibold))
+                Text(done ? "Resume" : "Done")
+                    .font(.uplift.text(14, weight: .semibold))
+            }
+            .foregroundStyle(done ? Color.uplift.fgMuted : Color.uplift.up)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 14)
+            .background {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(done ? Color.uplift.surface1 : Color.uplift.up.opacity(0.14))
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .strokeBorder(
+                        done ? Color.uplift.hairline : Color.uplift.up.opacity(0.35),
+                        lineWidth: 1
+                    )
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(done ? "Resume this lift" : "Done with this lift")
+        .accessibilityHint(
+            done
+                ? "Marks the lift not done so you can log more sets"
+                : "Marks this lift finished and moves to the next unfinished lift"
+        )
     }
 
     /// Countdown is session-wide; on/off is remembered per exercise (supersets).
@@ -567,11 +630,20 @@ struct FocusView: View {
                 isAssisted: last.isAssisted
             )
         }()
+        // No session sets yet: convert progression effective-load targets into
+        // assistance when this lift prefers assist (or last completed set was assisted).
+        let preferAssist = sessionLast?.isAssisted == true
+            || (sessionLast == nil && (
+                lastCompletedRecord?.setsArray.contains(where: { $0.isAssisted && !$0.isWarmup }) == true
+                || ExerciseAssistPreferences.prefersAssist(for: exercise.id)
+            ))
         return FocusTargetLogic.prefill(
             suggestion: workoutVM.suggestion(for: exercise, mode: workoutVM.selectedMode),
             recent: workoutVM.recentAverage(for: exercise, mode: workoutVM.selectedMode),
             lastBest: lastSessionBestSet(),
-            sessionLast: sessionLast
+            sessionLast: sessionLast,
+            preferAssistance: preferAssist,
+            bodyWeightLbs: BodyWeightPreferences.pounds
         )
     }
 

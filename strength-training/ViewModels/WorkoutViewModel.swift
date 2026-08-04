@@ -64,8 +64,12 @@ final class WorkoutViewModel {
     /// Bumped when a per-exercise rest on/off changes so Focus re-renders.
     var restTimerPreferenceEpoch: Int = 0
 
-    /// True when the active session was reopened from History for edits (no new HealthKit workout).
-    var isRevisitingSavedSession: Bool = false
+    /// History session opened for edit. While set, that row must never be deleted —
+    /// only re-completed. History lists `isCompleted == true` only, so leaving it
+    /// incomplete makes the workout look deleted.
+    private(set) var revisitingSessionID: UUID?
+    /// True when the active/suspended session was reopened from History for edits.
+    var isRevisitingSavedSession: Bool { revisitingSessionID != nil }
     /// ContentView flips to the Workout tab when this becomes true.
     var wantsFocusOnWorkoutTab: Bool = false
 
@@ -216,6 +220,7 @@ final class WorkoutViewModel {
     }
 
     /// Auto-complete any sessions from previous days that were never finished.
+    /// Empty sessions (no sets) are deleted so History stays clean.
     func autoCompleteStaleSession() {
         let startOfToday = Calendar.current.startOfDay(for: .now)
 
@@ -228,7 +233,12 @@ final class WorkoutViewModel {
 
         if let staleSessions = try? modelContext.fetch(descriptor) {
             for session in staleSessions {
-                session.isCompleted = true
+                let hasSets = session.exerciseRecordsArray.contains { !$0.setsArray.isEmpty }
+                if hasSets {
+                    session.isCompleted = true
+                } else {
+                    modelContext.delete(session)
+                }
             }
             try? modelContext.save()
         }
@@ -245,22 +255,19 @@ final class WorkoutViewModel {
             }
             suspendedSession = nil
             // Historical re-open never had a live HK session.
-            if isRevisitingSavedSession {
-                // keep flag; no HK resume
+            if isProtectedHistorySession(suspended) {
+                // keep revisitingSessionID; no HK resume
             } else {
                 healthKitService.resumeWorkout()
             }
             return
         }
-        isRevisitingSavedSession = false
-        // Silently discard a suspended session that has no sets
+        // Leaving a parked session behind to start something else.
         if let suspended = suspendedSession {
-            if !suspended.exerciseRecordsArray.contains(where: { !$0.setsArray.isEmpty }) {
-                modelContext.delete(suspended)
-                try? modelContext.save()
-            }
+            releaseParkedSession(suspended, discardLiveWork: false)
             suspendedSession = nil
         }
+        clearRevisiting()
         let track = rotationTrack ?? suggestedRotationTrack(for: dayType)
         let session = WorkoutSession(dayType: dayType, rotationTrack: track)
         modelContext.insert(session)
@@ -296,34 +303,102 @@ final class WorkoutViewModel {
     }
 
     /// Move the active session to the background without completing it.
+    /// History edits stay completed in the store — just clear the active pointer.
     func suspendSession() {
-        suspendedSession = activeSession
+        guard let session = activeSession else { return }
+        if isProtectedHistorySession(session) {
+            // Never flip isCompleted; session already remains in History.
+            activeSession = nil
+            clearRevisiting()
+            restEndDate = nil
+            return
+        }
+        suspendedSession = session
         activeSession = nil
         healthKitService.pauseWorkout()
+    }
+
+    /// Undo a cancel/park when the user dismisses the confirmation (Keep Training / Keep Editing).
+    func resumeSuspendedIfNeeded() {
+        // Exit-editing confirm may leave the session active (not suspended).
+        if activeSession != nil { return }
+        guard let suspended = suspendedSession else { return }
+        activeSession = suspended
+        suspendedSession = nil
+        if !isProtectedHistorySession(suspended) {
+            healthKitService.resumeWorkout()
+        }
     }
 
     /// Discard the suspended session and immediately start a new one.
     /// HealthKit disposal follows the >= 5 min threshold logic.
     func abandonSuspendedAndStart(dayType: DayType, rotationTrack: RotationTrack = .a) {
         if let suspended = suspendedSession {
-            modelContext.delete(suspended)
-            try? modelContext.save()
+            releaseParkedSession(suspended, discardLiveWork: true)
             suspendedSession = nil
         }
+        clearRevisiting()
         // Delay to let the first confirmation dialog dismiss before potentially showing the HealthKit one.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
             self?.resolveHealthKitDisposal(.replaceWith(dayType, rotationTrack))
         }
     }
 
-    /// Cancel and delete the suspended session entirely.
+    /// Cancel workout / exit History editing.
+    /// History edits: drop the active pointer only (row stays completed, never deleted).
+    /// Live workouts: deleted.
     func cancelSuspendedSession() {
-        if let suspended = suspendedSession {
-            modelContext.delete(suspended)
-            try? modelContext.save()
-            suspendedSession = nil
+        // Prefer parked session; Exit editing may still have an active session.
+        let session = suspendedSession ?? activeSession
+        let wasRevisit: Bool
+        if let session {
+            wasRevisit = isProtectedHistorySession(session)
+            if wasRevisit {
+                // Edits are already saved per set — just leave History alone.
+                if suspendedSession?.id == session.id { suspendedSession = nil }
+                if activeSession?.id == session.id { activeSession = nil }
+            } else {
+                releaseParkedSession(session, discardLiveWork: true)
+                if suspendedSession?.id == session.id { suspendedSession = nil }
+                if activeSession?.id == session.id { activeSession = nil }
+            }
+        } else {
+            wasRevisit = isRevisitingSavedSession
         }
+        clearRevisiting()
+        restEndDate = nil
+        // Revisit edits never started a new HealthKit workout.
+        if wasRevisit { return }
         resolveHealthKitDisposal(.cancelOnly)
+    }
+
+    // MARK: - History edit protection
+
+    private func isProtectedHistorySession(_ session: WorkoutSession) -> Bool {
+        revisitingSessionID == session.id
+    }
+
+    private func clearRevisiting() {
+        revisitingSessionID = nil
+    }
+
+    /// Drop a parked *live* session.
+    /// - `discardLiveWork`: delete (Cancel / Abandon).
+    /// - keep work: complete if it has sets so it stays in History; delete empties.
+    /// History-edit sessions must not call this for delete — they stay completed in-place.
+    private func releaseParkedSession(_ session: WorkoutSession, discardLiveWork: Bool) {
+        if isProtectedHistorySession(session) {
+            // Safety: never delete a History edit target.
+            clearRevisiting()
+            return
+        }
+        let hasSets = session.exerciseRecordsArray.contains { !$0.setsArray.isEmpty }
+        if !discardLiveWork, hasSets {
+            session.isCompleted = true
+        } else {
+            modelContext.delete(session)
+        }
+        try? modelContext.save()
     }
 
     /// Called when the HealthKit keep/delete dialog dismisses without an explicit button tap.
@@ -394,11 +469,14 @@ final class WorkoutViewModel {
     }
 
     func finishSession() {
-        guard let session = activeSession, !session.isCompleted else { return }
-        session.isCompleted = true
+        guard let session = activeSession else { return }
+        let wasRevisit = isProtectedHistorySession(session)
+        // History edits stay completed the whole time; live sessions complete here.
+        if !session.isCompleted {
+            session.isCompleted = true
+        }
         let capturedSession = session
-        let wasRevisit = isRevisitingSavedSession
-        isRevisitingSavedSession = false
+        clearRevisiting()
         restEndDate = nil
         // Don't nil activeSession here — keep the workout screen visible as a
         // stable backdrop while the effort-rating sheet and summary cover show.
@@ -425,8 +503,9 @@ final class WorkoutViewModel {
         }
     }
 
-    /// Re-open a completed (or already-active) session for set edits / skipped lifts.
-    /// Parks any in-progress session, skips a new HealthKit workout, and requests the Workout tab.
+    /// Re-open a completed session for set edits / skipped lifts.
+    /// Keeps `isCompleted == true` so History never hides/deletes the workout.
+    /// Parks any in-progress live session, skips a new HealthKit workout.
     @discardableResult
     func reopenSessionForEditing(_ session: WorkoutSession) -> Bool {
         if activeSession?.id == session.id {
@@ -436,10 +515,11 @@ final class WorkoutViewModel {
 
         parkLiveSessionForReopen()
 
-        session.isCompleted = false
-        try? modelContext.save()
+        // Critical: do NOT set isCompleted = false. History only lists completed
+        // sessions; flipping that made workouts vanish (and cancel after relaunch
+        // could delete them when revisitingSessionID was gone).
         activeSession = session
-        isRevisitingSavedSession = true
+        revisitingSessionID = session.id
         celebratedExerciseIDsThisSession = []
         restEndDate = nil
         wantsFocusOnWorkoutTab = true
@@ -449,15 +529,17 @@ final class WorkoutViewModel {
     /// Suspend or discard whatever is currently live so a saved session can become active.
     private func parkLiveSessionForReopen() {
         if let active = activeSession {
+            // History edit in progress — just drop the pointer (row stays completed).
+            if isProtectedHistorySession(active) {
+                activeSession = nil
+                clearRevisiting()
+                return
+            }
             let hasSets = active.exerciseRecordsArray.contains { !$0.setsArray.isEmpty }
             if hasSets {
                 // Prefer suspending; if a suspended session already exists, complete it.
                 if let previous = suspendedSession, previous.id != active.id {
-                    if previous.exerciseRecordsArray.contains(where: { !$0.setsArray.isEmpty }) {
-                        previous.isCompleted = true
-                    } else {
-                        modelContext.delete(previous)
-                    }
+                    releaseParkedSession(previous, discardLiveWork: false)
                 }
                 suspendedSession = active
                 if healthKitService.isSessionActive {
@@ -506,14 +588,14 @@ final class WorkoutViewModel {
     func dismissSummaryToToday() {
         sessionPendingSummary = nil
         activeSession = nil
-        isRevisitingSavedSession = false
+        clearRevisiting()
     }
 
     func dismissSummaryToDetail() {
         summaryDetailSession = sessionPendingSummary
         sessionPendingSummary = nil
         activeSession = nil
-        isRevisitingSavedSession = false
+        clearRevisiting()
     }
 
     // MARK: - Exercises
@@ -555,8 +637,10 @@ final class WorkoutViewModel {
     /// The set holding the all-time best e1RM for this exercise across
     /// completed sessions (non-warmup sets, any mode). nil = no prior history.
     private func priorBestE1RMSet(for exercise: Exercise) -> PRDetection.PriorBest? {
+        let excludeID = activeSession?.id
         var best: PRDetection.PriorBest?
-        for record in exercise.recordsArray where record.session?.isCompleted == true {
+        for record in exercise.recordsArray
+        where record.session?.isCompleted == true && record.session?.id != excludeID {
             let sessionDate = record.session?.date ?? .distantPast
             for set in record.setsArray where !set.isWarmup {
                 let load = set.effectiveLoadLbs()
@@ -596,13 +680,54 @@ final class WorkoutViewModel {
     // MARK: - Progression
 
     func recentAverage(for exercise: Exercise, mode: TrainingMode) -> RecentAverage? {
-        ProgressionService.recentAverage(for: exercise, mode: mode)
+        ProgressionService.recentAverage(
+            for: exercise,
+            mode: mode,
+            excludingSessionID: activeSession?.id
+        )
     }
 
     func suggestion(for exercise: Exercise, mode: TrainingMode) -> ProgressionSuggestion? {
         let raw = UserDefaults.standard.string(forKey: "progressionAggressiveness") ?? ""
         let aggressiveness = ProgressionAggressiveness(rawValue: raw) ?? .moderate
-        return ProgressionService.suggestion(for: exercise, mode: mode, aggressiveness: aggressiveness)
+        return ProgressionService.suggestion(
+            for: exercise,
+            mode: mode,
+            aggressiveness: aggressiveness,
+            excludingSessionID: activeSession?.id
+        )
+    }
+
+    /// True when this exercise already has at least one set in the active session.
+    func hasLoggedSets(for exercise: Exercise) -> Bool {
+        currentRecord(for: exercise)?.setsArray.isEmpty == false
+    }
+
+    /// Explicit “done with this lift” for the active mode — not inferred from set count.
+    func isExerciseDone(for exercise: Exercise) -> Bool {
+        currentRecord(for: exercise)?.isCompleted == true
+    }
+
+    /// Mark the lift finished (any set count, including zero to skip). Next skips done lifts.
+    func markExerciseDone(_ exercise: Exercise) {
+        let record = findOrCreateRecord(for: exercise)
+        record.isCompleted = true
+        try? modelContext.save()
+    }
+
+    /// Resume a lift after marking done (e.g. add more sets).
+    func markExerciseNotDone(_ exercise: Exercise) {
+        guard let record = currentRecord(for: exercise) else { return }
+        record.isCompleted = false
+        try? modelContext.save()
+    }
+
+    func toggleExerciseDone(_ exercise: Exercise) {
+        if isExerciseDone(for: exercise) {
+            markExerciseNotDone(exercise)
+        } else {
+            markExerciseDone(exercise)
+        }
     }
 
     /// Get the current session's record for an exercise in the active mode.
@@ -626,6 +751,8 @@ final class WorkoutViewModel {
         isAssisted: Bool = false
     ) {
         let record = findOrCreateRecord(for: exercise)
+        // Logging again means the lift is no longer marked done.
+        record.isCompleted = false
         let setNumber = record.setsArray.count + 1
         let set = SetRecord(
             setNumber: setNumber,
@@ -665,6 +792,8 @@ final class WorkoutViewModel {
         set.isEachSide = isEachSide
         set.isAssisted = isAssisted
         set.completedAt = .now
+        // Editing while marked done keeps the lift open again.
+        set.exerciseRecord?.isCompleted = false
         try? modelContext.save()
         HapticService.setLogged()
     }

@@ -126,6 +126,22 @@ final class FocusTargetLogicTests: XCTestCase {
         XCTAssertEqual(p.weightDelta, "+2.5 lb")
     }
 
+    /// Effective load targets convert to assistance when logging assisted lifts.
+    /// BW 200, last effective 150 (assist 50), target effective 155 → assist 45, delta −5 lb.
+    func test_preferAssistance_convertsEffectiveToAssistAndDressesDrop() {
+        let p = FocusTargetLogic.prefill(
+            suggestion: suggestion(155, 8, .consistent),
+            recent: RecentAverage(weight: 150, reps: 8, sessionCount: 3),
+            lastBest: (weight: 150, reps: 8),
+            preferAssistance: true,
+            bodyWeightLbs: 200
+        )
+        XCTAssertEqual(p.weight, 45)
+        XCTAssertTrue(p.isAssisted)
+        XCTAssertEqual(p.weightDelta, "−5 lb")
+        XCTAssertNil(p.repsDelta)
+    }
+
     // MARK: - lastBest (dress baseline, mirrors algorithm bestSet convention)
 
     func test_lastBest_picksHeaviestSet() {

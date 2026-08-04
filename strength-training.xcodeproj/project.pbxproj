@@ -38,6 +38,7 @@
 		A3A7A993E817CEC629FC7D7A /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8227BD6A0FFEBA20B7444236 /* Foundation.framework */; };
 		A86332EC74EEB61D502B9A66 /* ProgressionLabApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2375B8872C6A1C21691DF866 /* ProgressionLabApp.swift */; };
 		AB75C1610447582730CCCB17 /* TrainingMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = E15010E72FA7E5AB009EF2FB /* TrainingMode.swift */; };
+		B2C3D4E5F60718293A4B5C6D /* BodyCompositionMathTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B5C /* BodyCompositionMathTests.swift */; };
 		B30B972F00BEB5024C59291A /* ExerciseDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA1089E656CA94B6914585FB /* ExerciseDetailView.swift */; };
 		B5CE50F29CC09192CC7D822B /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AA363F8D7BCEA2FCDE96CCEE /* Cocoa.framework */; };
 		BC3117F994C6BEF049F4F098 /* ProgressionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87211BB2F7AB169D53339453 /* ProgressionService.swift */; };
@@ -60,7 +61,6 @@
 		F1575293D208883B22818EF3 /* ParameterPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 165BF58640500A519020F992 /* ParameterPanel.swift */; };
 		F782886371C54BEC655F1D47 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32C7938965779BE5D2C32989 /* DashboardView.swift */; };
 		FD8D7B4D50F612D4C3DC32C0 /* ExerciseDashboardRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = E90D8161F780FCDA4CBDA8C4 /* ExerciseDashboardRow.swift */; };
-B2C3D4E5F60718293A4B5C6D /* BodyCompositionMathTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B5C /* BodyCompositionMathTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -108,6 +108,7 @@ B2C3D4E5F60718293A4B5C6D /* BodyCompositionMathTests.swift in Sources */ = {isa 
 		978F4F3D2BE8A98E61F6B83C /* ExerciseModeReplay.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ExerciseModeReplay.swift; sourceTree = "<group>"; };
 		9BB09AE52C260DDF439056CC /* ProgressionServiceParityTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ProgressionServiceParityTests.swift; sourceTree = "<group>"; };
 		9C9B1F409EF0053F85ACE816 /* BackupModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BackupModels.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60718293A4B5C /* BodyCompositionMathTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BodyCompositionMathTests.swift; sourceTree = "<group>"; };
 		A284E56C056FDF4F4E7CE02C /* ProgressionServicePureFunctionTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ProgressionServicePureFunctionTests.swift; sourceTree = "<group>"; };
 		A9D1927AD35565C0B0F0CB4D /* EffortScaleTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EffortScaleTests.swift; sourceTree = "<group>"; };
 		AA363F8D7BCEA2FCDE96CCEE /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.0.sdk/System/Library/Frameworks/Cocoa.framework; sourceTree = DEVELOPER_DIR; };
@@ -132,7 +133,6 @@ B2C3D4E5F60718293A4B5C6D /* BodyCompositionMathTests.swift in Sources */ = {isa 
 		FC046B453D9070D004742173 /* ConfigArtifact.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ConfigArtifact.swift; sourceTree = "<group>"; };
 		FC5ED87967CB436716AA1EF1 /* ProgressionTypes.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ProgressionTypes.swift; sourceTree = "<group>"; };
 		FCD72FE4DBC5F2CB9BEB771B /* strength-training-tests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; name = "strength-training-tests.xctest"; path = strength_training_tests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-A1B2C3D4E5F60718293A4B5C /* BodyCompositionMathTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BodyCompositionMathTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */

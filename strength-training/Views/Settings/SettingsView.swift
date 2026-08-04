@@ -333,6 +333,10 @@ struct SettingsView: View {
             }
             .scrollContentBackground(.hidden)
             .background(Color.uplift.bgElev)
+            .refreshable {
+                guard CloudKitSyncService.isEnabled else { return }
+                await cloudKitSyncService.checkAccountStatus()
+            }
             .navigationTitle("Settings")
             .fullScreenCover(isPresented: $showGymPass) {
                 GymPassView()
@@ -434,8 +438,24 @@ struct SettingsView: View {
                         .foregroundStyle(.secondary)
 
                 case .couldNotDetermine:
-                    Label("Checking iCloud Status...", systemImage: "icloud")
-                        .foregroundStyle(.secondary)
+                    if !cloudKitSyncService.hasCheckedAccount {
+                        Label("Checking iCloud Status…", systemImage: "icloud")
+                            .foregroundStyle(.secondary)
+                    } else {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Label("iCloud Status Unknown", systemImage: "exclamationmark.icloud")
+                                .foregroundStyle(Color.uplift.customBadge)
+                            if let error = cloudKitSyncService.syncError {
+                                Text(error)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            } else {
+                                Text("Could not determine account status. Check network and iCloud sign-in, then pull to refresh.")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
 
                 @unknown default:
                     Label("iCloud Unavailable", systemImage: "icloud.slash")
@@ -452,6 +472,10 @@ struct SettingsView: View {
             )
         }
         .listRowBackground(Color.uplift.surface1)
+        .task {
+            guard CloudKitSyncService.isEnabled else { return }
+            await cloudKitSyncService.checkAccountStatus()
+        }
     }
 
     // MARK: - Height (ft / in) bindings

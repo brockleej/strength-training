@@ -91,17 +91,31 @@ struct TodayView: View {
             )
         }
         .confirmationDialog(
-            "Cancel Workout?",
+            workoutVM.isRevisitingSavedSession ? "Exit Editing?" : "Cancel Workout?",
             isPresented: $workoutVM.showCancelConfirmation,
             titleVisibility: .visible
         ) {
-            Button("Cancel Workout", role: .destructive) {
+            Button(
+                workoutVM.isRevisitingSavedSession ? "Exit Editing" : "Cancel Workout",
+                role: .destructive
+            ) {
                 workoutVM.cancelSuspendedSession()
             }
-            Button("Keep Training", role: .cancel) {}
+            Button(
+                workoutVM.isRevisitingSavedSession ? "Keep Editing" : "Keep Training",
+                role: .cancel
+            ) {
+                // Cancel flow parks the session first so the dialog can describe it.
+                // Aborting must put it back as active.
+                workoutVM.resumeSuspendedIfNeeded()
+            }
         } message: {
-            let dayName = workoutVM.suspendedSession?.day.rawValue ?? "current"
-            Text("Your \(dayName) Day workout will be discarded. This can't be undone.")
+            if workoutVM.isRevisitingSavedSession {
+                Text("Your set edits are already saved. Exit returns this workout to History without deleting it.")
+            } else {
+                let dayName = workoutVM.suspendedSession?.day.rawValue ?? "current"
+                Text("Your \(dayName) Day workout will be discarded. This can't be undone.")
+            }
         }
         .confirmationDialog(
             "Apple Health Workout",
@@ -398,9 +412,13 @@ struct TodayView: View {
 
     private var cancelLink: some View {
         Button {
+            // Park live suspended/active so confirm can discard; History edits stay protected.
+            if workoutVM.activeSession != nil, !workoutVM.isRevisitingSavedSession {
+                workoutVM.suspendSession()
+            }
             workoutVM.showCancelConfirmation = true
         } label: {
-            Text("Cancel workout")
+            Text(workoutVM.isRevisitingSavedSession ? "Exit editing" : "Cancel workout")
                 .font(.uplift.text(13, weight: .medium))
                 .foregroundStyle(Color.uplift.fgMuted)
                 .frame(maxWidth: .infinity)

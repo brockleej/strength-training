@@ -54,9 +54,9 @@ final class ExerciseDrillDownViewModel {
             let value: Double
             switch topSetMetric {
             case .weight:
-                value = sets.map(\.weightLbs).max() ?? 0
+                value = sets.map { $0.effectiveLoadLbs() }.max() ?? 0
             case .reps:
-                let bestSet = sets.max(by: { $0.weightLbs < $1.weightLbs })
+                let bestSet = sets.max(by: { $0.effectiveLoadLbs() < $1.effectiveLoadLbs() })
                 value = Double(bestSet?.reps ?? 0)
             }
 
@@ -80,7 +80,7 @@ final class ExerciseDrillDownViewModel {
         for record in allRecords {
             guard let date = record.session?.date else { continue }
             let sets = workingSets(record)
-            guard let bestE1RM = sets.map({ E1RM.estimate(weightLbs: $0.weightLbs, reps: $0.reps) }).max() else {
+            guard let bestE1RM = sets.map(\.estimatedE1RM).max() else {
                 continue
             }
 
@@ -102,7 +102,7 @@ final class ExerciseDrillDownViewModel {
             .filter { $0.session?.isCompleted == true }
             .flatMap { $0.setsArray.filter { !$0.isWarmup } }
 
-        let best = allSets.map { E1RM.estimate(weightLbs: $0.weightLbs, reps: $0.reps) }.max()
+        let best = allSets.map(\.estimatedE1RM).max()
         return best
     }
 
@@ -129,17 +129,17 @@ final class ExerciseDrillDownViewModel {
         }
     }
 
-    /// The set holding the all-time best e1RM, with its session date.
+    /// The set holding the all-time best e1RM, with its session date (effective load).
     var personalBestSet: (weight: Double, reps: Int, date: Date)? {
         var best: (weight: Double, reps: Int, date: Date)?
         var bestE1RM: Double = 0
         for record in exercise.recordsArray where record.session?.isCompleted == true {
             guard let date = record.session?.date else { continue }
             for set in record.setsArray where !set.isWarmup {
-                let e1rm = E1RM.estimate(weightLbs: set.weightLbs, reps: set.reps)
+                let e1rm = set.estimatedE1RM
                 if e1rm > bestE1RM {
                     bestE1RM = e1rm
-                    best = (set.weightLbs, set.reps, date)
+                    best = (set.effectiveLoadLbs(), set.reps, date)
                 }
             }
         }
@@ -152,10 +152,8 @@ final class ExerciseDrillDownViewModel {
         return filteredRecords().suffix(10).reversed().compactMap { record in
             guard let date = record.session?.date else { return nil }
             let sets = workingSets(record)
-            guard let top = sets.max(by: {
-                E1RM.estimate(weightLbs: $0.weightLbs, reps: $0.reps) < E1RM.estimate(weightLbs: $1.weightLbs, reps: $1.reps)
-            }) else { return nil }
-            return (record.id, date, sets.count, top.weightLbs, top.reps, prDates.contains(date))
+            guard let top = sets.max(by: { $0.estimatedE1RM < $1.estimatedE1RM }) else { return nil }
+            return (record.id, date, sets.count, top.effectiveLoadLbs(), top.reps, prDates.contains(date))
         }
     }
 }

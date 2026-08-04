@@ -33,16 +33,26 @@ final class Exercise {
     // MARK: - History helpers
 
     /// Most recent completed session record for this exercise in the given mode.
-    func lastCompletedRecord(mode: TrainingMode) -> ExerciseRecord? {
+    /// Pass `excludingSessionID` to skip the active workout (needed when editing a
+    /// completed History session in place — it stays `isCompleted == true`).
+    func lastCompletedRecord(mode: TrainingMode, excludingSessionID: UUID? = nil) -> ExerciseRecord? {
         recordsArray
-            .filter { $0.trainingMode == mode && $0.session?.isCompleted == true }
+            .filter {
+                $0.trainingMode == mode
+                    && $0.session?.isCompleted == true
+                    && $0.session?.id != excludingSessionID
+            }
             .max { ($0.session?.date ?? .distantPast) < ($1.session?.date ?? .distantPast) }
     }
 
     /// Completed records for mode, newest-first (excludes incomplete sessions).
-    func completedRecords(mode: TrainingMode) -> [ExerciseRecord] {
+    func completedRecords(mode: TrainingMode, excludingSessionID: UUID? = nil) -> [ExerciseRecord] {
         recordsArray
-            .filter { $0.trainingMode == mode && $0.session?.isCompleted == true }
+            .filter {
+                $0.trainingMode == mode
+                    && $0.session?.isCompleted == true
+                    && $0.session?.id != excludingSessionID
+            }
             .sorted { ($0.session?.date ?? .distantPast) > ($1.session?.date ?? .distantPast) }
     }
 

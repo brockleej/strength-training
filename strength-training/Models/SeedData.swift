@@ -43,11 +43,14 @@ struct SeedData {
 
     /// Removes duplicate exercises (same name + dayType), keeping the one with the most history.
     /// Records from duplicates are reassigned to the kept exercise before deletion.
+    /// Safe to re-run after CloudKit import (second device can seed before iCloud lands).
     static func deduplicateExercises(context: ModelContext) {
         let exercises = (try? context.fetch(FetchDescriptor<Exercise>())) ?? []
         var grouped: [String: [Exercise]] = [:]
         for exercise in exercises {
-            let key = "\(exercise.name.lowercased())|\(exercise.dayTypeNames.joined(separator: "+"))"
+            // Sort day names so Push+Pull and Pull+Push collapse to one group.
+            let days = exercise.dayTypeNames.map { $0.lowercased() }.sorted().joined(separator: "+")
+            let key = "\(exercise.name.lowercased())|\(days)"
             grouped[key, default: []].append(exercise)
         }
         for (_, group) in grouped where group.count > 1 {
@@ -61,6 +64,41 @@ struct SeedData {
             }
         }
         try? context.save()
+    }
+
+    /// Collapses duplicate split days (same name, case-insensitive) that can appear when
+    /// a fresh install seeds before CloudKit imports an existing split from iCloud.
+    static func deduplicateSplitDays(context: ModelContext) {
+        let days = (try? context.fetch(FetchDescriptor<SplitDay>())) ?? []
+        var grouped: [String: [SplitDay]] = [:]
+        for day in days {
+            let key = day.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            guard !key.isEmpty else { continue }
+            grouped[key, default: []].append(day)
+        }
+        var changed = false
+        for (_, group) in grouped where group.count > 1 {
+            // Prefer the row with the lowest sortOrder (canonical catalog order), then stable id.
+            let sorted = group.sorted {
+                if $0.sortOrder != $1.sortOrder { return $0.sortOrder < $1.sortOrder }
+                return $0.id.uuidString < $1.id.uuidString
+            }
+            for duplicate in sorted.dropFirst() {
+                context.delete(duplicate)
+                changed = true
+            }
+        }
+        if changed {
+            try? context.save()
+            DayTypeRegistry.shared.reload(context: context)
+        }
+    }
+
+    /// Post-import hygiene after CloudKit merges remote rows with a local seed.
+    static func reconcileAfterCloudKitImport(context: ModelContext) {
+        migrateExerciseNames(context: context)
+        deduplicateExercises(context: context)
+        deduplicateSplitDays(context: context)
     }
 
     /// Seeds the default bro-split day types when none exist yet.
