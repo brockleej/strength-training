@@ -18,22 +18,24 @@ struct ContentView: View {
     var body: some View {
         Group {
             if let vm = workoutViewModel {
+                // Classic TabView (iOS 17+). The iOS 18 `Tab { }` API is not used so we keep
+                // the minimum deployment at 17.0 for broader TestFlight reach.
                 TabView(selection: $selectedTab) {
-                    Tab("Workout", systemImage: "dumbbell", value: "workout") {
-                        WorkoutTabView(viewModel: vm)
-                    }
-                    Tab("History", systemImage: "clock", value: "history") {
-                        HistoryListView(workoutVM: vm)
-                    }
-                    Tab("Progress", systemImage: "chart.line.uptrend.xyaxis", value: "progress") {
-                        ProgressDashboardView()
-                    }
-                    Tab("Exercises", systemImage: "list.bullet", value: "exercises") {
-                        ExerciseLibraryView()
-                    }
-                    Tab("Settings", systemImage: "gear", value: "settings") {
-                        SettingsView(healthKitService: healthKitService, cloudKitSyncService: cloudKitSyncService)
-                    }
+                    WorkoutTabView(viewModel: vm)
+                        .tabItem { Label("Workout", systemImage: "dumbbell") }
+                        .tag("workout")
+                    HistoryListView(workoutVM: vm)
+                        .tabItem { Label("History", systemImage: "clock") }
+                        .tag("history")
+                    ProgressDashboardView()
+                        .tabItem { Label("Progress", systemImage: "chart.line.uptrend.xyaxis") }
+                        .tag("progress")
+                    ExerciseLibraryView()
+                        .tabItem { Label("Exercises", systemImage: "list.bullet") }
+                        .tag("exercises")
+                    SettingsView(healthKitService: healthKitService, cloudKitSyncService: cloudKitSyncService)
+                        .tabItem { Label("Settings", systemImage: "gear") }
+                        .tag("settings")
                 }
             } else {
                 // Mirrors LaunchScreen.storyboard so the handoff is seamless.
