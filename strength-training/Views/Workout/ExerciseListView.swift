@@ -179,9 +179,28 @@ struct ExerciseListView: View {
                 .scrollIndicators(.hidden)
 
                 GlassHeader {
-                    CircleButton(icon: "chevron.down", accessibilityLabel: "Minimize workout") {
+                    // Hierarchy: Home (Today) → this workout list → a lift.
+                    // Chevron-down matches dismiss sheet; label makes “leave without finishing” clear.
+                    Button {
                         workoutVM.suspendSession()
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "chevron.down")
+                                .font(.system(size: 13, weight: .bold))
+                            Text("Home")
+                                .font(.uplift.text(14, weight: .semibold))
+                        }
+                        .foregroundStyle(Color.uplift.fg)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 9)
+                        .background(Capsule().fill(Color.uplift.surface1))
                     }
+                    .buttonStyle(.plain)
+                    .frame(minHeight: 44)
+                    .contentShape(Rectangle())
+                    .accessibilityLabel("Home")
+                    .accessibilityHint("Leave the workout list and return to Today. Your session stays available to resume.")
+
                     Spacer()
                     Text("\(dayType.rawValue) day")
                         .textCase(.uppercase)
@@ -408,6 +427,8 @@ struct ExerciseListView: View {
                             state: rowState(for: exercise, number: index + 1),
                             trackBadge: exercise.track.badge,
                             lastSessionSummary: rowData.lastSessionSummary,
+                            personalBestSummary: rowData.personalBestSummary,
+                            hasHistory: rowData.hasHistory,
                             targetWeight: rowData.targetWeight,
                             targetReps: rowData.targetReps,
                             secondaryMode: secondaryMode,
@@ -562,7 +583,9 @@ struct ExerciseListView: View {
     private func rowData(for exercise: Exercise) -> (
         targetWeight: Double?,
         targetReps: Int?,
-        lastSessionSummary: String?
+        lastSessionSummary: String?,
+        personalBestSummary: String?,
+        hasHistory: Bool
     ) {
         let lastRecord = exercise.lastCompletedRecord(
             mode: workoutVM.selectedMode,
@@ -579,10 +602,13 @@ struct ExerciseListView: View {
         if preferAssist, let effective = target, bw > 0 {
             target = max(0, bw - effective)
         }
+        let hasHistory = workoutVM.hasTrainingHistory(for: exercise)
         return (
             targetWeight: target,
             targetReps: suggestion?.targetReps ?? recent?.reps,
-            lastSessionSummary: summary
+            lastSessionSummary: summary,
+            personalBestSummary: workoutVM.personalBestSummary(for: exercise),
+            hasHistory: hasHistory
         )
     }
 

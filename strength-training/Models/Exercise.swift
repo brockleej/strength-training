@@ -56,6 +56,38 @@ final class Exercise {
             .sorted { ($0.session?.date ?? .distantPast) > ($1.session?.date ?? .distantPast) }
     }
 
+    /// True when any completed session logged sets for this lift.
+    func hasTrainingHistory(excludingSessionID: UUID? = nil) -> Bool {
+        recordsArray.contains {
+            $0.session?.isCompleted == true
+                && $0.session?.id != excludingSessionID
+                && !$0.setsArray.isEmpty
+        }
+    }
+
+    /// Best working set by estimated 1RM (non-warmup, any mode).
+    func bestWorkingSet(excludingSessionID: UUID? = nil) -> (weight: Double, reps: Int, e1RM: Double)? {
+        var best: (weight: Double, reps: Int, e1RM: Double)?
+        for record in recordsArray
+        where record.session?.isCompleted == true && record.session?.id != excludingSessionID {
+            for set in record.setsArray where !set.isWarmup {
+                let load = set.effectiveLoadLbs()
+                guard load > 0 else { continue }
+                let e1rm = E1RM.estimate(weightLbs: load, reps: set.reps)
+                if best == nil || e1rm > best!.e1RM {
+                    best = (load, set.reps, e1rm)
+                }
+            }
+        }
+        return best
+    }
+
+    /// Compact PR label for lists, e.g. `"305×5"`.
+    func personalBestSummary(excludingSessionID: UUID? = nil) -> String? {
+        guard let best = bestWorkingSet(excludingSessionID: excludingSessionID) else { return nil }
+        return "\(StepperLogic.format(best.weight))×\(best.reps)"
+    }
+
     // MARK: - Per-day order
 
     func sortIndex(for day: DayType) -> Int {

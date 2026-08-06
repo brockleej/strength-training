@@ -61,17 +61,36 @@ struct ContentView: View {
         }
         .tint(Color.uplift.accent)
         .preferredColorScheme(.dark)
-        .onAppear {
-            // Keep launch work light: seed + VM first so the tab UI appears.
-            // CloudKit account checks run inside CloudKitSyncService, not here.
+        .task {
+            // Migrations are safe anytime; full catalog seed waits for iCloud when empty.
+            SeedData.hydrateSplitPreferencesFromICloud()
             SeedData.migrateExerciseNames(context: modelContext)
             SeedData.deduplicateExercises(context: modelContext)
             SeedData.deduplicateSplitDays(context: modelContext)
-            // Fresh install seeds; existing installs top up any missing catalog lifts.
-            SeedData.seedIfNeeded(context: modelContext)
+
+            let exerciseCount = (try? modelContext.fetchCount(FetchDescriptor<Exercise>())) ?? 0
+            let splitCount = (try? modelContext.fetchCount(FetchDescriptor<SplitDay>())) ?? 0
+            let storeLooksEmpty = exerciseCount == 0 && splitCount == 0
+
+            if storeLooksEmpty {
+                await cloudKitSyncService.waitBeforeInitialSeedIfNeeded(modelContext: modelContext)
+            }
+
+            // After wait: seed only if still empty (no remote library). Never re-fill
+            // deleted catalog lifts on every launch (see SeedData.topUpCatalogIfNeeded).
+            SeedData.seedIfNeeded(
+                context: modelContext,
+                allowEmptyCatalogSeed: true
+            )
+            // If user had configured a split but store is still empty (sync lag),
+            // seedIfNeeded already skipped re-seeding bro when hasConfiguredSplit is set.
             DayTypeRegistry.shared.reload(context: modelContext)
+
             if workoutViewModel == nil {
-                workoutViewModel = WorkoutViewModel(modelContext: modelContext, healthKitService: healthKitService)
+                workoutViewModel = WorkoutViewModel(
+                    modelContext: modelContext,
+                    healthKitService: healthKitService
+                )
             }
             healthKitService.checkAuthorization()
         }
@@ -79,6 +98,7 @@ struct ContentView: View {
         .onChange(of: cloudKitSyncService.lastSyncDate) { _, newDate in
             guard newDate != nil else { return }
             SeedData.reconcileAfterCloudKitImport(context: modelContext)
+            DayTypeRegistry.shared.reload(context: modelContext)
         }
         .onChange(of: workoutViewModel?.wantsFocusOnWorkoutTab) { _, wants in
             guard wants == true else { return }

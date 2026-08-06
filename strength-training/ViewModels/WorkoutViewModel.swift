@@ -59,7 +59,12 @@ final class WorkoutViewModel {
     var targetRestSeconds: Double = Double(RestTimerPreferences.targetSeconds)
     /// Absolute end of the current countdown; nil when not resting.
     var restEndDate: Date? = nil {
-        didSet { syncRestCountdownMonitor() }
+        didSet {
+            syncRestCountdownMonitor()
+            // Local notifications keep ticks playing when the screen locks
+            // (the in-app Task is suspended in the background).
+            RestTimerNotificationScheduler.reschedule(endDate: restEndDate)
+        }
     }
     /// Bumped when a per-exercise rest on/off changes so Focus re-renders.
     var restTimerPreferenceEpoch: Int = 0
@@ -77,6 +82,8 @@ final class WorkoutViewModel {
     private var announcedRestSeconds: Set<Int> = []
     private var restDoneAnnounced = false
     private var restMonitorTask: Task<Void, Never>?
+    /// GCD timer survives better than Task.sleep when the app is backgrounded with audio.
+    private var restDispatchTimer: DispatchSourceTimer?
 
     var isResting: Bool {
         guard let end = restEndDate else { return false }
@@ -97,6 +104,7 @@ final class WorkoutViewModel {
     func startRestAfterSet(for exercise: Exercise) {
         if isRestTimerEnabled(for: exercise) {
             RestTimerSoundService.prepareIfNeeded()
+            RestTimerSoundService.startBackgroundKeepAlive()
             restEndDate = Date.now.addingTimeInterval(targetRestSeconds)
         }
         // Timer off for this exercise: leave any active countdown running
@@ -114,16 +122,32 @@ final class WorkoutViewModel {
         }
     }
 
+    /// Adjust a running countdown, or start one when idle and `seconds` is positive.
+    /// Negative deltas shorten rest; if the end would be in the past, rest clears.
     func addRestTime(_ seconds: Double = 30) {
         if let current = restEndDate {
-            // Extending rest — allow the countdown window to fire again later.
+            // Extending/shortening — allow the countdown window to fire again later.
             announcedRestSeconds = []
             restDoneAnnounced = false
-            restEndDate = current.addingTimeInterval(seconds)
-        } else {
-            RestTimerSoundService.prepareIfNeeded()
-            restEndDate = Date.now.addingTimeInterval(seconds)
+            let newEnd = current.addingTimeInterval(seconds)
+            if newEnd <= .now {
+                restEndDate = nil
+            } else {
+                restEndDate = newEnd
+            }
+        } else if seconds > 0 {
+            startRest(seconds: seconds)
         }
+    }
+
+    /// Manual start (or restart) of the session rest countdown.
+    func startRest(seconds: Double? = nil) {
+        let duration = max(1, seconds ?? targetRestSeconds)
+        RestTimerSoundService.prepareIfNeeded()
+        RestTimerSoundService.startBackgroundKeepAlive()
+        announcedRestSeconds = []
+        restDoneAnnounced = false
+        restEndDate = Date.now.addingTimeInterval(duration)
     }
 
     func skipRest() {
@@ -135,19 +159,29 @@ final class WorkoutViewModel {
     private func syncRestCountdownMonitor() {
         restMonitorTask?.cancel()
         restMonitorTask = nil
+        restDispatchTimer?.cancel()
+        restDispatchTimer = nil
         announcedRestSeconds = []
         restDoneAnnounced = false
 
-        guard restEndDate != nil else { return }
+        guard restEndDate != nil else {
+            RestTimerSoundService.stopBackgroundKeepAlive()
+            return
+        }
 
-        restMonitorTask = Task { @MainActor [weak self] in
-            while !Task.isCancelled {
-                guard let self else { return }
-                self.pollRestCountdownAudio()
-                if self.restEndDate == nil { return }
-                try? await Task.sleep(for: .milliseconds(100))
+        // Keep the process eligible to run while the screen is locked.
+        RestTimerSoundService.prepareIfNeeded()
+        RestTimerSoundService.startBackgroundKeepAlive()
+
+        let timer = DispatchSource.makeTimerSource(queue: DispatchQueue.global(qos: .userInitiated))
+        timer.schedule(deadline: .now(), repeating: .milliseconds(150), leeway: .milliseconds(50))
+        timer.setEventHandler { [weak self] in
+            DispatchQueue.main.async {
+                self?.pollRestCountdownAudio()
             }
         }
+        timer.resume()
+        restDispatchTimer = timer
     }
 
     private func pollRestCountdownAudio() {
@@ -636,7 +670,7 @@ final class WorkoutViewModel {
 
     /// The set holding the all-time best e1RM for this exercise across
     /// completed sessions (non-warmup sets, any mode). nil = no prior history.
-    private func priorBestE1RMSet(for exercise: Exercise) -> PRDetection.PriorBest? {
+    func priorBestE1RMSet(for exercise: Exercise) -> PRDetection.PriorBest? {
         let excludeID = activeSession?.id
         var best: PRDetection.PriorBest?
         for record in exercise.recordsArray
@@ -652,6 +686,16 @@ final class WorkoutViewModel {
             }
         }
         return best
+    }
+
+    /// Compact personal-best label for list rows, e.g. `"305×5"`.
+    func personalBestSummary(for exercise: Exercise) -> String? {
+        exercise.personalBestSummary(excludingSessionID: activeSession?.id)
+    }
+
+    /// True when this lift has at least one completed session (any mode).
+    func hasTrainingHistory(for exercise: Exercise) -> Bool {
+        exercise.hasTrainingHistory(excludingSessionID: activeSession?.id)
     }
 
     /// Called after a set is persisted; fires the celebration when it's a PR.

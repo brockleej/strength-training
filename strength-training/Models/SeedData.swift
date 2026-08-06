@@ -101,12 +101,50 @@ struct SeedData {
         deduplicateSplitDays(context: context)
     }
 
-    /// Seeds the default bro-split day types when none exist yet.
+    /// UserDefaults: once the user applies a preset or edits days, never re-seed
+    /// a default split over an empty store (wait for CloudKit instead).
+    static let hasConfiguredSplitKey = "hasConfiguredSplit"
+    static let preferredSplitPresetKey = "preferredSplitPresetRaw"
+
+    static func markSplitConfigured(preset: SplitPreset? = nil) {
+        UserDefaults.standard.set(true, forKey: hasConfiguredSplitKey)
+        // Also mirror to iCloud KVS so a reinstall still remembers “don’t seed bro”.
+        let kvs = NSUbiquitousKeyValueStore.default
+        kvs.set(true, forKey: hasConfiguredSplitKey)
+        if let preset {
+            UserDefaults.standard.set(preset.rawValue, forKey: preferredSplitPresetKey)
+            kvs.set(preset.rawValue, forKey: preferredSplitPresetKey)
+        }
+        kvs.synchronize()
+    }
+
+    /// Pull split prefs from iCloud KVS into local UserDefaults (call on launch).
+    static func hydrateSplitPreferencesFromICloud() {
+        let kvs = NSUbiquitousKeyValueStore.default
+        kvs.synchronize()
+        if kvs.bool(forKey: hasConfiguredSplitKey) {
+            UserDefaults.standard.set(true, forKey: hasConfiguredSplitKey)
+        }
+        if let raw = kvs.string(forKey: preferredSplitPresetKey), !raw.isEmpty {
+            UserDefaults.standard.set(raw, forKey: preferredSplitPresetKey)
+        }
+    }
+
+    /// Seeds day types only when the store is empty **and** the user has never
+    /// configured a split on this install. Prefer the last applied preset when known.
     static func seedSplitDaysIfNeeded(context: ModelContext) {
         let count = (try? context.fetchCount(FetchDescriptor<SplitDay>())) ?? 0
         guard count == 0 else { return }
-        for def in SplitPreset.broSplit.definitions {
-            context.insert(SplitDay(definition: def))
+        // Empty after iCloud reinstall / mid-sync: don't stomp PPL-PC with bro-split.
+        if UserDefaults.standard.bool(forKey: hasConfiguredSplitKey) {
+            return
+        }
+        let raw = UserDefaults.standard.string(forKey: preferredSplitPresetKey) ?? ""
+        let preset = SplitPreset(rawValue: raw) ?? .broSplit
+        for (index, def) in preset.definitions.enumerated() {
+            let day = SplitDay(definition: def)
+            day.sortOrder = index
+            context.insert(day)
         }
         try? context.save()
     }
@@ -323,13 +361,16 @@ struct SeedData {
 
     // MARK: - Seed / top-up
 
-    static func seedIfNeeded(context: ModelContext) {
+    /// - Parameter allowEmptyCatalogSeed: When false (iCloud still importing),
+    ///   do not insert the full stock catalog into an empty store.
+    static func seedIfNeeded(context: ModelContext, allowEmptyCatalogSeed: Bool = true) {
         seedSplitDaysIfNeeded(context: context)
 
         let hasSeeded = UserDefaults.standard.bool(forKey: "hasSeededExercises")
         let count = (try? context.fetchCount(FetchDescriptor<Exercise>())) ?? 0
 
         if !hasSeeded && count == 0 {
+            guard allowEmptyCatalogSeed else { return }
             insertCatalogExercises(context: context, existingNames: [])
             try? context.save()
             UserDefaults.standard.set(true, forKey: "hasSeededExercises")
@@ -337,24 +378,25 @@ struct SeedData {
             return
         }
 
-        // Existing install (or iCloud data): still top up missing catalog names.
+        // Existing install (or iCloud data): only add *new* catalog lifts on version bumps.
+        // Never re-insert names the user deleted from the library.
         UserDefaults.standard.set(true, forKey: "hasSeededExercises")
         topUpCatalogIfNeeded(context: context)
     }
 
-    /// Bump when the stock catalog gains new exercises so installs re-scan.
+    /// Bump when the stock catalog gains new exercises so installs re-scan **once**.
     private static let catalogVersion = 2
     private static let catalogVersionKey = "exerciseCatalogVersion"
 
-    /// Insert any catalog lifts not already in the library (by name, case-insensitive).
+    /// Insert catalog lifts missing from the library **only when** the catalog version
+    /// increased. If a user deletes a stock lift, it must not reappear on every launch.
     static func topUpCatalogIfNeeded(context: ModelContext) {
         let installedVersion = UserDefaults.standard.integer(forKey: catalogVersionKey)
-        // Always allow top-up if version is behind OR library is thinner than catalog.
+        guard installedVersion < catalogVersion else { return }
+
         let existing = (try? context.fetch(FetchDescriptor<Exercise>())) ?? []
         let existingNames = Set(existing.map { $0.name.lowercased() })
-
         let missing = exerciseCatalog.filter { !existingNames.contains($0.name.lowercased()) }
-        guard !missing.isEmpty || installedVersion < catalogVersion else { return }
 
         if !missing.isEmpty {
             let baseOrder = (existing.map(\.sortOrder).max() ?? -1) + 1

@@ -180,7 +180,10 @@ struct AddExercisePicker: View {
     }
 
     private func exerciseRow(_ exercise: Exercise) -> some View {
-        Button {
+        let personalBest = exercise.personalBestSummary()
+        let hasHistory = exercise.hasTrainingHistory()
+
+        return Button {
             let assign = forceAssignToDay
                 || (assignToCurrentDay && !currentDayType.includesAllExercises)
             dismiss()
@@ -193,6 +196,7 @@ struct AddExercisePicker: View {
                         Text(exercise.name)
                             .font(.uplift.text(15, weight: .semibold))
                             .foregroundStyle(Color.uplift.fg)
+                            .lineLimit(1)
                         if let badge = exercise.track.badge {
                             Text(badge)
                                 .font(.uplift.text(9, weight: .bold))
@@ -200,6 +204,11 @@ struct AddExercisePicker: View {
                                 .padding(.horizontal, 5)
                                 .padding(.vertical, 1)
                                 .background(Capsule().fill(Color.uplift.accent.opacity(0.16)))
+                        }
+                        if hasHistory && personalBest == nil {
+                            Image(systemName: "clock.arrow.circlepath")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(Color.uplift.fgDim)
                         }
                     }
                     HStack(spacing: 6) {
@@ -217,6 +226,7 @@ struct AddExercisePicker: View {
                     }
                 }
                 Spacer(minLength: 0)
+                ExercisePRBadge(hasHistory: hasHistory, personalBestSummary: personalBest)
                 Image(systemName: "plus.circle.fill")
                     .font(.system(size: 22))
                     .foregroundStyle(Color.uplift.accent)
@@ -227,6 +237,21 @@ struct AddExercisePicker: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(pickerAccessibility(exercise, personalBest: personalBest, hasHistory: hasHistory))
+    }
+
+    private func pickerAccessibility(
+        _ exercise: Exercise,
+        personalBest: String?,
+        hasHistory: Bool
+    ) -> String {
+        var parts = [exercise.name, "add"]
+        if let personalBest {
+            parts.append("personal best \(personalBest)")
+        } else if hasHistory {
+            parts.append("trained before")
+        }
+        return parts.joined(separator: ", ")
     }
 
     // MARK: - Grouping

@@ -6,6 +6,7 @@
 import Foundation
 import CloudKit
 import CoreData
+import SwiftData
 
 @Observable
 final class CloudKitSyncService {
@@ -67,6 +68,37 @@ final class CloudKitSyncService {
                 self.hasCheckedAccount = true
                 self.syncError = error.localizedDescription
             }
+        }
+    }
+
+    /// Wait briefly for iCloud before first-run catalog/split seed, so we don't
+    /// overwrite a PPL-PC library with bro-split defaults on an empty local store.
+    /// Returns when: no iCloud account, already has data, first successful import, or timeout.
+    @MainActor
+    func waitBeforeInitialSeedIfNeeded(
+        modelContext: ModelContext,
+        timeout: Duration = .seconds(5)
+    ) async {
+        guard Self.isEnabled else { return }
+
+        if !hasCheckedAccount {
+            await checkAccountStatus()
+        }
+        // No iCloud → seed immediately.
+        guard accountStatus == .available else { return }
+
+        let exerciseCount = (try? modelContext.fetchCount(FetchDescriptor<Exercise>())) ?? 0
+        let splitCount = (try? modelContext.fetchCount(FetchDescriptor<SplitDay>())) ?? 0
+        if exerciseCount > 0 || splitCount > 0 { return }
+
+        // Empty local store with iCloud on: give CloudKit a few seconds to land.
+        let deadline = ContinuousClock.now + timeout
+        while ContinuousClock.now < deadline {
+            if lastSyncDate != nil { return }
+            let e = (try? modelContext.fetchCount(FetchDescriptor<Exercise>())) ?? 0
+            let s = (try? modelContext.fetchCount(FetchDescriptor<SplitDay>())) ?? 0
+            if e > 0 || s > 0 { return }
+            try? await Task.sleep(for: .milliseconds(250))
         }
     }
 

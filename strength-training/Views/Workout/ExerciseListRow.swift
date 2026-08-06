@@ -27,6 +27,9 @@ struct ExerciseListRow: View {
     var trackBadge: String? = nil
     /// Compact last-session recipe, e.g. "135×5 · 225×4 · 305×5".
     var lastSessionSummary: String? = nil
+    /// All-time best working set by e1RM, e.g. "305×5".
+    var personalBestSummary: String? = nil
+    var hasHistory: Bool = false
     var targetWeight: Double? = nil
     var targetReps: Int? = nil
     var secondaryMode: SecondaryMode = .recipe
@@ -45,6 +48,7 @@ struct ExerciseListRow: View {
                         .kerning(-0.2)
                         .foregroundStyle(Color.uplift.fg)
                         .strikethrough(isCompleted, color: Color.uplift.fgDim)
+                        .lineLimit(1)
                     if let trackBadge {
                         Text(trackBadge)
                             .font(.uplift.text(10, weight: .bold))
@@ -53,10 +57,30 @@ struct ExerciseListRow: View {
                             .padding(.vertical, 1)
                             .background(Capsule().fill(Color.uplift.accent.opacity(0.16)))
                     }
+                    if hasHistory {
+                        Image(systemName: "clock.arrow.circlepath")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(Color.uplift.fgDim)
+                            .accessibilityLabel("Trained before")
+                    }
                 }
                 secondaryLine
             }
             Spacer(minLength: 8)
+            if let personalBestSummary, !personalBestSummary.isEmpty {
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("PR")
+                        .font(.uplift.text(9, weight: .bold))
+                        .tracking(0.4)
+                        .foregroundStyle(Color.uplift.up)
+                    Text(personalBestSummary)
+                        .font(.uplift.mono(12, weight: .semibold))
+                        .foregroundStyle(Color.uplift.fg)
+                        .monospacedDigit()
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Personal best \(personalBestSummary)")
+            }
             if isActive {
                 Image(systemName: "chevron.right")
                     .font(.system(size: 14, weight: .semibold))
@@ -239,7 +263,13 @@ struct ExerciseListRow: View {
         case .active: stateText = "current exercise"
         case .pending(let n): stateText = "number \(n)"
         }
-        return "\(name), \(secondaryContent.accessibility), \(stateText)"
+        var parts = [name, secondaryContent.accessibility, stateText]
+        if let personalBestSummary, !personalBestSummary.isEmpty {
+            parts.append("personal best \(personalBestSummary)")
+        } else if hasHistory {
+            parts.append("trained before")
+        }
+        return parts.joined(separator: ", ")
     }
 }
 

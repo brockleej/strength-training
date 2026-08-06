@@ -7,12 +7,16 @@
 
 import SwiftUI
 import SwiftData
+import UserNotifications
 
 @main
 struct strength_trainingApp: App {
     let container: ModelContainer
 
     init() {
+        // Rest timer uses local notifications when the screen locks.
+        UNUserNotificationCenter.current().delegate = RestTimerNotificationDelegate.shared
+
         let schema = Schema([
             Exercise.self,
             WorkoutSession.self,

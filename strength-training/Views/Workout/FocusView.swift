@@ -106,9 +106,27 @@ struct FocusView: View {
             .scrollIndicators(.hidden)
 
             GlassHeader {
-                CircleButton(icon: "chevron.left", accessibilityLabel: "Back to exercise list") {
+                // Hierarchy: Workout (list) → this exercise. Label the parent, not the leaf.
+                Button {
                     dismiss()
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 13, weight: .bold))
+                        Text("Workout")
+                            .font(.uplift.text(14, weight: .semibold))
+                    }
+                    .foregroundStyle(Color.uplift.fg)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 9)
+                    .background(Capsule().fill(Color.uplift.surface1))
                 }
+                .buttonStyle(.plain)
+                .frame(minHeight: 44)
+                .contentShape(Rectangle())
+                .accessibilityLabel("Back to workout")
+                .accessibilityHint("Return to the workout exercise list to finish or change lifts")
+
                 Spacer()
                 Text("Lift \(liftIndex) · \(totalLifts)")
                     .textCase(.uppercase)
@@ -487,7 +505,8 @@ struct FocusView: View {
         )
     }
 
-    /// Countdown is session-wide; on/off is remembered per exercise (supersets).
+    /// Countdown is session-wide; auto-start on/off is per exercise (supersets).
+    /// Controls live in one card: Start when idle; −30 / +30 / Skip while running.
     private func restTimerCard() -> some View {
         @Bindable var wvm = workoutVM
         // Read epoch so toggles refresh the card.
@@ -497,115 +516,130 @@ struct FocusView: View {
         // from the end of a previous super-set).
         let showCountdown = wvm.isResting
 
-        return VStack(spacing: 12) {
+        return HStack(spacing: 10) {
+            // Tap icon + labels: toggle auto-rest after sets for this lift only.
             Button {
                 wvm.toggleRestTimer(for: exercise)
             } label: {
-                HStack(spacing: 14) {
+                HStack(spacing: 10) {
                     Image(systemName: timerOn
                           ? (showCountdown ? "timer" : "timer.circle.fill")
                           : "timer.circle")
-                        .font(.system(size: 28, weight: .semibold))
+                        .font(.system(size: 22, weight: .semibold))
                         .foregroundStyle(
                             showCountdown
                                 ? Color.uplift.accent
                                 : (timerOn ? Color.uplift.fg : Color.uplift.fgDim)
                         )
-                        .frame(width: 36)
+                        .frame(width: 28)
 
-                    VStack(alignment: .leading, spacing: 2) {
+                    VStack(alignment: .leading, spacing: 1) {
                         Text(timerOn ? "Rest · this lift" : "Rest off · this lift")
-                            .font(.uplift.text(12, weight: .semibold))
+                            .font(.uplift.text(11, weight: .semibold))
                             .tracking(0.3)
                             .textCase(.uppercase)
                             .foregroundStyle(Color.uplift.fgMuted)
+                            .lineLimit(1)
 
                         if showCountdown {
                             TimelineView(.periodic(from: .now, by: 1)) { context in
                                 Text(timeString(from: max(0, wvm.restEndDate?.timeIntervalSince(context.date) ?? 0)))
-                                    .font(.uplift.mono(34, weight: .bold))
+                                    .font(.uplift.mono(26, weight: .bold))
                                     .monospacedDigit()
                                     .foregroundStyle(Color.uplift.fg)
                                     .contentTransition(.numericText())
                             }
                         } else if timerOn {
                             Text(timeString(from: wvm.targetRestSeconds))
-                                .font(.uplift.mono(34, weight: .bold))
+                                .font(.uplift.mono(26, weight: .bold))
                                 .monospacedDigit()
                                 .foregroundStyle(Color.uplift.fgMuted)
                         } else {
-                            Text("No rest after sets")
-                                .font(.uplift.text(18, weight: .semibold))
+                            Text("Manual only")
+                                .font(.uplift.text(15, weight: .semibold))
                                 .foregroundStyle(Color.uplift.fgDim)
                         }
                     }
-
-                    Spacer(minLength: 0)
                 }
-                .padding(.horizontal, 18)
-                .padding(.vertical, 16)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background {
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .fill(showCountdown ? Color.uplift.accent.opacity(0.14) : Color.uplift.surface1)
-                }
-                .overlay {
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .strokeBorder(
-                            showCountdown ? Color.uplift.accent.opacity(0.35) : Color.uplift.hairline,
-                            lineWidth: 1
-                        )
-                }
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .accessibilityLabel(restAccessibilityLabel(timerOn: timerOn))
-            .accessibilityHint("Remembers on or off for this exercise only — use off during a superset, on for the last lift")
+            .accessibilityHint("Toggles auto-rest after sets for this exercise only")
+
+            Spacer(minLength: 4)
 
             if showCountdown {
-                HStack(spacing: 10) {
-                    Button {
-                        wvm.addRestTime(30)
-                    } label: {
-                        Text("+30s")
-                            .font(.uplift.text(16, weight: .semibold))
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                            .background(
-                                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                    .fill(Color.uplift.surface1)
-                            )
-                            .foregroundStyle(Color.uplift.fg)
-                    }
-                    .buttonStyle(.plain)
-
-                    Button {
-                        wvm.skipRest()
-                    } label: {
-                        Text("Skip rest")
-                            .font(.uplift.text(16, weight: .semibold))
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                            .background(
-                                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                    .fill(Color.uplift.surface1)
-                            )
-                            .foregroundStyle(Color.uplift.fgMuted)
-                    }
-                    .buttonStyle(.plain)
+                restControlChip("−30") {
+                    wvm.addRestTime(-30)
                 }
+                .accessibilityLabel("Subtract 30 seconds")
+
+                restControlChip("+30") {
+                    wvm.addRestTime(30)
+                }
+                .accessibilityLabel("Add 30 seconds")
+
+                restControlChip("Skip", muted: true) {
+                    wvm.skipRest()
+                }
+                .accessibilityLabel("Skip rest")
+            } else {
+                Button {
+                    wvm.startRest()
+                } label: {
+                    Text("Start")
+                        .font(.uplift.text(14, weight: .semibold))
+                        .foregroundStyle(Color.uplift.onAccent)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 10)
+                        .background(Capsule().fill(Color.uplift.accent))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Start rest timer")
+                .accessibilityHint("Starts a \(timeString(from: wvm.targetRestSeconds)) rest countdown")
             }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(showCountdown ? Color.uplift.accent.opacity(0.14) : Color.uplift.surface1)
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .strokeBorder(
+                    showCountdown ? Color.uplift.accent.opacity(0.35) : Color.uplift.hairline,
+                    lineWidth: 1
+                )
         }
         .padding(.horizontal, 16)
     }
 
+    private func restControlChip(_ title: String, muted: Bool = false, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.uplift.text(13, weight: .semibold))
+                .foregroundStyle(muted ? Color.uplift.fgMuted : Color.uplift.fg)
+                .padding(.horizontal, 11)
+                .padding(.vertical, 10)
+                .background(Capsule().fill(Color.uplift.bgElev.opacity(0.7)))
+                .overlay {
+                    Capsule().strokeBorder(Color.uplift.hairline.opacity(0.8), lineWidth: 1)
+                }
+        }
+        .buttonStyle(.plain)
+    }
+
     private func restAccessibilityLabel(timerOn: Bool) -> String {
         if workoutVM.isResting {
-            return "Resting, \(timeString(from: workoutVM.remainingRestSeconds)) remaining. Timer for this lift is \(timerOn ? "on" : "off"). Tap to toggle this lift."
+            return "Resting, \(timeString(from: workoutVM.remainingRestSeconds)) remaining. Auto-rest for this lift is \(timerOn ? "on" : "off")."
         }
         if timerOn {
-            return "Rest on for this lift, \(timeString(from: workoutVM.targetRestSeconds)), tap to turn off for this lift"
+            return "Auto-rest on for this lift, \(timeString(from: workoutVM.targetRestSeconds)). Tap to turn off auto-rest."
         }
-        return "Rest off for this lift, tap to turn on for this lift"
+        return "Auto-rest off for this lift. Tap to turn on, or use Start for a manual rest."
     }
 
     private func timeString(from seconds: TimeInterval) -> String {

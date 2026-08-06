@@ -79,6 +79,7 @@ final class DayTypeRegistry {
             context.insert(day)
         }
         try? context.save()
+        SeedData.markSplitConfigured(preset: preset)
         reload(context: context)
     }
 
@@ -147,6 +148,7 @@ final class DayTypeRegistry {
             )
         }
         try? context.save()
+        SeedData.markSplitConfigured()
         reload(context: context)
     }
 
@@ -158,6 +160,7 @@ final class DayTypeRegistry {
         if !row.includesAllExercises && homes.count <= 1 { return }
         context.delete(row)
         try? context.save()
+        SeedData.markSplitConfigured()
         reload(context: context)
     }
 
@@ -173,6 +176,7 @@ final class DayTypeRegistry {
             row.sortOrder = index
         }
         try? context.save()
+        SeedData.markSplitConfigured()
         reload(context: context)
     }
 
@@ -184,6 +188,7 @@ final class DayTypeRegistry {
             byID[id]?.sortOrder = index
         }
         try? context.save()
+        SeedData.markSplitConfigured()
         reload(context: context)
     }
 

@@ -162,7 +162,10 @@ struct DayPlanEditorView: View {
     }
 
     private func planRow(_ exercise: Exercise, index: Int) -> some View {
-        HStack(spacing: 12) {
+        let personalBest = exercise.personalBestSummary()
+        let hasHistory = exercise.hasTrainingHistory()
+
+        return HStack(spacing: 12) {
             Text("\(index + 1)")
                 .font(.uplift.mono(13, weight: .bold))
                 .foregroundStyle(Color.uplift.fgDim)
@@ -173,6 +176,7 @@ struct DayPlanEditorView: View {
                     Text(exercise.name)
                         .font(.uplift.text(15, weight: .semibold))
                         .foregroundStyle(Color.uplift.fg)
+                        .lineLimit(1)
                     if let badge = exercise.track.badge {
                         Text(badge)
                             .font(.uplift.text(9, weight: .bold))
@@ -180,6 +184,11 @@ struct DayPlanEditorView: View {
                             .padding(.horizontal, 5)
                             .padding(.vertical, 1)
                             .background(Capsule().fill(Color.uplift.accent.opacity(0.16)))
+                    }
+                    if hasHistory && personalBest == nil {
+                        Image(systemName: "clock.arrow.circlepath")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(Color.uplift.fgDim)
                     }
                 }
                 if !exercise.muscleGroup.isEmpty {
@@ -190,6 +199,8 @@ struct DayPlanEditorView: View {
             }
 
             Spacer(minLength: 0)
+
+            ExercisePRBadge(hasHistory: hasHistory, personalBestSummary: personalBest)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
@@ -205,8 +216,23 @@ struct DayPlanEditorView: View {
             editingExercise = exercise
         })
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(index + 1). \(exercise.name)")
+        .accessibilityLabel(planAccessibility(index: index, exercise: exercise, personalBest: personalBest, hasHistory: hasHistory))
         .accessibilityHint("Long press and drag to reorder, swipe left to remove, double tap to edit")
+    }
+
+    private func planAccessibility(
+        index: Int,
+        exercise: Exercise,
+        personalBest: String?,
+        hasHistory: Bool
+    ) -> String {
+        var parts = ["\(index + 1). \(exercise.name)"]
+        if let personalBest {
+            parts.append("personal best \(personalBest)")
+        } else if hasHistory {
+            parts.append("trained before")
+        }
+        return parts.joined(separator: ", ")
     }
 
     private func syncOrderedIDsFromStore() {

@@ -217,6 +217,9 @@ private struct LibraryRow: View {
     let exercise: Exercise
     var sectionDay: DayType? = nil
 
+    private var personalBest: String? { exercise.personalBestSummary() }
+    private var hasHistory: Bool { exercise.hasTrainingHistory() }
+
     var body: some View {
         HStack(spacing: 10) {
             VStack(alignment: .leading, spacing: 2) {
@@ -225,6 +228,7 @@ private struct LibraryRow: View {
                         .font(.uplift.text(15, weight: .semibold))
                         .kerning(-0.2)
                         .foregroundStyle(Color.uplift.fg)
+                        .lineLimit(1)
                     if let badge = exercise.track.badge {
                         Text(badge)
                             .font(.uplift.text(9, weight: .bold))
@@ -242,6 +246,12 @@ private struct LibraryRow: View {
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
                             .background(Capsule().fill(Color.uplift.customBadge.opacity(0.16)))
+                    }
+                    if hasHistory && personalBest == nil {
+                        Image(systemName: "clock.arrow.circlepath")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(Color.uplift.fgDim)
+                            .accessibilityLabel("Trained before")
                     }
                 }
                 HStack(spacing: 6) {
@@ -263,6 +273,7 @@ private struct LibraryRow: View {
                 }
             }
             Spacer(minLength: 0)
+            ExercisePRBadge(hasHistory: hasHistory, personalBestSummary: personalBest)
             Image(systemName: "chevron.right")
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(Color.uplift.fgDim)
@@ -280,6 +291,11 @@ private struct LibraryRow: View {
         if !exercise.muscleGroup.isEmpty { parts.append(exercise.muscleGroup) }
         if exercise.dayTypeNames.count > 1 {
             parts.append("days \(exercise.dayTypeNames.joined(separator: ", "))")
+        }
+        if let personalBest {
+            parts.append("personal best \(personalBest)")
+        } else if hasHistory {
+            parts.append("trained before")
         }
         parts.append("edit")
         return parts.joined(separator: ", ")
