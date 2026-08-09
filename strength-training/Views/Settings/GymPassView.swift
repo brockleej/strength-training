@@ -11,26 +11,22 @@ import UIKit
 struct GymPassView: View {
     @Environment(\.dismiss) private var dismiss
 
-    @AppStorage(GymMembershipPreferences.codeKey) private var code: String = ""
-    @AppStorage(GymMembershipPreferences.labelKey) private var label: String = ""
-    @AppStorage(GymMembershipPreferences.formatKey) private var formatRaw: String =
-        GymMembershipPreferences.Format.code128.rawValue
+    @Bindable private var membership = GymMembershipStore.shared
 
     @State private var previousBrightness: CGFloat?
     /// Screen we adjusted — restore on the same instance (not UIScreen.main).
     @State private var brightnessScreen: UIScreen?
 
     private var format: GymMembershipPreferences.Format {
-        GymMembershipPreferences.Format(rawValue: formatRaw) ?? .code128
+        membership.format
     }
 
     private var displayLabel: String {
-        let t = label.trimmingCharacters(in: .whitespacesAndNewlines)
-        return t.isEmpty ? GymMembershipPreferences.defaultLabel : t
+        membership.displayLabel
     }
 
     private var barcodeImage: UIImage? {
-        BarcodeImageGenerator.image(from: code, format: format)
+        BarcodeImageGenerator.image(from: membership.code, format: format)
     }
 
     var body: some View {
@@ -85,8 +81,8 @@ struct GymPassView: View {
                     .padding(.horizontal, 32)
                 }
 
-                if !code.isEmpty {
-                    Text(code)
+                if membership.isConfigured {
+                    Text(membership.code)
                         .font(.system(size: 16, weight: .medium, design: .monospaced))
                         .foregroundStyle(.black.opacity(0.55))
                         .padding(.top, 16)

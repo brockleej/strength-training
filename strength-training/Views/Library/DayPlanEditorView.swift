@@ -191,10 +191,11 @@ struct DayPlanEditorView: View {
                             .foregroundStyle(Color.uplift.fgDim)
                     }
                 }
-                if !exercise.muscleGroup.isEmpty {
-                    Text(exercise.muscleGroup)
+                if !exercise.muscleGroupsDisplay.isEmpty {
+                    Text(exercise.muscleGroupsDisplay)
                         .font(.uplift.text(12, weight: .medium))
                         .foregroundStyle(Color.uplift.fgMuted)
+                        .lineLimit(2)
                 }
             }
 

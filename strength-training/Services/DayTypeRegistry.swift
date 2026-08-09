@@ -80,6 +80,8 @@ final class DayTypeRegistry {
         }
         try? context.save()
         SeedData.markSplitConfigured(preset: preset)
+        // New days start empty — pin a short starter template (3–5 lifts), not the full catalog.
+        SeedData.applyStarterDayPlans(context: context, onlyIfDayEmpty: true)
         reload(context: context)
     }
 

@@ -316,7 +316,7 @@ final class ProgressDashboardViewModel {
         var volumeByGroup: [String: Double] = [:]
 
         for tuple in allWorkingSets() {
-            let group = tuple.record.exercise?.muscleGroup ?? "Other"
+            let group = tuple.record.exercise?.primaryMuscleGroup ?? "Other"
             guard !group.isEmpty else { continue }
             volumeByGroup[group, default: 0] += tuple.set.volumeContribution
         }

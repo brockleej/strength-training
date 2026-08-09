@@ -19,7 +19,7 @@ struct ExerciseLibraryView: View {
     private func matchesSearch(_ exercise: Exercise) -> Bool {
         searchText.isEmpty
             || exercise.name.localizedCaseInsensitiveContains(searchText)
-            || exercise.muscleGroup.localizedCaseInsensitiveContains(searchText)
+            || exercise.muscleGroupsDisplay.localizedCaseInsensitiveContains(searchText)
     }
 
     private func exercises(for dayType: DayType) -> [Exercise] {
@@ -255,10 +255,11 @@ private struct LibraryRow: View {
                     }
                 }
                 HStack(spacing: 6) {
-                    if !exercise.muscleGroup.isEmpty {
-                        Text(exercise.muscleGroup)
+                    if !exercise.muscleGroupsDisplay.isEmpty {
+                        Text(exercise.muscleGroupsDisplay)
                             .font(.uplift.text(12, weight: .medium))
                             .foregroundStyle(Color.uplift.fgMuted)
+                            .lineLimit(2)
                     }
                     if exercise.isUnassigned {
                         Text("Unassigned")
@@ -288,7 +289,7 @@ private struct LibraryRow: View {
     private var accessibilityLabel: String {
         var parts = [exercise.name]
         if let badge = exercise.track.badge { parts.append("week \(badge)") }
-        if !exercise.muscleGroup.isEmpty { parts.append(exercise.muscleGroup) }
+        if !exercise.muscleGroupsDisplay.isEmpty { parts.append(exercise.muscleGroupsDisplay) }
         if exercise.dayTypeNames.count > 1 {
             parts.append("days \(exercise.dayTypeNames.joined(separator: ", "))")
         }

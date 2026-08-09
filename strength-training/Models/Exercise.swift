@@ -16,6 +16,8 @@ final class Exercise {
     var dayType: String = ""
     /// Extra home days beyond `dayType`, comma-separated (e.g. "Pull,Legs").
     var extraDayTypes: String = ""
+    /// Primary muscle first; compounds may list several, comma-separated
+    /// (e.g. `"Chest, Triceps, Shoulders"`). Prefer `muscleGroupNames` / `muscleGroupsDisplay` in UI.
     var muscleGroup: String = ""
     var sortOrder: Int = 0
     var isCustom: Bool = false
@@ -29,6 +31,32 @@ final class Exercise {
     var records: [ExerciseRecord]?
 
     var recordsArray: [ExerciseRecord] { records ?? [] }
+
+    // MARK: - Muscle groups (single or compound)
+
+    /// Parsed muscle list, primary first. Empty if unset.
+    var muscleGroupNames: [String] {
+        muscleGroup
+            .split(separator: ",")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+    }
+
+    /// First muscle (used for charts / section bucketing).
+    var primaryMuscleGroup: String {
+        muscleGroupNames.first ?? ""
+    }
+
+    /// UI label: `"Chest · Triceps · Shoulders"`.
+    var muscleGroupsDisplay: String {
+        muscleGroupNames.joined(separator: " · ")
+    }
+
+    func trainsMuscle(_ name: String) -> Bool {
+        let target = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !target.isEmpty else { return false }
+        return muscleGroupNames.contains { $0.caseInsensitiveCompare(target) == .orderedSame }
+    }
 
     // MARK: - History helpers
 

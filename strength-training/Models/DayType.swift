@@ -57,6 +57,59 @@ struct DayType: Hashable, Identifiable, Codable, Sendable, Comparable {
     /// Legacy SwiftUI `Color` used in a few call sites before the design system.
     var color: Color { upliftInk }
 
+    /// Muscle groups that belong on this day — used to sort “Add exercise” pickers
+    /// so Arms shows biceps/triceps first, Push shows chest/shoulders/triceps, etc.
+    var preferredMuscleGroups: [String] {
+        switch rawValue {
+        case "Push":
+            return ["Chest", "Shoulders", "Triceps"]
+        case "Pull":
+            return ["Back", "Biceps", "Rear Delts", "Traps"]
+        case "Legs", "Lower":
+            return ["Quads", "Hamstrings", "Glutes", "Calves", "Adductors", "Hip Flexors", "Tibialis"]
+        case "Posterior Chain":
+            return ["Hamstrings", "Glutes", "Lower Back"]
+        case "Arms":
+            return ["Biceps", "Triceps"]
+        case "Upper":
+            return ["Chest", "Back", "Shoulders", "Biceps", "Triceps", "Rear Delts", "Traps"]
+        case "Full Body":
+            return ["Quads", "Chest", "Back", "Shoulders", "Hamstrings", "Glutes"]
+        case "Chest":
+            return ["Chest", "Triceps", "Shoulders"]
+        case "Back":
+            return ["Back", "Biceps", "Rear Delts", "Traps"]
+        case "Shoulders":
+            return ["Shoulders", "Rear Delts", "Traps"]
+        default:
+            // Custom day names: no hard preference (A–Z / full library).
+            return []
+        }
+    }
+
+    /// Higher = better match for this day (tags + any trained muscle group).
+    func exerciseRelevance(_ exercise: Exercise) -> Int {
+        var score = 0
+        if exercise.belongs(to: self) {
+            score += 1_000
+        }
+        // Best-matching muscle among compounds (e.g. bench → Chest + Triceps).
+        var bestMuscleScore = 0
+        for muscle in exercise.muscleGroupNames {
+            if let idx = preferredMuscleGroups.firstIndex(where: {
+                $0.caseInsensitiveCompare(muscle) == .orderedSame
+            }) {
+                bestMuscleScore = max(bestMuscleScore, 500 - idx * 20)
+            }
+        }
+        score += bestMuscleScore
+        // Unassigned library lifts still rank by muscle preference above random.
+        if exercise.isUnassigned, score >= 400 {
+            score += 50
+        }
+        return score
+    }
+
     // MARK: Active split (user-configured)
 
     /// Days in the user's current split, sorted.

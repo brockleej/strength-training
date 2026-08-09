@@ -122,8 +122,8 @@ struct AddExerciseView: View {
                         )
                     }
 
-                    field(label: "Muscle group", optional: true) {
-                        TextField("e.g. Biceps", text: $muscleGroup)
+                    field(label: "Muscle groups", optional: true) {
+                        TextField("e.g. Chest, Triceps, Shoulders", text: $muscleGroup)
                             .font(.uplift.text(16, weight: .medium))
                             .foregroundStyle(Color.uplift.fg)
                             .autocorrectionDisabled()

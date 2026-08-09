@@ -64,7 +64,10 @@ struct ContentView: View {
         .task {
             // Migrations are safe anytime; full catalog seed waits for iCloud when empty.
             SeedData.hydrateSplitPreferencesFromICloud()
+            GymMembershipStore.shared.hydrateFromICloud()
+            BodyProfileStore.shared.hydrateFromICloud()
             SeedData.migrateExerciseNames(context: modelContext)
+            SeedData.migrateCompoundMuscleGroups(context: modelContext)
             SeedData.deduplicateExercises(context: modelContext)
             SeedData.deduplicateSplitDays(context: modelContext)
 

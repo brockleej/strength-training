@@ -104,12 +104,16 @@ struct EditExerciseView: View {
                             .padding(.horizontal, 4)
                     }
 
-                    field(label: "Muscle group", optional: true) {
-                        TextField("e.g. Triceps", text: $muscleGroup)
+                    field(label: "Muscle groups", optional: true) {
+                        TextField("e.g. Chest, Triceps, Shoulders", text: $muscleGroup)
                             .font(.uplift.text(16, weight: .medium))
                             .foregroundStyle(Color.uplift.fg)
                             .autocorrectionDisabled()
                     }
+                    Text("Comma-separate compounds (primary first).")
+                        .font(.uplift.text(12, weight: .medium))
+                        .foregroundStyle(Color.uplift.fgDim)
+                        .padding(.horizontal, 4)
 
                     if let focusDay, exercise.belongs(to: focusDay) {
                         Button {

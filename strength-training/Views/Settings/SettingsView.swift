@@ -39,23 +39,15 @@ struct SettingsView: View {
     @AppStorage(RestTimerPreferences.soundEnabledKey)
     private var restTimerSoundEnabled: Bool = RestTimerPreferences.defaultSoundEnabled
 
-    @AppStorage(BodyWeightPreferences.poundsKey)
-    private var bodyWeightPounds: Double = 0
+    /// Body profile drafts — edit freely, then Save (zeros/empty fields are easier than live Double bindings).
+    @State private var draftWeightText = ""
+    @State private var draftFeetText = ""
+    @State private var draftInchesText = ""
+    @State private var draftSexRaw: String = BiologicalSex.male.rawValue
+    @State private var bodyProfileDirty = false
+    @State private var showBodyProfileSaved = false
 
-    @AppStorage(BodyProfilePreferences.heightInchesKey)
-    private var heightInches: Double = 0
-
-    @AppStorage(BodyProfilePreferences.sexKey)
-    private var sexRaw: String = BiologicalSex.male.rawValue
-
-    @AppStorage(GymMembershipPreferences.codeKey)
-    private var gymCode: String = ""
-
-    @AppStorage(GymMembershipPreferences.labelKey)
-    private var gymLabel: String = ""
-
-    @AppStorage(GymMembershipPreferences.formatKey)
-    private var gymFormatRaw: String = GymMembershipPreferences.Format.code128.rawValue
+    @Bindable private var gymMembership = GymMembershipStore.shared
 
     @State private var showGymPass = false
 
@@ -145,19 +137,23 @@ struct SettingsView: View {
                 .listRowBackground(Color.uplift.surface1)
 
                 Section {
-                    TextField("Label", text: $gymLabel, prompt: Text(GymMembershipPreferences.defaultLabel))
+                    TextField(
+                        "Label",
+                        text: $gymMembership.label,
+                        prompt: Text(GymMembershipPreferences.defaultLabel)
+                    )
                         .font(.uplift.text(15, weight: .medium))
                         .foregroundStyle(Color.uplift.fg)
                         .textInputAutocapitalization(.words)
 
-                    TextField("Member ID / barcode number", text: $gymCode)
+                    TextField("Member ID / barcode number", text: $gymMembership.code)
                         .font(.uplift.mono(15, weight: .medium))
                         .foregroundStyle(Color.uplift.fg)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                         .keyboardType(.asciiCapable)
 
-                    Picker("Format", selection: $gymFormatRaw) {
+                    Picker("Format", selection: $gymMembership.formatRaw) {
                         ForEach(GymMembershipPreferences.Format.allCases) { format in
                             Text(format.title).tag(format.rawValue)
                         }
@@ -168,22 +164,22 @@ struct SettingsView: View {
                         showGymPass = true
                     } label: {
                         Label(
-                            gymCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                                ? "Preview pass (add ID first)"
-                                : "Show gym pass",
+                            gymMembership.isConfigured
+                                ? "Show gym pass"
+                                : "Preview pass (add ID first)",
                             systemImage: "barcode.viewfinder"
                         )
                         .foregroundStyle(
-                            gymCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                                ? Color.uplift.fgDim
-                                : Color.uplift.accent
+                            gymMembership.isConfigured
+                                ? Color.uplift.accent
+                                : Color.uplift.fgDim
                         )
                     }
-                    .disabled(gymCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .disabled(!gymMembership.isConfigured)
                 } header: {
                     sectionHeader("Gym pass")
                 } footer: {
-                    sectionFooter("Paste the number under your membership barcode. Open the pass from Today (barcode button) at check-in — screen goes bright white for scanners.")
+                    sectionFooter("Paste the number under your membership barcode. Saved to this phone and your iCloud account so it comes back after reinstall. Open the pass from Today (barcode button) at check-in — screen goes bright white for scanners.")
                 }
                 .listRowBackground(Color.uplift.surface1)
 
@@ -193,12 +189,15 @@ struct SettingsView: View {
                             .font(.uplift.text(15, weight: .medium))
                             .foregroundStyle(Color.uplift.fg)
                         Spacer()
-                        TextField("lb", value: $bodyWeightPounds, format: .number.precision(.fractionLength(0...1)))
+                        TextField("e.g. 185", text: $draftWeightText)
                             .font(.uplift.mono(15, weight: .semibold))
                             .foregroundStyle(Color.uplift.accent)
                             .multilineTextAlignment(.trailing)
                             .keyboardType(.decimalPad)
-                            .frame(width: 72)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .frame(minWidth: 72, maxWidth: 96, alignment: .trailing)
+                            .onChange(of: draftWeightText) { _, _ in bodyProfileDirty = true }
                         Text("lb")
                             .font(.uplift.text(13, weight: .medium))
                             .foregroundStyle(Color.uplift.fgDim)
@@ -209,22 +208,27 @@ struct SettingsView: View {
                             .font(.uplift.text(15, weight: .medium))
                             .foregroundStyle(Color.uplift.fg)
                         Spacer()
-                        // Feet
-                        TextField("ft", value: heightFeetBinding, format: .number)
+                        TextField("ft", text: $draftFeetText)
                             .font(.uplift.mono(15, weight: .semibold))
                             .foregroundStyle(Color.uplift.accent)
                             .multilineTextAlignment(.trailing)
                             .keyboardType(.numberPad)
-                            .frame(width: 36)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .frame(width: 40)
+                            .onChange(of: draftFeetText) { _, _ in bodyProfileDirty = true }
                         Text("ft")
                             .font(.uplift.text(13, weight: .medium))
                             .foregroundStyle(Color.uplift.fgDim)
-                        TextField("in", value: heightInchesRemainderBinding, format: .number)
+                        TextField("in", text: $draftInchesText)
                             .font(.uplift.mono(15, weight: .semibold))
                             .foregroundStyle(Color.uplift.accent)
                             .multilineTextAlignment(.trailing)
                             .keyboardType(.numberPad)
-                            .frame(width: 36)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .frame(width: 40)
+                            .onChange(of: draftInchesText) { _, _ in bodyProfileDirty = true }
                         Text("in")
                             .font(.uplift.text(13, weight: .medium))
                             .foregroundStyle(Color.uplift.fgDim)
@@ -238,16 +242,32 @@ struct SettingsView: View {
                             segments: BiologicalSex.allCases.map {
                                 UpliftSegment(id: $0.rawValue, label: $0.title)
                             },
-                            selection: $sexRaw
+                            selection: $draftSexRaw
                         )
+                        .onChange(of: draftSexRaw) { _, _ in bodyProfileDirty = true }
                     }
                     .padding(.vertical, 4)
+
+                    Button {
+                        saveBodyProfileDraft()
+                    } label: {
+                        Label(
+                            bodyProfileDirty ? "Save body profile" : "Body profile saved",
+                            systemImage: bodyProfileDirty ? "checkmark.circle.fill" : "checkmark.circle"
+                        )
+                        .font(.uplift.text(15, weight: .semibold))
+                        .foregroundStyle(bodyProfileDirty ? Color.uplift.accent : Color.uplift.fgDim)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .disabled(!bodyProfileDirty)
+                    .accessibilityHint("Saves weight, height, and sex to this device and iCloud")
                 } header: {
                     sectionHeader("Body profile")
                 } footer: {
-                    sectionFooter("Weight powers assisted lifts and muscularity. Height + sex unlock Navy body-fat % and FFMI on Progress → Body. Male: waist at navel + neck (no hips). Female: waist (narrowest) + hips + neck. Estimates are for trends only—not medical diagnosis.")
+                    sectionFooter("Tap a field, type freely (empty is fine—no sticky zeros), then Save. Values sync with iCloud for reinstall. Weight powers assisted lifts and muscularity. Height + sex unlock Navy body-fat % and FFMI on Progress → Body. Estimates are for trends only—not medical diagnosis.")
                 }
                 .listRowBackground(Color.uplift.surface1)
+                .onAppear { loadBodyProfileDraft() }
 
                 Section {
                     Toggle(isOn: $restTimerEnabled) {
@@ -333,11 +353,22 @@ struct SettingsView: View {
             }
             .scrollContentBackground(.hidden)
             .background(Color.uplift.bgElev)
+            // Number pads have no Return key — swipe/scroll must dismiss so tabs are reachable.
+            .scrollDismissesKeyboard(.interactively)
             .refreshable {
                 guard CloudKitSyncService.isEnabled else { return }
                 await cloudKitSyncService.checkAccountStatus()
             }
             .navigationTitle("Settings")
+            .toolbar {
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") {
+                        dismissKeyboard()
+                    }
+                    .fontWeight(.semibold)
+                }
+            }
             .fullScreenCover(isPresented: $showGymPass) {
                 GymPassView()
             }
@@ -373,6 +404,11 @@ struct SettingsView: View {
                 Button("OK", role: .cancel) {}
             } message: {
                 Text(successMessage)
+            }
+            .alert("Body profile saved", isPresented: $showBodyProfileSaved) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("Weight, height, and sex are saved on this device and synced with iCloud when available.")
             }
         }
     }
@@ -478,35 +514,59 @@ struct SettingsView: View {
         }
     }
 
-    // MARK: - Height (ft / in) bindings
+    // MARK: - Keyboard
 
-    private var heightFeetBinding: Binding<Int> {
-        Binding(
-            get: {
-                guard heightInches > 0 else { return 0 }
-                return Int(heightInches.rounded()) / 12
-            },
-            set: { feet in
-                let inches = max(0, min(11, Int(heightInches.rounded()) % 12))
-                let total = max(0, feet) * 12 + inches
-                heightInches = total > 0 ? Double(total) : 0
-            }
+    private func dismissKeyboard() {
+        UIApplication.shared.sendAction(
+            #selector(UIResponder.resignFirstResponder),
+            to: nil,
+            from: nil,
+            for: nil
         )
     }
 
-    private var heightInchesRemainderBinding: Binding<Int> {
-        Binding(
-            get: {
-                guard heightInches > 0 else { return 0 }
-                return Int(heightInches.rounded()) % 12
-            },
-            set: { inchesPart in
-                let feet = max(0, Int(heightInches.rounded()) / 12)
-                let clamped = max(0, min(11, inchesPart))
-                let total = feet * 12 + clamped
-                heightInches = total > 0 ? Double(total) : 0
-            }
+    // MARK: - Body profile draft
+
+    private func loadBodyProfileDraft() {
+        let store = BodyProfileStore.shared
+        draftWeightText = store.weightPounds > 0
+            ? Self.formatDraftNumber(store.weightPounds)
+            : ""
+        if store.heightInches > 0 {
+            let total = Int(store.heightInches.rounded())
+            draftFeetText = "\(total / 12)"
+            draftInchesText = "\(total % 12)"
+        } else {
+            draftFeetText = ""
+            draftInchesText = ""
+        }
+        draftSexRaw = store.sex.rawValue
+        bodyProfileDirty = false
+    }
+
+    private func saveBodyProfileDraft() {
+        let weight = Double(draftWeightText.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0
+        let feet = Int(draftFeetText.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0
+        let inchesPart = min(11, max(0, Int(draftInchesText.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0))
+        let height = Double(max(0, feet) * 12 + inchesPart)
+        let sex = BiologicalSex(rawValue: draftSexRaw) ?? .male
+
+        BodyProfileStore.shared.apply(
+            weightPounds: max(0, weight),
+            heightInches: height,
+            sex: sex
         )
+        // Normalize draft text after save (empty if cleared).
+        loadBodyProfileDraft()
+        showBodyProfileSaved = true
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+    }
+
+    private static func formatDraftNumber(_ value: Double) -> String {
+        if value.rounded() == value {
+            return String(Int(value))
+        }
+        return String(format: "%g", value)
     }
 
     // MARK: - Section text styling

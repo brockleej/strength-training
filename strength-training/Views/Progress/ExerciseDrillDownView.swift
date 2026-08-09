@@ -85,8 +85,8 @@ private struct DrillDownContent: View {
                     .kerning(-0.5)
                     .foregroundStyle(Color.uplift.fg)
                 HStack(spacing: 6) {
-                    if !exercise.muscleGroup.isEmpty {
-                        Text(exercise.muscleGroup)
+                    if !exercise.muscleGroupsDisplay.isEmpty {
+                        Text(exercise.muscleGroupsDisplay)
                             .font(.uplift.text(11, weight: .semibold))
                             .foregroundStyle(exercise.day.upliftInk)
                             .padding(.horizontal, 8)

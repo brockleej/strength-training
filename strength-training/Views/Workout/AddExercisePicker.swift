@@ -4,7 +4,8 @@
 //
 //  Full library browser for adding lifts to a session. Shows every preset /
 //  custom exercise (except those already in the workout), grouped by muscle
-//  or day — not limited to the current day’s tags.
+//  or day. For the current day (e.g. Arms), preferred muscles and unassigned
+//  matching lifts are listed first so users aren’t buried in irrelevant stock.
 //
 
 import SwiftUI
@@ -42,23 +43,39 @@ struct AddExercisePicker: View {
             !excludedIDs.contains(exercise.id)
                 && (searchText.isEmpty
                     || exercise.name.localizedCaseInsensitiveContains(searchText)
-                    || exercise.muscleGroup.localizedCaseInsensitiveContains(searchText)
+                    || exercise.muscleGroupsDisplay.localizedCaseInsensitiveContains(searchText)
                     || exercise.dayTypeNames.contains {
                         $0.localizedCaseInsensitiveContains(searchText)
                     })
         }
     }
 
+    /// Ranked for the day being edited (Arms → biceps/triceps first, etc.).
+    private func daySorted(_ exercises: [Exercise]) -> [Exercise] {
+        exercises.sorted { lhs, rhs in
+            let ls = currentDayType.exerciseRelevance(lhs)
+            let rs = currentDayType.exerciseRelevance(rhs)
+            if ls != rs { return ls > rs }
+            return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+        }
+    }
+
     private var sections: [(title: String, ink: Color, exercises: [Exercise])] {
+        // When a "Suggested for Day" block is shown, omit those rows from lower sections.
+        let rest: [Exercise]
+        if searchText.isEmpty, !currentDayType.includesAllExercises {
+            let suggestedIDs = Set(suggestedForDay.map(\.id))
+            rest = candidates.filter { !suggestedIDs.contains($0.id) }
+        } else {
+            rest = candidates
+        }
         switch groupMode {
         case .muscle:
-            return groupByMuscle(candidates)
+            return groupByMuscle(rest)
         case .day:
-            return groupByDay(candidates)
+            return groupByDay(rest)
         case .name:
-            let sorted = candidates.sorted {
-                $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
-            }
+            let sorted = daySorted(rest)
             return sorted.isEmpty ? [] : [("All exercises", Color.uplift.fgMuted, sorted)]
         }
     }
@@ -84,7 +101,7 @@ struct AddExercisePicker: View {
                     .padding(.horizontal, 20)
             }
 
-            Text("Full library · \(candidates.count) available")
+            Text(librarySubtitle)
                 .font(.uplift.text(13, weight: .medium))
                 .foregroundStyle(Color.uplift.fgMuted)
                 .padding(.horizontal, 20)
@@ -103,9 +120,14 @@ struct AddExercisePicker: View {
             .padding(.horizontal, 20)
             .padding(.top, 12)
 
-            SearchField(placeholder: "Search all exercises", text: $searchText)
-                .padding(.horizontal, 20)
-                .padding(.top, 10)
+            SearchField(
+                placeholder: currentDayType.includesAllExercises
+                    ? "Search all exercises"
+                    : "Search · \(currentDayType.rawValue) first",
+                text: $searchText
+            )
+            .padding(.horizontal, 20)
+            .padding(.top, 10)
 
             // Pin to current day (builds Posterior Chain / Push library over time)
             if showAssignToggle {
@@ -126,6 +148,29 @@ struct AddExercisePicker: View {
 
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
+                    // Suggested first when browsing (not searching) a specific day.
+                    if searchText.isEmpty,
+                       !currentDayType.includesAllExercises,
+                       !suggestedForDay.isEmpty {
+                        Section {
+                            ForEach(Array(suggestedForDay.enumerated()), id: \.element.id) { index, exercise in
+                                exerciseRow(exercise)
+                                if index < suggestedForDay.count - 1 {
+                                    Rectangle()
+                                        .fill(Color.uplift.hairline)
+                                        .frame(height: 0.5)
+                                        .padding(.leading, 66)
+                                }
+                            }
+                        } header: {
+                            sectionHeader(
+                                title: "Suggested for \(currentDayType.rawValue)",
+                                ink: currentDayType.upliftInk,
+                                count: suggestedForDay.count
+                            )
+                        }
+                    }
+
                     ForEach(Array(sections.enumerated()), id: \.offset) { _, section in
                         Section {
                             ForEach(Array(section.exercises.enumerated()), id: \.element.id) { index, exercise in
@@ -157,6 +202,29 @@ struct AddExercisePicker: View {
         }
         .background(Color.uplift.bgElev)
         .modifier(StandaloneSheetChrome(enabled: !embedded))
+        .onAppear {
+            // Muscle groups ordered for this day; better default than A–Z.
+            if !currentDayType.includesAllExercises {
+                groupMode = .muscle
+            }
+        }
+    }
+
+    private var librarySubtitle: String {
+        if currentDayType.includesAllExercises {
+            return "Full library · \(candidates.count) available"
+        }
+        let preferred = currentDayType.preferredMuscleGroups.prefix(3).joined(separator: ", ")
+        if preferred.isEmpty {
+            return "Full library · \(candidates.count) available · \(currentDayType.rawValue) first"
+        }
+        return "\(currentDayType.rawValue) first (\(preferred)…) · \(candidates.count) available"
+    }
+
+    /// High-relevance lifts for this day (unassigned preferred, not already suggested twice).
+    private var suggestedForDay: [Exercise] {
+        let ranked = daySorted(candidates).filter { currentDayType.exerciseRelevance($0) >= 400 }
+        return Array(ranked.prefix(12))
     }
 
     // MARK: - Rows
@@ -212,10 +280,11 @@ struct AddExercisePicker: View {
                         }
                     }
                     HStack(spacing: 6) {
-                        if !exercise.muscleGroup.isEmpty {
-                            Text(exercise.muscleGroup)
+                        if !exercise.muscleGroupsDisplay.isEmpty {
+                            Text(exercise.muscleGroupsDisplay)
                                 .font(.uplift.text(12, weight: .medium))
                                 .foregroundStyle(Color.uplift.fgMuted)
+                                .lineLimit(2)
                         }
                         if exercise.dayTypeNames.count >= 1 {
                             Text(exercise.dayTypeNames.joined(separator: " · "))
@@ -257,30 +326,40 @@ struct AddExercisePicker: View {
     // MARK: - Grouping
 
     private func groupByMuscle(_ exercises: [Exercise]) -> [(title: String, ink: Color, exercises: [Exercise])] {
-        let order = Self.muscleGroupOrder
+        // Prefer this day’s muscles (e.g. Arms → Biceps, Triceps) before the rest.
+        let preferred = currentDayType.preferredMuscleGroups
+        let order = preferred + Self.muscleGroupOrder.filter { name in
+            !preferred.contains(where: { $0.caseInsensitiveCompare(name) == .orderedSame })
+        }
+
         var buckets: [String: [Exercise]] = [:]
         for exercise in exercises {
-            let key = exercise.muscleGroup.trimmingCharacters(in: .whitespaces)
+            // Bucket by primary muscle; compounds still show full list on the row.
+            let key = exercise.primaryMuscleGroup.trimmingCharacters(in: .whitespaces)
             let label = key.isEmpty ? "Other" : key
             buckets[label, default: []].append(exercise)
         }
         var result: [(String, Color, [Exercise])] = []
-        for name in order where buckets[name] != nil {
-            let list = buckets.removeValue(forKey: name)!
-                .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
-            result.append((name, muscleInk(name), list))
+        for name in order {
+            // Case-insensitive bucket match
+            guard let key = buckets.keys.first(where: { $0.caseInsensitiveCompare(name) == .orderedSame }),
+                  let list = buckets.removeValue(forKey: key)
+            else { continue }
+            let sorted = daySorted(list)
+            let title = preferred.contains(where: { $0.caseInsensitiveCompare(key) == .orderedSame })
+                ? "\(key) · \(currentDayType.rawValue)"
+                : key
+            result.append((title, muscleInk(key), sorted))
         }
         for name in buckets.keys.sorted() {
-            let list = buckets[name]!
-                .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+            let list = daySorted(buckets[name]!)
             result.append((name, muscleInk(name), list))
         }
         return result
     }
 
     private func groupByDay(_ exercises: [Exercise]) -> [(title: String, ink: Color, exercises: [Exercise])] {
-        // One row per exercise under its primary day; multi-day lifts still listed once
-        // under primary to avoid duplicates, with all day names in the subtitle.
+        // Unassigned first when relevant, then current day, then other days.
         var byPrimary: [String: [Exercise]] = [:]
         for exercise in exercises {
             let key = exercise.dayTypeNames.first ?? "Unassigned"
@@ -294,6 +373,8 @@ struct AddExercisePicker: View {
             orderedKeys.append(key)
             seen.insert(key)
         }
+        // Unassigned arm/push/etc. stock sits here after slim day seeding.
+        appendKey("Unassigned")
         appendKey(currentDayType.rawValue)
         for home in dayCatalog.exerciseHomeDays { appendKey(home.rawValue) }
         for key in byPrimary.keys.sorted() where !seen.contains(key) {
@@ -303,11 +384,18 @@ struct AddExercisePicker: View {
         return orderedKeys.compactMap { key in
             guard let list = byPrimary[key], !list.isEmpty else { return nil }
             let day = DayType(rawValue: key)
-            let title = key == currentDayType.rawValue ? "\(key) · today" : key
-            let sorted = list.sorted {
-                $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+            let title: String
+            if key == "Unassigned" {
+                title = "Unassigned · library"
+            } else if key == currentDayType.rawValue {
+                title = "\(key) · this day"
+            } else {
+                title = key
             }
-            return (title, day.upliftInk, sorted)
+            // Within Unassigned, still rank by day relevance (arms first on Arms).
+            let sorted = daySorted(list)
+            let ink = key == "Unassigned" ? Color.uplift.fgMuted : day.upliftInk
+            return (title, ink, sorted)
         }
     }
 

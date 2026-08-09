@@ -41,6 +41,41 @@ struct SeedData {
         if changed { try? context.save() }
     }
 
+    /// Upgrade stock compound lifts to multi-muscle labels (idempotent).
+    /// Custom exercises are left alone. Only replaces when the stored muscle is a
+    /// single legacy primary that matches the old catalog single-group tag.
+    static func migrateCompoundMuscleGroups(context: ModelContext) {
+        let byName = Dictionary(
+            uniqueKeysWithValues: exerciseCatalog.map { ($0.name.lowercased(), $0.muscle) }
+        )
+        let all = (try? context.fetch(FetchDescriptor<Exercise>())) ?? []
+        var changed = false
+        for exercise in all {
+            guard !exercise.isCustom else { continue }
+            guard let catalogMuscle = byName[exercise.name.lowercased()] else { continue }
+            // Skip if already multi-tagged the same way.
+            let current = exercise.muscleGroupNames.map { $0.lowercased() }.sorted()
+            let target = catalogMuscle
+                .split(separator: ",")
+                .map { $0.trimmingCharacters(in: .whitespaces).lowercased() }
+                .filter { !$0.isEmpty }
+                .sorted()
+            guard current != target else { continue }
+            // Don't overwrite user-edited multi-muscle that diverged from catalog
+            // unless still single-muscle (typical stock seed).
+            if exercise.muscleGroupNames.count > 1, current != target {
+                // Only upgrade when catalog is a strict expansion of the primary.
+                guard let primary = exercise.muscleGroupNames.first?.lowercased(),
+                      target.contains(primary),
+                      target.count > current.count
+                else { continue }
+            }
+            exercise.muscleGroup = catalogMuscle
+            changed = true
+        }
+        if changed { try? context.save() }
+    }
+
     /// Removes duplicate exercises (same name + dayType), keeping the one with the most history.
     /// Records from duplicates are reassigned to the kept exercise before deletion.
     /// Safe to re-run after CloudKit import (second device can seed before iCloud lands).
@@ -97,6 +132,7 @@ struct SeedData {
     /// Post-import hygiene after CloudKit merges remote rows with a local seed.
     static func reconcileAfterCloudKitImport(context: ModelContext) {
         migrateExerciseNames(context: context)
+        migrateCompoundMuscleGroups(context: context)
         deduplicateExercises(context: context)
         deduplicateSplitDays(context: context)
     }
@@ -183,40 +219,41 @@ struct SeedData {
 
     // MARK: - Exercise catalog
 
-    /// (name, muscle group, default home day). Home day is a starting tag only —
-    /// users reassign freely. Prefer PPL-PC-friendly homes; bro-split users still
-    /// see everything in the full library picker.
+    /// (name, muscle group(s), default home day).
+    /// `muscle` may be comma-separated for compounds: `"Chest, Triceps, Shoulders"`.
+    /// Primary muscle is listed first (charts / section buckets use the primary).
+    /// Home day is a starting tag only — users reassign freely.
     static let exerciseCatalog: [(name: String, muscle: String, day: DayType)] = {
         var items: [(String, String, DayType)] = []
 
         // MARK: Chest (Push)
         items += [
-            ("Barbell Bench Press", "Chest", .push),
-            ("Incline Barbell Bench Press", "Chest", .push),
-            ("Decline Barbell Bench Press", "Chest", .push),
-            ("Dumbbell Bench Press", "Chest", .push),
-            ("Incline Dumbbell Press", "Chest", .push),
-            ("Decline Dumbbell Press", "Chest", .push),
-            ("Chest Press", "Chest", .push),
-            ("Machine Chest Press", "Chest", .push),
+            ("Barbell Bench Press", "Chest, Triceps, Shoulders", .push),
+            ("Incline Barbell Bench Press", "Chest, Triceps, Shoulders", .push),
+            ("Decline Barbell Bench Press", "Chest, Triceps", .push),
+            ("Dumbbell Bench Press", "Chest, Triceps, Shoulders", .push),
+            ("Incline Dumbbell Press", "Chest, Triceps, Shoulders", .push),
+            ("Decline Dumbbell Press", "Chest, Triceps", .push),
+            ("Chest Press", "Chest, Triceps", .push),
+            ("Machine Chest Press", "Chest, Triceps", .push),
             ("Pectoral Fly", "Chest", .push),
             ("Cable Fly", "Chest", .push),
             ("Pec Deck", "Chest", .push),
-            ("Push-Up", "Chest", .push),
-            ("Dip (Chest)", "Chest", .push),
+            ("Push-Up", "Chest, Triceps, Shoulders", .push),
+            ("Dip (Chest)", "Chest, Triceps, Shoulders", .push),
         ]
 
         // MARK: Shoulders (Push)
         items += [
-            ("Overhead Press", "Shoulders", .push),
-            ("Shoulder Press", "Shoulders", .push),
-            ("Seated Dumbbell Shoulder Press", "Shoulders", .push),
-            ("Arnold Press", "Shoulders", .push),
+            ("Overhead Press", "Shoulders, Triceps", .push),
+            ("Shoulder Press", "Shoulders, Triceps", .push),
+            ("Seated Dumbbell Shoulder Press", "Shoulders, Triceps", .push),
+            ("Arnold Press", "Shoulders, Triceps", .push),
             ("Lateral Raise", "Shoulders", .push),
             ("Cable Lateral Raise", "Shoulders", .push),
             ("Front Raise", "Shoulders", .push),
-            ("Upright Row", "Shoulders", .push),
-            ("Machine Shoulder Press", "Shoulders", .push),
+            ("Upright Row", "Shoulders, Traps", .push),
+            ("Machine Shoulder Press", "Shoulders, Triceps", .push),
         ]
 
         // MARK: Triceps (Push)
@@ -225,29 +262,29 @@ struct SeedData {
             ("Triceps Pushdown", "Triceps", .push),
             ("Overhead Triceps Extension", "Triceps", .push),
             ("Skull Crusher", "Triceps", .push),
-            ("Close-Grip Bench Press", "Triceps", .push),
-            ("Dip (Triceps)", "Triceps", .push),
+            ("Close-Grip Bench Press", "Triceps, Chest", .push),
+            ("Dip (Triceps)", "Triceps, Chest", .push),
             ("Kickback", "Triceps", .push),
         ]
 
         // MARK: Back — vertical / horizontal pull (Pull)
         items += [
-            ("Pull-Up", "Back", .pull),
-            ("Chin-Up", "Back", .pull),
-            ("Lat Pulldown", "Back", .pull),
-            ("Wide-Grip Lat Pulldown", "Back", .pull),
-            ("Neutral-Grip Lat Pulldown", "Back", .pull),
+            ("Pull-Up", "Back, Biceps", .pull),
+            ("Chin-Up", "Back, Biceps", .pull),
+            ("Lat Pulldown", "Back, Biceps", .pull),
+            ("Wide-Grip Lat Pulldown", "Back, Biceps", .pull),
+            ("Neutral-Grip Lat Pulldown", "Back, Biceps", .pull),
             ("Straight-Arm Pulldown", "Back", .pull),
-            ("Seated Cable Row", "Back", .pull),
-            ("Chest-Supported Row", "Back", .pull),
-            ("Chest-Supported T-Bar Row", "Back", .pull),
-            ("Barbell Bent-Over Row", "Back", .pull),
-            ("Pendlay Row", "Back", .pull),
-            ("One-Arm Dumbbell Row", "Back", .pull),
-            ("Meadows Row", "Back", .pull),
-            ("Machine Row", "Back", .pull),
-            ("Inverted Row", "Back", .pull),
-            ("Face Pull", "Rear Delts", .pull),
+            ("Seated Cable Row", "Back, Biceps", .pull),
+            ("Chest-Supported Row", "Back, Biceps", .pull),
+            ("Chest-Supported T-Bar Row", "Back, Biceps", .pull),
+            ("Barbell Bent-Over Row", "Back, Biceps, Lower Back", .pull),
+            ("Pendlay Row", "Back, Biceps, Lower Back", .pull),
+            ("One-Arm Dumbbell Row", "Back, Biceps", .pull),
+            ("Meadows Row", "Back, Biceps", .pull),
+            ("Machine Row", "Back, Biceps", .pull),
+            ("Inverted Row", "Back, Biceps", .pull),
+            ("Face Pull", "Rear Delts, Traps", .pull),
             ("Rear Delt Fly", "Rear Delts", .pull),
             ("Reverse Pec Deck", "Rear Delts", .pull),
             ("Band Pull-Apart", "Rear Delts", .pull),
@@ -267,47 +304,47 @@ struct SeedData {
 
         // MARK: Quads / knee-dominant (Legs)
         items += [
-            ("Barbell Back Squat", "Quads", .legs),
-            ("Front Squat", "Quads", .legs),
-            ("Smith Machine Squat", "Quads", .legs),
-            ("Hack Squat", "Quads", .legs),
-            ("Pendulum Squat", "Quads", .legs),
-            ("Safety Bar Squat", "Quads", .legs),
-            ("Goblet Squat", "Quads", .legs),
-            ("Leg Press", "Quads", .legs),
-            ("Seated Leg Press", "Quads", .legs),
+            ("Barbell Back Squat", "Quads, Glutes, Lower Back", .legs),
+            ("Front Squat", "Quads, Glutes, Core", .legs),
+            ("Smith Machine Squat", "Quads, Glutes", .legs),
+            ("Hack Squat", "Quads, Glutes", .legs),
+            ("Pendulum Squat", "Quads, Glutes", .legs),
+            ("Safety Bar Squat", "Quads, Glutes, Lower Back", .legs),
+            ("Goblet Squat", "Quads, Glutes, Core", .legs),
+            ("Leg Press", "Quads, Glutes", .legs),
+            ("Seated Leg Press", "Quads, Glutes", .legs),
             ("Leg Extension", "Quads", .legs),
-            ("Poliquin Step-Up", "Quads", .legs),
-            ("Bulgarian Split Squat", "Quads", .legs),
-            ("Walking Lunge", "Quads", .legs),
-            ("Reverse Lunge", "Quads", .legs),
+            ("Poliquin Step-Up", "Quads, Glutes", .legs),
+            ("Bulgarian Split Squat", "Quads, Glutes", .legs),
+            ("Walking Lunge", "Quads, Glutes", .legs),
+            ("Reverse Lunge", "Quads, Glutes", .legs),
             ("Sissy Squat", "Quads", .legs),
-            ("Belt Squat", "Quads", .legs),
+            ("Belt Squat", "Quads, Glutes", .legs),
         ]
 
         // MARK: Hamstrings / posterior (Posterior Chain)
         items += [
-            ("Conventional Deadlift", "Hamstrings", .posteriorChain),
-            ("Sumo Deadlift", "Hamstrings", .posteriorChain),
-            ("Romanian Deadlift", "Hamstrings", .posteriorChain),
-            ("Stiff-Leg Deadlift", "Hamstrings", .posteriorChain),
-            ("Trap Bar Deadlift", "Hamstrings", .posteriorChain),
-            ("Single-Leg Romanian Deadlift", "Hamstrings", .posteriorChain),
+            ("Conventional Deadlift", "Hamstrings, Glutes, Lower Back, Back", .posteriorChain),
+            ("Sumo Deadlift", "Hamstrings, Glutes, Quads, Lower Back", .posteriorChain),
+            ("Romanian Deadlift", "Hamstrings, Glutes, Lower Back", .posteriorChain),
+            ("Stiff-Leg Deadlift", "Hamstrings, Glutes, Lower Back", .posteriorChain),
+            ("Trap Bar Deadlift", "Quads, Hamstrings, Glutes, Lower Back", .posteriorChain),
+            ("Single-Leg Romanian Deadlift", "Hamstrings, Glutes, Lower Back", .posteriorChain),
             ("Lying Hamstring Curl", "Hamstrings", .posteriorChain),
             ("Seated Hamstring Curl", "Hamstrings", .posteriorChain),
             ("Standing Hamstring Curl", "Hamstrings", .posteriorChain),
             ("Nordic Hamstring Curl", "Hamstrings", .posteriorChain),
-            ("Seated Good Morning", "Hamstrings", .posteriorChain),
-            ("Standing Good Morning", "Hamstrings", .posteriorChain),
-            ("Back Extension", "Lower Back", .posteriorChain),
-            ("45° Back Extension", "Lower Back", .posteriorChain),
-            ("Reverse Hyper", "Lower Back", .posteriorChain),
+            ("Seated Good Morning", "Hamstrings, Glutes, Lower Back", .posteriorChain),
+            ("Standing Good Morning", "Hamstrings, Glutes, Lower Back", .posteriorChain),
+            ("Back Extension", "Lower Back, Glutes, Hamstrings", .posteriorChain),
+            ("45° Back Extension", "Lower Back, Glutes, Hamstrings", .posteriorChain),
+            ("Reverse Hyper", "Glutes, Hamstrings, Lower Back", .posteriorChain),
             ("QL Extension", "Lower Back", .posteriorChain),
-            ("Cable Pull-Through", "Glutes", .posteriorChain),
-            ("Hip Thrust", "Glutes", .posteriorChain),
-            ("Barbell Hip Thrust", "Glutes", .posteriorChain),
-            ("Glute Bridge", "Glutes", .posteriorChain),
-            ("Single-Leg Glute Bridge", "Glutes", .posteriorChain),
+            ("Cable Pull-Through", "Glutes, Hamstrings", .posteriorChain),
+            ("Hip Thrust", "Glutes, Hamstrings", .posteriorChain),
+            ("Barbell Hip Thrust", "Glutes, Hamstrings", .posteriorChain),
+            ("Glute Bridge", "Glutes, Hamstrings", .posteriorChain),
+            ("Single-Leg Glute Bridge", "Glutes, Hamstrings", .posteriorChain),
             ("Kickback (Glute)", "Glutes", .posteriorChain),
             ("Hip Abduction (Glute)", "Glutes", .posteriorChain),
             ("Cable Kickback", "Glutes", .posteriorChain),
@@ -351,13 +388,95 @@ struct SeedData {
         items += [
             ("Barbell Shrug", "Traps", .pull),
             ("Dumbbell Shrug", "Traps", .pull),
-            ("Farmer Carry", "Traps", .pull),
-            ("Y-Raise", "Rear Delts", .pull),
-            ("Prone Y-T-W", "Rear Delts", .pull),
+            ("Farmer Carry", "Traps, Core, Forearms", .pull),
+            ("Y-Raise", "Rear Delts, Shoulders", .pull),
+            ("Prone Y-T-W", "Rear Delts, Shoulders", .pull),
         ]
 
         return items
     }()
+
+    // MARK: - Starter day plans (3–5 lifts each)
+    //
+    // Full catalog still seeds into the **library** (unassigned). Only these short
+    // templates land on each day so new users add/swap instead of deleting 15+.
+    // Names must match `exerciseCatalog` exactly.
+
+    /// Beginner-friendly templates (compound-first, common gym equipment).
+    static let starterDayPlans: [String: [String]] = [
+        // PPL / PPL+PC — Muscle&Strength / Hevy-style beginners
+        "Push": [
+            "Dumbbell Bench Press",
+            "Overhead Press",
+            "Lateral Raise",
+            "Triceps Pushdown",
+        ],
+        "Pull": [
+            "Lat Pulldown",
+            "Seated Cable Row",
+            "Face Pull",
+            "Dumbbell Curl",
+        ],
+        "Legs": [
+            "Goblet Squat",
+            "Romanian Deadlift",
+            "Leg Press",
+            "Standing Calf Raise",
+        ],
+        // PPL + Posterior — hinge / glute focus day
+        "Posterior Chain": [
+            "Romanian Deadlift",
+            "Hip Thrust",
+            "Lying Hamstring Curl",
+            "Back Extension",
+        ],
+        // Bro split (Arms / Legs / Full Body in preset)
+        "Arms": [
+            "Biceps Curl",
+            "Triceps Pushdown",
+            "Hammer Curl",
+            "Lateral Raise",
+        ],
+        "Full Body": [
+            "Goblet Squat",
+            "Dumbbell Bench Press",
+            "Seated Cable Row",
+            "Overhead Press",
+        ],
+        // Upper / Lower
+        "Upper": [
+            "Dumbbell Bench Press",
+            "Lat Pulldown",
+            "Seated Cable Row",
+            "Overhead Press",
+            "Dumbbell Curl",
+        ],
+        "Lower": [
+            "Goblet Squat",
+            "Romanian Deadlift",
+            "Leg Press",
+            "Standing Calf Raise",
+        ],
+        // Orphan day names that may appear from older data
+        "Chest": [
+            "Dumbbell Bench Press",
+            "Incline Dumbbell Press",
+            "Cable Fly",
+            "Triceps Pushdown",
+        ],
+        "Back": [
+            "Lat Pulldown",
+            "Seated Cable Row",
+            "Face Pull",
+            "Dumbbell Curl",
+        ],
+        "Shoulders": [
+            "Overhead Press",
+            "Lateral Raise",
+            "Face Pull",
+            "Rear Delt Fly",
+        ],
+    ]
 
     // MARK: - Seed / top-up
 
@@ -371,8 +490,10 @@ struct SeedData {
 
         if !hasSeeded && count == 0 {
             guard allowEmptyCatalogSeed else { return }
-            insertCatalogExercises(context: context, existingNames: [])
+            // Library: full catalog, unassigned. Days: short starter templates only.
+            insertCatalogExercises(context: context, existingNames: [], assignCatalogDays: false)
             try? context.save()
+            applyStarterDayPlans(context: context, onlyIfDayEmpty: true)
             UserDefaults.standard.set(true, forKey: "hasSeededExercises")
             UserDefaults.standard.set(catalogVersion, forKey: catalogVersionKey)
             return
@@ -382,6 +503,52 @@ struct SeedData {
         // Never re-insert names the user deleted from the library.
         UserDefaults.standard.set(true, forKey: "hasSeededExercises")
         topUpCatalogIfNeeded(context: context)
+    }
+
+    /// Pin 3–5 starter lifts onto each active split day.
+    /// - Parameter onlyIfDayEmpty: When true, skip days that already have exercises
+    ///   (preserves user plans). When false, still only adds missing starters (no wipe).
+    static func applyStarterDayPlans(context: ModelContext, onlyIfDayEmpty: Bool = true) {
+        let splitRows = (try? context.fetch(
+            FetchDescriptor<SplitDay>(sortBy: [SortDescriptor(\SplitDay.sortOrder)])
+        )) ?? []
+        let dayNames = splitRows
+            .filter { !$0.includesAllExercises }
+            .map(\.name)
+
+        let all = (try? context.fetch(FetchDescriptor<Exercise>())) ?? []
+        var byName: [String: Exercise] = [:]
+        for exercise in all {
+            byName[exercise.name.lowercased()] = exercise
+        }
+
+        var changed = false
+        for dayName in dayNames {
+            let day = DayType(rawValue: dayName)
+            let alreadyOnDay = all.filter { $0.belongs(to: day) }
+            if onlyIfDayEmpty, !alreadyOnDay.isEmpty { continue }
+
+            guard let plan = starterDayPlans[dayName], !plan.isEmpty else { continue }
+
+            // Place starters at the start of the day list.
+            for (index, exerciseName) in plan.enumerated() {
+                guard let exercise = byName[exerciseName.lowercased()] else { continue }
+                let wasOnDay = exercise.belongs(to: day)
+                if !wasOnDay {
+                    exercise.addDayType(day)
+                    changed = true
+                }
+                let current = exercise.sortIndex(for: day)
+                if current != index {
+                    exercise.setSortIndex(index, for: day)
+                    changed = true
+                }
+            }
+        }
+
+        if changed {
+            try? context.save()
+        }
     }
 
     /// Bump when the stock catalog gains new exercises so installs re-scan **once**.
@@ -404,18 +571,22 @@ struct SeedData {
                 context: context,
                 existingNames: existingNames,
                 sortOrderBase: baseOrder,
-                only: missing
+                only: missing,
+                assignCatalogDays: false
             )
             try? context.save()
         }
         UserDefaults.standard.set(catalogVersion, forKey: catalogVersionKey)
     }
 
+    /// - Parameter assignCatalogDays: When true (legacy), tags every lift with its
+    ///   catalog home day (huge day lists). Prefer false + `applyStarterDayPlans`.
     private static func insertCatalogExercises(
         context: ModelContext,
         existingNames: Set<String>,
         sortOrderBase: Int = 0,
-        only: [(name: String, muscle: String, day: DayType)]? = nil
+        only: [(name: String, muscle: String, day: DayType)]? = nil,
+        assignCatalogDays: Bool = false
     ) {
         let source = only ?? exerciseCatalog
         var order = sortOrderBase
@@ -424,7 +595,7 @@ struct SeedData {
             context.insert(
                 Exercise(
                     name: item.name,
-                    dayType: item.day,
+                    dayType: assignCatalogDays ? item.day : nil,
                     muscleGroup: item.muscle,
                     sortOrder: order,
                     isCustom: false
