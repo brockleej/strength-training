@@ -37,19 +37,19 @@ private struct ProgressDashboardContent: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 rangePicker
-                headline
+                strengthHeadline
                     .padding(.top, 18)
-                VolumeAreaChart(data: viewModel.volumeChartData)
+                activityStats
                     .padding(.top, 14)
-                strengthScoreCard
-                    .padding(.top, 8)
+                SectionHeader("Workouts")
+                SessionActivityChart(data: viewModel.sessionChartData)
                 BodyMetricsCard()
                     .padding(.top, 8)
                 PRsThisMonthCard(prs: viewModel.prsThisMonth)
                     .padding(.top, 8)
-                SectionHeader("Muscle group volume")
-                MuscleGroupVolumeChart(volumes: viewModel.muscleGroupVolumes)
-                SectionHeader("Training mode split")
+                SectionHeader("Sets by muscle")
+                MuscleGroupVolumeChart(volumes: viewModel.muscleGroupSetCounts)
+                SectionHeader("Strength vs endurance")
                 ModeSplitChart(
                     data: viewModel.modeSplit,
                     period: $viewModel.modeSplitPeriod
@@ -77,72 +77,85 @@ private struct ProgressDashboardContent: View {
         .padding(.top, 4)
     }
 
-    private var headline: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("Total volume")
+    /// Overall strength: sum of best estimated 1RMs (clearer than “total volume”).
+    private var strengthHeadline: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Strength score")
                 .textCase(.uppercase)
                 .font(.uplift.text(11, weight: .semibold))
                 .tracking(0.4)
                 .foregroundStyle(Color.uplift.fgMuted)
             HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Num(TodayStats.formatVolume(viewModel.totalVolume), size: 42)
+                Num(TodayStats.formatVolume(viewModel.strengthScore), size: 42)
                 Text("lb")
                     .font(.uplift.text(18, weight: .medium))
                     .foregroundStyle(Color.uplift.fgMuted)
                 Spacer()
-                if let delta = viewModel.totalVolumeDeltaPercent {
-                    deltaPill(delta)
+                let trend = viewModel.strengthScoreTrend
+                HStack(spacing: 3) {
+                    Image(systemName: trend.systemImage)
+                        .font(.system(size: 11, weight: .bold))
+                    Text("\(viewModel.strengthScoreDelta >= 0 ? "+" : "")\(Int(viewModel.strengthScoreDelta.rounded()))")
+                        .font(.uplift.mono(12, weight: .semibold))
                 }
+                .foregroundStyle(trendColor(trend))
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(Capsule().fill(trendColor(trend).opacity(0.16)))
+                .accessibilityLabel("Change vs one month ago: \(Int(viewModel.strengthScoreDelta.rounded())) pounds")
             }
+            Text("Sum of your best estimated 1-rep max on each lift. Goes up when top sets get stronger.")
+                .font(.uplift.text(12, weight: .medium))
+                .foregroundStyle(Color.uplift.fgDim)
+                .fixedSize(horizontal: false, vertical: true)
         }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(headlineAccessibility)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(
+            "Strength score \(TodayStats.formatVolume(viewModel.strengthScore)) pounds estimated 1 rep max total, change \(Int(viewModel.strengthScoreDelta.rounded())) versus one month ago"
+        )
     }
 
-    private func deltaPill(_ percent: Double) -> some View {
-        let up = percent >= 0
-        return HStack(spacing: 3) {
-            Image(systemName: up ? "arrow.up" : "arrow.down")
-                .font(.system(size: 11, weight: .bold))
-            Text("\(abs(Int(percent.rounded())))%")
-                .font(.uplift.mono(12, weight: .semibold))
+    private var activityStats: some View {
+        HStack(spacing: 10) {
+            activityStat(
+                label: "Workouts",
+                value: "\(viewModel.workoutCount)",
+                detail: workoutDeltaLabel
+            )
+            activityStat(
+                label: "Working sets",
+                value: "\(viewModel.workingSetCount)",
+                detail: "In this range"
+            )
         }
-        .foregroundStyle(up ? Color.uplift.up : Color.uplift.down)
-        .padding(.horizontal, 8)
-        .padding(.vertical, 3)
-        .background(Capsule().fill((up ? Color.uplift.up : Color.uplift.down).opacity(0.16)))
     }
 
-    private var headlineAccessibility: String {
-        var label = "Total volume \(TodayStats.formatVolume(viewModel.totalVolume)) pounds"
-        if let delta = viewModel.totalVolumeDeltaPercent {
-            label += ", \(delta >= 0 ? "up" : "down") \(abs(Int(delta.rounded()))) percent vs previous period"
-        }
-        return label
+    private var workoutDeltaLabel: String {
+        guard let delta = viewModel.workoutCountDelta else { return "In this range" }
+        if delta == 0 { return "Same as prior period" }
+        return delta > 0 ? "+\(delta) vs prior period" : "\(delta) vs prior period"
     }
 
-    private var strengthScoreCard: some View {
-        HStack(spacing: 14) {
-            Stat(label: "Strength score",
-                 value: TodayStats.formatVolume(viewModel.strengthScore),
-                 unit: "lb e1RM")
-            Spacer()
-            let trend = viewModel.strengthScoreTrend
-            HStack(spacing: 3) {
-                Image(systemName: trend.systemImage)
-                    .font(.system(size: 11, weight: .bold))
-                Text("\(viewModel.strengthScoreDelta >= 0 ? "+" : "")\(Int(viewModel.strengthScoreDelta.rounded()))")
-                    .font(.uplift.mono(12, weight: .semibold))
-            }
-            .foregroundStyle(trendColor(trend))
-            .padding(.horizontal, 8)
-            .padding(.vertical, 3)
-            .background(Capsule().fill(trendColor(trend).opacity(0.16)))
-            .accessibilityLabel("Change vs one month ago: \(Int(viewModel.strengthScoreDelta.rounded())) pounds")
+    private func activityStat(label: String, value: String, detail: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label)
+                .textCase(.uppercase)
+                .font(.uplift.text(10, weight: .semibold))
+                .tracking(0.3)
+                .foregroundStyle(Color.uplift.fgDim)
+            Text(value)
+                .font(.uplift.mono(28, weight: .bold))
+                .foregroundStyle(Color.uplift.fg)
+            Text(detail)
+                .font(.uplift.text(11, weight: .medium))
+                .foregroundStyle(Color.uplift.fgMuted)
+                .lineLimit(2)
+                .minimumScaleFactor(0.85)
         }
-        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
         .background {
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .fill(Color.uplift.surface1)
         }
     }
@@ -261,38 +274,35 @@ private struct LiftProgressRow: View {
     }
 }
 
-// MARK: - Volume area chart
+// MARK: - Session activity chart (how often you trained)
 
-private struct VolumeAreaChart: View {
+private struct SessionActivityChart: View {
     let data: [ChartDataPoint]
 
     var body: some View {
         Group {
             if data.isEmpty {
-                Text("No volume in this range yet")
+                Text("No completed workouts in this range yet")
                     .font(.uplift.text(13, weight: .medium))
                     .foregroundStyle(Color.uplift.fgDim)
                     .frame(maxWidth: .infinity)
                     .frame(height: 140)
             } else {
                 Chart(data) { point in
-                    AreaMark(x: .value("Date", point.date), y: .value("Volume", point.value))
-                        .foregroundStyle(
-                            LinearGradient(
-                                colors: [Color.uplift.accent.opacity(0.4), Color.uplift.accent.opacity(0)],
-                                startPoint: .top, endPoint: .bottom
-                            )
-                        )
-                    LineMark(x: .value("Date", point.date), y: .value("Volume", point.value))
-                        .foregroundStyle(Color.uplift.accent)
-                        .lineStyle(StrokeStyle(lineWidth: 2.5, lineCap: .round))
-                    if point.id == data.last?.id {
-                        PointMark(x: .value("Date", point.date), y: .value("Volume", point.value))
-                            .foregroundStyle(Color.uplift.accent)
-                            .symbolSize(60)
+                    BarMark(
+                        x: .value("Date", point.date),
+                        y: .value("Workouts", point.value)
+                    )
+                    .foregroundStyle(Color.uplift.accent)
+                    .cornerRadius(4)
+                }
+                .chartYAxis {
+                    AxisMarks(position: .leading, values: .automatic(desiredCount: 3)) {
+                        AxisValueLabel()
+                            .font(.uplift.text(11, weight: .medium))
+                            .foregroundStyle(Color.uplift.fgDim)
                     }
                 }
-                .chartYAxis(.hidden)
                 .chartXAxis {
                     AxisMarks(values: .automatic(desiredCount: 4)) {
                         AxisValueLabel()
@@ -304,9 +314,16 @@ private struct VolumeAreaChart: View {
             }
         }
         .padding(16)
+        .padding(.bottom, 4)
         .background {
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .fill(Color.uplift.surface1)
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(
+            data.isEmpty
+                ? "No workouts in range"
+                : "Workouts over time, \(Int(data.reduce(0) { $0 + $1.value })) total in chart"
+        )
     }
 }

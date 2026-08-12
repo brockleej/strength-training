@@ -436,6 +436,9 @@ struct ExerciseListView: View {
                         )
                     }
                     .buttonStyle(.plain)
+                    .swipeToDelete {
+                        exercisePendingRemoval = exercise
+                    }
                     .contextMenu {
                         Button {
                             editingExercise = exercise
@@ -456,6 +459,7 @@ struct ExerciseListView: View {
                             Label(ListMutationCopy.removeFromWorkout, systemImage: "minus.circle")
                         }
                     }
+                    .accessibilityHint("Swipe left to remove from this workout")
                 }
             }
         }
@@ -507,8 +511,15 @@ struct ExerciseListView: View {
     }
 
     private var addExerciseRow: some View {
-        AddItemRow(title: ListMutationCopy.addExercise) {
-            showAddSheet = true
+        VStack(alignment: .leading, spacing: 10) {
+            AddItemRow(title: ListMutationCopy.addExercise) {
+                showAddSheet = true
+            }
+            Text(ListMutationCopy.workoutListHint)
+                .font(.uplift.text(12, weight: .medium))
+                .foregroundStyle(Color.uplift.fgDim)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, 4)
         }
         .padding(.horizontal, 20)
         .padding(.top, 8)

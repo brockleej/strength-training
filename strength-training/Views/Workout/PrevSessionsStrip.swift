@@ -43,19 +43,19 @@ struct PrevSessionsStrip: View {
         VStack(alignment: .leading, spacing: 6) {
             Text(entry.dateLabel)
                 .textCase(.uppercase)
-                .font(.uplift.text(10, weight: .bold))
+                .font(.uplift.text(11, weight: .bold))
                 .tracking(0.4)
                 .foregroundStyle(Color.uplift.fgDim)
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: 4) {
                 ForEach(Array(entry.runs.enumerated()), id: \.offset) { _, run in
-                    PairText.pair(weight: run.weight, reps: run.reps, font: .uplift.mono(12, weight: .semibold))
+                    PairText.pair(weight: run.weight, reps: run.reps, font: .uplift.mono(15, weight: .semibold))
                         .kerning(-0.2)
                 }
             }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .frame(width: 112, alignment: .leading)
+        .frame(width: 132, alignment: .leading)
         .background {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .fill(Color.uplift.surface1.opacity(0.45))

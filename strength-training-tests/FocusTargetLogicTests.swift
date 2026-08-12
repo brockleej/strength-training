@@ -98,13 +98,85 @@ final class FocusTargetLogicTests: XCTestCase {
                 isWarmup: false,
                 isEachSide: true,
                 isAssisted: false
-            )
+            ),
+            prefillMode: .repeatLast
         )
         XCTAssertEqual(p.weight, 40)
         XCTAssertEqual(p.reps, 12)
         XCTAssertTrue(p.isEachSide)
         XCTAssertNil(p.weightDelta)
         XCTAssertNil(p.repsDelta)
+    }
+
+    /// Ramp: after logging set 1, next should follow last session set 2 (not 135 again).
+    func test_matchHistory_usesHistoricalSetOverSessionLast() {
+        let p = FocusTargetLogic.prefill(
+            suggestion: suggestion(230, 5, .consistent),
+            recent: RecentAverage(weight: 225, reps: 5, sessionCount: 4),
+            lastBest: (weight: 315, reps: 5),
+            sessionLast: FocusTargetLogic.SessionLastSet(
+                weight: 135,
+                reps: 5,
+                isWarmup: true,
+                isEachSide: false,
+                isAssisted: false
+            ),
+            historicalSet: FocusTargetLogic.SessionLastSet(
+                weight: 225,
+                reps: 4,
+                isWarmup: true,
+                isEachSide: false,
+                isAssisted: false
+            ),
+            prefillMode: .matchHistory
+        )
+        XCTAssertEqual(p.weight, 225)
+        XCTAssertEqual(p.reps, 4)
+        XCTAssertTrue(p.isWarmup)
+    }
+
+    func test_matchHistory_fallsBackToSessionLastWhenNoHistorySlot() {
+        let p = FocusTargetLogic.prefill(
+            suggestion: suggestion(230, 5, .consistent),
+            recent: nil,
+            lastBest: (weight: 225, reps: 5),
+            sessionLast: FocusTargetLogic.SessionLastSet(
+                weight: 315,
+                reps: 5,
+                isWarmup: false,
+                isEachSide: false,
+                isAssisted: false
+            ),
+            historicalSet: nil,
+            prefillMode: .matchHistory
+        )
+        XCTAssertEqual(p.weight, 315)
+        XCTAssertEqual(p.reps, 5)
+    }
+
+    func test_repeatLast_ignoresHistoricalSet() {
+        let p = FocusTargetLogic.prefill(
+            suggestion: suggestion(230, 5, .consistent),
+            recent: nil,
+            lastBest: (weight: 225, reps: 5),
+            sessionLast: FocusTargetLogic.SessionLastSet(
+                weight: 135,
+                reps: 5,
+                isWarmup: true,
+                isEachSide: false,
+                isAssisted: false
+            ),
+            historicalSet: FocusTargetLogic.SessionLastSet(
+                weight: 225,
+                reps: 4,
+                isWarmup: true,
+                isEachSide: false,
+                isAssisted: false
+            ),
+            prefillMode: .repeatLast
+        )
+        XCTAssertEqual(p.weight, 135)
+        XCTAssertEqual(p.reps, 5)
     }
 
     func test_suggestionWithoutLastBest_staysNeutral() {

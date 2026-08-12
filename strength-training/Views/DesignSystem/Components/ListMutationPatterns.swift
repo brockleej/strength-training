@@ -27,11 +27,15 @@ enum ListMutationCopy {
 
     static func removeFromDay(_ day: String) -> String { "Remove from \(day)" }
     static let removeFromWorkout = "Remove from this workout"
+    static let replaceInWorkout = "Replace exercise"
     static let deleteFromLibrary = "Delete from library"
     static let deleteWorkout = "Delete workout"
     static let deleteDay = "Delete day"
     static let addExercise = "Add exercise"
     static let addDay = "Add day"
+    /// In-session exercise list.
+    static let workoutListHint =
+        "Swipe left to remove a lift from this workout. Long-press for edit or replace."
 }
 
 // MARK: - Reorder (long-press drag, no Edit mode)

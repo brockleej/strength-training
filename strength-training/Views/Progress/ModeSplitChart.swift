@@ -23,7 +23,7 @@ struct ModeSplitChart: View {
             )
 
             if data.isEmpty {
-                Text("Complete workouts to see training mode split")
+                Text("Complete workouts to see strength vs endurance sets")
                     .font(.uplift.text(13, weight: .medium))
                     .foregroundStyle(Color.uplift.fgDim)
                     .frame(maxWidth: .infinity)
@@ -31,7 +31,7 @@ struct ModeSplitChart: View {
             } else {
                 Chart(data) { item in
                     SectorMark(
-                        angle: .value("Volume", item.value),
+                        angle: .value("Sets", item.value),
                         innerRadius: .ratio(0.6),
                         angularInset: 2
                     )
@@ -55,7 +55,7 @@ struct ModeSplitChart: View {
                             Circle()
                                 .fill(item.mode == .highWeightLowReps ? Color.uplift.accent : Color.uplift.endurance)
                                 .frame(width: 8, height: 8)
-                            Text(item.mode.rawValue)
+                            Text("\(item.mode.rawValue) · \(Int(item.value)) sets")
                                 .font(.uplift.text(12, weight: .medium))
                                 .foregroundStyle(Color.uplift.fgMuted)
                         }

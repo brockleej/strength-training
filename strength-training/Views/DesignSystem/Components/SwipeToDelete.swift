@@ -67,13 +67,19 @@ struct SwipeToDeleteModifier: ViewModifier {
                         }
                     }
             )
-            .onTapGesture {
+            // Avoid a blanket onTapGesture when unused — it steals taps from NavigationLink.
+            .overlay {
                 if isRevealed {
-                    withAnimation(.easeOut(duration: 0.2)) { close() }
-                } else {
-                    onTap?()
+                    Color.clear
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            withAnimation(.easeOut(duration: 0.2)) { close() }
+                        }
                 }
             }
+            .modifier(SwipeOptionalTap(onTap: onTap, isRevealed: isRevealed, onClose: {
+                withAnimation(.easeOut(duration: 0.2)) { close() }
+            }))
             .accessibilityAction(named: "Remove") { onDelete() }
     }
 
@@ -88,8 +94,24 @@ struct SwipeToDeleteModifier: ViewModifier {
     }
 }
 
+/// Only attaches a tap handler when `onTap` is provided (and not while revealed).
+private struct SwipeOptionalTap: ViewModifier {
+    let onTap: (() -> Void)?
+    let isRevealed: Bool
+    let onClose: () -> Void
+
+    func body(content: Content) -> some View {
+        if let onTap, !isRevealed {
+            content.onTapGesture(perform: onTap)
+        } else {
+            content
+        }
+    }
+}
+
 extension View {
     /// Soft remove: swipe reveals trash; tap to confirm (unless fullSwipeDeletes).
+    /// When `onTap` is nil, taps pass through (e.g. to a NavigationLink).
     func swipeToDelete(
         fullSwipeDeletes: Bool = false,
         onDelete: @escaping () -> Void,

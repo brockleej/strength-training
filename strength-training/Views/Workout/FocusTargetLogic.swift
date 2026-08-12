@@ -31,10 +31,11 @@ enum FocusTargetLogic {
     }
 
     /// Derives stepper prefill + target dress.
-    /// Priority for weight/reps values:
-    /// 1. Last set already logged this session (same exercise) — supersets
-    /// 2. Progression suggestion (with optional target dress vs lastBest)
-    /// 3. Rolling average / defaults
+    ///
+    /// Weight/reps source depends on `prefillMode`:
+    /// - `.repeatLast` — last set logged this session (straight sets / supersets)
+    /// - `.matchHistory` — last session’s set at the same ordinal (warm-up ramps)
+    /// Then progression suggestion / recent average / defaults.
     ///
     /// Progression snapshots use *effective* load (BW − assist). When
     /// `preferAssistance` is true, convert effective targets into assistance
@@ -44,21 +45,25 @@ enum FocusTargetLogic {
         recent: RecentAverage?,
         lastBest: (weight: Double, reps: Int)?,
         sessionLast: SessionLastSet? = nil,
+        /// Last session’s set for the *next* set number (1-based index into prior session).
+        historicalSet: SessionLastSet? = nil,
+        prefillMode: SetPrefillMode = SetPrefillPreferences.defaultMode,
         preferAssistance: Bool = false,
         bodyWeightLbs: Double = 0
     ) -> Prefill {
-        // Superset / return-to-exercise: keep the recipe you just used.
-        // `weight` is already assistance when `isAssisted` (stored that way).
-        if let sessionLast {
-            return Prefill(
-                weight: sessionLast.weight,
-                reps: sessionLast.reps,
-                weightDelta: nil,
-                repsDelta: nil,
-                isWarmup: sessionLast.isWarmup,
-                isEachSide: sessionLast.isEachSide,
-                isAssisted: sessionLast.isAssisted
-            )
+        switch prefillMode {
+        case .matchHistory:
+            // Prefer same set # from last time; if past end of history, fall back.
+            if let historicalSet {
+                return prefill(from: historicalSet)
+            }
+            if let sessionLast {
+                return prefill(from: sessionLast)
+            }
+        case .repeatLast:
+            if let sessionLast {
+                return prefill(from: sessionLast)
+            }
         }
 
         guard let suggestion else {
@@ -123,6 +128,18 @@ enum FocusTargetLogic {
         )
     }
 
+    private static func prefill(from set: SessionLastSet) -> Prefill {
+        Prefill(
+            weight: set.weight,
+            reps: set.reps,
+            weightDelta: nil,
+            repsDelta: nil,
+            isWarmup: set.isWarmup,
+            isEachSide: set.isEachSide,
+            isAssisted: set.isAssisted
+        )
+    }
+
     private static func assistanceIfNeeded(
         _ effectiveLoad: Double,
         preferAssistance: Bool,
@@ -130,6 +147,33 @@ enum FocusTargetLogic {
     ) -> Double {
         guard preferAssistance, bodyWeight > 0 else { return effectiveLoad }
         return max(0, bodyWeight - effectiveLoad)
+    }
+
+    /// Map a prior-session set into stepper values (weight is already assist when assisted).
+    static func sessionSet(from set: SetRecord) -> SessionLastSet {
+        SessionLastSet(
+            weight: set.weightLbs,
+            reps: set.reps,
+            isWarmup: set.isWarmup,
+            isEachSide: set.isEachSide,
+            isAssisted: set.isAssisted
+        )
+    }
+
+    /// Next set’s recipe from the previous completed session (by set number / order).
+    /// `nextSetNumber` is 1-based (after 0 logged sets → 1, after 1 → 2, …).
+    static func historicalSet(
+        fromPriorSets ordered: [SetRecord],
+        nextSetNumber: Int
+    ) -> SessionLastSet? {
+        guard nextSetNumber >= 1, !ordered.isEmpty else { return nil }
+        let sorted = ordered.sorted { $0.setNumber < $1.setNumber }
+        if let byNumber = sorted.first(where: { $0.setNumber == nextSetNumber }) {
+            return sessionSet(from: byNumber)
+        }
+        let index = nextSetNumber - 1
+        guard index >= 0, index < sorted.count else { return nil }
+        return sessionSet(from: sorted[index])
     }
 
     /// Heaviest *working* set of a session — the dress baseline. Mirrors

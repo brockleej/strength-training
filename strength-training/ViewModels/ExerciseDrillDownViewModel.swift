@@ -11,12 +11,29 @@ final class ExerciseDrillDownViewModel {
     var modelContext: ModelContext
     let exercise: Exercise
     var selectedTimeRange: ProgressTimeRange = .threeMonths
-    var topSetMetric: TopSetMetric = .weight
+    /// Default chart: estimated 1RM (strength over time). Top weight is optional view.
+    var chartMetric: ChartMetric = .e1RM
 
-    enum TopSetMetric: String, CaseIterable, Identifiable {
-        case weight = "Weight"
-        case reps = "Reps"
+    enum ChartMetric: String, CaseIterable, Identifiable {
+        case e1RM = "e1RM"
+        case topWeight = "Top weight"
         var id: String { rawValue }
+
+        var chartValueLabel: String {
+            switch self {
+            case .e1RM: return "e1RM"
+            case .topWeight: return "Top weight"
+            }
+        }
+
+        var caption: String {
+            switch self {
+            case .e1RM:
+                return "Best estimated 1-rep max each session (from working sets). PR marks a new all-time high."
+            case .topWeight:
+                return "Heaviest working-set load each session. PR marks a new all-time top weight."
+            }
+        }
     }
 
     init(modelContext: ModelContext, exercise: Exercise) {
@@ -43,55 +60,50 @@ final class ExerciseDrillDownViewModel {
         record.setsArray.filter { !$0.isWarmup }
     }
 
-    // MARK: - Top Set Trend
+    // MARK: - Primary progress line (default e1RM)
 
-    var topSetTrendData: [ModeChartDataPoint] {
-        filteredRecords().compactMap { record in
-            guard let date = record.session?.date else { return nil }
-            let sets = workingSets(record)
-            guard !sets.isEmpty else { return nil }
-
-            let value: Double
-            switch topSetMetric {
-            case .weight:
-                value = sets.map { $0.effectiveLoadLbs() }.max() ?? 0
-            case .reps:
-                let bestSet = sets.max(by: { $0.effectiveLoadLbs() < $1.effectiveLoadLbs() })
-                value = Double(bestSet?.reps ?? 0)
-            }
-
-            return ModeChartDataPoint(date: date, value: value, mode: record.trainingMode)
+    /// Points for the main chart from `chartMetric` (range-filtered; PRs from all-time running max).
+    var primaryTrendData: [AnnotatedChartDataPoint] {
+        switch chartMetric {
+        case .e1RM: return e1rmTrendData
+        case .topWeight: return topWeightTrendData
         }
     }
 
-    // MARK: - Estimated 1RM Trend with PR annotations (2B)
+    // MARK: - Estimated 1RM Trend with PR annotations
 
     var e1rmTrendData: [AnnotatedChartDataPoint] {
-        var runningMax: Double = 0
+        trendSeries { sets in
+            sets.map(\.estimatedE1RM).max()
+        }
+    }
 
-        // Include ALL records for PR detection, not just filtered ones
+    /// Heaviest effective load per session; PR = new all-time top weight.
+    var topWeightTrendData: [AnnotatedChartDataPoint] {
+        trendSeries { sets in
+            sets.map { $0.effectiveLoadLbs() }.max()
+        }
+    }
+
+    /// Chronological sessions → value; running max over all time marks PRs; filter to selected range for display.
+    private func trendSeries(
+        value: ([SetRecord]) -> Double?
+    ) -> [AnnotatedChartDataPoint] {
+        var runningMax: Double = 0
         let allRecords = exercise.recordsArray
             .filter { $0.session?.isCompleted == true }
             .sorted { ($0.session?.date ?? .distantPast) < ($1.session?.date ?? .distantPast) }
-
         let startDate = selectedTimeRange.startDate
-
         var result: [AnnotatedChartDataPoint] = []
         for record in allRecords {
             guard let date = record.session?.date else { continue }
             let sets = workingSets(record)
-            guard let bestE1RM = sets.map(\.estimatedE1RM).max() else {
-                continue
-            }
-
-            let isPR = bestE1RM > runningMax
-            if isPR { runningMax = bestE1RM }
-
-            // Only include in display if within the selected time range
+            guard let sessionValue = value(sets), sessionValue > 0 else { continue }
+            let isPR = sessionValue > runningMax + 0.05
+            if isPR { runningMax = sessionValue }
             if let start = startDate, date < start { continue }
-            result.append(AnnotatedChartDataPoint(date: date, value: bestE1RM, isPR: isPR))
+            result.append(AnnotatedChartDataPoint(date: date, value: sessionValue, isPR: isPR))
         }
-
         return result
     }
 
@@ -116,17 +128,6 @@ final class ExerciseDrillDownViewModel {
         exercise.recordsArray
             .compactMap { $0.session?.date }
             .max()
-    }
-
-    // MARK: - Top Set Bars (drill-down chart)
-
-    /// Top-set bars (capped to the 20 most recent in range). PR flag = that
-    /// session set a new all-time running-max e1RM (reuses e1rmTrendData's rule).
-    var topSetBars: [AnnotatedChartDataPoint] {
-        let prDates = Set(e1rmTrendData.filter(\.isPR).map(\.date))
-        return topSetTrendData.suffix(20).map { point in
-            AnnotatedChartDataPoint(date: point.date, value: point.value, isPR: prDates.contains(point.date))
-        }
     }
 
     /// The set holding the all-time best e1RM, with its session date (effective load).

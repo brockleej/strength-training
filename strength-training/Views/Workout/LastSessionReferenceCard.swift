@@ -61,13 +61,13 @@ struct LastSessionReferenceCard: View {
 
                             if set.isAssisted {
                                 Text("−\(StepperLogic.format(set.weight)) × \(set.reps)")
-                                    .font(.uplift.mono(14, weight: .semibold))
+                                    .font(.uplift.mono(16, weight: .semibold))
                                     .foregroundStyle(Color.uplift.weightTint)
                             } else {
                                 PairText.pair(
                                     weight: set.weight,
                                     reps: set.reps,
-                                    font: .uplift.mono(14, weight: .semibold)
+                                    font: .uplift.mono(16, weight: .semibold)
                                 )
                             }
 

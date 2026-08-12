@@ -25,6 +25,7 @@ struct FocusView: View {
     @State private var focusVM: FocusViewModel?
     @State private var showEditExercise = false
     @State private var showRemoveConfirm = false
+    @State private var showReplaceSheet = false
     @State private var historyExpanded = false
 
     private var loggedSets: [SetRecord] {
@@ -178,6 +179,21 @@ struct FocusView: View {
                 focusDay: workoutVM.activeSession?.day
             )
         }
+        .sheet(isPresented: $showReplaceSheet) {
+            AddExerciseSheet(
+                currentDayType: workoutVM.activeSession?.day
+                    ?? DayTypeRegistry.shared.defaultSelection,
+                excludedIDs: Set([exercise.id]),
+                onPick: { newExercise, _ in
+                    workoutVM.replaceExerciseInSession(removing: exercise, with: newExercise)
+                    dismiss()
+                },
+                onCreated: { newExercise in
+                    workoutVM.replaceExerciseInSession(removing: exercise, with: newExercise)
+                    dismiss()
+                }
+            )
+        }
         .confirmationDialog(
             "Remove \(exercise.name)?",
             isPresented: $showRemoveConfirm,
@@ -316,6 +332,11 @@ struct FocusView: View {
                 showEditExercise = true
             } label: {
                 Label("Edit exercise", systemImage: "pencil")
+            }
+            Button {
+                showReplaceSheet = true
+            } label: {
+                Label(ListMutationCopy.replaceInWorkout, systemImage: "arrow.triangle.swap")
             }
             Button {
                 workoutVM.selectedMode = workoutVM.selectedMode == .highWeightLowReps
@@ -652,22 +673,21 @@ struct FocusView: View {
     // MARK: - Actions
 
     private func currentPrefill() -> FocusTargetLogic.Prefill {
-        // Prefer the last set already logged this session (same exercise) so
-        // supersets restore weight/reps when you hop back.
         let sessionLast: FocusTargetLogic.SessionLastSet? = {
             guard let last = loggedSets.last else { return nil }
-            return FocusTargetLogic.SessionLastSet(
-                weight: last.weightLbs,
-                reps: last.reps,
-                isWarmup: last.isWarmup,
-                isEachSide: last.isEachSide,
-                isAssisted: last.isAssisted
-            )
+            return FocusTargetLogic.sessionSet(from: last)
         }()
-        // No session sets yet: convert progression effective-load targets into
-        // assistance when this lift prefers assist (or last completed set was assisted).
-        let preferAssist = sessionLast?.isAssisted == true
-            || (sessionLast == nil && (
+        // Next set # this session (1-based) → same slot from last completed session.
+        let nextSetNumber = loggedSets.count + 1
+        let historicalSet = FocusTargetLogic.historicalSet(
+            fromPriorSets: lastCompletedRecord?.setsArray ?? [],
+            nextSetNumber: nextSetNumber
+        )
+        let mode = SetPrefillPreferences.mode
+        // Assist preference: history/session flags, else lift preference.
+        let preferAssist = historicalSet?.isAssisted == true
+            || sessionLast?.isAssisted == true
+            || (sessionLast == nil && historicalSet == nil && (
                 lastCompletedRecord?.setsArray.contains(where: { $0.isAssisted && !$0.isWarmup }) == true
                 || ExerciseAssistPreferences.prefersAssist(for: exercise.id)
             ))
@@ -676,6 +696,8 @@ struct FocusView: View {
             recent: workoutVM.recentAverage(for: exercise, mode: workoutVM.selectedMode),
             lastBest: lastSessionBestSet(),
             sessionLast: sessionLast,
+            historicalSet: historicalSet,
+            prefillMode: mode,
             preferAssistance: preferAssist,
             bodyWeightLbs: BodyWeightPreferences.pounds
         )
@@ -763,7 +785,8 @@ struct FocusView: View {
             isEachSide: isEachSide,
             isAssisted: isAssisted
         )
-        focusVM.setLogged()
+        // Seed steppers for the *next* set (repeat last vs match last session).
+        focusVM.apply(prefill: currentPrefill())
         workoutVM.startRestAfterSet(for: exercise)
     }
 }

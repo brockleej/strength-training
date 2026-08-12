@@ -5,7 +5,6 @@
 
 import SwiftUI
 import SwiftData
-import Charts
 
 struct ExerciseDrillDownView: View {
     let exercise: Exercise
@@ -44,10 +43,8 @@ private struct DrillDownContent: View {
                     .padding(.top, 8)
                 rangePicker
                     .padding(.top, 14)
-                topSetCard
-                    .padding(.top, 8)
-                SectionHeader("Estimated 1RM trend")
-                E1RMTrendChart(data: viewModel.e1rmTrendData)
+                progressChartCard
+                    .padding(.top, 12)
                 SectionHeader("Recent sessions")
                 recentSessionRows
             }
@@ -173,59 +170,48 @@ private struct DrillDownContent: View {
         )
     }
 
-    // MARK: - Top set bar chart
+    // MARK: - Progress line (default e1RM)
 
-    private var topSetCard: some View {
+    private var progressChartCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Top set")
-                    .font(.uplift.text(13, weight: .semibold))
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Progress over time")
+                    .font(.uplift.text(15, weight: .semibold))
                     .foregroundStyle(Color.uplift.fg)
-                Spacer()
-                Text("per session in range")
+                Text(viewModel.chartMetric.caption)
                     .font(.uplift.text(12, weight: .medium))
-                    .foregroundStyle(Color.uplift.fgMuted)
+                    .foregroundStyle(Color.uplift.fgDim)
+                    .fixedSize(horizontal: false, vertical: true)
             }
+
             UpliftSegmentedControl(
-                segments: ExerciseDrillDownViewModel.TopSetMetric.allCases.map {
+                segments: ExerciseDrillDownViewModel.ChartMetric.allCases.map {
                     UpliftSegment(id: $0.rawValue, label: $0.rawValue)
                 },
                 selection: Binding(
-                    get: { viewModel.topSetMetric.rawValue },
-                    set: { viewModel.topSetMetric = ExerciseDrillDownViewModel.TopSetMetric(rawValue: $0) ?? .weight }
+                    get: { viewModel.chartMetric.rawValue },
+                    set: {
+                        viewModel.chartMetric =
+                            ExerciseDrillDownViewModel.ChartMetric(rawValue: $0) ?? .e1RM
+                    }
                 )
             )
-            if viewModel.topSetBars.isEmpty {
-                Text("No sessions in this range")
-                    .font(.uplift.text(13, weight: .medium))
-                    .foregroundStyle(Color.uplift.fgDim)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 90)
-            } else {
-                Chart(viewModel.topSetBars) { bar in
-                    BarMark(
-                        x: .value("Date", bar.date, unit: .day),
-                        y: .value("Value", bar.value)
-                    )
-                    .foregroundStyle(bar.isPR ? Color.uplift.pr : Color.uplift.accent.opacity(0.75))
-                    .cornerRadius(3)
+
+            E1RMTrendChart(
+                data: viewModel.primaryTrendData,
+                valueLabel: viewModel.chartMetric.chartValueLabel,
+                emptyMessage: "No working sets in this range yet"
+            )
+
+            if viewModel.primaryTrendData.contains(where: \.isPR) {
+                HStack(spacing: 6) {
+                    Circle()
+                        .fill(Color.uplift.pr)
+                        .frame(width: 8, height: 8)
+                    Text("PR = first time that best beat your previous all-time high")
+                        .font(.uplift.text(11, weight: .medium))
+                        .foregroundStyle(Color.uplift.fgMuted)
                 }
-                .chartYAxis {
-                    AxisMarks(values: .automatic(desiredCount: 3)) {
-                        AxisGridLine().foregroundStyle(Color.uplift.hairline)
-                        AxisValueLabel()
-                            .font(.uplift.text(10, weight: .medium))
-                            .foregroundStyle(Color.uplift.fgDim)
-                    }
-                }
-                .chartXAxis {
-                    AxisMarks(values: .automatic(desiredCount: 3)) {
-                        AxisValueLabel()
-                            .font(.uplift.text(10, weight: .medium))
-                            .foregroundStyle(Color.uplift.fgDim)
-                    }
-                }
-                .frame(height: 90)
             }
         }
         .padding(16)
@@ -264,7 +250,7 @@ private struct DrillDownContent: View {
                             .foregroundStyle(Color.uplift.fgMuted)
                     }
                     Spacer()
-                    PairText.pair(weight: session.topWeight, reps: session.topReps, font: .uplift.mono(14, weight: .semibold))
+                    PairText.pair(weight: session.topWeight, reps: session.topReps, font: .uplift.mono(15, weight: .semibold))
                 }
                 .padding(13)
                 .background {

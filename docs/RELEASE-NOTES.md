@@ -1,5 +1,35 @@
 # RockLog release notes
 
+## 1.0 (7) — 2026-08-11
+
+TestFlight build **7** (marketing version **1.0**). Previous TF upload was **build 6**.
+
+### What’s new
+
+- **Rest timer audio-only:** no more stacked local notification banners on each countdown tick; tones via background audio only; clears legacy rest-timer notifications on launch
+- **Readable past sets:** larger weight × reps on history strip, last-vs-this column, workout list “Last” line, last-session card
+- **Mid-workout lift edits:** swipe left to remove a lift from this workout; Focus ⋯ **Replace exercise**; clearer list hint
+- **Next-set defaults (Settings → Logging):** **Last session** (by set #, good for 135→225→315 ramps) or **Last set** (straight sets); default Last session
+- **Settings reorganized:** Logging / Rest / Progression / Training days / Gym pass / Body / Health / iCloud / Backup; shorter footers
+- **Progress overhaul:** strength score + workout/set counts instead of total volume tonnage; workouts-over-time bars; sets by muscle; mode split by set count
+- **Exercise drill-down:** primary **e1RM line** (toggle top weight) with PR markers; clearer captions
+
+### Files touched (high level)
+
+- Rest timer: `RestTimerNotificationScheduler.swift`, `strength_trainingApp.swift`
+- Prefill: `SetPrefillPreferences.swift`, `FocusTargetLogic.swift`, `FocusView.swift`, tests
+- Workout list/Focus: `ExerciseListView`, `FocusView`, `SwipeToDelete`, fonts on strip/cards
+- Progress: dashboard + drill-down view models/charts
+- Settings: `SettingsView.swift`
+
+### Build / ship checklist
+
+1. Confirm `CURRENT_PROJECT_VERSION` is **greater** than last App Store Connect build (this release: **7**).
+2. `xcodebuild … archive` then export App Store IPA (upload).
+3. Wait for processing before re-uploading the same number.
+
+---
+
 ## 1.0 (6) — 2026-08-09
 
 TestFlight build **6** (marketing version **1.0**). Previous TF upload was **build 5**.

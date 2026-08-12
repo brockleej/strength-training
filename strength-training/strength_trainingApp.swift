@@ -14,8 +14,9 @@ struct strength_trainingApp: App {
     let container: ModelContainer
 
     init() {
-        // Rest timer uses local notifications when the screen locks.
+        // Rest timer is audio-only; suppress/clear any leftover rest-timer notifications.
         UNUserNotificationCenter.current().delegate = RestTimerNotificationDelegate.shared
+        RestTimerNotificationScheduler.cancelAll()
 
         let schema = Schema([
             Exercise.self,

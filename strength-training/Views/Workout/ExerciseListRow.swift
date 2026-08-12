@@ -143,7 +143,7 @@ struct ExerciseListRow: View {
                         .foregroundStyle(Color.uplift.fgMuted)
                 }
             }
-            .font(.uplift.mono(12, weight: .medium))
+            .font(.uplift.mono(14, weight: .semibold))
             .lineLimit(2)
             .minimumScaleFactor(0.85)
         }
@@ -212,7 +212,7 @@ struct ExerciseListRow: View {
             attributed = PairText.pair(
                 weight: targetWeight,
                 reps: targetReps,
-                font: .uplift.mono(12, weight: .medium)
+                font: .uplift.mono(14, weight: .semibold)
             )
             a11y = "Target \(StepperLogic.format(targetWeight)) pounds by \(targetReps)"
         } else if let targetReps {

@@ -153,16 +153,16 @@ struct FocusSetsCard: View {
                             .font(.system(size: 8, weight: .semibold))
                             .foregroundStyle(Color.uplift.fgFaint)
                     }
-                    .frame(width: 88, alignment: .leading)
+                    .frame(width: 104, alignment: .leading)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Load last set \(index + 1) into steppers")
             } else {
                 Text("—")
-                    .font(.uplift.mono(12, weight: .medium))
+                    .font(.uplift.mono(14, weight: .medium))
                     .foregroundStyle(Color.uplift.fgFaint)
-                    .frame(width: 88, alignment: .leading)
+                    .frame(width: 104, alignment: .leading)
             }
 
             Spacer(minLength: 4)
@@ -250,13 +250,13 @@ struct FocusSetsCard: View {
         let rText = previous.isEachSide ? "\(previous.reps)×2" : "\(previous.reps)"
         return HStack(spacing: 2) {
             Text("\(wText)×\(rText)")
-                .font(.uplift.mono(12, weight: .medium))
-                .foregroundStyle(Color.uplift.fgDim)
+                .font(.uplift.mono(15, weight: .semibold))
+                .foregroundStyle(Color.uplift.fgMuted)
                 .lineLimit(1)
-                .minimumScaleFactor(0.7)
+                .minimumScaleFactor(0.75)
             if previous.isWarmup {
                 Text("W")
-                    .font(.uplift.text(8, weight: .bold))
+                    .font(.uplift.text(9, weight: .bold))
                     .foregroundStyle(Color.uplift.customBadge.opacity(0.8))
             }
         }

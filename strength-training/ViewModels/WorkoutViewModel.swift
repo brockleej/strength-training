@@ -61,8 +61,7 @@ final class WorkoutViewModel {
     var restEndDate: Date? = nil {
         didSet {
             syncRestCountdownMonitor()
-            // Local notifications keep ticks playing when the screen locks
-            // (the in-app Task is suspended in the background).
+            // Clear any legacy rest-timer local notifications (ticks are audio-only now).
             RestTimerNotificationScheduler.reschedule(endDate: restEndDate)
         }
     }
@@ -666,6 +665,13 @@ final class WorkoutViewModel {
         }
         session.suppressExercise(id: exercise.id)
         try? modelContext.save()
+    }
+
+    /// Swap one lift for another in the active session only (library day plan unchanged).
+    func replaceExerciseInSession(removing old: Exercise, with new: Exercise) {
+        guard old.id != new.id else { return }
+        removeExerciseFromSession(old)
+        addExerciseToSession(new)
     }
 
     /// The set holding the all-time best e1RM for this exercise across

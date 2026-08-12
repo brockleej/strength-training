@@ -105,38 +105,41 @@ final class ProgressDashboardViewModel {
         return bestE1RMPerExercise.values.reduce(0, +)
     }
 
-    // MARK: - Total Volume (headline)
+    // MARK: - Activity (workouts & sets — not tonnage)
 
-    /// Working-set volume within the selected range (effective load; assist + each-side aware).
-    var totalVolume: Double {
-        allWorkingSets().reduce(0.0) { $0 + $1.set.volumeContribution }
+    /// Completed sessions in the selected range.
+    var workoutCount: Int {
+        fetchCompletedSessions().count
     }
 
-    /// Percent change vs the equivalent previous window (nil for All or no baseline).
-    var totalVolumeDeltaPercent: Double? {
+    /// Non-warmup sets logged in the selected range.
+    var workingSetCount: Int {
+        allWorkingSets().count
+    }
+
+    /// Workouts in the equivalent previous window (nil for All).
+    var previousWorkoutCount: Int? {
         guard let start = selectedTimeRange.startDate,
               let prevStart = selectedTimeRange.previousStartDate else { return nil }
-        let all = fetchAllCompletedSessions()
-        func volume(_ sessions: [WorkoutSession]) -> Double {
-            sessions
-                .flatMap { $0.exerciseRecordsArray }
-                .flatMap { $0.setsArray.filter { !$0.isWarmup } }
-                .reduce(0.0) { $0 + $1.volumeContribution }
-        }
-        let current = volume(all.filter { $0.date >= start })
-        let previous = volume(all.filter { $0.date >= prevStart && $0.date < start })
-        guard previous > 0 else { return nil }
-        return (current - previous) / previous * 100
+        return fetchAllCompletedSessions()
+            .filter { $0.date >= prevStart && $0.date < start }
+            .count
     }
 
-    /// Volume bucketed by the range's calendar unit, oldest-first, for the area chart.
-    var volumeChartData: [ChartDataPoint] {
+    /// Delta workouts vs previous window (nil if no baseline).
+    var workoutCountDelta: Int? {
+        guard let prev = previousWorkoutCount else { return nil }
+        return workoutCount - prev
+    }
+
+    /// Completed workouts per calendar bucket (day/week/month) for the activity chart.
+    var sessionChartData: [ChartDataPoint] {
         let cal = Calendar.current
         var buckets: [Date: Double] = [:]
-        for tuple in allWorkingSets() {
-            guard let bucket = cal.dateInterval(of: selectedTimeRange.bucketUnit, for: tuple.session.date)?.start
+        for session in fetchCompletedSessions() {
+            guard let bucket = cal.dateInterval(of: selectedTimeRange.bucketUnit, for: session.date)?.start
             else { continue }
-            buckets[bucket, default: 0] += tuple.set.volumeContribution
+            buckets[bucket, default: 0] += 1
         }
         return buckets
             .map { ChartDataPoint(date: $0.key, value: $0.value) }
@@ -310,23 +313,22 @@ final class ProgressDashboardViewModel {
         return prs.sorted { $0.date > $1.date }
     }
 
-    // MARK: - Muscle Group Volume
+    // MARK: - Muscle group attention (working-set counts)
 
-    var muscleGroupVolumes: [MuscleGroupVolume] {
-        var volumeByGroup: [String: Double] = [:]
-
+    /// How many working sets hit each primary muscle group in range (not tonnage).
+    var muscleGroupSetCounts: [MuscleGroupSetCount] {
+        var counts: [String: Int] = [:]
         for tuple in allWorkingSets() {
             let group = tuple.record.exercise?.primaryMuscleGroup ?? "Other"
             guard !group.isEmpty else { continue }
-            volumeByGroup[group, default: 0] += tuple.set.volumeContribution
+            counts[group, default: 0] += 1
         }
-
-        return volumeByGroup
-            .map { MuscleGroupVolume(muscleGroup: $0.key, volume: $0.value) }
-            .sorted { $0.volume > $1.volume }
+        return counts
+            .map { MuscleGroupSetCount(muscleGroup: $0.key, setCount: $0.value) }
+            .sorted { $0.setCount > $1.setCount }
     }
 
-    // MARK: - Mode Split
+    // MARK: - Mode Split (by set count)
 
     var modeSplit: [ModeSplitData] {
         let calendar = Calendar.current
@@ -344,16 +346,16 @@ final class ProgressDashboardViewModel {
             return tuple.session.date >= start
         }
 
-        var volumeByMode: [TrainingMode: Double] = [:]
+        var setsByMode: [TrainingMode: Double] = [:]
         for tuple in sets {
-            volumeByMode[tuple.record.trainingMode, default: 0] += tuple.set.volumeContribution
+            setsByMode[tuple.record.trainingMode, default: 0] += 1
         }
 
-        let total = volumeByMode.values.reduce(0, +)
+        let total = setsByMode.values.reduce(0, +)
         guard total > 0 else { return [] }
 
         return TrainingMode.allCases.compactMap { mode in
-            let value = volumeByMode[mode] ?? 0
+            let value = setsByMode[mode] ?? 0
             guard value > 0 else { return nil }
             return ModeSplitData(mode: mode, value: value, percentage: value / total)
         }

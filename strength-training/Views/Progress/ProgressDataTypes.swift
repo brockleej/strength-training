@@ -37,7 +37,7 @@ enum ProgressTimeRange: String, CaseIterable, Identifiable {
         dayCount.flatMap { Calendar.current.date(byAdding: .day, value: -2 * $0, to: .now) }
     }
 
-    /// Bucketing unit for the volume chart.
+    /// Bucketing unit for activity charts (sessions over time).
     var bucketUnit: Calendar.Component {
         switch self {
         case .week: .day
@@ -71,11 +71,15 @@ struct AnnotatedChartDataPoint: Identifiable {
 
 // MARK: - Dashboard Data
 
-struct MuscleGroupVolume: Identifiable {
+/// Working-set count per primary muscle (attention, not tonnage).
+struct MuscleGroupSetCount: Identifiable {
     let id = UUID()
     let muscleGroup: String
-    let volume: Double
+    let setCount: Int
 }
+
+/// Legacy name used by older previews/tests — prefer `MuscleGroupSetCount`.
+typealias MuscleGroupVolume = MuscleGroupSetCount
 
 struct ModeSplitData: Identifiable {
     let id = UUID()

@@ -39,6 +39,9 @@ struct SettingsView: View {
     @AppStorage(RestTimerPreferences.soundEnabledKey)
     private var restTimerSoundEnabled: Bool = RestTimerPreferences.defaultSoundEnabled
 
+    @AppStorage(SetPrefillPreferences.modeKey)
+    private var setPrefillModeRaw: String = SetPrefillPreferences.defaultMode.rawValue
+
     /// Body profile drafts — edit freely, then Save (zeros/empty fields are easier than live Double bindings).
     @State private var draftWeightText = ""
     @State private var draftFeetText = ""
@@ -54,40 +57,90 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             List {
+                // MARK: In-session logging
                 Section {
-                    if healthKitService.isAvailable {
-                        switch healthKitService.authorizationStatus {
-                        case .none:
-                            Button {
-                                Task {
-                                    await healthKitService.requestAuthorization()
-                                }
-                            } label: {
-                                Label("Connect Apple Health", systemImage: "heart.fill")
-                            }
-                        case true?:
-                            Label("Apple Health Connected", systemImage: "checkmark.circle.fill")
-                                .foregroundStyle(Color.uplift.ahGreen)
-                        case false?:
-                            VStack(alignment: .leading, spacing: 4) {
-                                Label("Apple Health Not Authorized", systemImage: "exclamationmark.triangle")
-                                    .foregroundStyle(Color.uplift.customBadge)
-                                Text("Open Settings > Privacy > Health to grant access.")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                    } else {
-                        Label("Apple Health Not Available", systemImage: "heart.slash")
-                            .foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Next set defaults to")
+                            .font(.uplift.text(15, weight: .semibold))
+                            .foregroundStyle(Color.uplift.fg)
+                        UpliftSegmentedControl(
+                            segments: SetPrefillMode.allCases.map {
+                                UpliftSegment(id: $0.rawValue, label: $0.title)
+                            },
+                            selection: $setPrefillModeRaw
+                        )
+                        Text((SetPrefillMode(rawValue: setPrefillModeRaw) ?? SetPrefillPreferences.defaultMode).detail)
+                            .font(.uplift.text(12, weight: .medium))
+                            .foregroundStyle(Color.uplift.fgDim)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
+                    .padding(.vertical, 4)
                 } header: {
-                    sectionHeader("Health")
-                } footer: {
-                    sectionFooter("When connected, workouts are saved to Apple Health for Activity Ring credit and fitness tracking.")
+                    sectionHeader("Logging")
                 }
                 .listRowBackground(Color.uplift.surface1)
 
+                Section {
+                    Toggle(isOn: $restTimerEnabled) {
+                        Label("Rest timer", systemImage: "timer")
+                    }
+                    .tint(Color.uplift.accent)
+
+                    if restTimerEnabled {
+                        Toggle(isOn: $restTimerSoundEnabled) {
+                            Label("Countdown sounds", systemImage: "speaker.wave.2.fill")
+                        }
+                        .tint(Color.uplift.accent)
+
+                        VStack(alignment: .leading, spacing: 10) {
+                            HStack {
+                                Text("Default rest")
+                                    .font(.uplift.text(15, weight: .medium))
+                                    .foregroundStyle(Color.uplift.fg)
+                                Spacer()
+                                Text(RestTimerPreferences.formatDuration(restTimerSeconds > 0 ? restTimerSeconds : RestTimerPreferences.defaultSeconds))
+                                    .font(.uplift.mono(15, weight: .semibold))
+                                    .foregroundStyle(Color.uplift.accent)
+                            }
+
+                            LazyVGrid(columns: [
+                                GridItem(.flexible(), spacing: 8),
+                                GridItem(.flexible(), spacing: 8),
+                                GridItem(.flexible(), spacing: 8),
+                            ], spacing: 8) {
+                                ForEach(RestTimerPreferences.presets, id: \.self) { seconds in
+                                    let selected = (restTimerSeconds > 0 ? restTimerSeconds : RestTimerPreferences.defaultSeconds) == seconds
+                                    Button {
+                                        restTimerSeconds = seconds
+                                    } label: {
+                                        Text(RestTimerPreferences.formatDuration(seconds))
+                                            .font(.uplift.text(13, weight: .semibold))
+                                            .frame(maxWidth: .infinity)
+                                            .padding(.vertical, 10)
+                                            .background {
+                                                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                                    .fill(selected ? Color.uplift.accent.opacity(0.2) : Color.uplift.surface2)
+                                            }
+                                            .overlay {
+                                                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                                    .strokeBorder(selected ? Color.uplift.accent : Color.clear, lineWidth: 1)
+                                            }
+                                            .foregroundStyle(selected ? Color.uplift.accent : Color.uplift.fgMuted)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                        }
+                        .padding(.vertical, 4)
+                    }
+                } header: {
+                    sectionHeader("Rest timer")
+                } footer: {
+                    sectionFooter("Default length for new lifts. On Focus you can turn rest on/off per exercise (useful for supersets). Sounds are ticks then a go chirp; off = haptics only.")
+                }
+                .listRowBackground(Color.uplift.surface1)
+
+                // MARK: Program
                 Section {
                     UpliftSegmentedControl(
                         segments: ProgressionAggressiveness.allCases.map { mode in
@@ -95,13 +148,12 @@ struct SettingsView: View {
                         },
                         selection: $aggressiveness
                     )
-                    .listRowInsets(EdgeInsets())
+                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                     .padding(.vertical, 4)
-                    .listRowBackground(Color.clear)
                 } header: {
-                    sectionHeader("Progressive Overload")
+                    sectionHeader("Progression")
                 } footer: {
-                    sectionFooter("Moderate recommends a weight increase after 2 consistent sessions. Conservative requires 3.")
+                    sectionFooter("How quickly weight or reps go up after consistent sessions. Moderate ≈ after 2; Conservative ≈ after 3.")
                 }
                 .listRowBackground(Color.uplift.surface1)
 
@@ -109,12 +161,11 @@ struct SettingsView: View {
                     NavigationLink {
                         TrainingSplitSettingsView()
                     } label: {
-                        Label("Training Split", systemImage: "calendar")
+                        Label("Edit training split", systemImage: "calendar")
                     }
 
-                    // Primary control for how Today advances through the split.
                     VStack(alignment: .leading, spacing: 10) {
-                        Text("Split schedule")
+                        Text("Today’s day schedule")
                             .font(.uplift.text(15, weight: .semibold))
                             .foregroundStyle(Color.uplift.fg)
                         UpliftSegmentedControl(
@@ -130,21 +181,20 @@ struct SettingsView: View {
                     }
                     .padding(.vertical, 4)
                 } header: {
-                    sectionHeader("Training")
-                } footer: {
-                    sectionFooter("Rolling always picks the next day after your last workout. Strict weekly tracks Mon–Sun and can prompt when last week was incomplete.")
+                    sectionHeader("Training days")
                 }
                 .listRowBackground(Color.uplift.surface1)
 
+                // MARK: Personal
                 Section {
                     TextField(
                         "Label",
                         text: $gymMembership.label,
                         prompt: Text(GymMembershipPreferences.defaultLabel)
                     )
-                        .font(.uplift.text(15, weight: .medium))
-                        .foregroundStyle(Color.uplift.fg)
-                        .textInputAutocapitalization(.words)
+                    .font(.uplift.text(15, weight: .medium))
+                    .foregroundStyle(Color.uplift.fg)
+                    .textInputAutocapitalization(.words)
 
                     TextField("Member ID / barcode number", text: $gymMembership.code)
                         .font(.uplift.mono(15, weight: .medium))
@@ -179,7 +229,7 @@ struct SettingsView: View {
                 } header: {
                     sectionHeader("Gym pass")
                 } footer: {
-                    sectionFooter("Paste the number under your membership barcode. Saved to this phone and your iCloud account so it comes back after reinstall. Open the pass from Today (barcode button) at check-in — screen goes bright white for scanners.")
+                    sectionFooter("Number under your membership barcode. Syncs via iCloud. Open from Today’s barcode button at check-in.")
                 }
                 .listRowBackground(Color.uplift.surface1)
 
@@ -264,69 +314,43 @@ struct SettingsView: View {
                 } header: {
                     sectionHeader("Body profile")
                 } footer: {
-                    sectionFooter("Tap a field, type freely (empty is fine—no sticky zeros), then Save. Values sync with iCloud for reinstall. Weight powers assisted lifts and muscularity. Height + sex unlock Navy body-fat % and FFMI on Progress → Body. Estimates are for trends only—not medical diagnosis.")
+                    sectionFooter("Save after editing. Weight is used for assisted lifts; height + sex unlock body-fat and FFMI on Progress. Trends only—not medical advice. Syncs with iCloud when available.")
                 }
                 .listRowBackground(Color.uplift.surface1)
                 .onAppear { loadBodyProfileDraft() }
 
+                // MARK: System
                 Section {
-                    Toggle(isOn: $restTimerEnabled) {
-                        Label("Rest timer", systemImage: "timer")
-                    }
-                    .tint(Color.uplift.accent)
-
-                    if restTimerEnabled {
-                        Toggle(isOn: $restTimerSoundEnabled) {
-                            Label("Countdown sounds", systemImage: "speaker.wave.2.fill")
-                        }
-                        .tint(Color.uplift.accent)
-
-                        VStack(alignment: .leading, spacing: 10) {
-                            HStack {
-                                Text("Default rest")
-                                    .font(.uplift.text(15, weight: .medium))
-                                    .foregroundStyle(Color.uplift.fg)
-                                Spacer()
-                                Text(RestTimerPreferences.formatDuration(restTimerSeconds > 0 ? restTimerSeconds : RestTimerPreferences.defaultSeconds))
-                                    .font(.uplift.mono(15, weight: .semibold))
-                                    .foregroundStyle(Color.uplift.accent)
-                            }
-
-                            // 2×3 preset grid — easier to hit in the gym than a continuous slider
-                            LazyVGrid(columns: [
-                                GridItem(.flexible(), spacing: 8),
-                                GridItem(.flexible(), spacing: 8),
-                                GridItem(.flexible(), spacing: 8),
-                            ], spacing: 8) {
-                                ForEach(RestTimerPreferences.presets, id: \.self) { seconds in
-                                    let selected = (restTimerSeconds > 0 ? restTimerSeconds : RestTimerPreferences.defaultSeconds) == seconds
-                                    Button {
-                                        restTimerSeconds = seconds
-                                    } label: {
-                                        Text(RestTimerPreferences.formatDuration(seconds))
-                                            .font(.uplift.text(13, weight: .semibold))
-                                            .frame(maxWidth: .infinity)
-                                            .padding(.vertical, 10)
-                                            .background {
-                                                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                                    .fill(selected ? Color.uplift.accent.opacity(0.2) : Color.uplift.surface2)
-                                            }
-                                            .overlay {
-                                                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                                    .strokeBorder(selected ? Color.uplift.accent : Color.clear, lineWidth: 1)
-                                            }
-                                            .foregroundStyle(selected ? Color.uplift.accent : Color.uplift.fgMuted)
-                                    }
-                                    .buttonStyle(.plain)
+                    if healthKitService.isAvailable {
+                        switch healthKitService.authorizationStatus {
+                        case .none:
+                            Button {
+                                Task {
+                                    await healthKitService.requestAuthorization()
                                 }
+                            } label: {
+                                Label("Connect Apple Health", systemImage: "heart.fill")
+                            }
+                        case true?:
+                            Label("Apple Health Connected", systemImage: "checkmark.circle.fill")
+                                .foregroundStyle(Color.uplift.ahGreen)
+                        case false?:
+                            VStack(alignment: .leading, spacing: 4) {
+                                Label("Apple Health Not Authorized", systemImage: "exclamationmark.triangle")
+                                    .foregroundStyle(Color.uplift.customBadge)
+                                Text("Open Settings → Privacy → Health to grant access.")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
                             }
                         }
-                        .padding(.vertical, 4)
+                    } else {
+                        Label("Apple Health Not Available", systemImage: "heart.slash")
+                            .foregroundStyle(.secondary)
                     }
                 } header: {
-                    sectionHeader("Rest Timer")
+                    sectionHeader("Apple Health")
                 } footer: {
-                    sectionFooter("Default for lifts that haven’t been customized. On Focus, rest on/off is per exercise (handy for supersets: off mid-circuit, on for the last lift). Last 5s: rising ticks; zero: go chirp. Sounds work with ringer off; turn them off for haptics only.")
+                    sectionFooter("Saves finished workouts for Activity rings and fitness history.")
                 }
                 .listRowBackground(Color.uplift.surface1)
 
@@ -334,20 +358,20 @@ struct SettingsView: View {
 
                 Section {
                     Button(action: exportBackup) {
-                        Label("Export Backup", systemImage: "square.and.arrow.up")
+                        Label("Export backup", systemImage: "square.and.arrow.up")
                             .foregroundStyle(Color.uplift.accent)
                     }
 
                     Button {
                         isImporting = true
                     } label: {
-                        Label("Restore from Backup", systemImage: "square.and.arrow.down")
+                        Label("Restore from backup", systemImage: "square.and.arrow.down")
                             .foregroundStyle(Color.uplift.customBadge)
                     }
                 } header: {
-                    sectionHeader("Data Management")
+                    sectionHeader("Backup")
                 } footer: {
-                    sectionFooter("Export a complete backup of your data as a JSON file for safekeeping or to transfer to another device. Restoring replaces all current data.")
+                    sectionFooter("JSON export for safekeeping or another device. Restore replaces all data on this phone.")
                 }
                 .listRowBackground(Color.uplift.surface1)
             }
@@ -503,8 +527,8 @@ struct SettingsView: View {
         } footer: {
             sectionFooter(
                 CloudKitSyncService.isEnabled
-                    ? "Your workout data automatically syncs to iCloud and is available across all your devices."
-                    : "Workouts are stored on this device only. Export a backup from Data Management below."
+                    ? "Workouts sync to iCloud across your devices signed into the same account."
+                    : "Workouts stay on this device only. Use Backup → Export below for a copy."
             )
         }
         .listRowBackground(Color.uplift.surface1)
