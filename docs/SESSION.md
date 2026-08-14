@@ -1,9 +1,9 @@
 # RockLog — session handoff
 
-**Last updated:** 2026-08-13 (build **8** shipping)  
+**Last updated:** 2026-08-14 (build **9** — welcome guide)  
 **Project:** `~/strength-training`  
 **App:** RockLog · bundle `com.lee.lift2026`  
-**Marketing version:** 1.0 · **Build:** 8 (TestFlight)  
+**Marketing version:** 1.0 · **Build:** 9 (TestFlight)  
 **Branch:** `main`  
 
 > Resume: *“Continue from ~/strength-training — load docs/SESSION.md, README.md, docs/RELEASE-NOTES.md, CLAUDE.md.”*
@@ -12,9 +12,11 @@
 
 ## Status
 
-- Last ship: **TestFlight build 8** — see `docs/RELEASE-NOTES.md`.
-- Next TF upload: bump `CURRENT_PROJECT_VERSION` **> 8**.
+- Last ship: **TestFlight build 9** — welcome guide + build 8 logging. See `docs/RELEASE-NOTES.md`.
+- Next TF upload: bump `CURRENT_PROJECT_VERSION` **> 9**.
+- **What to Test paste:** `docs/TESTFLIGHT-WHAT-TO-TEST.md` (no ASC API key — cannot set Test Details from this Mac).
 - Friends testers **Invited** need resend invite / correct Apple ID (not a binary issue).
+- **User guide:** `docs/USER-GUIDE.md`. In-app: first launch + Settings → Welcome guide.
 - **Next polish (not blocking):** recapture **README + App Store screenshots** — `docs/SCREENSHOTS.md`. Current `docs/screenshots/*.png` are stale.
 
 ---
@@ -48,4 +50,4 @@ xcodebuild test -scheme strength-training -destination 'platform=iOS Simulator,n
 
 ## One-line
 
-**RockLog 1.0 (8) on `main` — swipe-delete sets, finish prompt, exercise notes. Screenshot recapture still owed.**
+**RockLog 1.0 (9) — first-run welcome + Settings replay. TF What to Test must be pasted (no API key).**

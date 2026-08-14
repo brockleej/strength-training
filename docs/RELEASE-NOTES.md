@@ -1,5 +1,32 @@
 # RockLog release notes
 
+## 1.0 (9) — 2026-08-14
+
+TestFlight build **9** (marketing version **1.0**). Previous TF upload was **build 8**.
+
+### What’s new
+
+- **Welcome guide** on first launch (Today, logging controls, History / Progress / Exercises). Replay: **Settings → Welcome guide**.
+- Still includes build 8: swipe-delete extra sets, finish-workout prompt, exercise notes.
+
+### What to Test (paste in App Store Connect)
+
+See `docs/TESTFLIGHT-WHAT-TO-TEST.md` (build 9 block). No ASC API key on this Mac — must paste in Test Details.
+
+### Files touched (high level)
+
+- `FirstRunView.swift`, `FirstRunPreferences.swift`
+- `ContentView.swift`, `SettingsView.swift` (Help)
+
+### Build / ship checklist
+
+1. Confirm `CURRENT_PROJECT_VERSION` is **greater** than last App Store Connect build (this release: **9**).
+2. Local archive + upload (`build/ExportOptions.plist`). Xcode Cloud has been failing.
+3. Paste What to Test from `docs/TESTFLIGHT-WHAT-TO-TEST.md`.
+4. Wait for processing before re-uploading the same number.
+
+---
+
 ## 1.0 (8) — 2026-08-13
 
 TestFlight build **8** (marketing version **1.0**). Previous TF upload was **build 7**.

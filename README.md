@@ -31,6 +31,8 @@ This fork (**RockLog**) is maintained by [Lee Brock](https://github.com/brocklee
 
 > [!NOTE]
 > **RockLog** (this fork) is a hobby project shaped around real gym use: freeform splits, assisted lifts, rest habits, body measurements / FFMI, gym pass, dark UI. Data is on-device (SwiftData) with optional **iCloud sync**. Export a JSON backup anytime.
+>
+> **How to use the app:** [User guide](docs/USER-GUIDE.md) — Today, workout overview, logging (assist, sides, warm-up, Done), History, Progress, Exercises.
 
 ---
 

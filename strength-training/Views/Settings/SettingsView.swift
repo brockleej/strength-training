@@ -53,6 +53,7 @@ struct SettingsView: View {
     @Bindable private var gymMembership = GymMembershipStore.shared
 
     @State private var showGymPass = false
+    @State private var showWelcomeGuide = false
 
     var body: some View {
         NavigationStack {
@@ -357,6 +358,20 @@ struct SettingsView: View {
                 iCloudSyncSection
 
                 Section {
+                    Button {
+                        showWelcomeGuide = true
+                    } label: {
+                        Label("Welcome guide", systemImage: "book")
+                            .foregroundStyle(Color.uplift.accent)
+                    }
+                } header: {
+                    sectionHeader("Help")
+                } footer: {
+                    sectionFooter("Same pages as first launch: Today, logging (assist, sides, warm-up, Done), History, Progress.")
+                }
+                .listRowBackground(Color.uplift.surface1)
+
+                Section {
                     Button(action: exportBackup) {
                         Label("Export backup", systemImage: "square.and.arrow.up")
                             .foregroundStyle(Color.uplift.accent)
@@ -395,6 +410,9 @@ struct SettingsView: View {
             }
             .fullScreenCover(isPresented: $showGymPass) {
                 GymPassView()
+            }
+            .fullScreenCover(isPresented: $showWelcomeGuide) {
+                FirstRunView { showWelcomeGuide = false }
             }
             .fileImporter(
                 isPresented: $isImporting,

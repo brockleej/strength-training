@@ -14,6 +14,7 @@ struct ContentView: View {
     @State private var healthKitService = HealthKitWorkoutService()
     @State private var cloudKitSyncService = CloudKitSyncService()
     @State private var selectedTab = "workout"
+    @AppStorage(FirstRunPreferences.completedKey) private var hasCompletedFirstRun = false
 
     var body: some View {
         Group {
@@ -61,6 +62,14 @@ struct ContentView: View {
         }
         .tint(Color.uplift.accent)
         .preferredColorScheme(.dark)
+        .fullScreenCover(isPresented: Binding(
+            get: { workoutViewModel != nil && !hasCompletedFirstRun },
+            set: { if !$0 { hasCompletedFirstRun = true } }
+        )) {
+            FirstRunView {
+                hasCompletedFirstRun = true
+            }
+        }
         .task {
             // Migrations are safe anytime; full catalog seed waits for iCloud when empty.
             SeedData.hydrateSplitPreferencesFromICloud()
