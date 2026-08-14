@@ -29,7 +29,8 @@ struct FocusView: View {
     @State private var historyExpanded = false
 
     private var loggedSets: [SetRecord] {
-        (workoutVM.currentRecord(for: exercise)?.setsArray ?? [])
+        let _ = workoutVM.setMutationEpoch
+        return (workoutVM.currentRecord(for: exercise)?.setsArray ?? [])
             .sorted { $0.setNumber < $1.setNumber }
     }
 
@@ -320,6 +321,10 @@ struct FocusView: View {
                 .kerning(-0.7)
                 .foregroundStyle(Color.uplift.fg)
                 .lineLimit(2)
+
+            ExerciseNoteCard(exercise: exercise) { text in
+                workoutVM.saveExerciseNote(text, for: exercise)
+            }
         }
         .padding(.horizontal, 20)
         .padding(.top, 14)

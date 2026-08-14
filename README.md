@@ -76,6 +76,9 @@ Layered on the foundation above for a more freeform, physique-aware gym log:
 - **A/B rotation tracks** on exercises and sessions
 - **Focus flow** overhaul — multi-lift navigation, **last-vs-this** set rows, superscript weight/rep deltas
 - **Explicit “Done with this lift”** (any set count) + **Next** that skips only marked-done lifts
+- **Finish prompt** when every lift is marked done
+- **Swipe to delete** an extra logged set
+- **Per-exercise notes** — difficulty / next time / modifications (Focus + Edit)
 - **Rest timer** — defaults + **per-exercise** on/off (supersets), countdown sounds
 - **Assisted lifts** — assist amount, effective load for volume/e1RM everywhere
 - **Each-side** volume doubling
@@ -109,6 +112,8 @@ Many UI screens still **sit on original ViewModels and services**; RockLog chang
 | Membership card is another app | Gym pass |
 
 ## Screenshots
+
+> Current PNGs are **stale** (pre–build 8 UI). Recapture for README + App Store — see [docs/SCREENSHOTS.md](docs/SCREENSHOTS.md).
 
 <p align="center">
   <img src="docs/screenshots/workout.png" alt="Workout" width="200" />

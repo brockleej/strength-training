@@ -21,9 +21,9 @@ enum ListMutationCopy {
     static let librarySwipe =
         "Swipe to remove from a day, or delete from the library. Delete always asks first."
 
-    /// Focus sets (soft delete only).
+    /// Focus sets — swipe commits delete (easy to undo an extra tap).
     static let setsSwipe =
-        "Tap a set to edit · swipe to remove"
+        "Tap a set to edit · swipe left to delete"
 
     static func removeFromDay(_ day: String) -> String { "Remove from \(day)" }
     static let removeFromWorkout = "Remove from this workout"

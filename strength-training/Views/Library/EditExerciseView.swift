@@ -19,6 +19,7 @@ struct EditExerciseView: View {
     @State private var name: String = ""
     @State private var selectedDayNames: Set<String> = []
     @State private var muscleGroup: String = ""
+    @State private var notes: String = ""
     @State private var rotationTrack: RotationTrack = .every
     @State private var dayCatalog = DayTypeRegistry.shared
     @State private var showDeleteConfirm = false
@@ -115,6 +116,13 @@ struct EditExerciseView: View {
                         .foregroundStyle(Color.uplift.fgDim)
                         .padding(.horizontal, 4)
 
+                    field(label: "Note", optional: true) {
+                        TextField("Difficulty, next time, modifications…", text: $notes, axis: .vertical)
+                            .lineLimit(2...4)
+                            .font(.uplift.text(16, weight: .medium))
+                            .foregroundStyle(Color.uplift.fg)
+                    }
+
                     if let focusDay, exercise.belongs(to: focusDay) {
                         Button {
                             showRemoveDayConfirm = true
@@ -160,6 +168,7 @@ struct EditExerciseView: View {
             name = exercise.name
             selectedDayNames = Set(exercise.dayTypeNames)
             muscleGroup = exercise.muscleGroup
+            notes = exercise.notes
             rotationTrack = exercise.track
         }
         .confirmationDialog(
@@ -276,6 +285,7 @@ struct EditExerciseView: View {
         exercise.name = trimmedName
         exercise.setDayTypes(ordered) // empty → unassigned library lift
         exercise.muscleGroup = muscleGroup.trimmingCharacters(in: .whitespaces)
+        exercise.notes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
         exercise.track = rotationTrack
         try? modelContext.save()
         dismiss()

@@ -98,6 +98,8 @@ struct FocusFlowView: View {
     private func markDoneAndAdvance() {
         guard exercises.indices.contains(index) else { return }
         workoutVM.markExerciseDone(exercises[index])
+        workoutVM.offerFinishIfAllLiftsDone(in: exercises)
+        if workoutVM.offerFinishWorkout { return }
         if let i = nextIndex() {
             index = i
         }

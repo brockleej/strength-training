@@ -32,5 +32,17 @@ struct WorkoutTabView: View {
         .fullScreenCover(item: $viewModel.sessionPendingSummary) { session in
             WorkoutSummaryView(session: session, workoutVM: viewModel)
         }
+        .confirmationDialog(
+            viewModel.isRevisitingSavedSession ? "Save changes?" : "Finish this workout?",
+            isPresented: $viewModel.offerFinishWorkout,
+            titleVisibility: .visible
+        ) {
+            Button(viewModel.isRevisitingSavedSession ? "Save Changes" : "Finish Workout") {
+                viewModel.finishSession()
+            }
+            Button("Keep training", role: .cancel) {}
+        } message: {
+            Text("Every lift is marked done.")
+        }
     }
 }

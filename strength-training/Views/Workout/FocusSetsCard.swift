@@ -236,7 +236,7 @@ struct FocusSetsCard: View {
                 .fill(isSelected ? Color.uplift.accent.opacity(0.10) : Color.clear)
         }
         .contentShape(Rectangle())
-        .swipeToDelete(fullSwipeDeletes: false, onDelete: { onDelete(set) }, onTap: { onSelect(set) })
+        .swipeToDelete(fullSwipeDeletes: true, onDelete: { onDelete(set) }, onTap: { onSelect(set) })
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(setAccessibilityLabel(set, isSelected: isSelected))
         .accessibilityAddTraits(isSelected ? [.isSelected] : [])
@@ -424,7 +424,7 @@ private struct OptionalSwipe: ViewModifier {
 
     func body(content: Content) -> some View {
         if enabled {
-            content.swipeToDelete(fullSwipeDeletes: false, onDelete: onDelete, onTap: onTap)
+            content.swipeToDelete(fullSwipeDeletes: true, onDelete: onDelete, onTap: onTap)
         } else {
             content
         }

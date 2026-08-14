@@ -67,6 +67,10 @@ final class WorkoutViewModel {
     }
     /// Bumped when a per-exercise rest on/off changes so Focus re-renders.
     var restTimerPreferenceEpoch: Int = 0
+    /// Bumped when sets are added/updated/removed so Focus re-reads SwiftData.
+    var setMutationEpoch: Int = 0
+    /// True when every lift is marked done — UI asks to finish the workout.
+    var offerFinishWorkout: Bool = false
 
     /// History session opened for edit. While set, that row must never be deleted —
     /// only re-completed. History lists `isCompleted == true` only, so leaving it
@@ -816,6 +820,7 @@ final class WorkoutViewModel {
         if record.sets == nil { record.sets = [] }
         record.sets?.append(set)
         modelContext.insert(set)
+        setMutationEpoch &+= 1
         try? modelContext.save()
         HapticService.setLogged()
         // Don't re-fire PR celebrations while fixing up an old session.
@@ -844,21 +849,39 @@ final class WorkoutViewModel {
         set.completedAt = .now
         // Editing while marked done keeps the lift open again.
         set.exerciseRecord?.isCompleted = false
+        setMutationEpoch &+= 1
         try? modelContext.save()
         HapticService.setLogged()
     }
 
     func deleteSet(_ set: SetRecord, from exercise: Exercise) {
         HapticService.swipeToDelete()
-        modelContext.delete(set)
-        // Renumber remaining sets
+        SetMutation.delete(set, from: currentRecord(for: exercise), in: modelContext)
+        setMutationEpoch &+= 1
+        try? modelContext.save()
+    }
+
+    /// Persist a cue on the exercise (and this session's record when one exists).
+    func saveExerciseNote(_ text: String, for exercise: Exercise) {
+        let trimmed = String(text.prefix(280)).trimmingCharacters(in: .whitespacesAndNewlines)
+        exercise.notes = trimmed
         if let record = currentRecord(for: exercise) {
-            let sorted = record.setsArray.sorted { $0.setNumber < $1.setNumber }
-            for (index, s) in sorted.enumerated() {
-                s.setNumber = index + 1
-            }
+            record.notes = trimmed
         }
         try? modelContext.save()
+    }
+
+    /// After marking a lift done, offer finish when every visible lift is done.
+    func offerFinishIfAllLiftsDone(in exercises: [Exercise]) {
+        let doneCount = exercises.filter { isExerciseDone(for: $0) }.count
+        let hasAnySets = activeSession?.exerciseRecordsArray.contains { !$0.setsArray.isEmpty } ?? false
+        if WorkoutCompletionLogic.shouldOfferFinish(
+            liftCount: exercises.count,
+            doneCount: doneCount,
+            hasAnySets: hasAnySets
+        ) {
+            offerFinishWorkout = true
+        }
     }
 
     // MARK: - Helpers

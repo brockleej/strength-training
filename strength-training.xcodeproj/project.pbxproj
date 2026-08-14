@@ -35,6 +35,7 @@
 		7BD31A210861E10FCC130CC8 /* unsupported-version.json in Resources */ = {isa = PBXBuildFile; fileRef = 6F62C644CB9B4CFF6875CF58 /* unsupported-version.json */; };
 		85CBF49126D27BC7C7C68605 /* ConfigArtifact.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC046B453D9070D004742173 /* ConfigArtifact.swift */; };
 		93349D7552961CAD8C765FB7 /* FocusTargetLogicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D469A75D83D9297C0A3174B3 /* FocusTargetLogicTests.swift */; };
+		A7E2C91B4D6F80E1A2B3C4D6 /* WorkoutSessionLogicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7E2C91B4D6F80E1A2B3C4D5 /* WorkoutSessionLogicTests.swift */; };
 		A3A7A993E817CEC629FC7D7A /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8227BD6A0FFEBA20B7444236 /* Foundation.framework */; settings = {ATTRIBUTES = (Required, ); }; };
 		A86332EC74EEB61D502B9A66 /* ProgressionLabApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2375B8872C6A1C21691DF866 /* ProgressionLabApp.swift */; };
 		AB75C1610447582730CCCB17 /* TrainingMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = E15010E72FA7E5AB009EF2FB /* TrainingMode.swift */; };
@@ -117,6 +118,7 @@
 		C4513366655FE67F2A44DEB5 /* StepperLogicTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StepperLogicTests.swift; sourceTree = "<group>"; };
 		C8E4F1A29B0D4E6F8A1C3D5E /* SplitScheduleLogicTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SplitScheduleLogicTests.swift; sourceTree = "<group>"; };
 		D469A75D83D9297C0A3174B3 /* FocusTargetLogicTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FocusTargetLogicTests.swift; sourceTree = "<group>"; };
+		A7E2C91B4D6F80E1A2B3C4D5 /* WorkoutSessionLogicTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkoutSessionLogicTests.swift; sourceTree = "<group>"; };
 		D7F178DC244F07C15EE63542 /* Sparkline.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Sparkline.swift; sourceTree = "<group>"; };
 		D831F8CB0728963D5B3EAFD0 /* ProgressionLab.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ProgressionLab.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D922C1B9725A7CCFCA27550B /* AlgorithmFixtures.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AlgorithmFixtures.swift; sourceTree = "<group>"; };
@@ -260,6 +262,7 @@
 				77A045484DE02168813131AA /* TodayStatsTests.swift */,
 				84E0B9265A12EFB99615DBA6 /* PrevSessionsStripDataTests.swift */,
 				D469A75D83D9297C0A3174B3 /* FocusTargetLogicTests.swift */,
+				A7E2C91B4D6F80E1A2B3C4D5 /* WorkoutSessionLogicTests.swift */,
 				C8E4F1A29B0D4E6F8A1C3D5E /* SplitScheduleLogicTests.swift */,
 				EB1C5CC453A0B417B4B47C31 /* WorkoutFormatTests.swift */,
 				2C13DB8B2815F5DFA66CB019 /* E1RMDetectionTests.swift */,
@@ -562,6 +565,7 @@
 				DD41F85ED9D23F809FE149E0 /* TodayStatsTests.swift in Sources */,
 				F10E09BC7B41DF904051DC08 /* PrevSessionsStripDataTests.swift in Sources */,
 				93349D7552961CAD8C765FB7 /* FocusTargetLogicTests.swift in Sources */,
+				A7E2C91B4D6F80E1A2B3C4D6 /* WorkoutSessionLogicTests.swift in Sources */,
 				D9F5A2B30C1E5F708B2D4E6F /* SplitScheduleLogicTests.swift in Sources */,
 				52260489A0E5F8F397C552CE /* WorkoutFormatTests.swift in Sources */,
 				08F2D596CD1C0AF37A4D316E /* E1RMDetectionTests.swift in Sources */,
@@ -832,7 +836,7 @@
 				CODE_SIGN_ENTITLEMENTS = "strength-training/strength-training.entitlements";
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				DEVELOPMENT_TEAM = 53AH938CUW;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -871,7 +875,7 @@
 				CODE_SIGN_ENTITLEMENTS = "strength-training/strength-training.entitlements";
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				DEVELOPMENT_TEAM = 53AH938CUW;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;

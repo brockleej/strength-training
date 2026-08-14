@@ -1,5 +1,41 @@
 # RockLog release notes
 
+## 1.0 (8) — 2026-08-13
+
+TestFlight build **8** (marketing version **1.0**). Previous TF upload was **build 7**.
+
+### What’s new
+
+- **Delete an extra set:** swipe left on a logged set in Focus actually removes it (trash was untappable; full swipe now deletes). Remaining sets renumber.
+- **Finish this workout?** After you mark the last lift **Done**, a prompt offers Finish or Keep training.
+- **Exercise notes:** on the lift screen (and Edit exercise), jot difficulty / next time / a modification. Sticks on the exercise for the next session.
+
+### What to test
+
+- Log a set by mistake → swipe left → set gone, numbers 1…n.
+- Mark every lift Done → confirm dialog → Finish Workout still goes to effort/summary.
+- Add a note on a lift, leave Focus, come back — note still there.
+
+### Files touched (high level)
+
+- Swipe: `SwipeToDelete.swift`, `FocusSetsCard.swift`
+- Sets: `SetMutation.swift`, `WorkoutViewModel.deleteSet`
+- Finish prompt: `WorkoutCompletionLogic.swift`, `FocusFlowView`, `WorkoutTabView`
+- Notes: `ExerciseNoteCard.swift`, `FocusView`, `EditExerciseView`
+- Tests: `WorkoutSessionLogicTests.swift`
+
+### Build / ship checklist
+
+1. Confirm `CURRENT_PROJECT_VERSION` is **greater** than last App Store Connect build (this release: **8**).
+2. Push `main` → Xcode Cloud → TestFlight (or local archive + upload).
+3. Wait for processing before re-uploading the same number.
+
+### Later (not this build)
+
+- Fresh **README + App Store screenshots** (`docs/screenshots/` is stale). See `docs/SCREENSHOTS.md`.
+
+---
+
 ## 1.0 (7) — 2026-08-11
 
 TestFlight build **7** (marketing version **1.0**). Previous TF upload was **build 6**.
