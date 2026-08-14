@@ -32,4 +32,22 @@ final class CloudKitErrorFormattingTests: XCTestCase {
         let message = CloudKitErrorFormatting.userFacingMessage(from: outer) ?? ""
         XCTAssertTrue(message.localizedCaseInsensitiveContains("network"))
     }
+
+    func test_emptyPartialFailure_isRetryable() {
+        let err = NSError(domain: CKError.errorDomain, code: CKError.Code.partialFailure.rawValue)
+        let summary = CloudKitErrorFormatting.summarize(err)
+        XCTAssertEqual(summary?.isRetryable, true)
+    }
+
+    func test_quota_isNotRetryable() {
+        let err = NSError(domain: CKError.errorDomain, code: CKError.Code.quotaExceeded.rawValue)
+        let summary = CloudKitErrorFormatting.summarize(err)
+        XCTAssertEqual(summary?.isRetryable, false)
+    }
+
+    func test_serverRecordChanged_isRetryable() {
+        let err = NSError(domain: CKError.errorDomain, code: CKError.Code.serverRecordChanged.rawValue)
+        let summary = CloudKitErrorFormatting.summarize(err)
+        XCTAssertEqual(summary?.isRetryable, true)
+    }
 }

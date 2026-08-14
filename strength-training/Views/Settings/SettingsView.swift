@@ -396,7 +396,7 @@ struct SettingsView: View {
             .scrollDismissesKeyboard(.interactively)
             .refreshable {
                 guard CloudKitSyncService.isEnabled else { return }
-                await cloudKitSyncService.checkAccountStatus()
+                await cloudKitSyncService.nudgeSync(modelContext: modelContext)
             }
             .navigationTitle("Settings")
             .toolbar {
@@ -479,30 +479,31 @@ struct SettingsView: View {
                         }
                     } else if let error = cloudKitSyncService.syncError {
                         VStack(alignment: .leading, spacing: 6) {
-                            Label("Sync hiccup", systemImage: "exclamationmark.icloud")
+                            Label("Couldn’t sync", systemImage: "exclamationmark.icloud")
                                 .foregroundStyle(Color.uplift.customBadge)
                             Text(error)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
-                            if let lastSync = cloudKitSyncService.lastSyncDate {
-                                Text("Last full sync \(lastSync, style: .relative)")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                            Text("Workouts stay on this phone. Pull down to retry.")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                            retrySyncButton
                         }
                     } else {
-                        HStack {
-                            Label("iCloud Sync Active", systemImage: "checkmark.icloud.fill")
-                                .foregroundStyle(Color.uplift.ahGreen)
-                            Spacer()
-                            if let lastSync = cloudKitSyncService.lastSyncDate {
-                                Text(lastSync, style: .relative)
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack {
+                                Label("iCloud Sync Active", systemImage: "checkmark.icloud.fill")
+                                    .foregroundStyle(Color.uplift.ahGreen)
+                                Spacer()
+                                if let lastSync = cloudKitSyncService.lastSyncDate {
+                                    Text(lastSync, style: .relative)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                            if let warning = cloudKitSyncService.lastExportWarning {
+                                Text(warning)
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
+                            retrySyncButton
                         }
                     }
 
@@ -553,7 +554,7 @@ struct SettingsView: View {
         } footer: {
             sectionFooter(
                 CloudKitSyncService.isEnabled
-                    ? "Workouts sync to iCloud across your devices signed into the same account."
+                    ? "Workouts stay on this phone. iCloud copies them when it can. Tap Retry or pull to refresh to poke iCloud — a later “skipped some items” line after a green status is a retryable upload, not lost data."
                     : "Workouts stay on this device only. Use Backup → Export below for a copy."
             )
         }
@@ -562,6 +563,18 @@ struct SettingsView: View {
             guard CloudKitSyncService.isEnabled else { return }
             await cloudKitSyncService.checkAccountStatus()
         }
+    }
+
+    private var retrySyncButton: some View {
+        Button {
+            Task { await cloudKitSyncService.nudgeSync(modelContext: modelContext) }
+        } label: {
+            Text("Retry sync")
+                .font(.uplift.text(13, weight: .semibold))
+                .foregroundStyle(Color.uplift.accent)
+        }
+        .buttonStyle(.plain)
+        .accessibilityHint("Checks iCloud and asks CloudKit to sync again")
     }
 
     // MARK: - Keyboard

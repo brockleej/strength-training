@@ -3,9 +3,10 @@
 //  strength-training
 //
 
-import Foundation
 import CloudKit
 import CoreData
+import Foundation
+import os
 import SwiftData
 
 @Observable
@@ -22,17 +23,20 @@ final class CloudKitSyncService {
     private(set) var accountStatus: CKAccountStatus = .couldNotDetermine
     private(set) var isSyncing = false
     private(set) var lastSyncDate: Date?
+    /// Blocking failure (auth, quota, schema). Nil if we only had a retryable export skip.
     private(set) var syncError: String?
+    /// Last retryable export skip — Settings stays green if `lastSyncDate` is set.
+    private(set) var lastExportWarning: String?
     /// True after the first `checkAccountStatus` attempt finishes (success or failure).
     private(set) var hasCheckedAccount = false
 
     private var observers: [Any] = []
     private let container = CKContainer(identifier: CloudKitSyncService.containerIdentifier)
+    private let log = Logger(subsystem: "com.lee.lift2026", category: "CloudKit")
 
     init() {
         lastSyncDate = UserDefaults.standard.object(forKey: "lastCloudKitSyncDate") as? Date
         guard Self.isEnabled else {
-            // Distinct from "still checking" so Settings can show local-only copy.
             accountStatus = .couldNotDetermine
             hasCheckedAccount = true
             syncError = nil
@@ -46,7 +50,7 @@ final class CloudKitSyncService {
         observers.forEach { NotificationCenter.default.removeObserver($0) }
     }
 
-    // MARK: - Account Status
+    // MARK: - Account / nudge
 
     func checkAccountStatus() async {
         guard Self.isEnabled else {
@@ -71,9 +75,29 @@ final class CloudKitSyncService {
         }
     }
 
+    /// Pull-to-refresh / Retry: re-check the account and wake the private DB.
+    /// SwiftData has no public “sync now”; this plus a save is the supported poke.
+    @MainActor
+    func nudgeSync(modelContext: ModelContext? = nil) async {
+        guard Self.isEnabled else { return }
+        isSyncing = true
+        await checkAccountStatus()
+        do {
+            _ = try await container.privateCloudDatabase.allRecordZones()
+        } catch {
+            log.error("nudgeSync zones failed: \(error.localizedDescription, privacy: .public)")
+            apply(error: error, eventType: nil)
+            isSyncing = false
+            return
+        }
+        try? modelContext?.save()
+        // Give NSPersistentCloudKitContainer a moment to emit import/export events.
+        try? await Task.sleep(for: .seconds(2))
+        if isSyncing { isSyncing = false }
+    }
+
     /// Wait briefly for iCloud before first-run catalog/split seed, so we don't
     /// overwrite a PPL-PC library with bro-split defaults on an empty local store.
-    /// Returns when: no iCloud account, already has data, first successful import, or timeout.
     @MainActor
     func waitBeforeInitialSeedIfNeeded(
         modelContext: ModelContext,
@@ -84,14 +108,12 @@ final class CloudKitSyncService {
         if !hasCheckedAccount {
             await checkAccountStatus()
         }
-        // No iCloud → seed immediately.
         guard accountStatus == .available else { return }
 
         let exerciseCount = (try? modelContext.fetchCount(FetchDescriptor<Exercise>())) ?? 0
         let splitCount = (try? modelContext.fetchCount(FetchDescriptor<SplitDay>())) ?? 0
         if exerciseCount > 0 || splitCount > 0 { return }
 
-        // Empty local store with iCloud on: give CloudKit a few seconds to land.
         let deadline = ContinuousClock.now + timeout
         while ContinuousClock.now < deadline {
             if lastSyncDate != nil { return }
@@ -105,7 +127,6 @@ final class CloudKitSyncService {
     // MARK: - Observers
 
     private func setupObservers() {
-        // Monitor iCloud account changes
         let accountObserver = NotificationCenter.default.addObserver(
             forName: .CKAccountChanged,
             object: nil,
@@ -115,7 +136,6 @@ final class CloudKitSyncService {
         }
         observers.append(accountObserver)
 
-        // Monitor CloudKit sync events from the underlying persistent container
         let syncObserver = NotificationCenter.default.addObserver(
             forName: NSPersistentCloudKitContainer.eventChangedNotification,
             object: nil,
@@ -134,19 +154,40 @@ final class CloudKitSyncService {
         }
 
         if event.endDate == nil {
-            // Event is in progress
             isSyncing = true
+            return
+        }
+
+        isSyncing = false
+        if event.succeeded {
             syncError = nil
-        } else if event.succeeded {
-            // Event completed successfully
-            isSyncing = false
-            syncError = nil
+            lastExportWarning = nil
             lastSyncDate = event.endDate
             UserDefaults.standard.set(event.endDate, forKey: "lastCloudKitSyncDate")
-        } else {
-            // Event failed
-            isSyncing = false
-            syncError = CloudKitErrorFormatting.userFacingMessage(from: event.error)
+            return
         }
+
+        log.error("CloudKit \(String(describing: event.type), privacy: .public) failed: \(event.error?.localizedDescription ?? "nil", privacy: .public)")
+        apply(error: event.error, eventType: event.type)
+    }
+
+    private func apply(error: Error?, eventType: NSPersistentCloudKitContainer.EventType?) {
+        let summary = CloudKitErrorFormatting.summarize(error)
+        let message = summary?.message ?? "iCloud hit an unknown error."
+        let retryable = summary?.isRetryable ?? false
+        let isExport = eventType == .export
+        // Import/setup already worked this session (or a previous one): a later
+        // export PartialFailure is CloudKit retrying, not “sync is dead.”
+        if retryable, lastSyncDate != nil, isExport || eventType == nil {
+            lastExportWarning = message
+            syncError = nil
+            return
+        }
+        if retryable, lastSyncDate != nil, eventType == .import || eventType == .setup {
+            lastExportWarning = message
+            syncError = nil
+            return
+        }
+        syncError = message
     }
 }

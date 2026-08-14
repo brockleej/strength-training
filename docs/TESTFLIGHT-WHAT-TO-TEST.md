@@ -7,6 +7,22 @@ App Apple ID: `6797695631` · bundle `com.lee.lift2026`
 
 ---
 
+## Build 11 (1.0)
+
+```
+Build 11 — iCloud Retry actually syncs; export skips stay green.
+
+What’s new
+• Settings → Retry sync / pull-to-refresh wakes CloudKit (not just “are you signed in?”).
+• After a good import, a later “skipped some items” pass no longer replaces Active with a red hiccup.
+
+What to test
+• Settings → iCloud: should show Active after launch.
+• Wait 2–3 minutes. Prefer still Active (maybe a small gray note), not “Couldn’t sync.”
+• Tap Retry sync — spinner, then Active again.
+• Finish a workout and confirm History still has it.
+```
+
 ## Build 10 (1.0)
 
 ```

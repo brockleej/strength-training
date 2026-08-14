@@ -1,5 +1,20 @@
 # RockLog release notes
 
+## 1.0 (11) — 2026-08-14
+
+TestFlight build **11**. Previous: **10**.
+
+### What’s new
+
+- **iCloud:** pull-to-refresh and **Retry sync** actually poke CloudKit (10 only re-checked sign-in).
+- A later export “partial failure” after a good import stays **green** with a quiet “skipped some items” line — that is iCloud retrying, not lost workouts.
+
+### What to Test
+
+Settings → iCloud: after launch should go **Active**. If a warning appears a minute later, it should stay Active (not flip to a red hiccup). Tap **Retry sync**.
+
+---
+
 ## 1.0 (10) — 2026-08-14
 
 TestFlight build **10** (marketing version **1.0**). Previous TF upload was **build 9**.
