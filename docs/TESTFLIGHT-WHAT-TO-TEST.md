@@ -1,11 +1,28 @@
 # TestFlight — What to Test
 
-Paste into App Store Connect → the build → **Test Details** → **What to Test**.  
-There is no API key on this Mac, so this is not pushed automatically.
+Paste into App Store Connect → the build → **Test Details** → **What to Test**,  
+**or** drop an API key in `~/Documents/Hobbies/RockLog/secrets/` (see that folder’s README) and we set it from here.
 
 App Apple ID: `6797695631` · bundle `com.lee.lift2026`
 
 ---
+
+## Build 10 (1.0)
+
+```
+Build 10 — iCloud sync fix for CKError 2.
+
+What’s new
+• Session fields that CloudKit needs defaults for (HealthKit id, effort rating).
+• Settings shows a readable sync message instead of “CKErrorDomain error 2”.
+
+What to test
+• Settings → iCloud Sync: pull to refresh. Prefer “iCloud Sync Active” (or a short English hiccup, not error 2).
+• Finish a workout, wait a minute, confirm History still has it.
+• If you have a second device on 10, confirm the new session appears.
+
+If it still fails, note the exact Settings sentence and whether iPhone Settings → iCloud storage is full.
+```
 
 ## Build 9 (1.0)
 

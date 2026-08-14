@@ -66,7 +66,7 @@ final class CloudKitSyncService {
             await MainActor.run {
                 self.accountStatus = .couldNotDetermine
                 self.hasCheckedAccount = true
-                self.syncError = error.localizedDescription
+                self.syncError = CloudKitErrorFormatting.userFacingMessage(from: error)
             }
         }
     }
@@ -146,7 +146,7 @@ final class CloudKitSyncService {
         } else {
             // Event failed
             isSyncing = false
-            syncError = event.error?.localizedDescription
+            syncError = CloudKitErrorFormatting.userFacingMessage(from: event.error)
         }
     }
 }

@@ -51,6 +51,8 @@ ExportOptions.plist
 
 # Secrets (safety net)
 *.env
+*.p8
+secrets/
 Secrets.swift
 *.xcconfig
 !*.xcconfig.example

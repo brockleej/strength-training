@@ -1,5 +1,26 @@
 # RockLog release notes
 
+## 1.0 (10) — 2026-08-14
+
+TestFlight build **10** (marketing version **1.0**). Previous TF upload was **build 9**.
+
+### What’s new
+
+- **iCloud sync:** CloudKit-safe defaults on session HealthKit UUID + effort rating (optional fields without defaults can cause **CKError 2 / PartialFailure** on every pass).
+- **Settings:** Sync hiccup copy instead of raw `CKErrorDomain error 2`; shows last full sync; pull to refresh.
+
+Also deploy the container schema **Development → Production** in [CloudKit Console](https://icloud.developer.apple.com/dashboard) for `iCloud.com.lee.lift2026` if you have not already. TestFlight uses Production.
+
+### What to Test
+
+See `docs/TESTFLIGHT-WHAT-TO-TEST.md` (build 10). After install: Settings → iCloud — should go green, or a readable hiccup (not “error 2”).
+
+### Files
+
+- `WorkoutSession.swift`, `CloudKitErrorFormatting.swift`, `CloudKitSyncService.swift`, `SettingsView.swift`
+
+---
+
 ## 1.0 (9) — 2026-08-14
 
 TestFlight build **9** (marketing version **1.0**). Previous TF upload was **build 8**.

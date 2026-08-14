@@ -478,10 +478,18 @@ struct SettingsView: View {
                             ProgressView()
                         }
                     } else if let error = cloudKitSyncService.syncError {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Label("Sync Error", systemImage: "exclamationmark.icloud")
+                        VStack(alignment: .leading, spacing: 6) {
+                            Label("Sync hiccup", systemImage: "exclamationmark.icloud")
                                 .foregroundStyle(Color.uplift.customBadge)
                             Text(error)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            if let lastSync = cloudKitSyncService.lastSyncDate {
+                                Text("Last full sync \(lastSync, style: .relative)")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Text("Workouts stay on this phone. Pull down to retry.")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }

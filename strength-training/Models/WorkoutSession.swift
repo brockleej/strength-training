@@ -16,8 +16,10 @@ final class WorkoutSession {
     var dayType: String = DayType.arms.rawValue
     var notes: String = ""
     var isCompleted: Bool = false
-    var healthKitWorkoutUUID: UUID?
-    var effortRating: Int?
+    /// Optional, but CloudKit requires an explicit default (`nil` is fine).
+    var healthKitWorkoutUUID: UUID? = nil
+    /// Optional, but CloudKit requires an explicit default (`nil` is fine).
+    var effortRating: Int? = nil
     /// Session filter: "A", "B", or "" (All). Drives which labeled exercises appear.
     var rotationTrack: String = RotationTrack.a.rawValue
     /// Library exercises hidden from this session only (comma-separated UUIDs).
