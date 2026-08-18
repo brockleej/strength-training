@@ -76,8 +76,8 @@ final class GymMembershipStore {
         ) { [weak self] note in
             self?.applyExternalChange(note)
         }
-        // Kick a sync; values may arrive later via didChangeExternally.
-        NSUbiquitousKeyValueStore.default.synchronize()
+        // Values arrive later via didChangeExternally — do not call synchronize()
+        // here; it blocks the main thread on first launch.
     }
 
     deinit {
@@ -88,7 +88,6 @@ final class GymMembershipStore {
 
     /// Call on launch (and after iCloud becomes available) to pull remote values.
     func hydrateFromICloud() {
-        NSUbiquitousKeyValueStore.default.synchronize()
         loadMerged()
     }
 
@@ -140,7 +139,6 @@ final class GymMembershipStore {
         guard !isApplyingRemote, value != old else { return }
         UserDefaults.standard.set(value, forKey: key)
         NSUbiquitousKeyValueStore.default.set(value, forKey: key)
-        NSUbiquitousKeyValueStore.default.synchronize()
     }
 
     private func persistAll() {
@@ -152,7 +150,6 @@ final class GymMembershipStore {
         kvs.set(code, forKey: Self.codeKey)
         kvs.set(label, forKey: Self.labelKey)
         kvs.set(formatRaw, forKey: Self.formatKey)
-        kvs.synchronize()
     }
 
     private func firstNonEmpty(_ a: String?, _ b: String?) -> String? {

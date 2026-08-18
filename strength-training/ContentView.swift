@@ -14,6 +14,7 @@ struct ContentView: View {
     @State private var healthKitService = HealthKitWorkoutService()
     @State private var cloudKitSyncService = CloudKitSyncService()
     @State private var selectedTab = "workout"
+    @State private var awakenedTabs: Set<String> = ["workout"]
     @AppStorage(FirstRunPreferences.completedKey) private var hasCompletedFirstRun = false
 
     var body: some View {
@@ -25,39 +26,32 @@ struct ContentView: View {
                     WorkoutTabView(viewModel: vm)
                         .tabItem { Label("Workout", systemImage: "dumbbell") }
                         .tag("workout")
-                    HistoryListView(workoutVM: vm)
-                        .tabItem { Label("History", systemImage: "clock") }
-                        .tag("history")
-                    ProgressDashboardView()
-                        .tabItem { Label("Progress", systemImage: "chart.line.uptrend.xyaxis") }
-                        .tag("progress")
-                    ExerciseLibraryView()
-                        .tabItem { Label("Exercises", systemImage: "list.bullet") }
-                        .tag("exercises")
-                    SettingsView(healthKitService: healthKitService, cloudKitSyncService: cloudKitSyncService)
-                        .tabItem { Label("Settings", systemImage: "gear") }
-                        .tag("settings")
+                    tab("history") {
+                        HistoryListView(workoutVM: vm)
+                    }
+                    .tabItem { Label("History", systemImage: "clock") }
+                    .tag("history")
+                    tab("progress") {
+                        ProgressDashboardView()
+                    }
+                    .tabItem { Label("Progress", systemImage: "chart.line.uptrend.xyaxis") }
+                    .tag("progress")
+                    tab("exercises") {
+                        ExerciseLibraryView()
+                    }
+                    .tabItem { Label("Exercises", systemImage: "list.bullet") }
+                    .tag("exercises")
+                    tab("settings") {
+                        SettingsView(healthKitService: healthKitService, cloudKitSyncService: cloudKitSyncService)
+                    }
+                    .tabItem { Label("Settings", systemImage: "gear") }
+                    .tag("settings")
+                }
+                .onChange(of: selectedTab) { _, tab in
+                    awakenedTabs.insert(tab)
                 }
             } else {
-                // Mirrors LaunchScreen.storyboard so the handoff is seamless.
-                ZStack {
-                    Color.uplift.bgElev.ignoresSafeArea()
-                    VStack(spacing: 18) {
-                        Image("LaunchGlyph")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 132, height: 63)
-                        Text("RockLog")
-                            .font(.system(size: 34, weight: .bold, design: .default))
-                            .tracking(-0.6)
-                            .foregroundStyle(Color.uplift.accent)
-                        Text("STRENGTH · PHYSIQUE")
-                            .font(.system(size: 11, weight: .medium))
-                            .tracking(1.2)
-                            .foregroundStyle(Color.uplift.fgDim)
-                    }
-                    .offset(y: -12)
-                }
+                RockLogLaunchPlaceholder(showsProgress: false)
             }
         }
         .tint(Color.uplift.accent)
@@ -71,40 +65,46 @@ struct ContentView: View {
             }
         }
         .task {
-            // Migrations are safe anytime; full catalog seed waits for iCloud when empty.
-            SeedData.hydrateSplitPreferencesFromICloud()
-            GymMembershipStore.shared.hydrateFromICloud()
-            BodyProfileStore.shared.hydrateFromICloud()
-            SeedData.migrateExerciseNames(context: modelContext)
-            SeedData.migrateCompoundMuscleGroups(context: modelContext)
-            SeedData.deduplicateExercises(context: modelContext)
-            SeedData.deduplicateSplitDays(context: modelContext)
-
-            let exerciseCount = (try? modelContext.fetchCount(FetchDescriptor<Exercise>())) ?? 0
-            let splitCount = (try? modelContext.fetchCount(FetchDescriptor<SplitDay>())) ?? 0
-            let storeLooksEmpty = exerciseCount == 0 && splitCount == 0
-
-            if storeLooksEmpty {
-                await cloudKitSyncService.waitBeforeInitialSeedIfNeeded(modelContext: modelContext)
-            }
-
-            // After wait: seed only if still empty (no remote library). Never re-fill
-            // deleted catalog lifts on every launch (see SeedData.topUpCatalogIfNeeded).
-            SeedData.seedIfNeeded(
-                context: modelContext,
-                allowEmptyCatalogSeed: true
-            )
-            // If user had configured a split but store is still empty (sync lag),
-            // seedIfNeeded already skipped re-seeding bro when hasConfiguredSplit is set.
+            // Show tabs immediately — don't wait on CloudKit / seed / KVS.
             DayTypeRegistry.shared.reload(context: modelContext)
-
             if workoutViewModel == nil {
                 workoutViewModel = WorkoutViewModel(
                     modelContext: modelContext,
                     healthKitService: healthKitService
                 )
             }
+            await Task.yield()
+
+            SeedData.hydrateSplitPreferencesFromICloud()
+            GymMembershipStore.shared.hydrateFromICloud()
+            BodyProfileStore.shared.hydrateFromICloud()
+            SeedData.migrateExerciseNames(context: modelContext)
+            SeedData.migrateCompoundMuscleGroups(context: modelContext)
+            // Dedupe walks every lift's history — only after CloudKit import.
+
+            let exerciseCount = (try? modelContext.fetchCount(FetchDescriptor<Exercise>())) ?? 0
+            let splitCount = (try? modelContext.fetchCount(FetchDescriptor<SplitDay>())) ?? 0
+            let hasRemoteSplit = UserDefaults.standard.bool(forKey: SeedData.hasConfiguredSplitKey)
+                || SeedData.loadSplitSnapshot() != nil
+            if exerciseCount == 0 && splitCount == 0 && hasRemoteSplit {
+                await cloudKitSyncService.waitBeforeInitialSeedIfNeeded(modelContext: modelContext)
+            }
+
+            SeedData.reconcileSplitToSnapshot(context: modelContext)
+            SeedData.seedIfNeeded(
+                context: modelContext,
+                allowEmptyCatalogSeed: true
+            )
+            DayTypeRegistry.shared.reload(context: modelContext)
+            SeedData.persistSplitSnapshotIfAuthoritative(context: modelContext)
             healthKitService.checkAuthorization()
+        }
+        .onReceive(NotificationCenter.default.publisher(
+            for: NSUbiquitousKeyValueStore.didChangeExternallyNotification
+        )) { _ in
+            SeedData.hydrateSplitPreferencesFromICloud()
+            SeedData.reconcileSplitToSnapshot(context: modelContext)
+            DayTypeRegistry.shared.reload(context: modelContext)
         }
         // Second device often seeds before iCloud import finishes — re-dedupe after sync.
         .onChange(of: cloudKitSyncService.lastSyncDate) { _, newDate in
@@ -119,7 +119,46 @@ struct ContentView: View {
         }
         // Don't auto-prompt HealthKit on cold launch — that dialog can stall the
         // first frame. Settings (and starting a workout) request access instead.
+    }
 
+    @ViewBuilder
+    private func tab<Content: View>(_ id: String, @ViewBuilder content: () -> Content) -> some View {
+        if awakenedTabs.contains(id) {
+            content()
+        } else {
+            Color.uplift.bgElev.ignoresSafeArea()
+        }
+    }
+}
+
+/// Matches LaunchScreen.storyboard so the handoff does not flash.
+struct RockLogLaunchPlaceholder: View {
+    var showsProgress: Bool
+
+    var body: some View {
+        ZStack {
+            Color.uplift.bgElev.ignoresSafeArea()
+            VStack(spacing: 18) {
+                Image("LaunchGlyph")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 132, height: 63)
+                Text("RockLog")
+                    .font(.system(size: 34, weight: .bold, design: .default))
+                    .tracking(-0.6)
+                    .foregroundStyle(Color.uplift.accent)
+                Text("STRENGTH · PHYSIQUE")
+                    .font(.system(size: 11, weight: .medium))
+                    .tracking(1.2)
+                    .foregroundStyle(Color.uplift.fgDim)
+                if showsProgress {
+                    ProgressView()
+                        .tint(Color.uplift.accent)
+                        .padding(.top, 8)
+                }
+            }
+            .offset(y: -12)
+        }
     }
 }
 

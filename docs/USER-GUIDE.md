@@ -18,7 +18,7 @@ Five tabs sit at the bottom: **Workout**, **History**, **Progress**, **Exercises
 
 | In Settings | Why |
 |-------------|-----|
-| **Logging → Next set defaults to** | How RockLog fills the next set after you log. See [Auto-fill](#auto-fill-settings--logging). |
+| **Next set default** | How RockLog fills the next set after you log. See [Auto-fill](#auto-fill-settings--logging). |
 | **Rest timer** | Default countdown after a set. You can still turn rest off on a single lift (supersets). |
 | **Progression** | How quickly suggested weight/reps move up after consistent sessions. |
 | **Edit training split** | Your days (Push, Legs, …) and order. Drag to match the week you actually train. |
@@ -192,7 +192,8 @@ Finished workouts only. Incomplete / cancelled sessions do not appear.
 
 **Open a session**
 - Lifts and sets, comparison to similar days, Apple Health stats if you saved them.
-- **Edit** / **Edit workout** reopens that session on the Workout tab. Sets stay in History the whole time. When you are done, **Save Changes** (same as Finish).
+- **Send to RockCoach** (paper plane) sends this workout to your coach. Not a backup — see [RockCoach](#rockcoach).
+- **Edit** reopens that session on the Workout tab. Sets stay in History the whole time. When you are done, **Save Changes** (same as Finish).
 
 Swipe a History row to delete a workout (you will be asked). That is permanent.
 
@@ -210,7 +211,7 @@ Trends across finished sessions — not a live workout screen.
 - **PRs this month**.
 - **Sets by muscle**.
 - **Strength vs endurance** — how you split set counts.
-- **Lift progression** — tap a lift for the e1RM line (toggle top weight) and PR marks.
+- **Lift progression** — spreadsheet of the last few sessions of a split day (same layout as RockCoach). Tap a lift name for the e1RM line (toggle top weight) and PR marks.
 
 Progress only moves when you **Finish** sessions.
 
@@ -232,6 +233,40 @@ Day order and which days exist are **Settings → Edit training split**. The lis
 
 ---
 
+## RockCoach
+
+Off by default. If nobody coaches you in **RockCoach**, leave **Settings → RockCoach → Use RockCoach** off. Send buttons stay hidden on the summary and in History; only that one switch remains in Settings.
+
+If someone *does* coach you, turn **Use RockCoach** on, then send finished workouts as a `.rocklogcoach` file (Messages, Mail, AirDrop, or Files). They import the file in RockCoach.
+
+**These files are for your coach, not a backup of RockLog.** They carry lifts and working sets so RockCoach can show progression. They do not restore your library, split, or history.
+
+### Send a workout
+
+- After **Finish**, the summary **paper plane**: **This workout** or **Unsent workouts**.
+- History → open a session → paper plane (that workout only).
+- **Settings → RockCoach**
+  - **Use RockCoach** — show or hide the rest of this feature.
+  - **Your name on coach files** — printed on the file, not your Apple ID.
+  - **Offer to send after finish** — opens the send sheet when you finish a live workout (not when you save a History edit).
+  - **Send last workout to coach**
+  - **Send unsent workouts** — everything finished that you have not sent yet.
+
+One workout is a session file. Two or more unsent workouts go as one batch file. Send the attachment — do not paste the file as text.
+
+**Save to Files** in the system sheet keeps a copy of what you sent. That is still a coach file, not a restore.
+
+### Backup (save / export)
+
+**Settings → Backup** is how you save or move *this* phone’s log.
+
+- **Export backup** — JSON of the library, split, and sessions.
+- **Restore from backup** — replaces everything on this phone.
+
+Use this for safekeeping or another device. Do not restore a `.rocklogcoach` file.
+
+---
+
 ## Quick reference
 
 | I want to… | Do this |
@@ -246,6 +281,9 @@ Day order and which days exist are **Settings → Edit training split**. The lis
 | Each-side lunges | **Sides** on |
 | Warm-ups | **Warm** on, then **Log set** |
 | Change plate jumps | Tap **± 5 / 1 / 0.5** under weight |
-| Change how the next set fills | Settings → **Logging** |
+| Change how the next set fills | Settings → **Next set default** |
 | Membership barcode | Today → **Gym pass** |
 | Fix yesterday’s weights | History → session → **Edit** |
+| Show or hide coach send | Settings → **RockCoach** → **Use RockCoach** |
+| Send a workout to your coach | Turn Use RockCoach on, then summary or History paper plane |
+| Save / move this phone’s log | Settings → **Export backup** |

@@ -35,9 +35,9 @@
 		7BD31A210861E10FCC130CC8 /* unsupported-version.json in Resources */ = {isa = PBXBuildFile; fileRef = 6F62C644CB9B4CFF6875CF58 /* unsupported-version.json */; };
 		85CBF49126D27BC7C7C68605 /* ConfigArtifact.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC046B453D9070D004742173 /* ConfigArtifact.swift */; };
 		93349D7552961CAD8C765FB7 /* FocusTargetLogicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D469A75D83D9297C0A3174B3 /* FocusTargetLogicTests.swift */; };
-		A7E2C91B4D6F80E1A2B3C4D6 /* WorkoutSessionLogicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7E2C91B4D6F80E1A2B3C4D5 /* WorkoutSessionLogicTests.swift */; };
-		C9D0E12F3A4B5C6D7E8F9012 /* CloudKitErrorFormattingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9D0E12F3A4B5C6D7E8F9011 /* CloudKitErrorFormattingTests.swift */; };
+		A0C0AC02C0AC020000000C /* RockCoachShare.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = A0C0AC02C0AC0200000001 /* RockCoachShare.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		A3A7A993E817CEC629FC7D7A /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8227BD6A0FFEBA20B7444236 /* Foundation.framework */; settings = {ATTRIBUTES = (Required, ); }; };
+		A7E2C91B4D6F80E1A2B3C4D6 /* WorkoutSessionLogicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7E2C91B4D6F80E1A2B3C4D5 /* WorkoutSessionLogicTests.swift */; };
 		A86332EC74EEB61D502B9A66 /* ProgressionLabApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2375B8872C6A1C21691DF866 /* ProgressionLabApp.swift */; };
 		AB75C1610447582730CCCB17 /* TrainingMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = E15010E72FA7E5AB009EF2FB /* TrainingMode.swift */; };
 		B2C3D4E5F60718293A4B5C6D /* BodyCompositionMathTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B5C /* BodyCompositionMathTests.swift */; };
@@ -45,9 +45,20 @@
 		B5CE50F29CC09192CC7D822B /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AA363F8D7BCEA2FCDE96CCEE /* Cocoa.framework */; };
 		BC3117F994C6BEF049F4F098 /* ProgressionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87211BB2F7AB169D53339453 /* ProgressionService.swift */; };
 		BD236B396E52380C0E086E31 /* ConfigArtifactReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42F6226112928C7FE996EAB2 /* ConfigArtifactReader.swift */; };
+		C0ACF001D0C0000000000002 /* CoachSessionDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0ACF001D0C0000000000001 /* CoachSessionDocument.swift */; };
+		C0ACF001D0C0000000000004 /* CoachSessionDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0ACF001D0C0000000000001 /* CoachSessionDocument.swift */; };
+		C0ACF001D0C0000000000007 /* CoachProgression.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0ACF001D0C0000000000006 /* CoachProgression.swift */; };
+		C0ACF001D0C0000000000009 /* CoachProgression.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0ACF001D0C0000000000006 /* CoachProgression.swift */; };
+		C0ACF001D0C0000000000011 /* CompareGridTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0ACF001D0C0000000000010 /* CompareGridTable.swift */; };
+		C0ACF001D0C0000000000012 /* CompareGridTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0ACF001D0C0000000000010 /* CompareGridTable.swift */; };
+		C0ACF001D0C000000000000B /* CoachFormatTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0ACF001D0C000000000000A /* CoachFormatTests.swift */; };
+		C0ACF001D0C000000000000D /* CoachInbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0ACF001D0C000000000000C /* CoachInbox.swift */; };
+		C0ACF001D0C000000000000E /* CoachInbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0ACF001D0C000000000000C /* CoachInbox.swift */; };
+		C0ACF001D0C000000000000F /* CoachSessionDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0ACF001D0C0000000000001 /* CoachSessionDocument.swift */; };
 		C1702C911A282B1D864CF718 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AA363F8D7BCEA2FCDE96CCEE /* Cocoa.framework */; };
 		C313AB84BBB7C618881DB9C7 /* BackupLoaderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FE94BB865292C869CD64F4F /* BackupLoaderTests.swift */; };
 		C6BC791F18CDB317248A0634 /* ProgressionServicePureFunctionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A284E56C056FDF4F4E7CE02C /* ProgressionServicePureFunctionTests.swift */; };
+		C9D0E12F3A4B5C6D7E8F9012 /* CloudKitErrorFormattingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9D0E12F3A4B5C6D7E8F9011 /* CloudKitErrorFormattingTests.swift */; };
 		D9F5A2B30C1E5F708B2D4E6F /* SplitScheduleLogicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8E4F1A29B0D4E6F8A1C3D5E /* SplitScheduleLogicTests.swift */; };
 		DD4064CC113170BDC4CA230E /* ReplayTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5781434F825A1387BC87CAD /* ReplayTable.swift */; };
 		DD41F85ED9D23F809FE149E0 /* TodayStatsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A045484DE02168813131AA /* TodayStatsTests.swift */; };
@@ -80,7 +91,28 @@
 			remoteGlobalIDString = E18CFB5E2F4A312400991D60;
 			remoteInfo = "strength-training";
 		};
+		A0C0AC02C0AC020000000D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E18CFB572F4A312400991D60 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A0C0AC02C0AC0200000003;
+			remoteInfo = RockCoachShare;
+		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		A0C0AC02C0AC020000000B /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				A0C0AC02C0AC020000000C /* RockCoachShare.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		0A503B4DC340838FA30BCFC0 /* BackupLoader.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BackupLoader.swift; sourceTree = "<group>"; };
@@ -110,17 +142,24 @@
 		978F4F3D2BE8A98E61F6B83C /* ExerciseModeReplay.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ExerciseModeReplay.swift; sourceTree = "<group>"; };
 		9BB09AE52C260DDF439056CC /* ProgressionServiceParityTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ProgressionServiceParityTests.swift; sourceTree = "<group>"; };
 		9C9B1F409EF0053F85ACE816 /* BackupModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BackupModels.swift; sourceTree = "<group>"; };
+		A0C0AC01C0AC0100000001 /* RockCoach.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RockCoach.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A0C0AC02C0AC0200000001 /* RockCoachShare.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = RockCoachShare.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		A1B2C3D4E5F60718293A4B5C /* BodyCompositionMathTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BodyCompositionMathTests.swift; sourceTree = "<group>"; };
 		A284E56C056FDF4F4E7CE02C /* ProgressionServicePureFunctionTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ProgressionServicePureFunctionTests.swift; sourceTree = "<group>"; };
+		A7E2C91B4D6F80E1A2B3C4D5 /* WorkoutSessionLogicTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkoutSessionLogicTests.swift; sourceTree = "<group>"; };
 		A9D1927AD35565C0B0F0CB4D /* EffortScaleTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EffortScaleTests.swift; sourceTree = "<group>"; };
 		AA363F8D7BCEA2FCDE96CCEE /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.0.sdk/System/Library/Frameworks/Cocoa.framework; sourceTree = DEVELOPER_DIR; };
 		B3E6DCDC4270F67C50095A9A /* SimulationStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SimulationStore.swift; sourceTree = "<group>"; };
+		C0ACF001D0C0000000000001 /* CoachSessionDocument.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoachSessionDocument.swift; sourceTree = "<group>"; };
+		C0ACF001D0C0000000000006 /* CoachProgression.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoachProgression.swift; sourceTree = "<group>"; };
+		C0ACF001D0C000000000000A /* CoachFormatTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoachFormatTests.swift; sourceTree = "<group>"; };
+		C0ACF001D0C000000000000C /* CoachInbox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoachInbox.swift; sourceTree = "<group>"; };
+		C0ACF001D0C0000000000010 /* CompareGridTable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompareGridTable.swift; sourceTree = "<group>"; };
 		C29E8DFE676157D4AD6A2D25 /* minimal-backup.json */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.json; path = "minimal-backup.json"; sourceTree = "<group>"; };
 		C4513366655FE67F2A44DEB5 /* StepperLogicTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StepperLogicTests.swift; sourceTree = "<group>"; };
 		C8E4F1A29B0D4E6F8A1C3D5E /* SplitScheduleLogicTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SplitScheduleLogicTests.swift; sourceTree = "<group>"; };
-		D469A75D83D9297C0A3174B3 /* FocusTargetLogicTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FocusTargetLogicTests.swift; sourceTree = "<group>"; };
-		A7E2C91B4D6F80E1A2B3C4D5 /* WorkoutSessionLogicTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkoutSessionLogicTests.swift; sourceTree = "<group>"; };
 		C9D0E12F3A4B5C6D7E8F9011 /* CloudKitErrorFormattingTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CloudKitErrorFormattingTests.swift; sourceTree = "<group>"; };
+		D469A75D83D9297C0A3174B3 /* FocusTargetLogicTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FocusTargetLogicTests.swift; sourceTree = "<group>"; };
 		D7F178DC244F07C15EE63542 /* Sparkline.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Sparkline.swift; sourceTree = "<group>"; };
 		D831F8CB0728963D5B3EAFD0 /* ProgressionLab.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ProgressionLab.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D922C1B9725A7CCFCA27550B /* AlgorithmFixtures.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AlgorithmFixtures.swift; sourceTree = "<group>"; };
@@ -140,6 +179,20 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		A0C0AC01C0AC010000000A /* Exceptions for "RockCoach" folder in "RockCoach" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = A0C0AC01C0AC0100000003 /* RockCoach */;
+		};
+		A0C0AC02C0AC020000000A /* Exceptions for "RockCoachShare" folder in "RockCoachShare" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = A0C0AC02C0AC0200000003 /* RockCoachShare */;
+		};
 		E1FCA4802F8B1BD7006E0E77 /* Exceptions for "strength-training" folder in "strength-training" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -150,6 +203,22 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		A0C0AC01C0AC0100000002 /* RockCoach */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				A0C0AC01C0AC010000000A /* Exceptions for "RockCoach" folder in "RockCoach" target */,
+			);
+			path = RockCoach;
+			sourceTree = "<group>";
+		};
+		A0C0AC02C0AC0200000002 /* RockCoachShare */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				A0C0AC02C0AC020000000A /* Exceptions for "RockCoachShare" folder in "RockCoachShare" target */,
+			);
+			path = RockCoachShare;
+			sourceTree = "<group>";
+		};
 		E18CFB612F4A312400991D60 /* strength-training */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
@@ -174,6 +243,20 @@
 			buildActionMask = 2147483647;
 			files = (
 				C1702C911A282B1D864CF718 /* Cocoa.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A0C0AC01C0AC0100000005 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A0C0AC02C0AC0200000005 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -271,6 +354,7 @@
 				2C13DB8B2815F5DFA66CB019 /* E1RMDetectionTests.swift */,
 				A9D1927AD35565C0B0F0CB4D /* EffortScaleTests.swift */,
 				A1B2C3D4E5F60718293A4B5C /* BodyCompositionMathTests.swift */,
+				C0ACF001D0C000000000000A /* CoachFormatTests.swift */,
 			);
 			path = "strength-training-tests";
 			sourceTree = "<group>";
@@ -311,6 +395,17 @@
 			name = "OS X";
 			sourceTree = "<group>";
 		};
+		C0ACF001D0C0000000000005 /* CoachFormat */ = {
+			isa = PBXGroup;
+			children = (
+				C0ACF001D0C0000000000001 /* CoachSessionDocument.swift */,
+				C0ACF001D0C0000000000006 /* CoachProgression.swift */,
+				C0ACF001D0C000000000000C /* CoachInbox.swift */,
+				C0ACF001D0C0000000000010 /* CompareGridTable.swift */,
+			);
+			path = CoachFormat;
+			sourceTree = "<group>";
+		};
 		D071FF8A61F769F7C6408A5C /* Dashboard */ = {
 			isa = PBXGroup;
 			children = (
@@ -335,6 +430,7 @@
 			isa = PBXGroup;
 			children = (
 				E15010E42FA7E53C009EF2FB /* Algorithm */,
+				C0ACF001D0C0000000000005 /* CoachFormat */,
 			);
 			path = Shared;
 			sourceTree = "<group>";
@@ -357,6 +453,8 @@
 			children = (
 				E15010E32FA7E526009EF2FB /* Shared */,
 				E18CFB612F4A312400991D60 /* strength-training */,
+				A0C0AC01C0AC0100000002 /* RockCoach */,
+				A0C0AC02C0AC0200000002 /* RockCoachShare */,
 				E18CFB602F4A312400991D60 /* Products */,
 				DCE6C1DA63A5EBF17D0B879B /* Frameworks */,
 				51C16B157883C4911DC9C13D /* strength-training-tests */,
@@ -372,6 +470,8 @@
 				FCD72FE4DBC5F2CB9BEB771B /* strength_training_tests.xctest */,
 				D831F8CB0728963D5B3EAFD0 /* ProgressionLab.app */,
 				8F65F06B7DAEC56D1511479D /* progression_lab_tests.xctest */,
+				A0C0AC01C0AC0100000001 /* RockCoach.app */,
+				A0C0AC02C0AC0200000001 /* RockCoachShare.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -413,6 +513,48 @@
 			productName = "progression-lab-tests";
 			productReference = 8F65F06B7DAEC56D1511479D /* progression_lab_tests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		A0C0AC01C0AC0100000003 /* RockCoach */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A0C0AC01C0AC0100000009 /* Build configuration list for PBXNativeTarget "RockCoach" */;
+			buildPhases = (
+				A0C0AC01C0AC0100000004 /* Sources */,
+				A0C0AC01C0AC0100000005 /* Frameworks */,
+				A0C0AC01C0AC0100000006 /* Resources */,
+				A0C0AC02C0AC020000000B /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A0C0AC02C0AC020000000E /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				A0C0AC01C0AC0100000002 /* RockCoach */,
+			);
+			name = RockCoach;
+			productName = RockCoach;
+			productReference = A0C0AC01C0AC0100000001 /* RockCoach.app */;
+			productType = "com.apple.product-type.application";
+		};
+		A0C0AC02C0AC0200000003 /* RockCoachShare */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A0C0AC02C0AC0200000009 /* Build configuration list for PBXNativeTarget "RockCoachShare" */;
+			buildPhases = (
+				A0C0AC02C0AC0200000004 /* Sources */,
+				A0C0AC02C0AC0200000005 /* Frameworks */,
+				A0C0AC02C0AC0200000006 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				A0C0AC02C0AC0200000002 /* RockCoachShare */,
+			);
+			name = RockCoachShare;
+			productName = RockCoachShare;
+			productReference = A0C0AC02C0AC0200000001 /* RockCoachShare.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 		CF2665086E70C7E1BDE1852D /* strength-training-tests */ = {
 			isa = PBXNativeTarget;
@@ -485,6 +627,8 @@
 				CF2665086E70C7E1BDE1852D /* strength-training-tests */,
 				4F24BB600FA0AED51F0C2A5B /* ProgressionLab */,
 				63987D9F4690E57A621DFB86 /* progression-lab-tests */,
+				A0C0AC01C0AC0100000003 /* RockCoach */,
+				A0C0AC02C0AC0200000003 /* RockCoachShare */,
 			);
 		};
 /* End PBXProject section */
@@ -508,6 +652,20 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		939DA61D7B673F734AE3BB27 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A0C0AC01C0AC0100000006 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A0C0AC02C0AC0200000006 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -575,6 +733,27 @@
 				08F2D596CD1C0AF37A4D316E /* E1RMDetectionTests.swift in Sources */,
 				E817E9DE7E0C2E2F33F7A626 /* EffortScaleTests.swift in Sources */,
 				B2C3D4E5F60718293A4B5C6D /* BodyCompositionMathTests.swift in Sources */,
+				C0ACF001D0C000000000000B /* CoachFormatTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A0C0AC01C0AC0100000004 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C0ACF001D0C0000000000004 /* CoachSessionDocument.swift in Sources */,
+				C0ACF001D0C0000000000009 /* CoachProgression.swift in Sources */,
+				C0ACF001D0C000000000000D /* CoachInbox.swift in Sources */,
+				C0ACF001D0C0000000000012 /* CompareGridTable.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A0C0AC02C0AC0200000004 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C0ACF001D0C000000000000F /* CoachSessionDocument.swift in Sources */,
+				C0ACF001D0C000000000000E /* CoachInbox.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -599,12 +778,21 @@
 				2334F6309DF8766B63363CB5 /* ProgressionTypes.swift in Sources */,
 				06EAF8373D2C66680087860B /* BackupModels.swift in Sources */,
 				37C45FF0E0D33AE49B93AB69 /* ProgressionService.swift in Sources */,
+				C0ACF001D0C0000000000002 /* CoachSessionDocument.swift in Sources */,
+				C0ACF001D0C0000000000007 /* CoachProgression.swift in Sources */,
+				C0ACF001D0C0000000000011 /* CompareGridTable.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		A0C0AC02C0AC020000000E /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = RockCoachShare;
+			target = A0C0AC02C0AC0200000003 /* RockCoachShare */;
+			targetProxy = A0C0AC02C0AC020000000D /* PBXContainerItemProxy */;
+		};
 		F6CD2017D76F9477DC870001 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			name = "strength-training";
@@ -690,6 +878,138 @@
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/strength-training.app/strength-training";
 			};
 			name = Debug;
+		};
+		A0C0AC01C0AC0100000007 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = RockCoach/RockCoach.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 53AH938CUW;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = RockCoach/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = RockCoach;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.lee.rockcoach;
+				PRODUCT_NAME = RockCoach;
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		A0C0AC01C0AC0100000008 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = RockCoach/RockCoach.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 53AH938CUW;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = RockCoach/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = RockCoach;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.lee.rockcoach;
+				PRODUCT_NAME = RockCoach;
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		A0C0AC02C0AC0200000007 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = RockCoachShare/RockCoachShare.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 53AH938CUW;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = RockCoachShare/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = RockCoach;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.lee.rockcoach.share;
+				PRODUCT_NAME = RockCoachShare;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		A0C0AC02C0AC0200000008 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = RockCoachShare/RockCoachShare.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 53AH938CUW;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = RockCoachShare/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = RockCoach;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.lee.rockcoach.share;
+				PRODUCT_NAME = RockCoachShare;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
 		};
 		D66CD616015FBAA8FDE65A28 /* Release */ = {
 			isa = XCBuildConfiguration;
@@ -840,7 +1160,7 @@
 				CODE_SIGN_ENTITLEMENTS = "strength-training/strength-training.entitlements";
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 11;
+				CURRENT_PROJECT_VERSION = 12;
 				DEVELOPMENT_TEAM = 53AH938CUW;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -879,7 +1199,7 @@
 				CODE_SIGN_ENTITLEMENTS = "strength-training/strength-training.entitlements";
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 11;
+				CURRENT_PROJECT_VERSION = 12;
 				DEVELOPMENT_TEAM = 53AH938CUW;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -961,6 +1281,24 @@
 			buildConfigurations = (
 				EA7E8CE9F736056CD0A71615 /* Release */,
 				F860DA83B96BA8BD72E67DF3 /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A0C0AC01C0AC0100000009 /* Build configuration list for PBXNativeTarget "RockCoach" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A0C0AC01C0AC0100000007 /* Debug */,
+				A0C0AC01C0AC0100000008 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A0C0AC02C0AC0200000009 /* Build configuration list for PBXNativeTarget "RockCoachShare" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A0C0AC02C0AC0200000007 /* Debug */,
+				A0C0AC02C0AC0200000008 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

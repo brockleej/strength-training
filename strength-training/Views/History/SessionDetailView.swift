@@ -15,6 +15,9 @@ struct SessionDetailView: View {
     @State private var healthStats: HealthKitWorkoutStats?
     @State private var loadedStats = false
     @State private var showReopenConfirm = false
+    @State private var shareError: String?
+    @AppStorage(CoachAthletePreferences.enabledKey)
+    private var coachFeaturesEnabled = false
 
     @Query(filter: #Predicate<WorkoutSession> { $0.isCompleted == true },
            sort: \WorkoutSession.date, order: .reverse)
@@ -38,10 +41,6 @@ struct SessionDetailView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 hero
-                if canReopen {
-                    editWorkoutButton
-                        .padding(.bottom, 12)
-                }
                 statsCard
                 if let comparison = SessionMath.comparison(for: session, among: completedSessions) {
                     SessionComparisonCard(comparison: comparison)
@@ -69,14 +68,33 @@ struct SessionDetailView: View {
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            if canReopen {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Edit") {
-                        showReopenConfirm = true
+            ToolbarItem(placement: .topBarTrailing) {
+                HStack(spacing: 16) {
+                    if coachFeaturesEnabled {
+                        Button {
+                            shareWithCoach()
+                        } label: {
+                            Image(systemName: "paperplane")
+                        }
+                        .accessibilityLabel("Send to RockCoach")
                     }
-                    .fontWeight(.semibold)
+
+                    if canReopen {
+                        Button("Edit") {
+                            showReopenConfirm = true
+                        }
+                        .fontWeight(.semibold)
+                    }
                 }
             }
+        }
+        .alert("Couldn’t send", isPresented: Binding(
+            get: { shareError != nil },
+            set: { if !$0 { shareError = nil } }
+        )) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(shareError ?? "")
         }
         .confirmationDialog(
             "Edit this workout?",
@@ -100,26 +118,12 @@ struct SessionDetailView: View {
         }
     }
 
-    private var editWorkoutButton: some View {
-        Button {
-            showReopenConfirm = true
-        } label: {
-            HStack(spacing: 8) {
-                Image(systemName: "pencil.line")
-                    .font(.system(size: 15, weight: .semibold))
-                Text("Edit workout")
-                    .font(.uplift.text(15, weight: .semibold))
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
-            .background(
-                Color.uplift.accent,
-                in: RoundedRectangle(cornerRadius: 16, style: .continuous)
-            )
-            .foregroundStyle(Color.uplift.onAccent)
+    private func shareWithCoach() {
+        do {
+            CoachExportService.present(try CoachExportService.writePackage(for: [session]))
+        } catch {
+            shareError = error.localizedDescription
         }
-        .buttonStyle(.plain)
-        .accessibilityHint("Re-open this session to change sets or add exercises")
     }
 
     // MARK: - Sections

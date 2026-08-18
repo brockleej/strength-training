@@ -19,6 +19,7 @@ struct TodayView: View {
     @State private var confirmingDayType: DayType?
     @State private var showGymPass = false
     @State private var showDayPlanEditor = false
+    @State private var yesterdayPRCount = 0
 
     @Query(
         filter: #Predicate<WorkoutSession> { $0.isCompleted == true },
@@ -89,6 +90,12 @@ struct TodayView: View {
                 sessions: completedSessions,
                 healthKitService: workoutVM.healthKitService
             )
+            if let recent = completedSessions.first {
+                // Don't scan the full history on first paint — that faults every set.
+                let window = Array(completedSessions.prefix(20))
+                let bests = SessionMath.allTimeBestE1RMs(across: window)
+                yesterdayPRCount = SessionMath.e1RMPRCount(for: recent, allTimeBests: bests)
+            }
         }
         .confirmationDialog(
             workoutVM.isRevisitingSavedSession ? "Exit Editing?" : "Cancel Workout?",
@@ -439,7 +446,7 @@ struct TodayView: View {
                     dayType: recent.day,
                     volumeText: TodayStats.formatVolume(SessionMath.volume(of: recent)),
                     setCount: SessionMath.setCount(of: recent),
-                    prCount: SessionMath.e1RMPRCount(for: recent, allSessions: completedSessions)
+                    prCount: yesterdayPRCount
                 )
             }
             .buttonStyle(.plain)

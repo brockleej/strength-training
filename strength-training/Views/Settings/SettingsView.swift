@@ -13,6 +13,7 @@ import CloudKit
 
 struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.scenePhase) private var scenePhase
     var healthKitService: HealthKitWorkoutService
     var cloudKitSyncService: CloudKitSyncService
 
@@ -42,6 +43,15 @@ struct SettingsView: View {
     @AppStorage(SetPrefillPreferences.modeKey)
     private var setPrefillModeRaw: String = SetPrefillPreferences.defaultMode.rawValue
 
+    @AppStorage(CoachAthletePreferences.enabledKey)
+    private var coachFeaturesEnabled: Bool = false
+
+    @AppStorage(CoachAthletePreferences.nameKey)
+    private var coachDisplayName: String = ""
+
+    @AppStorage(CoachAthletePreferences.shareAfterFinishKey)
+    private var shareSessionWithCoach: Bool = false
+
     /// Body profile drafts — edit freely, then Save (zeros/empty fields are easier than live Double bindings).
     @State private var draftWeightText = ""
     @State private var draftFeetText = ""
@@ -58,7 +68,39 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             List {
-                // MARK: In-session logging
+                Section {
+                    NavigationLink {
+                        TrainingSplitSettingsView()
+                    } label: {
+                        Label("Edit training split", systemImage: "calendar")
+                    }
+                } header: {
+                    sectionHeader("Training split")
+                }
+                .listRowBackground(Color.uplift.surface1)
+
+                Section {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Today’s day schedule")
+                            .font(.uplift.text(15, weight: .semibold))
+                            .foregroundStyle(Color.uplift.fg)
+                        UpliftSegmentedControl(
+                            segments: SplitScheduleMode.allCases.map {
+                                UpliftSegment(id: $0.rawValue, label: $0.shortTitle)
+                            },
+                            selection: $splitScheduleModeRaw
+                        )
+                        Text((SplitScheduleMode(rawValue: splitScheduleModeRaw) ?? .rolling).detail)
+                            .font(.uplift.text(12, weight: .medium))
+                            .foregroundStyle(Color.uplift.fgDim)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(.vertical, 4)
+                } header: {
+                    sectionHeader("Rolling / Weekly")
+                }
+                .listRowBackground(Color.uplift.surface1)
+
                 Section {
                     VStack(alignment: .leading, spacing: 10) {
                         Text("Next set defaults to")
@@ -77,7 +119,23 @@ struct SettingsView: View {
                     }
                     .padding(.vertical, 4)
                 } header: {
-                    sectionHeader("Logging")
+                    sectionHeader("Next set default")
+                }
+                .listRowBackground(Color.uplift.surface1)
+
+                Section {
+                    UpliftSegmentedControl(
+                        segments: ProgressionAggressiveness.allCases.map { mode in
+                            UpliftSegment(id: mode.rawValue, label: mode.rawValue)
+                        },
+                        selection: $aggressiveness
+                    )
+                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                    .padding(.vertical, 4)
+                } header: {
+                    sectionHeader("Progression")
+                } footer: {
+                    sectionFooter("How quickly weight or reps go up after consistent sessions. Moderate ≈ after 2; Conservative ≈ after 3.")
                 }
                 .listRowBackground(Color.uplift.surface1)
 
@@ -135,102 +193,9 @@ struct SettingsView: View {
                         .padding(.vertical, 4)
                     }
                 } header: {
-                    sectionHeader("Rest timer")
+                    sectionHeader("Timer")
                 } footer: {
                     sectionFooter("Default length for new lifts. On Focus you can turn rest on/off per exercise (useful for supersets). Sounds are ticks then a go chirp; off = haptics only.")
-                }
-                .listRowBackground(Color.uplift.surface1)
-
-                // MARK: Program
-                Section {
-                    UpliftSegmentedControl(
-                        segments: ProgressionAggressiveness.allCases.map { mode in
-                            UpliftSegment(id: mode.rawValue, label: mode.rawValue)
-                        },
-                        selection: $aggressiveness
-                    )
-                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-                    .padding(.vertical, 4)
-                } header: {
-                    sectionHeader("Progression")
-                } footer: {
-                    sectionFooter("How quickly weight or reps go up after consistent sessions. Moderate ≈ after 2; Conservative ≈ after 3.")
-                }
-                .listRowBackground(Color.uplift.surface1)
-
-                Section {
-                    NavigationLink {
-                        TrainingSplitSettingsView()
-                    } label: {
-                        Label("Edit training split", systemImage: "calendar")
-                    }
-
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("Today’s day schedule")
-                            .font(.uplift.text(15, weight: .semibold))
-                            .foregroundStyle(Color.uplift.fg)
-                        UpliftSegmentedControl(
-                            segments: SplitScheduleMode.allCases.map {
-                                UpliftSegment(id: $0.rawValue, label: $0.shortTitle)
-                            },
-                            selection: $splitScheduleModeRaw
-                        )
-                        Text((SplitScheduleMode(rawValue: splitScheduleModeRaw) ?? .rolling).detail)
-                            .font(.uplift.text(12, weight: .medium))
-                            .foregroundStyle(Color.uplift.fgDim)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    .padding(.vertical, 4)
-                } header: {
-                    sectionHeader("Training days")
-                }
-                .listRowBackground(Color.uplift.surface1)
-
-                // MARK: Personal
-                Section {
-                    TextField(
-                        "Label",
-                        text: $gymMembership.label,
-                        prompt: Text(GymMembershipPreferences.defaultLabel)
-                    )
-                    .font(.uplift.text(15, weight: .medium))
-                    .foregroundStyle(Color.uplift.fg)
-                    .textInputAutocapitalization(.words)
-
-                    TextField("Member ID / barcode number", text: $gymMembership.code)
-                        .font(.uplift.mono(15, weight: .medium))
-                        .foregroundStyle(Color.uplift.fg)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                        .keyboardType(.asciiCapable)
-
-                    Picker("Format", selection: $gymMembership.formatRaw) {
-                        ForEach(GymMembershipPreferences.Format.allCases) { format in
-                            Text(format.title).tag(format.rawValue)
-                        }
-                    }
-                    .font(.uplift.text(15, weight: .medium))
-
-                    Button {
-                        showGymPass = true
-                    } label: {
-                        Label(
-                            gymMembership.isConfigured
-                                ? "Show gym pass"
-                                : "Preview pass (add ID first)",
-                            systemImage: "barcode.viewfinder"
-                        )
-                        .foregroundStyle(
-                            gymMembership.isConfigured
-                                ? Color.uplift.accent
-                                : Color.uplift.fgDim
-                        )
-                    }
-                    .disabled(!gymMembership.isConfigured)
-                } header: {
-                    sectionHeader("Gym pass")
-                } footer: {
-                    sectionFooter("Number under your membership barcode. Syncs via iCloud. Open from Today’s barcode button at check-in.")
                 }
                 .listRowBackground(Color.uplift.surface1)
 
@@ -320,54 +285,92 @@ struct SettingsView: View {
                 .listRowBackground(Color.uplift.surface1)
                 .onAppear { loadBodyProfileDraft() }
 
-                // MARK: System
                 Section {
-                    if healthKitService.isAvailable {
-                        switch healthKitService.authorizationStatus {
-                        case .none:
-                            Button {
-                                Task {
-                                    await healthKitService.requestAuthorization()
-                                }
-                            } label: {
-                                Label("Connect Apple Health", systemImage: "heart.fill")
-                            }
-                        case true?:
-                            Label("Apple Health Connected", systemImage: "checkmark.circle.fill")
-                                .foregroundStyle(Color.uplift.ahGreen)
-                        case false?:
-                            VStack(alignment: .leading, spacing: 4) {
-                                Label("Apple Health Not Authorized", systemImage: "exclamationmark.triangle")
-                                    .foregroundStyle(Color.uplift.customBadge)
-                                Text("Open Settings → Privacy → Health to grant access.")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
+                    TextField(
+                        "Label",
+                        text: $gymMembership.label,
+                        prompt: Text(GymMembershipPreferences.defaultLabel)
+                    )
+                    .font(.uplift.text(15, weight: .medium))
+                    .foregroundStyle(Color.uplift.fg)
+                    .textInputAutocapitalization(.words)
+
+                    TextField("Member ID / barcode number", text: $gymMembership.code)
+                        .font(.uplift.mono(15, weight: .medium))
+                        .foregroundStyle(Color.uplift.fg)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .keyboardType(.asciiCapable)
+
+                    Picker("Format", selection: $gymMembership.formatRaw) {
+                        ForEach(GymMembershipPreferences.Format.allCases) { format in
+                            Text(format.title).tag(format.rawValue)
                         }
-                    } else {
-                        Label("Apple Health Not Available", systemImage: "heart.slash")
-                            .foregroundStyle(.secondary)
                     }
+                    .font(.uplift.text(15, weight: .medium))
+
+                    Button {
+                        showGymPass = true
+                    } label: {
+                        Label(
+                            gymMembership.isConfigured
+                                ? "Show gym pass"
+                                : "Preview pass (add ID first)",
+                            systemImage: "barcode.viewfinder"
+                        )
+                        .foregroundStyle(
+                            gymMembership.isConfigured
+                                ? Color.uplift.accent
+                                : Color.uplift.fgDim
+                        )
+                    }
+                    .disabled(!gymMembership.isConfigured)
                 } header: {
-                    sectionHeader("Apple Health")
+                    sectionHeader("Gym pass")
                 } footer: {
-                    sectionFooter("Saves finished workouts for Activity rings and fitness history.")
+                    sectionFooter("Number under your membership barcode. Syncs via iCloud. Open from Today’s barcode button at check-in.")
                 }
                 .listRowBackground(Color.uplift.surface1)
 
-                iCloudSyncSection
-
                 Section {
-                    Button {
-                        showWelcomeGuide = true
-                    } label: {
-                        Label("Welcome guide", systemImage: "book")
-                            .foregroundStyle(Color.uplift.accent)
+                    Toggle(isOn: $coachFeaturesEnabled) {
+                        Label("Use RockCoach", systemImage: "person.2")
+                    }
+                    .tint(Color.uplift.accent)
+
+                    if coachFeaturesEnabled {
+                        TextField(
+                            "Your name on coach files",
+                            text: $coachDisplayName,
+                            prompt: Text(CoachAthletePreferences.defaultDisplayName)
+                        )
+                        .font(.uplift.text(15, weight: .medium))
+                        .foregroundStyle(Color.uplift.fg)
+                        .textInputAutocapitalization(.words)
+
+                        Toggle(isOn: $shareSessionWithCoach) {
+                            Label("Offer to send after finish", systemImage: "paperplane")
+                        }
+                        .tint(Color.uplift.accent)
+
+                        Button(action: shareLastSessionWithCoach) {
+                            Label("Send last workout to coach", systemImage: "paperplane")
+                                .foregroundStyle(Color.uplift.accent)
+                        }
+
+                        Button(action: shareSinceLastShareWithCoach) {
+                            Label("Send unsent workouts", systemImage: "clock.arrow.circlepath")
+                                .foregroundStyle(Color.uplift.accent)
+                        }
                     }
                 } header: {
-                    sectionHeader("Help")
+                    sectionHeader("RockCoach")
                 } footer: {
-                    sectionFooter("Same pages as first launch: Today, logging (assist, sides, warm-up, Done), History, Progress.")
+                    sectionFooter(
+                        coachFeaturesEnabled
+                            ? "These files are for RockCoach — not a backup. Name appears on the file, not your Apple ID. One workout is a session file; two or more unsent go as one batch. Your coach imports it in RockCoach. Use Backup below to save or move your log."
+                            : "Off by default. Turn on only if you send workouts to a coach in RockCoach."
+                    )
                 }
                 .listRowBackground(Color.uplift.surface1)
 
@@ -386,9 +389,64 @@ struct SettingsView: View {
                 } header: {
                     sectionHeader("Backup")
                 } footer: {
-                    sectionFooter("JSON export for safekeeping or another device. Restore replaces all data on this phone.")
+                    sectionFooter("This is your save/export — a JSON of this phone’s log. Restore replaces everything on this device. Coach files above cannot restore RockLog.")
                 }
                 .listRowBackground(Color.uplift.surface1)
+
+                Section {
+                    Button {
+                        showWelcomeGuide = true
+                    } label: {
+                        Label("Welcome guide", systemImage: "book")
+                            .foregroundStyle(Color.uplift.accent)
+                    }
+                } header: {
+                    sectionHeader("Welcome guide")
+                } footer: {
+                    sectionFooter("Same pages as first launch: Today, logging (assist, sides, warm-up, Done), History, Progress.")
+                }
+                .listRowBackground(Color.uplift.surface1)
+
+                Section {
+                    if healthKitService.isAvailable {
+                        switch healthKitService.authorizationStatus {
+                        case .none:
+                            Button {
+                                Task {
+                                    await healthKitService.requestAuthorization()
+                                }
+                            } label: {
+                                Label("Connect Apple Health", systemImage: "heart.fill")
+                            }
+                        case true?:
+                            Button(action: openHealthSettings) {
+                                Label("Apple Health Connected", systemImage: "checkmark.circle.fill")
+                                    .foregroundStyle(Color.uplift.ahGreen)
+                            }
+                        case false?:
+                            Button(action: openHealthSettings) {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Label("Allow in Health settings", systemImage: "exclamationmark.triangle")
+                                        .foregroundStyle(Color.uplift.customBadge)
+                                    Text("Opens Settings so you can turn on RockLog under Health.")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                        }
+                    } else {
+                        Label("Apple Health Not Available", systemImage: "heart.slash")
+                            .foregroundStyle(.secondary)
+                    }
+                } header: {
+                    sectionHeader("Apple Health")
+                } footer: {
+                    sectionFooter("Saves finished workouts for Activity rings and fitness history. After the first ask, iOS only lets you change Health access in Settings.")
+                }
+                .listRowBackground(Color.uplift.surface1)
+                .onAppear { healthKitService.checkAuthorization() }
+
+                iCloudSyncSection
             }
             .scrollContentBackground(.hidden)
             .background(Color.uplift.bgElev)
@@ -397,6 +455,11 @@ struct SettingsView: View {
             .refreshable {
                 guard CloudKitSyncService.isEnabled else { return }
                 await cloudKitSyncService.nudgeSync(modelContext: modelContext)
+            }
+            .onChange(of: scenePhase) { _, phase in
+                if phase == .active {
+                    healthKitService.checkAuthorization()
+                }
             }
             .navigationTitle("Settings")
             .toolbar {
@@ -588,6 +651,13 @@ struct SettingsView: View {
         )
     }
 
+    /// HealthKit will not show the permission sheet again after a denial.
+    /// The app’s Settings page is where iOS puts the Health toggle.
+    private func openHealthSettings() {
+        guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+        UIApplication.shared.open(url)
+    }
+
     // MARK: - Body profile draft
 
     private func loadBodyProfileDraft() {
@@ -658,15 +728,41 @@ struct SettingsView: View {
             let filename = "strength-training-backup-\(formatter.string(from: .now)).json"
             let url = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
             try data.write(to: url)
+            ShareSheetPresenter.presentFile(url)
+        } catch {
+            errorMessage = error.localizedDescription
+            showError = true
+        }
+    }
 
-            // Present UIActivityViewController directly from root — embedding it in a
-            // SwiftUI .sheet causes a nested modal that renders blank.
-            guard let rootVC = UIApplication.shared.connectedScenes
-                .compactMap({ $0 as? UIWindowScene })
-                .first?.windows.first?.rootViewController else { return }
+    private func shareLastSessionWithCoach() {
+        do {
+            var fetch = FetchDescriptor<WorkoutSession>(
+                predicate: #Predicate { $0.isCompleted == true },
+                sortBy: [SortDescriptor(\.date, order: .reverse)]
+            )
+            fetch.fetchLimit = 1
+            guard let session = try modelContext.fetch(fetch).first else {
+                errorMessage = "No finished workout to send yet."
+                showError = true
+                return
+            }
+            CoachExportService.present(try CoachExportService.writePackage(for: [session]))
+        } catch {
+            errorMessage = error.localizedDescription
+            showError = true
+        }
+    }
 
-            let activityVC = UIActivityViewController(activityItems: [url], applicationActivities: nil)
-            rootVC.present(activityVC, animated: true)
+    private func shareSinceLastShareWithCoach() {
+        do {
+            let completed = try modelContext.fetch(
+                FetchDescriptor<WorkoutSession>(
+                    predicate: #Predicate { $0.isCompleted == true },
+                    sortBy: [SortDescriptor(\.date)]
+                )
+            )
+            CoachExportService.present(try CoachExportService.writeUnsharedPackage(from: completed))
         } catch {
             errorMessage = error.localizedDescription
             showError = true

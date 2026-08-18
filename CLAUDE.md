@@ -23,6 +23,9 @@ xcodebuild -scheme strength-training -destination 'platform=iOS Simulator,name=i
 
 # Open in Xcode
 open strength-training.xcodeproj
+
+# RockCoach companion (Path 1 — local import only, scheme RockCoach)
+xcodebuild -scheme RockCoach -destination 'platform=iOS Simulator,name=iPhone 17' build
 ```
 
 ### Tests
@@ -67,8 +70,10 @@ Models/        -> SwiftData @Model classes (Exercise, WorkoutSession, ExerciseRe
                   SplitDay, BodyMetricEntry) + day/rotation types, SeedData
 ViewModels/    -> @Observable classes managing state per feature (incl. BodyMetricsViewModel)
 Views/         -> SwiftUI views by feature (DesignSystem, Today, Workout, History, Progress, Library, Settings)
-Services/      -> Backup, progression, E1RM, PRs, rest timer, body composition (Navy/FFMI),
+Services/      -> Backup, coach export/share, progression, E1RM, PRs, rest timer, body composition (Navy/FFMI),
                   HealthKit, CloudKit status, gym pass, split schedule
+Shared/CoachFormat/ -> rocklog.coach.session codec (RockLog export + RockCoach import)
+RockCoach/     -> Companion app target (com.lee.rockcoach): import files, roster, session, set comparison
 Utilities/     -> PreviewSampleData (preview helpers only)
 ```
 

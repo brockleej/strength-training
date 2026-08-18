@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rocklog.app/schema/rocklog.coach.batch.v1.json",
+  "title": "rocklog.coach.batch",
+  "description": "Two or more finished RockLog workouts for RockCoach. Session objects match rocklog.coach.session v1. No tonnage.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format", "schemaVersion", "exportedAt", "athlete", "sessions"],
+  "properties": {
+    "format": { "const": "rocklog.coach.batch" },
+    "schemaVersion": { "const": 1 },
+    "exportedAt": { "type": "string", "format": "date-time" },
+    "athlete": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "displayName"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "displayName": { "type": "string", "minLength": 1 }
+      }
+    },
+    "sessions": {
+      "type": "array",
+      "minItems": 2,
+      "items": { "$ref": "https://rocklog.app/schema/rocklog.coach.session.v1.json#/properties/session" }
+    }
+  }
+}

@@ -15,6 +15,10 @@ struct WorkoutSummaryView: View {
     @Bindable var workoutVM: WorkoutViewModel
 
     @State private var hkStats: HealthKitWorkoutStats?
+    @State private var shareError: String?
+    @State private var showShareChoices = false
+    @AppStorage(CoachAthletePreferences.enabledKey)
+    private var coachFeaturesEnabled = false
 
     @Query(
         filter: #Predicate<WorkoutSession> { $0.isCompleted == true },
@@ -102,7 +106,26 @@ struct WorkoutSummaryView: View {
         .safeAreaInset(edge: .bottom) {
             actionBar
         }
+        .confirmationDialog("Send to RockCoach", isPresented: $showShareChoices, titleVisibility: .visible) {
+            Button("This workout") { shareThisWorkout() }
+            Button(sinceLastShareLabel) { shareSinceLastShare() }
+            Button("Cancel", role: .cancel) {}
+        }
+        .alert("Couldn’t send", isPresented: Binding(
+            get: { shareError != nil },
+            set: { if !$0 { shareError = nil } }
+        )) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(shareError ?? "")
+        }
         .task {
+            if coachFeaturesEnabled, workoutVM.consumeCoachShareOffer() {
+                // Wait until the finish cover is on screen — presenting the
+                // share sheet from onAppear deadlocks UIKit.
+                try? await Task.sleep(for: .milliseconds(400))
+                shareThisWorkout()
+            }
             if let uuid = session.healthKitWorkoutUUID {
                 hkStats = await workoutVM.healthKitService.fetchWorkoutStats(for: uuid)
             }
@@ -133,13 +156,28 @@ struct WorkoutSummaryView: View {
 
     private var actionBar: some View {
         PillBottomBar {
+            if coachFeaturesEnabled {
+                Button {
+                    showShareChoices = true
+                } label: {
+                    Image(systemName: "paperplane")
+                        .font(.system(size: 16, weight: .semibold))
+                        .padding(.vertical, 14)
+                        .padding(.horizontal, 16)
+                        .foregroundStyle(Color.uplift.fg)
+                        .contentShape(Rectangle())
+                        .accessibilityLabel("Send to RockCoach")
+                }
+                .buttonStyle(.plain)
+            }
+
             Button {
                 workoutVM.dismissSummaryToToday()
             } label: {
                 Text("Done")
                     .font(.uplift.text(15, weight: .semibold))
                     .padding(.vertical, 14)
-                    .padding(.horizontal, 22)
+                    .padding(.horizontal, 18)
                     .foregroundStyle(Color.uplift.fg)
                     .contentShape(Rectangle())
             }
@@ -158,6 +196,32 @@ struct WorkoutSummaryView: View {
             .buttonStyle(.plain)
         }
         .padding(.bottom, 12)
+    }
+
+    private var unsharedCount: Int {
+        CoachShareLedger.unshared(from: completedSessions).count
+    }
+
+    private var sinceLastShareLabel: String {
+        let count = unsharedCount
+        if count == 0 { return "Unsent workouts" }
+        return "Unsent workouts (\(count))"
+    }
+
+    private func shareThisWorkout() {
+        do {
+            CoachExportService.present(try CoachExportService.writePackage(for: [session]))
+        } catch {
+            shareError = error.localizedDescription
+        }
+    }
+
+    private func shareSinceLastShare() {
+        do {
+            CoachExportService.present(try CoachExportService.writeUnsharedPackage(from: completedSessions))
+        } catch {
+            shareError = error.localizedDescription
+        }
     }
 
     private var durationText: String {

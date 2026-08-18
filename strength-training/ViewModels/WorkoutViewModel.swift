@@ -513,6 +513,7 @@ final class WorkoutViewModel {
             session.isCompleted = true
         }
         let capturedSession = session
+        pendingCoachShare = !wasRevisit && CoachAthletePreferences.shouldOfferAfterFinish
         clearRevisiting()
         restEndDate = nil
         // Don't nil activeSession here — keep the workout screen visible as a
@@ -621,6 +622,15 @@ final class WorkoutViewModel {
     /// Set when the user taps "View Details" — TodayView pushes this session's
     /// detail via navigationDestination(item:).
     var summaryDetailSession: WorkoutSession?
+    /// True after a live finish when Settings “Offer to send after finish” is on.
+    private var pendingCoachShare = false
+
+    /// Returns true once after a live finish that should auto-present the send sheet.
+    func consumeCoachShareOffer() -> Bool {
+        let offer = pendingCoachShare
+        pendingCoachShare = false
+        return offer
+    }
 
     func dismissSummaryToToday() {
         sessionPendingSummary = nil

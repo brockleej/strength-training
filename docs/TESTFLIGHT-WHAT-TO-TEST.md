@@ -7,6 +7,30 @@ App Apple ID: `6797695631` · bundle `com.lee.lift2026`
 
 ---
 
+## Build 12 (1.0)
+
+```
+Build 12 — split and order survive reinstall; Progress spreadsheet; welcome rewrite.
+
+What’s new
+• Training days and their order now save to iCloud and in Export backup.
+• Progress → Lift progression is a side-by-side spreadsheet (names stay, swipe sets).
+• First launch should not sit frozen for 20–30 seconds.
+• Welcome guide is clearer. Settings order starts with split / Rolling-Weekly.
+• Coach send is off unless you turn on Settings → RockCoach.
+
+What to test
+• Today: only the days you actually use, in the order you set. No surprise Arms / Full Body.
+• Settings → Edit training split: drag a day, leave, come back — order stuck.
+• Progress: pick a split day, swipe the numbers sideways. Lift names should not move. Tap a name → lift detail.
+• Finish a workout. History still has it. Settings → iCloud still Active.
+• Settings → RockCoach should be one switch (off). Turn it on only if you want to try sending a file. That file is not a backup.
+• Settings → Welcome guide: skim all four pages. After the welcome, Settings should be the first stop on a new phone.
+• (Optional) Export backup after this build. Restore only if you are okay replacing this phone’s log.
+
+If Today grows extra days or the order resets, say which days you had and whether you restored a backup.
+```
+
 ## Build 11 (1.0)
 
 ```

@@ -71,7 +71,6 @@ final class BodyProfileStore {
         ) { [weak self] note in
             self?.applyExternalChange(note)
         }
-        NSUbiquitousKeyValueStore.default.synchronize()
     }
 
     deinit {
@@ -81,7 +80,6 @@ final class BodyProfileStore {
     }
 
     func hydrateFromICloud() {
-        NSUbiquitousKeyValueStore.default.synchronize()
         loadMerged()
     }
 
@@ -161,14 +159,12 @@ final class BodyProfileStore {
             defaults.set(value, forKey: key)
             kvs.set(value, forKey: key)
         }
-        kvs.synchronize()
     }
 
     private func persistString(_ value: String, key: String, old: String) {
         guard !isApplyingRemote, value != old else { return }
         UserDefaults.standard.set(value, forKey: key)
         NSUbiquitousKeyValueStore.default.set(value, forKey: key)
-        NSUbiquitousKeyValueStore.default.synchronize()
     }
 
     private func persistAll() {
@@ -184,7 +180,6 @@ final class BodyProfileStore {
         }
         defaults.set(sexRaw, forKey: Self.sexKey)
         kvs.set(sexRaw, forKey: Self.sexKey)
-        kvs.synchronize()
     }
 }
 

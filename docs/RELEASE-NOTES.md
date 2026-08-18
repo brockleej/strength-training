@@ -1,5 +1,24 @@
 # RockLog release notes
 
+## 1.0 (12) — 2026-08-17
+
+TestFlight build **12**. Previous: **11**. RockCoach stays local (not on TestFlight).
+
+### What’s new
+
+- **Launch:** first open after install no longer freezes 20–30s on CloudKit store setup. Tabs besides Workout stay unloaded until you tap them.
+- **Split:** Today days and their **order** are saved to iCloud and included in **Export backup**. Reinstall should not add leftover Arms / Full Body from the default seed. Restore no longer invents extra days from the exercise catalog.
+- **Progress:** lift progression is a spreadsheet of recent sessions for each split day (same layout as RockCoach). Lift names stay on the left; swipe sets sideways. Tap a name for the existing lift detail.
+- **Welcome:** five tabs named as tabs; start in Settings; Today vs Home/Resume spelled out; logging in full sentences; Progress matches current metrics (strength score, frequency, body, PRs this month, sets by muscle, split spreadsheet).
+- **Settings:** new order — training split, Rolling/Weekly, next set, progression, timer, body, gym pass, RockCoach, backup, welcome, Apple Health, iCloud. Health row opens Settings → RockLog when access is already decided.
+- **RockCoach send (off by default):** Settings → RockCoach → **Use RockCoach**. Hidden unless you turn it on. Files are for a coach, not a backup.
+
+### What to Test
+
+See `docs/TESTFLIGHT-WHAT-TO-TEST.md` (build 12). Confirm Today still has *your* days in *your* order, Progress names stay put when you swipe, and Settings → RockCoach is a single off switch.
+
+---
+
 ## 1.0 (11) — 2026-08-14
 
 TestFlight build **11**. Previous: **10**.

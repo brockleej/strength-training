@@ -111,3 +111,138 @@ final class WorkoutSessionLogicTests: XCTestCase {
         )
     }
 }
+
+@MainActor
+final class SplitPersistenceTests: XCTestCase {
+    func test_inferSplit_usesSessionDays_notExerciseCatalog() {
+        let backup = AppBackup(
+            version: 1,
+            exportedAt: .now,
+            exercises: [
+                ExerciseBackup(
+                    id: UUID(),
+                    name: "Curl",
+                    dayType: "Arms",
+                    muscleGroup: "Biceps",
+                    sortOrder: 0,
+                    isCustom: false,
+                    notes: ""
+                ),
+            ],
+            sessions: [
+                WorkoutSessionBackup(
+                    id: UUID(),
+                    date: Date(timeIntervalSince1970: 100),
+                    dayType: "Push",
+                    notes: "",
+                    isCompleted: true,
+                    exerciseRecords: []
+                ),
+                WorkoutSessionBackup(
+                    id: UUID(),
+                    date: Date(timeIntervalSince1970: 200),
+                    dayType: "Legs",
+                    notes: "",
+                    isCompleted: true,
+                    exerciseRecords: []
+                ),
+                WorkoutSessionBackup(
+                    id: UUID(),
+                    date: Date(timeIntervalSince1970: 300),
+                    dayType: "Posterior Chain",
+                    notes: "",
+                    isCompleted: true,
+                    exerciseRecords: []
+                ),
+                WorkoutSessionBackup(
+                    id: UUID(),
+                    date: Date(timeIntervalSince1970: 400),
+                    dayType: "Pull",
+                    notes: "",
+                    isCompleted: true,
+                    exerciseRecords: []
+                ),
+            ],
+            splitDays: nil
+        )
+        let names = BackupService.inferSplit(from: backup).map(\.name)
+        XCTAssertEqual(names, ["Push", "Pull", "Legs", "Posterior Chain"])
+        XCTAssertFalse(names.contains("Arms"))
+        XCTAssertFalse(names.contains("Full Body"))
+    }
+
+    func test_applySnapshot_removesBroExtrasAndKeepsOrder() throws {
+        let container = try inMemoryContainer()
+        let context = container.mainContext
+        for (index, name) in ["Arms", "Push", "Legs", "Full Body", "Pull", "Posterior Chain"].enumerated() {
+            let def = DayTypePalette.fallback(for: name)
+            context.insert(
+                SplitDay(
+                    name: def.name,
+                    systemImage: def.systemImage,
+                    subtitle: def.subtitle,
+                    colorHex: def.colorHex,
+                    includesAllExercises: def.includesAllExercises,
+                    sortOrder: index
+                )
+            )
+        }
+        try context.save()
+
+        let snapshot = ["Push", "Legs", "Posterior Chain", "Pull"].enumerated().map { index, name in
+            let def = DayTypePalette.fallback(for: name)
+            return SplitDayBackup(
+                id: UUID(),
+                name: def.name,
+                systemImage: def.systemImage,
+                subtitle: def.subtitle,
+                colorHex: Int(def.colorHex),
+                includesAllExercises: def.includesAllExercises,
+                sortOrder: index
+            )
+        }
+        XCTAssertTrue(SeedData.applySplitSnapshot(snapshot, context: context))
+        let names = ((try? context.fetch(
+            FetchDescriptor<SplitDay>(sortBy: [SortDescriptor(\SplitDay.sortOrder)])
+        )) ?? []).map(\.name)
+        XCTAssertEqual(names, ["Push", "Legs", "Posterior Chain", "Pull"])
+    }
+
+    func test_backupRoundTrip_includesSplitOrder() throws {
+        let container = try inMemoryContainer()
+        let context = container.mainContext
+        for (index, name) in ["Pull", "Push", "Legs"].enumerated() {
+            let def = DayTypePalette.fallback(for: name)
+            context.insert(
+                SplitDay(
+                    name: def.name,
+                    systemImage: def.systemImage,
+                    subtitle: def.subtitle,
+                    colorHex: def.colorHex,
+                    includesAllExercises: def.includesAllExercises,
+                    sortOrder: index
+                )
+            )
+        }
+        try context.save()
+
+        let data = try BackupService.export(context: context)
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let decoded = try decoder.decode(AppBackup.self, from: data)
+        XCTAssertEqual(decoded.splitDays?.map(\.name), ["Pull", "Push", "Legs"])
+    }
+
+    private func inMemoryContainer() throws -> ModelContainer {
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        return try ModelContainer(
+            for: Exercise.self,
+            WorkoutSession.self,
+            ExerciseRecord.self,
+            SetRecord.self,
+            SplitDay.self,
+            BodyMetricEntry.self,
+            configurations: config
+        )
+    }
+}

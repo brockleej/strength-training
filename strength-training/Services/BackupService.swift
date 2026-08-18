@@ -27,6 +27,12 @@ struct BackupService {
     static func export(context: ModelContext) throws -> Data {
         let exercises = (try? context.fetch(FetchDescriptor<Exercise>(sortBy: [SortDescriptor(\Exercise.sortOrder)]))) ?? []
         let sessions = (try? context.fetch(FetchDescriptor<WorkoutSession>(sortBy: [SortDescriptor(\WorkoutSession.date)]))) ?? []
+        let splitDays = (try? context.fetch(
+            FetchDescriptor<SplitDay>(sortBy: [
+                SortDescriptor(\SplitDay.sortOrder),
+                SortDescriptor(\SplitDay.name),
+            ])
+        )) ?? []
 
         let exerciseBackups = exercises.map { e in
             ExerciseBackup(
@@ -79,11 +85,24 @@ struct BackupService {
             )
         }
 
+        let splitBackups = splitDays.enumerated().map { index, day in
+            SplitDayBackup(
+                id: day.id,
+                name: day.name,
+                systemImage: day.systemImage,
+                subtitle: day.subtitle,
+                colorHex: day.colorHex,
+                includesAllExercises: day.includesAllExercises,
+                sortOrder: index
+            )
+        }
+
         let backup = AppBackup(
             version: currentVersion,
             exportedAt: .now,
             exercises: exerciseBackups,
-            sessions: sessionBackups
+            sessions: sessionBackups,
+            splitDays: splitBackups
         )
 
         let encoder = JSONEncoder()
@@ -115,13 +134,13 @@ struct BackupService {
         sessions.forEach { context.delete($0) }
         let exercises = (try? context.fetch(FetchDescriptor<Exercise>())) ?? []
         exercises.forEach { context.delete($0) }
+        let splitDays = (try? context.fetch(FetchDescriptor<SplitDay>())) ?? []
+        splitDays.forEach { context.delete($0) }
 
         // Re-insert exercises, building an ID → Exercise map for linking records
         var exerciseMap: [UUID: Exercise] = [:]
-        var dayTypeNames = Set<String>()
         for eb in backup.exercises {
             let dayType = DayType(rawValue: eb.dayType)
-            dayTypeNames.insert(eb.dayType)
             let exercise = Exercise(
                 name: eb.name,
                 dayType: dayType,
@@ -139,7 +158,6 @@ struct BackupService {
 
         // Re-insert sessions → exercise records → sets
         for sb in backup.sessions {
-            dayTypeNames.insert(sb.dayType)
             let dayType = DayType(rawValue: sb.dayType)
             let session = WorkoutSession(
                 dayType: dayType,
@@ -190,12 +208,67 @@ struct BackupService {
         // re-apply the idempotent migration so restored data is corrected immediately.
         SeedData.migrateExerciseNames(context: context)
 
-        // Keep the user's split (or seed bro-split), and ensure any historical
-        // day-type names from the backup still resolve for chips / filters.
-        SeedData.seedSplitDaysIfNeeded(context: context)
+        restoreSplitDays(from: backup, context: context)
+        SeedData.markSplitConfigured(context: context)
+
         Task { @MainActor in
-            DayTypeRegistry.shared.ensureDaysExist(names: dayTypeNames, context: context)
             DayTypeRegistry.shared.reload(context: context)
+        }
+    }
+
+    /// Prefer the stored split. Older backups only have session/exercise names —
+    /// rebuild from session days (not catalog home days, which add unused Arms / Full Body).
+    private static func restoreSplitDays(from backup: AppBackup, context: ModelContext) {
+        if let stored = backup.splitDays, !stored.isEmpty {
+            _ = SeedData.applySplitSnapshot(stored, context: context)
+            return
+        }
+        let inferred = inferSplit(from: backup)
+        guard !inferred.isEmpty else {
+            SeedData.seedSplitDaysIfNeeded(context: context)
+            return
+        }
+        _ = SeedData.applySplitSnapshot(inferred, context: context)
+    }
+
+    static func inferSplit(from backup: AppBackup) -> [SplitDayBackup] {
+        var seen = Set<String>()
+        var names: [String] = []
+        for session in backup.sessions.sorted(by: { $0.date < $1.date }) {
+            let name = session.dayType.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !name.isEmpty, seen.insert(name.lowercased()).inserted else { continue }
+            names.append(name)
+        }
+        guard !names.isEmpty else { return [] }
+
+        let used = Set(names.map { $0.lowercased() })
+        let preset = matchingPreset(for: used)
+            ?? SplitPreset(rawValue: UserDefaults.standard.string(forKey: SeedData.preferredSplitPresetKey) ?? "")
+        if let preset {
+            let ordered = preset.definitions.map(\.name).filter { used.contains($0.lowercased()) }
+            let extras = names.filter { name in
+                !preset.definitions.contains { $0.name.lowercased() == name.lowercased() }
+            }
+            names = ordered + extras
+        }
+
+        return names.enumerated().map { index, name in
+            let def = DayTypePalette.fallback(for: name)
+            return SplitDayBackup(
+                id: UUID(),
+                name: def.name,
+                systemImage: def.systemImage,
+                subtitle: def.subtitle,
+                colorHex: Int(def.colorHex),
+                includesAllExercises: def.includesAllExercises,
+                sortOrder: index
+            )
+        }
+    }
+
+    private static func matchingPreset(for used: Set<String>) -> SplitPreset? {
+        SplitPreset.allCases.first { preset in
+            Set(preset.definitions.map { $0.name.lowercased() }) == used
         }
     }
 }

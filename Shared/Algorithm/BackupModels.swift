@@ -12,6 +12,18 @@ struct AppBackup: Codable {
     let exportedAt: Date
     let exercises: [ExerciseBackup]
     let sessions: [WorkoutSessionBackup]
+    /// Active Today split, in display order. Missing on backups made before this field.
+    let splitDays: [SplitDayBackup]?
+}
+
+struct SplitDayBackup: Codable, Equatable {
+    var id: UUID
+    var name: String
+    var systemImage: String
+    var subtitle: String
+    var colorHex: Int
+    var includesAllExercises: Bool
+    var sortOrder: Int
 }
 
 struct ExerciseBackup: Codable {

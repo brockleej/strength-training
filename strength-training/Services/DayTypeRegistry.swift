@@ -61,7 +61,23 @@ final class DayTypeRegistry {
         )
         let rows = (try? context.fetch(descriptor)) ?? []
         if rows.isEmpty {
-            definitions = SplitPreset.broSplit.definitions
+            if let snapshot = SeedData.loadSplitSnapshot(), !snapshot.isEmpty {
+                definitions = snapshot
+                    .sorted { $0.sortOrder < $1.sortOrder }
+                    .map {
+                        DayTypeDefinition(
+                            name: $0.name,
+                            systemImage: $0.systemImage,
+                            subtitle: $0.subtitle,
+                            colorHex: UInt32(truncatingIfNeeded: $0.colorHex),
+                            includesAllExercises: $0.includesAllExercises,
+                            sortOrder: $0.sortOrder
+                        )
+                    }
+            } else {
+                let raw = UserDefaults.standard.string(forKey: SeedData.preferredSplitPresetKey) ?? ""
+                definitions = (SplitPreset(rawValue: raw) ?? .broSplit).definitions
+            }
         } else {
             definitions = rows.map(\.definition)
         }
@@ -79,7 +95,7 @@ final class DayTypeRegistry {
             context.insert(day)
         }
         try? context.save()
-        SeedData.markSplitConfigured(preset: preset)
+        SeedData.markSplitConfigured(preset: preset, context: context)
         // New days start empty — pin a short starter template (3–5 lifts), not the full catalog.
         SeedData.applyStarterDayPlans(context: context, onlyIfDayEmpty: true)
         reload(context: context)
@@ -150,7 +166,7 @@ final class DayTypeRegistry {
             )
         }
         try? context.save()
-        SeedData.markSplitConfigured()
+        SeedData.markSplitConfigured(context: context)
         reload(context: context)
     }
 
@@ -162,7 +178,7 @@ final class DayTypeRegistry {
         if !row.includesAllExercises && homes.count <= 1 { return }
         context.delete(row)
         try? context.save()
-        SeedData.markSplitConfigured()
+        SeedData.markSplitConfigured(context: context)
         reload(context: context)
     }
 
@@ -178,7 +194,7 @@ final class DayTypeRegistry {
             row.sortOrder = index
         }
         try? context.save()
-        SeedData.markSplitConfigured()
+        SeedData.markSplitConfigured(context: context)
         reload(context: context)
     }
 
@@ -190,7 +206,7 @@ final class DayTypeRegistry {
             byID[id]?.sortOrder = index
         }
         try? context.save()
-        SeedData.markSplitConfigured()
+        SeedData.markSplitConfigured(context: context)
         reload(context: context)
     }
 

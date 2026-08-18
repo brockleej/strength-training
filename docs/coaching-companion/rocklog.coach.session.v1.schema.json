@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rocklog.app/schema/rocklog.coach.session.v1.json",
+  "title": "rocklog.coach.session",
+  "description": "One finished RockLog workout for RockCoach. No tonnage/volume totals.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format", "schemaVersion", "exportedAt", "athlete", "session"],
+  "properties": {
+    "format": { "const": "rocklog.coach.session" },
+    "schemaVersion": { "const": 1 },
+    "exportedAt": { "type": "string", "format": "date-time" },
+    "athlete": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "displayName"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "displayName": { "type": "string", "minLength": 1 }
+      }
+    },
+    "session": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "startedAt", "dayType", "exercises"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "startedAt": { "type": "string", "format": "date-time" },
+        "dayType": { "type": "string" },
+        "rotationTrack": { "type": "string" },
+        "notes": { "type": "string" },
+        "effortRating": { "type": ["integer", "null"], "minimum": 1, "maximum": 10 },
+        "exercises": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/exercise" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "exercise": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "sets"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "name": { "type": "string" },
+        "muscleGroup": { "type": "string" },
+        "trainingMode": { "type": "string" },
+        "notes": { "type": "string" },
+        "sets": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/set" }
+        }
+      }
+    },
+    "set": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["setNumber", "weightLbs", "reps"],
+      "properties": {
+        "setNumber": { "type": "integer", "minimum": 1 },
+        "weightLbs": { "type": "number" },
+        "reps": { "type": "integer", "minimum": 0 },
+        "isWarmup": { "type": "boolean" },
+        "isEachSide": { "type": "boolean" },
+        "isAssisted": { "type": "boolean" },
+        "completedAt": { "type": "string", "format": "date-time" }
+      }
+    }
+  }
+}

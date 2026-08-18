@@ -135,48 +135,212 @@ struct SeedData {
         migrateCompoundMuscleGroups(context: context)
         deduplicateExercises(context: context)
         deduplicateSplitDays(context: context)
+        reconcileSplitToSnapshot(context: context)
     }
 
     /// UserDefaults: once the user applies a preset or edits days, never re-seed
     /// a default split over an empty store (wait for CloudKit instead).
     static let hasConfiguredSplitKey = "hasConfiguredSplit"
     static let preferredSplitPresetKey = "preferredSplitPresetRaw"
+    /// JSON array of `SplitDayBackup` — membership + order + styling.
+    static let splitSnapshotKey = "configuredSplitDaysJSON"
 
-    static func markSplitConfigured(preset: SplitPreset? = nil) {
+    static func markSplitConfigured(preset: SplitPreset? = nil, context: ModelContext? = nil) {
         UserDefaults.standard.set(true, forKey: hasConfiguredSplitKey)
-        // Also mirror to iCloud KVS so a reinstall still remembers “don’t seed bro”.
         let kvs = NSUbiquitousKeyValueStore.default
         kvs.set(true, forKey: hasConfiguredSplitKey)
         if let preset {
             UserDefaults.standard.set(preset.rawValue, forKey: preferredSplitPresetKey)
             kvs.set(preset.rawValue, forKey: preferredSplitPresetKey)
         }
-        kvs.synchronize()
+        if let context {
+            persistSplitSnapshot(context: context)
+        }
     }
 
     /// Pull split prefs from iCloud KVS into local UserDefaults (call on launch).
     static func hydrateSplitPreferencesFromICloud() {
         let kvs = NSUbiquitousKeyValueStore.default
-        kvs.synchronize()
         if kvs.bool(forKey: hasConfiguredSplitKey) {
             UserDefaults.standard.set(true, forKey: hasConfiguredSplitKey)
         }
         if let raw = kvs.string(forKey: preferredSplitPresetKey), !raw.isEmpty {
             UserDefaults.standard.set(raw, forKey: preferredSplitPresetKey)
         }
+        if let json = kvs.string(forKey: splitSnapshotKey), !json.isEmpty {
+            UserDefaults.standard.set(json, forKey: splitSnapshotKey)
+        }
     }
 
-    /// Seeds day types only when the store is empty **and** the user has never
-    /// configured a split on this install. Prefer the last applied preset when known.
+    static func loadSplitSnapshot() -> [SplitDayBackup]? {
+        let json = UserDefaults.standard.string(forKey: splitSnapshotKey)
+            ?? NSUbiquitousKeyValueStore.default.string(forKey: splitSnapshotKey)
+        guard let json, let data = json.data(using: .utf8) else { return nil }
+        return try? JSONDecoder().decode([SplitDayBackup].self, from: data)
+    }
+
+    /// Write the live Today split (days + order) to UserDefaults and iCloud KVS.
+    static func persistSplitSnapshot(context: ModelContext) {
+        let rows = fetchSplitDays(context: context)
+        guard !rows.isEmpty else { return }
+        let snaps = rows.enumerated().map { index, row in
+            SplitDayBackup(
+                id: row.id,
+                name: row.name,
+                systemImage: row.systemImage,
+                subtitle: row.subtitle,
+                colorHex: row.colorHex,
+                includesAllExercises: row.includesAllExercises,
+                sortOrder: index
+            )
+        }
+        guard let data = try? JSONEncoder().encode(snaps),
+              let json = String(data: data, encoding: .utf8)
+        else { return }
+        UserDefaults.standard.set(json, forKey: splitSnapshotKey)
+        UserDefaults.standard.set(true, forKey: hasConfiguredSplitKey)
+        let kvs = NSUbiquitousKeyValueStore.default
+        kvs.set(json, forKey: splitSnapshotKey)
+        kvs.set(true, forKey: hasConfiguredSplitKey)
+    }
+
+    /// Avoid publishing a local bro-split + real-split union over a good remote snapshot.
+    static func persistSplitSnapshotIfAuthoritative(context: ModelContext) {
+        let rows = fetchSplitDays(context: context)
+        guard !rows.isEmpty else { return }
+        if let remote = loadSplitSnapshot(), !remote.isEmpty {
+            let localNames = Set(rows.map { $0.name.lowercased() })
+            let remoteNames = Set(remote.map { $0.name.lowercased() })
+            if remoteNames.isSubset(of: localNames), remoteNames != localNames {
+                let extras = localNames.subtracting(remoteNames)
+                if extras.isSubset(of: broSplitNameSet) { return }
+            }
+        }
+        persistSplitSnapshot(context: context)
+    }
+
+    /// Replace the local day list so it matches the saved snapshot (names + order).
+    @discardableResult
+    static func reconcileSplitToSnapshot(context: ModelContext) -> Bool {
+        if let snapshot = loadSplitSnapshot(), !snapshot.isEmpty {
+            return applySplitSnapshot(snapshot, context: context)
+        }
+        return stripSeedExtrasUsingPreset(context: context)
+    }
+
+    static func applySplitSnapshot(_ snapshot: [SplitDayBackup], context: ModelContext) -> Bool {
+        let desired = snapshot.sorted { $0.sortOrder < $1.sortOrder }
+        guard !desired.isEmpty else { return false }
+        let existing = fetchSplitDays(context: context)
+        var byName: [String: SplitDay] = [:]
+        for row in existing {
+            byName[row.name.lowercased()] = row
+        }
+        let wanted = Set(desired.map { $0.name.lowercased() })
+        var changed = false
+
+        for extra in existing where !wanted.contains(extra.name.lowercased()) {
+            context.delete(extra)
+            changed = true
+        }
+
+        for (index, snap) in desired.enumerated() {
+            let key = snap.name.lowercased()
+            if let row = byName[key] {
+                if row.sortOrder != index
+                    || row.systemImage != snap.systemImage
+                    || row.subtitle != snap.subtitle
+                    || row.colorHex != snap.colorHex
+                    || row.includesAllExercises != snap.includesAllExercises
+                    || row.name != snap.name
+                {
+                    row.name = snap.name
+                    row.systemImage = snap.systemImage
+                    row.subtitle = snap.subtitle
+                    row.colorHex = snap.colorHex
+                    row.includesAllExercises = snap.includesAllExercises
+                    row.sortOrder = index
+                    changed = true
+                }
+            } else {
+                let day = SplitDay(
+                    name: snap.name,
+                    systemImage: snap.systemImage,
+                    subtitle: snap.subtitle,
+                    colorHex: UInt32(truncatingIfNeeded: snap.colorHex),
+                    includesAllExercises: snap.includesAllExercises,
+                    sortOrder: index
+                )
+                day.id = snap.id
+                context.insert(day)
+                changed = true
+            }
+        }
+
+        if changed {
+            try? context.save()
+        }
+        return changed
+    }
+
+    /// When KVS only knows the last preset, drop leftover bro-split days (Arms / Full Body)
+    /// that CloudKit re-imported after a first-run seed.
+    static func stripSeedExtrasUsingPreset(context: ModelContext) -> Bool {
+        let raw = UserDefaults.standard.string(forKey: preferredSplitPresetKey) ?? ""
+        guard let preset = SplitPreset(rawValue: raw), preset != .broSplit else { return false }
+        let allowed = Set(preset.definitions.map { $0.name.lowercased() })
+        let rows = fetchSplitDays(context: context)
+        let names = Set(rows.map { $0.name.lowercased() })
+        guard allowed.isSubset(of: names) else { return false }
+        let extras = rows.filter { row in
+            let key = row.name.lowercased()
+            return !allowed.contains(key) && broSplitNameSet.contains(key)
+        }
+        guard !extras.isEmpty else { return false }
+        extras.forEach { context.delete($0) }
+        let remaining = fetchSplitDays(context: context)
+        for (index, row) in remaining.enumerated() {
+            row.sortOrder = index
+        }
+        try? context.save()
+        persistSplitSnapshot(context: context)
+        return true
+    }
+
+    /// Seeds day types only when the store is empty. Prefer the saved snapshot,
+    /// then the last preset — never bro-split over a configured iCloud split.
     static func seedSplitDaysIfNeeded(context: ModelContext) {
         let count = (try? context.fetchCount(FetchDescriptor<SplitDay>())) ?? 0
         guard count == 0 else { return }
-        // Empty after iCloud reinstall / mid-sync: don't stomp PPL-PC with bro-split.
-        if UserDefaults.standard.bool(forKey: hasConfiguredSplitKey) {
+
+        if let snapshot = loadSplitSnapshot(), !snapshot.isEmpty {
+            _ = applySplitSnapshot(snapshot, context: context)
             return
         }
-        let raw = UserDefaults.standard.string(forKey: preferredSplitPresetKey) ?? ""
-        let preset = SplitPreset(rawValue: raw) ?? .broSplit
+
+        if UserDefaults.standard.bool(forKey: hasConfiguredSplitKey) {
+            let raw = UserDefaults.standard.string(forKey: preferredSplitPresetKey) ?? ""
+            if let preset = SplitPreset(rawValue: raw) {
+                insertPresetDays(preset, context: context)
+            }
+            return
+        }
+
+        insertPresetDays(.broSplit, context: context)
+    }
+
+    private static let broSplitNameSet: Set<String> = ["arms", "legs", "full body"]
+
+    private static func fetchSplitDays(context: ModelContext) -> [SplitDay] {
+        (try? context.fetch(
+            FetchDescriptor<SplitDay>(sortBy: [
+                SortDescriptor(\SplitDay.sortOrder),
+                SortDescriptor(\SplitDay.name),
+            ])
+        )) ?? []
+    }
+
+    private static func insertPresetDays(_ preset: SplitPreset, context: ModelContext) {
         for (index, def) in preset.definitions.enumerated() {
             let day = SplitDay(definition: def)
             day.sortOrder = index
