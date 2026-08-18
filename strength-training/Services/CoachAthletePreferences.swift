@@ -7,11 +7,11 @@
 import Foundation
 
 enum CoachAthletePreferences {
-    static let nameKey = "coachAthleteDisplayName"
-    static let idKey = "coachAthleteID"
-    static let enabledKey = "coachFeaturesEnabled"
-    static let shareAfterFinishKey = "coachShareAfterFinish"
-    static let defaultDisplayName = "Athlete"
+    nonisolated static let nameKey = "coachAthleteDisplayName"
+    nonisolated static let idKey = "coachAthleteID"
+    nonisolated static let enabledKey = "coachFeaturesEnabled"
+    nonisolated static let shareAfterFinishKey = "coachShareAfterFinish"
+    nonisolated static let defaultDisplayName = "Athlete"
 
     nonisolated static var displayName: String {
         get {

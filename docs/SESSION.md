@@ -1,36 +1,81 @@
 # RockLog — session handoff
 
-**Last updated:** 2026-08-17 (build **12** committed — not pushed)  
+**Parked:** 2026-08-17  
 **Project:** `~/strength-training`  
 **App:** RockLog · bundle `com.lee.lift2026`  
-**Marketing version:** 1.0 · **Build:** 12 (local; TF still 11 until push)  
-**Branch:** `main`  
+**Marketing version:** 1.0 · **Build:** 12 on TestFlight (VALID)  
+**Git:** `main` at `c0bc533` on GitHub; local isolation-warning commit may sit on top — **do not push** until the next real 13.  
+**Branch:** `main`
 
 > Resume: *“Continue from ~/strength-training — load docs/SESSION.md, README.md, docs/RELEASE-NOTES.md, CLAUDE.md.”*  
-> HA is parked. ASC: RockLog 1.0 has build 11 attached; Aequis 1.0 has build 2 attached (icons, not submitted).
+> HA is parked. ASC: RockLog 1.0 still has **build 11** selected on the store listing (Prepare for Submission). Attach **12** if you want the listing icon to follow. Aequis 1.0 has build 2 attached (not submitted).
 
 ---
 
-## Status
+## Where we left it
 
-- Last ship: **TestFlight build 11** (2026-08-14). **12** is committed locally — push `main` when you want Xcode Cloud → TF.
-- **2026-08-16:** ASC app-header icon was the placeholder because App Store version **1.0** had **no build selected**. Attached build **11** to 1.0 (Prepare for Submission — not submitted). After 12 is on TF, attach **12** if you want the store listing to follow.
-- Next TF upload: **push main** (version already **12**).
-- **RockCoach** stays **local** — scheme `RockCoach`, bundle `com.lee.rockcoach`. Do not archive/upload it. Notes: `docs/coaching-companion/PATH-1.md`.
+RockLog **12** is live for internal **Friends** testers. What to Test is set. RockCoach is **in the repo only** — scheme `RockCoach`, bundle `com.lee.rockcoach`. Do **not** archive or upload it.
 
-### Do with the next bug-fix build (iCloud UI)
+Isolation/`nonisolated` cleanups on coach helpers landed after 12 (warnings only). Sit on them until the next real change. Testers do not need a 13 for that.
 
-Sync is functioning. On the **next** bug-fix drop (not a standalone ship):
+---
 
-- **Remove** Settings **Retry sync** and pull-to-refresh-as-resync. User should not manage CloudKit.
-- **Keep** a quiet **status indicator** (signed in / last synced / real failure only).
-- Make sync **transparent**: no “hiccup / skipped items / pull to refresh” copy in the happy path. Don’t flip the row red on a later retryable export if import already succeeded.
-- Leave the nudge code in the service if useful internally; just don’t expose it.
-- **ASC API key (local):** `~/Documents/Hobbies/RockLog/secrets/` — create in App Store Connect, then `source …/scripts/asc-env.sh` + `asc-check.sh`. Not in git.
-- Friends testers **Invited** need resend invite / correct Apple ID (not a binary issue).
-- **User guide:** `docs/USER-GUIDE.md`. In-app: first launch + Settings → Welcome guide.
-- **Next polish (not blocking):** recapture **README + App Store screenshots** — `docs/SCREENSHOTS.md`. Current `docs/screenshots/*.png` are stale.
-- **RockCoach (Path 1):** session v1 unchanged. Catch-up uses sibling **`rocklog.coach.batch` v1** (same `.rocklogcoach` file). Share this workout or everything not yet sent. Not on TestFlight yet. Notes: `docs/coaching-companion/PATH-1.md`.
+## What shipped in 12 (since TF 11)
+
+- First launch no longer blocks 20–30s on CloudKit `ModelContainer` in `App.init`. Extra tabs stay unloaded until tapped.
+- Split **membership and order** persist to iCloud KVS + backup JSON. Reinstall should not merge leftover bro-split **Arms / Full Body**. Old backups infer days from **sessions**, not the catalog.
+- Progress **lift progression** is the coach spreadsheet. Lift names stay; set columns scroll sideways.
+- Welcome guide rewritten: five **tabs**, start in Settings, Today vs Home/Resume, verbose logging, Progress matches current metrics.
+- Settings order: Edit training split → Rolling/Weekly → Next set default → Progression → Timer → Body profile → Gym pass → RockCoach → Backup → Welcome guide → Apple Health → iCloud.
+- Apple Health row opens **Settings → RockLog** after the first ask (no public deep link into Health → Apps).
+- **Use RockCoach** is **off**. Send UI hidden until that switch is on. `.rocklogcoach` is for a coach, not a backup.
+
+Notes: `docs/RELEASE-NOTES.md`, tester copy: `docs/TESTFLIGHT-WHAT-TO-TEST.md` (build 12).
+
+---
+
+## Decisions (this thread)
+
+| Topic | Decision |
+|---|---|
+| One RockLog vs a share-only SKU | **One app.** Share is optional. |
+| Share vs backup | **Stay separate.** Coach file ≠ restore. Backup is Settings → Export backup. |
+| Coach UI | Hidden behind **Use RockCoach** (default off). One Settings row when off. |
+| RockCoach TestFlight | **No.** Local Xcode only. Share extension `RockCoachShare` is part of that app. |
+| Isolation warnings | **Do not burn a TF 13** on them. |
+| Tonnage in coach | **Still no.** Session v1 locked. Batch is sibling `rocklog.coach.batch` v1. |
+
+Path 1: `docs/coaching-companion/PATH-1.md`.
+
+---
+
+## How 12 actually got to TestFlight
+
+`main` → GitHub **does** start Xcode Cloud (workflow on `main`). Cloud **run #11** is *not* TestFlight 11 — it is the 11th Cloud job. It archived commit `c0bc533` (app version **12**) and **failed** at App Store upload:
+
+> The bundle version must be higher than the previously uploaded version.
+
+Same failure on Cloud runs 4–10. Cloud’s own next-build number is behind hand-uploaded 11/12.
+
+**12 testers have** is a **local** `xcodebuild archive` + `ExportOptions.plist` upload (`build/`). What to Test via `~/Documents/Hobbies/RockLog/scripts/asc-set-what-to-test.sh 12`.
+
+Next Cloud ship: set Cloud **next build number ≥ 13**, or keep uploading from this Mac after bumping `CURRENT_PROJECT_VERSION` to **13**. Do not push a docs-only commit expecting Cloud to ship 12 again.
+
+---
+
+## Next (not now)
+
+On the **next real** RockLog drop (build **13+**):
+
+- Bump `CURRENT_PROJECT_VERSION` in the **strength-training** target only (not RockCoach).
+- Include the parked `nonisolated` coach-format cleanup if not already committed.
+- **iCloud UI:** remove Settings **Retry sync** and pull-to-refresh-as-resync. Quiet status only (signed in / last synced / real failure). Don’t flip red on a later retryable export after a good import.
+- Optional: attach TF **12** (or 13) to ASC version 1.0 so the store header icon follows.
+- Optional: set Xcode Cloud next build number to 13+ if you want Cloud to succeed.
+- Screenshots still stale (`docs/SCREENSHOTS.md`).
+- Friends testers **Invited** may still need a resend / correct Apple ID.
+
+**ASC API (local, not in git):** `~/Documents/Hobbies/RockLog/secrets/` + `source …/scripts/asc-env.sh`.
 
 ---
 
@@ -38,31 +83,43 @@ Sync is functioning. On the **next** bug-fix drop (not a standalone ship):
 
 | Path | Role |
 |------|------|
-| `strength-training/` | iOS app (SwiftUI + SwiftData) |
+| `strength-training/` | RockLog (SwiftUI + SwiftData + CloudKit) |
 | `strength-training-tests/` | Unit tests |
 | `Shared/Algorithm/` | Pure progression algorithm |
-| `Shared/CoachFormat/` | `rocklog.coach.session` codec + set comparison |
-| `RockCoach/` | Companion app (import / roster / session / progression) |
+| `Shared/CoachFormat/` | session/batch codec + compare grid |
+| `RockCoach/` | Companion (local): roster, import, spreadsheet |
+| `RockCoachShare/` | Share extension → App Group `group.com.lee.rockcoach` → `rockcoach://inbox` |
 | `progression-lab/` | macOS algo lab (local only) |
 | `docs/RELEASE-NOTES.md` | TF / ship notes |
-| `docs/SCREENSHOTS.md` | README + App Store capture list (todo) |
+| `docs/coaching-companion/` | Path 1 + locked schemas |
 | `CLAUDE.md` | Architecture + build commands |
 
 **CloudKit:** `iCloud.com.lee.lift2026`  
-**Note:** `main` → Xcode Cloud → TestFlight (treat main as release).
+**Pushing `main` starts Xcode Cloud.** Treat `main` as release. Cloud upload is currently broken on version; TF still needs a local archive or a Cloud number bump.
 
 ### Build
 
 ```bash
 cd ~/strength-training
 open strength-training.xcodeproj
-# or
 xcodebuild -scheme strength-training -destination 'platform=iOS Simulator,name=iPhone 17' build
-xcodebuild test -scheme strength-training -destination 'platform=iOS Simulator,name=iPhone 17'
+xcodebuild -scheme RockCoach -destination 'platform=iOS Simulator,name=iPhone 17' build
+```
+
+Ship RockLog (when you mean it):
+
+```bash
+xcodebuild archive -scheme strength-training -configuration Release \
+  -destination generic/platform=iOS -archivePath build/RockLog.xcarchive \
+  -allowProvisioningUpdates DEVELOPMENT_TEAM=53AH938CUW
+xcodebuild -exportArchive -archivePath build/RockLog.xcarchive \
+  -exportPath build/export -exportOptionsPlist build/ExportOptions.plist \
+  -allowProvisioningUpdates DEVELOPMENT_TEAM=53AH938CUW
+~/Documents/Hobbies/RockLog/scripts/asc-set-what-to-test.sh 13
 ```
 
 ---
 
 ## One-line
 
-**RockLog 1.0 (12) committed locally — split persist, Progress spreadsheet, welcome, coach send off. Not pushed. RockCoach local only.**
+**Parked. RockLog 1.0 (12) on TestFlight. RockCoach local. Isolation warning fix not shipped. Next drop is 13.**

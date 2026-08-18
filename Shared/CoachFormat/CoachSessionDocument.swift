@@ -5,7 +5,7 @@
 
 import Foundation
 
-enum CoachFormat {
+nonisolated enum CoachFormat {
     static let formatName = "rocklog.coach.session"
     static let batchFormatName = "rocklog.coach.batch"
     static let schemaVersion = 1
@@ -15,7 +15,7 @@ enum CoachFormat {
 }
 
 /// A .rocklogcoach file is either one session (v1) or a catch-up batch.
-enum CoachFile: Equatable {
+nonisolated enum CoachFile: Equatable {
     case session(CoachSessionDocument)
     case batch(CoachBatchDocument)
 
@@ -34,7 +34,7 @@ enum CoachFile: Equatable {
     }
 }
 
-struct CoachBatchDocument: Codable, Hashable {
+nonisolated struct CoachBatchDocument: Codable, Hashable, Sendable {
     var format: String
     var schemaVersion: Int
     var exportedAt: Date
@@ -54,7 +54,7 @@ struct CoachBatchDocument: Codable, Hashable {
     }
 }
 
-struct CoachSessionDocument: Codable, Hashable, Identifiable {
+nonisolated struct CoachSessionDocument: Codable, Hashable, Identifiable, Sendable {
     var format: String
     var schemaVersion: Int
     var exportedAt: Date
@@ -78,12 +78,12 @@ struct CoachSessionDocument: Codable, Hashable, Identifiable {
     }
 }
 
-struct CoachAthlete: Codable, Hashable, Identifiable {
+nonisolated struct CoachAthlete: Codable, Hashable, Identifiable, Sendable {
     var id: UUID
     var displayName: String
 }
 
-struct CoachSessionPayload: Codable, Hashable, Identifiable {
+nonisolated struct CoachSessionPayload: Codable, Hashable, Identifiable, Sendable {
     var id: UUID
     var startedAt: Date
     var dayType: String
@@ -93,7 +93,7 @@ struct CoachSessionPayload: Codable, Hashable, Identifiable {
     var exercises: [CoachExercisePayload]
 }
 
-struct CoachExercisePayload: Codable, Hashable, Identifiable {
+nonisolated struct CoachExercisePayload: Codable, Hashable, Identifiable, Sendable {
     var id: UUID
     var name: String
     var muscleGroup: String?
@@ -102,7 +102,7 @@ struct CoachExercisePayload: Codable, Hashable, Identifiable {
     var sets: [CoachSetPayload]
 }
 
-struct CoachSetPayload: Codable, Hashable {
+nonisolated struct CoachSetPayload: Codable, Hashable, Sendable {
     var setNumber: Int
     var weightLbs: Double
     var reps: Int
@@ -116,7 +116,7 @@ struct CoachSetPayload: Codable, Hashable {
     var resolvedAssisted: Bool { isAssisted ?? false }
 }
 
-enum CoachSessionCodec {
+nonisolated enum CoachSessionCodec {
     private static let iso8601 = ISO8601DateFormatter()
     private static let iso8601Fractional: ISO8601DateFormatter = {
         let f = ISO8601DateFormatter()

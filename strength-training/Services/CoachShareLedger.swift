@@ -7,7 +7,7 @@
 import Foundation
 
 enum CoachShareLedger {
-    static let idsKey = "coachSharedSessionIDs"
+    nonisolated static let idsKey = "coachSharedSessionIDs"
 
     nonisolated static var sharedIDs: Set<UUID> {
         get {

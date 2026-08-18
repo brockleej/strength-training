@@ -5,7 +5,7 @@
 
 import Foundation
 
-enum CoachProgression {
+nonisolated enum CoachProgression {
     enum Direction: String, Equatable {
         case up
         case down
@@ -23,7 +23,7 @@ enum CoachProgression {
     }
 
     /// Best working set: highest weight, then higher reps. Warm-ups ignored.
-    static func bestWorkingSet(in exercise: CoachExercisePayload) -> CoachSetPayload? {
+    nonisolated static func bestWorkingSet(in exercise: CoachExercisePayload) -> CoachSetPayload? {
         exercise.sets
             .filter { !$0.resolvedWarmup }
             .max { lhs, rhs in
@@ -34,7 +34,7 @@ enum CoachProgression {
             }
     }
 
-    static func direction(from previous: CoachSetPayload?, to current: CoachSetPayload?) -> Direction {
+    nonisolated static func direction(from previous: CoachSetPayload?, to current: CoachSetPayload?) -> Direction {
         guard let current else { return previous == nil ? .new : .down }
         guard let previous else { return .new }
         if current.weightLbs > previous.weightLbs { return .up }
@@ -45,7 +45,7 @@ enum CoachProgression {
     }
 
     /// Latest session versus the most recent earlier session that logged the same lift.
-    static func snapshots(current: CoachSessionDocument, history: [CoachSessionDocument]) -> [Snapshot] {
+    nonisolated static func snapshots(current: CoachSessionDocument, history: [CoachSessionDocument]) -> [Snapshot] {
         let prior = history
             .filter { $0.session.id != current.session.id }
             .sorted { $0.session.startedAt > $1.session.startedAt }
@@ -94,7 +94,7 @@ enum CoachProgression {
     }
 
     /// Oldest → newest columns (left to right). Sessions should already be the same day type.
-    static func compareGrid(from documents: [CoachSessionDocument], limit: Int = 4) -> CompareGrid {
+    nonisolated static func compareGrid(from documents: [CoachSessionDocument], limit: Int = 4) -> CompareGrid {
         let newestFirst = documents.sorted { $0.session.startedAt > $1.session.startedAt }
         let window = Array(newestFirst.prefix(max(1, limit))).reversed()
         let columns = window.map { doc in
@@ -144,7 +144,7 @@ enum CoachProgression {
         return CompareGrid(columns: columns, rows: rows)
     }
 
-    static func setLabel(_ set: CoachSetPayload) -> String {
+    nonisolated static func setLabel(_ set: CoachSetPayload) -> String {
         let weight: String
         if set.resolvedAssisted {
             weight = "−\(trimmed(set.weightLbs))"
@@ -156,7 +156,7 @@ enum CoachProgression {
         return "\(weight)×\(set.reps)\(suffix)"
     }
 
-    private static func trimmed(_ value: Double) -> String {
+    nonisolated private static func trimmed(_ value: Double) -> String {
         if value.rounded() == value { return String(Int(value)) }
         return String(format: "%g", value)
     }
