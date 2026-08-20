@@ -288,6 +288,7 @@ struct EditExerciseView: View {
         exercise.notes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
         exercise.track = rotationTrack
         try? modelContext.save()
+        SeedData.persistUserPlan(context: modelContext)
         dismiss()
     }
 }

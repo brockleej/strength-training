@@ -111,10 +111,21 @@ struct SessionDetailView: View {
             Text("Adjust sets, add a skipped lift, then Save Changes. Any in-progress workout is parked until you’re done.")
         }
         .task {
+            if session.durationSeconds <= 0 {
+                let inferred = SessionMath.durationSeconds(of: session)
+                if inferred > 0 {
+                    session.durationSeconds = inferred
+                    try? modelContext.save()
+                }
+            }
             guard !loadedStats, let uuid = session.healthKitWorkoutUUID else { return }
             loadedStats = true
             let service = HealthKitWorkoutService()
             healthStats = await service.fetchWorkoutStats(for: uuid)
+            if session.durationSeconds <= 0, let hk = healthStats?.duration, hk > 0 {
+                session.durationSeconds = hk
+                try? modelContext.save()
+            }
         }
     }
 
@@ -155,8 +166,10 @@ struct SessionDetailView: View {
     private var statsCard: some View {
         HStack(spacing: 14) {
             Stat(label: "Duration",
-                 value: healthStats.map { "\(max(1, Int(($0.duration / 60).rounded())))" } ?? "—",
-                 unit: healthStats == nil ? nil : "min")
+                 value: SessionMath.durationMinutesLabel(of: session)
+                    ?? healthStats.map { "\(max(1, Int(($0.duration / 60).rounded())))" }
+                    ?? "—",
+                 unit: (SessionMath.durationSeconds(of: session) > 0 || healthStats != nil) ? "min" : nil)
             Stat(label: "Volume", value: TodayStats.formatVolume(SessionMath.volume(of: session)), unit: "lb")
             Stat(label: "Sets", value: "\(SessionMath.setCount(of: session))")
             Stat(label: "PRs", value: "\(prNames.count)", tone: prNames.isEmpty ? .uplift.fg : .uplift.pr)

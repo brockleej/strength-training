@@ -225,6 +225,9 @@ struct WorkoutSummaryView: View {
     }
 
     private var durationText: String {
+        if let label = SessionMath.durationMinutesLabel(of: session) {
+            return label
+        }
         guard let stats = hkStats else { return "—" }
         return "\(max(1, Int((stats.duration / 60).rounded())))"
     }

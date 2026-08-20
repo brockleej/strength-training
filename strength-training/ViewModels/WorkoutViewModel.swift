@@ -232,6 +232,9 @@ final class WorkoutViewModel {
         healthKitService.checkAuthorization()
         healthKitService.cleanUpOrphanedState()
         resolveSessionState()
+        if let session = activeSession, !isProtectedHistorySession(session) {
+            Task { await healthKitService.recoverOrStartIfNeeded() }
+        }
     }
 
     // MARK: - Session Lifecycle
@@ -273,6 +276,7 @@ final class WorkoutViewModel {
                 let hasSets = session.exerciseRecordsArray.contains { !$0.setsArray.isEmpty }
                 if hasSets {
                     session.isCompleted = true
+                    SessionMath.stampDuration(on: session, liveElapsed: 0)
                 } else {
                     modelContext.delete(session)
                 }
@@ -477,7 +481,7 @@ final class WorkoutViewModel {
     // MARK: - HealthKit Disposal
 
     private func resolveHealthKitDisposal(_ action: PendingAction) {
-        let elapsed = healthKitService.elapsedSeconds
+        let elapsed = healthKitService.wallClockElapsed
         if elapsed >= 300 {
             pendingAction = action
             healthKitDecisionMade = false
@@ -529,14 +533,21 @@ final class WorkoutViewModel {
             return
         }
 
-        Task {
+        SessionMath.stampDuration(
+            on: capturedSession,
+            liveElapsed: healthKitService.wallClockElapsed
+        )
+        try? modelContext.save()
+        // Always ask for effort. HealthKit UUID used to gate this, so a dead
+        // HK session (phone lock) skipped intensity and left Duration as "—".
+        sessionPendingEffortRating = capturedSession
+
+        Task { @MainActor in
             let uuid = await healthKitService.endWorkout()
             capturedSession.healthKitWorkoutUUID = uuid
             try? modelContext.save()
-            if uuid != nil {
-                sessionPendingEffortRating = capturedSession
-            } else {
-                sessionPendingSummary = capturedSession
+            if let uuid, let rating = capturedSession.effortRating {
+                await healthKitService.saveEffortRating(rating, workoutUUID: uuid)
             }
         }
     }
@@ -681,6 +692,13 @@ final class WorkoutViewModel {
         try? modelContext.save()
     }
 
+    /// Unassign from the day plan and hide it in this session.
+    func removeExerciseFromDayPlan(_ exercise: Exercise, day: DayType) {
+        exercise.removeDayType(day)
+        removeExerciseFromSession(exercise)
+        SeedData.persistUserPlan(context: modelContext)
+    }
+
     /// Swap one lift for another in the active session only (library day plan unchanged).
     func replaceExerciseInSession(removing old: Exercise, with new: Exercise) {
         guard old.id != new.id else { return }
@@ -796,12 +814,30 @@ final class WorkoutViewModel {
 
     /// Get the current session's record for an exercise in the active mode.
     func currentRecord(for exercise: Exercise) -> ExerciseRecord? {
-        guard let session = activeSession else { return nil }
+        guard let session = activeSession, !session.isDeleted else { return nil }
         let modeRaw = selectedMode.rawValue
-        return session.exerciseRecordsArray.first {
-            $0.exercise?.id == exercise.id &&
-            $0.trainingMode.rawValue == modeRaw
+        return session.exerciseRecordsArray.first { record in
+            guard !record.isDeleted else { return false }
+            return record.exercise?.id == exercise.id &&
+                record.trainingMode.rawValue == modeRaw
         }
+    }
+
+    /// Restore deletes every SwiftData row. Drop in-memory session refs so
+    /// the workout tab cannot read or save zombie records (TF 13 crashes).
+    func resetAfterStoreReplace() {
+        _activeSession = nil
+        _suspendedSession = nil
+        sessionPendingEffortRating = nil
+        sessionPendingSummary = nil
+        pendingSummaryAfterRating = nil
+        summaryDetailSession = nil
+        pendingCelebration = nil
+        celebratedExerciseIDsThisSession = []
+        offerFinishWorkout = false
+        revisitingSessionID = nil
+        restEndDate = nil
+        setMutationEpoch &+= 1
     }
 
     // MARK: - Set Logging

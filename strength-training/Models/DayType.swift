@@ -202,10 +202,10 @@ enum DayTypePalette {
             .init(name: "Legs", systemImage: "figure.stair.stepper",
                   subtitle: "Quads, Hamstrings, Glutes, Calves, Core",
                   colorHex: 0x3F9CFF, includesAllExercises: false, sortOrder: 1),
-            // Cross-training figure → whole-body session
+            // Cross-training figure → whole-body session (own roster, not a catch-all)
             .init(name: "Full Body", systemImage: "figure.cross.training",
-                  subtitle: "All exercises across your split",
-                  colorHex: 0xB569FF, includesAllExercises: true, sortOrder: 2),
+                  subtitle: "Squat, press, row, overhead",
+                  colorHex: 0xB569FF, includesAllExercises: false, sortOrder: 2),
             // Dumbbell → press / push load
             .init(name: "Push", systemImage: "dumbbell.fill",
                   subtitle: "Chest, Shoulders, Triceps",

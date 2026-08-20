@@ -22,6 +22,7 @@ struct ExerciseListView: View {
     @State private var editingExercise: Exercise?
     @State private var exercisePendingRemoval: Exercise?
     @State private var showDayPlanEditor = false
+    @State private var focusLaunch: FocusLaunch?
     /// Shared secondary line for all rows: last recipe (default) or progression target.
     @AppStorage("exerciseListSecondaryMode") private var secondaryModeRaw: String =
         ExerciseListRow.SecondaryMode.recipe.rawValue
@@ -215,6 +216,14 @@ struct ExerciseListView: View {
                 finishBar
             }
             .navigationBarHidden(true)
+            .navigationDestination(item: $focusLaunch) { launch in
+                FocusFlowView(
+                    workoutVM: workoutVM,
+                    exercises: flatExercises,
+                    startIndex: launch.startIndex
+                )
+                .onAppear { activeExerciseID = launch.exerciseID }
+            }
             .confirmationDialog(
                 workoutVM.isRevisitingSavedSession ? "Save changes?" : "Finish Workout?",
                 isPresented: $showFinishConfirmation,
@@ -241,6 +250,7 @@ struct ExerciseListView: View {
                         if assignToCurrentDay {
                             exercise.addDayType(dayType, atEndOf: allExercises)
                             try? workoutVM.modelContext.save()
+                            SeedData.persistUserPlan(context: workoutVM.modelContext)
                         }
                         workoutVM.addExerciseToSession(exercise)
                     },
@@ -250,7 +260,10 @@ struct ExerciseListView: View {
                 )
             }
             .sheet(item: $editingExercise) { exercise in
-                EditExerciseView(exercise: exercise)
+                EditExerciseView(
+                    exercise: exercise,
+                    focusDay: dayType.includesAllExercises ? nil : dayType
+                )
             }
             .sheet(isPresented: $showDayPlanEditor) {
                 DayPlanEditorView(dayType: dayType)
@@ -269,11 +282,21 @@ struct ExerciseListView: View {
                     }
                     exercisePendingRemoval = nil
                 }
+                if !dayType.includesAllExercises {
+                    Button(ListMutationCopy.removeFromDay(dayType.rawValue), role: .destructive) {
+                        if let exercise = exercisePendingRemoval {
+                            workoutVM.removeExerciseFromDayPlan(exercise, day: dayType)
+                        }
+                        exercisePendingRemoval = nil
+                    }
+                }
                 Button("Cancel", role: .cancel) {
                     exercisePendingRemoval = nil
                 }
             } message: {
-                Text("Stays in your library. You can add it back anytime. Sets logged this session for this exercise will be deleted.")
+                Text(dayType.includesAllExercises
+                     ? "Stays in your library. Sets logged this session for this exercise will be deleted."
+                     : "This workout only hides it today. Remove from \(dayType.rawValue) to drop it from the day plan.")
             }
         }
     }
@@ -413,31 +436,25 @@ struct ExerciseListView: View {
                         .padding(.top, 8)
                 }
                 ForEach(Array(section.exercises.enumerated()), id: \.element.id) { index, exercise in
-                    NavigationLink {
-                        FocusFlowView(
-                            workoutVM: workoutVM,
-                            exercises: flatExercises,
-                            startIndex: flatExercises.firstIndex(where: { $0.id == exercise.id }) ?? 0
-                        )
-                        .onAppear { activeExerciseID = exercise.id }
-                    } label: {
-                        let rowData = rowData(for: exercise)
-                        ExerciseListRow(
-                            name: exercise.name,
-                            state: rowState(for: exercise, number: index + 1),
-                            trackBadge: exercise.track.badge,
-                            lastSessionSummary: rowData.lastSessionSummary,
-                            personalBestSummary: rowData.personalBestSummary,
-                            hasHistory: rowData.hasHistory,
-                            targetWeight: rowData.targetWeight,
-                            targetReps: rowData.targetReps,
-                            secondaryMode: secondaryMode,
-                            onToggleSecondary: toggleSecondaryMode
-                        )
-                    }
-                    .buttonStyle(.plain)
+                    let rowData = rowData(for: exercise)
+                    ExerciseListRow(
+                        name: exercise.name,
+                        state: rowState(for: exercise, number: index + 1),
+                        trackBadge: exercise.track.badge,
+                        lastSessionSummary: rowData.lastSessionSummary,
+                        personalBestSummary: rowData.personalBestSummary,
+                        hasHistory: rowData.hasHistory,
+                        targetWeight: rowData.targetWeight,
+                        targetReps: rowData.targetReps,
+                        secondaryMode: secondaryMode,
+                        onToggleSecondary: toggleSecondaryMode
+                    )
+                    .contentShape(Rectangle())
                     .swipeToDelete {
                         exercisePendingRemoval = exercise
+                    } onTap: {
+                        let start = flatExercises.firstIndex(where: { $0.id == exercise.id }) ?? 0
+                        focusLaunch = FocusLaunch(exerciseID: exercise.id, startIndex: start)
                     }
                     .contextMenu {
                         Button {
@@ -458,8 +475,15 @@ struct ExerciseListView: View {
                         } label: {
                             Label(ListMutationCopy.removeFromWorkout, systemImage: "minus.circle")
                         }
+                        if !dayType.includesAllExercises {
+                            Button(role: .destructive) {
+                                workoutVM.removeExerciseFromDayPlan(exercise, day: dayType)
+                            } label: {
+                                Label(ListMutationCopy.removeFromDay(dayType.rawValue), systemImage: "minus.circle")
+                            }
+                        }
                     }
-                    .accessibilityHint("Swipe left to remove from this workout")
+                    .accessibilityHint("Swipe left to remove from this workout or day plan")
                 }
             }
         }
@@ -637,6 +661,12 @@ struct ExerciseListView: View {
         }
         .joined(separator: " · ")
     }
+}
+
+private struct FocusLaunch: Hashable, Identifiable {
+    let exerciseID: UUID
+    let startIndex: Int
+    var id: UUID { exerciseID }
 }
 
 #Preview {

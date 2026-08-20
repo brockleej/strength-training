@@ -23,6 +23,36 @@ enum SessionMath {
         session.exerciseRecordsArray.reduce(0) { $0 + $1.setsArray.count }
     }
 
+    /// Minutes string ("47") for UI. Nil when we have no stored or inferred length.
+    static func durationMinutesLabel(of session: WorkoutSession) -> String? {
+        WorkoutDurationLogic.minutesLabel(durationSeconds(of: session))
+    }
+
+    static func durationSeconds(of session: WorkoutSession) -> TimeInterval {
+        WorkoutDurationLogic.resolvedSeconds(
+            stored: session.durationSeconds,
+            sessionStart: session.date,
+            setDates: session.exerciseRecordsArray.flatMap { $0.setsArray.map(\.completedAt) }
+        )
+    }
+
+    static func stampDuration(
+        on session: WorkoutSession,
+        liveElapsed: TimeInterval,
+        now: Date = .now
+    ) {
+        let setDates = session.exerciseRecordsArray.flatMap { $0.setsArray.map(\.completedAt) }
+        let seconds = WorkoutDurationLogic.secondsToStore(
+            liveElapsed: liveElapsed,
+            sessionStart: session.date,
+            setDates: setDates,
+            now: now
+        )
+        if seconds > session.durationSeconds {
+            session.durationSeconds = seconds
+        }
+    }
+
     /// Names of exercises whose session-best e1RM ties/beats the all-time best.
     static func e1RMPRExerciseNames(for session: WorkoutSession, allSessions: [WorkoutSession]) -> [String] {
         var counted = Set<UUID>()
@@ -178,5 +208,39 @@ enum SessionMath {
         if delta > 0 { return "+\(delta)" }
         if delta < 0 { return "−\(abs(delta))" }
         return "0"
+    }
+}
+
+/// Session length without HealthKit. Stored value wins; otherwise first→last set.
+enum WorkoutDurationLogic {
+    static func resolvedSeconds(
+        stored: TimeInterval,
+        sessionStart: Date,
+        setDates: [Date]
+    ) -> TimeInterval {
+        if stored > 0 { return stored }
+        return inferredSeconds(sessionStart: sessionStart, setDates: setDates)
+    }
+
+    static func inferredSeconds(sessionStart: Date, setDates: [Date]) -> TimeInterval {
+        guard let last = setDates.max() else { return 0 }
+        let start = min(sessionStart, setDates.min() ?? sessionStart)
+        return max(0, last.timeIntervalSince(start))
+    }
+
+    static func secondsToStore(
+        liveElapsed: TimeInterval,
+        sessionStart: Date,
+        setDates: [Date],
+        now: Date
+    ) -> TimeInterval {
+        let inferred = inferredSeconds(sessionStart: sessionStart, setDates: setDates)
+        let wall = now.timeIntervalSince(sessionStart)
+        return max(0, liveElapsed, inferred, wall)
+    }
+
+    static func minutesLabel(_ seconds: TimeInterval) -> String? {
+        guard seconds > 0 else { return nil }
+        return "\(max(1, Int((seconds / 60).rounded())))"
     }
 }

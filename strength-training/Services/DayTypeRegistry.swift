@@ -85,7 +85,13 @@ final class DayTypeRegistry {
     }
 
     /// Replace all SplitDay rows with a preset and reload.
-    func applyPreset(_ preset: SplitPreset, context: ModelContext) {
+    /// - Parameter includeStarters: When true, pin 3–5 common lifts on empty days.
+    ///   When false, days stay empty for a custom roster.
+    func applyPreset(
+        _ preset: SplitPreset,
+        context: ModelContext,
+        includeStarters: Bool = false
+    ) {
         let existing = (try? context.fetch(FetchDescriptor<SplitDay>())) ?? []
         existing.forEach { context.delete($0) }
         // Sequential sortOrder = list order on Today (user can drag to change).
@@ -96,8 +102,10 @@ final class DayTypeRegistry {
         }
         try? context.save()
         SeedData.markSplitConfigured(preset: preset, context: context)
-        // New days start empty — pin a short starter template (3–5 lifts), not the full catalog.
-        SeedData.applyStarterDayPlans(context: context, onlyIfDayEmpty: true)
+        if includeStarters {
+            SeedData.applyStarterDayPlans(context: context, onlyIfDayEmpty: true)
+        }
+        SeedData.markDayPlansTrusted()
         reload(context: context)
     }
 

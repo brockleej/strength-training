@@ -16,10 +16,16 @@ struct ContentView: View {
     @State private var selectedTab = "workout"
     @State private var awakenedTabs: Set<String> = ["workout"]
     @AppStorage(FirstRunPreferences.completedKey) private var hasCompletedFirstRun = false
+    @State private var showFirstUseSplitSetup = false
+    /// While true the TabView (including Focus / workout list) is torn down
+    /// so restore can delete SwiftData rows without those views reading them.
+    @State private var storeReplaceInProgress = false
 
     var body: some View {
         Group {
-            if let vm = workoutViewModel {
+            if storeReplaceInProgress {
+                RockLogLaunchPlaceholder(showsProgress: true)
+            } else if let vm = workoutViewModel {
                 // Classic TabView (iOS 17+). The iOS 18 `Tab { }` API is not used so we keep
                 // the minimum deployment at 17.0 for broader TestFlight reach.
                 TabView(selection: $selectedTab) {
@@ -60,12 +66,19 @@ struct ContentView: View {
             get: { workoutViewModel != nil && !hasCompletedFirstRun },
             set: { if !$0 { hasCompletedFirstRun = true } }
         )) {
-            FirstRunView {
+            FirstRunView(showsSplitSetup: showFirstUseSplitSetup) {
                 hasCompletedFirstRun = true
             }
         }
         .task {
-            // Show tabs immediately — don't wait on CloudKit / seed / KVS.
+            // Hydrate iCloud split prefs before first-run UI, so a reinstall
+            // does not ask to pick a split that already lives in KVS.
+            SeedData.hydrateSplitPreferencesFromICloud()
+            GymMembershipStore.shared.hydrateFromICloud()
+            BodyProfileStore.shared.hydrateFromICloud()
+            showFirstUseSplitSetup = SeedData.needsFirstUseSplitSetup(context: modelContext)
+
+            // Show tabs immediately — don't wait on CloudKit / seed.
             DayTypeRegistry.shared.reload(context: modelContext)
             if workoutViewModel == nil {
                 workoutViewModel = WorkoutViewModel(
@@ -75,18 +88,15 @@ struct ContentView: View {
             }
             await Task.yield()
 
-            SeedData.hydrateSplitPreferencesFromICloud()
-            GymMembershipStore.shared.hydrateFromICloud()
-            BodyProfileStore.shared.hydrateFromICloud()
             SeedData.migrateExerciseNames(context: modelContext)
             SeedData.migrateCompoundMuscleGroups(context: modelContext)
             // Dedupe walks every lift's history — only after CloudKit import.
 
             let exerciseCount = (try? modelContext.fetchCount(FetchDescriptor<Exercise>())) ?? 0
-            let splitCount = (try? modelContext.fetchCount(FetchDescriptor<SplitDay>())) ?? 0
             let hasRemoteSplit = UserDefaults.standard.bool(forKey: SeedData.hasConfiguredSplitKey)
                 || SeedData.loadSplitSnapshot() != nil
-            if exerciseCount == 0 && splitCount == 0 && hasRemoteSplit {
+                || SeedData.loadDayPlanSnapshot() != nil
+            if exerciseCount == 0 && hasRemoteSplit {
                 await cloudKitSyncService.waitBeforeInitialSeedIfNeeded(modelContext: modelContext)
             }
 
@@ -116,6 +126,25 @@ struct ContentView: View {
             guard wants == true else { return }
             selectedTab = "workout"
             workoutViewModel?.wantsFocusOnWorkoutTab = false
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .rockLogStoreWillReplace)) { _ in
+            workoutViewModel?.resetAfterStoreReplace()
+            storeReplaceInProgress = true
+            selectedTab = "settings"
+            awakenedTabs = ["settings"]
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .rockLogStoreReplaced)) { _ in
+            if let hk = workoutViewModel?.healthKitService {
+                workoutViewModel = WorkoutViewModel(
+                    modelContext: modelContext,
+                    healthKitService: hk
+                )
+            } else {
+                workoutViewModel?.resetAfterStoreReplace()
+            }
+            storeReplaceInProgress = false
+            selectedTab = "workout"
+            awakenedTabs = ["workout"]
         }
         // Don't auto-prompt HealthKit on cold launch — that dialog can stall the
         // first frame. Settings (and starting a workout) request access instead.

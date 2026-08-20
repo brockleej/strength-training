@@ -76,20 +76,29 @@ struct SeedData {
         if changed { try? context.save() }
     }
 
-    /// Removes duplicate exercises (same name + dayType), keeping the one with the most history.
-    /// Records from duplicates are reassigned to the kept exercise before deletion.
+    /// Removes duplicate exercises (same name), keeping the one with the most history.
+    /// Grouping by name only — not name+days — so a seeded starter and the user's
+    /// copy of the same lift collapse instead of both showing on the day.
     /// Safe to re-run after CloudKit import (second device can seed before iCloud lands).
     static func deduplicateExercises(context: ModelContext) {
         let exercises = (try? context.fetch(FetchDescriptor<Exercise>())) ?? []
         var grouped: [String: [Exercise]] = [:]
         for exercise in exercises {
-            // Sort day names so Push+Pull and Pull+Push collapse to one group.
-            let days = exercise.dayTypeNames.map { $0.lowercased() }.sorted().joined(separator: "+")
-            let key = "\(exercise.name.lowercased())|\(days)"
+            let key = exercise.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            guard !key.isEmpty else { continue }
             grouped[key, default: []].append(exercise)
         }
+        let snapshotIDs = Set((loadDayPlanSnapshot() ?? []).flatMap(\.exerciseIDs))
         for (_, group) in grouped where group.count > 1 {
-            let sorted = group.sorted { $0.recordsArray.count > $1.recordsArray.count }
+            let sorted = group.sorted { lhs, rhs in
+                let lhsSnap = snapshotIDs.contains(lhs.id)
+                let rhsSnap = snapshotIDs.contains(rhs.id)
+                if lhsSnap != rhsSnap { return lhsSnap && !rhsSnap }
+                if lhs.recordsArray.count != rhs.recordsArray.count {
+                    return lhs.recordsArray.count > rhs.recordsArray.count
+                }
+                return lhs.dayTypeNames.count < rhs.dayTypeNames.count
+            }
             let keeper = sorted[0]
             for duplicate in sorted.dropFirst() {
                 for record in duplicate.recordsArray {
@@ -136,6 +145,9 @@ struct SeedData {
         deduplicateExercises(context: context)
         deduplicateSplitDays(context: context)
         reconcileSplitToSnapshot(context: context)
+        stripUnusedStarterExtrasIfNeeded(context: context)
+        reconcileDayPlansToSnapshot(context: context)
+        persistSplitSnapshotIfAuthoritative(context: context)
     }
 
     /// UserDefaults: once the user applies a preset or edits days, never re-seed
@@ -144,6 +156,10 @@ struct SeedData {
     static let preferredSplitPresetKey = "preferredSplitPresetRaw"
     /// JSON array of `SplitDayBackup` — membership + order + styling.
     static let splitSnapshotKey = "configuredSplitDaysJSON"
+    /// JSON array of `DayPlanBackup` — which lifts sit on each day, in order.
+    static let dayPlanSnapshotKey = "configuredDayPlansJSON"
+    static let hasSeededExercisesKey = "hasSeededExercises"
+    static let strippedUnusedStarterExtrasKey = "strippedUnusedStarterExtrasV1"
 
     static func markSplitConfigured(preset: SplitPreset? = nil, context: ModelContext? = nil) {
         UserDefaults.standard.set(true, forKey: hasConfiguredSplitKey)
@@ -169,6 +185,9 @@ struct SeedData {
         }
         if let json = kvs.string(forKey: splitSnapshotKey), !json.isEmpty {
             UserDefaults.standard.set(json, forKey: splitSnapshotKey)
+        }
+        if let json = kvs.string(forKey: dayPlanSnapshotKey), !json.isEmpty {
+            UserDefaults.standard.set(json, forKey: dayPlanSnapshotKey)
         }
     }
 
@@ -202,6 +221,7 @@ struct SeedData {
         let kvs = NSUbiquitousKeyValueStore.default
         kvs.set(json, forKey: splitSnapshotKey)
         kvs.set(true, forKey: hasConfiguredSplitKey)
+        persistDayPlanSnapshot(context: context)
     }
 
     /// Avoid publishing a local bro-split + real-split union over a good remote snapshot.
@@ -217,6 +237,113 @@ struct SeedData {
             }
         }
         persistSplitSnapshot(context: context)
+    }
+
+    /// Write the live per-day rosters to UserDefaults and iCloud KVS.
+    /// Skip when every day is empty — that is the reinstall window before
+    /// CloudKit brings the user's lifts, not a real "cleared all days" plan.
+    static func persistDayPlanSnapshot(context: ModelContext) {
+        let plans = captureDayPlans(context: context)
+        guard plans.contains(where: { !$0.exerciseIDs.isEmpty }) else { return }
+        storeDayPlanSnapshot(plans)
+    }
+
+    /// Persist after the user adds/removes a lift from a day.
+    static func persistUserPlan(context: ModelContext) {
+        persistSplitSnapshot(context: context)
+    }
+
+    static func loadDayPlanSnapshot() -> [DayPlanBackup]? {
+        let json = UserDefaults.standard.string(forKey: dayPlanSnapshotKey)
+            ?? NSUbiquitousKeyValueStore.default.string(forKey: dayPlanSnapshotKey)
+        guard let json, let data = json.data(using: .utf8) else { return nil }
+        return try? JSONDecoder().decode([DayPlanBackup].self, from: data)
+    }
+
+    static func storeDayPlanSnapshot(_ plans: [DayPlanBackup]) {
+        guard let data = try? JSONEncoder().encode(plans),
+              let json = String(data: data, encoding: .utf8)
+        else { return }
+        UserDefaults.standard.set(json, forKey: dayPlanSnapshotKey)
+        NSUbiquitousKeyValueStore.default.set(json, forKey: dayPlanSnapshotKey)
+    }
+
+    static func captureDayPlans(context: ModelContext) -> [DayPlanBackup] {
+        let splitDays = fetchSplitDays(context: context)
+        let exercises = (try? context.fetch(FetchDescriptor<Exercise>())) ?? []
+        return captureDayPlans(from: exercises, splitDays: splitDays)
+    }
+
+    static func captureDayPlans(from exercises: [Exercise], splitDays: [SplitDay]) -> [DayPlanBackup] {
+        splitDays.compactMap { row in
+            guard !row.includesAllExercises else { return nil }
+            let day = DayType(rawValue: row.name)
+            let members = exercises
+                .filter { $0.belongs(to: day) }
+                .sorted {
+                    let lhs = $0.sortIndex(for: day)
+                    let rhs = $1.sortIndex(for: day)
+                    if lhs != rhs { return lhs < rhs }
+                    return $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+                }
+            return DayPlanBackup(dayName: row.name, exerciseIDs: members.map(\.id))
+        }
+    }
+
+    /// Restore a backup's day rosters (or derive them from restored exercises).
+    static func restoreDayPlans(from backup: AppBackup, context: ModelContext) {
+        if let plans = backup.dayPlans, !plans.isEmpty {
+            storeDayPlanSnapshot(plans)
+            _ = applyDayPlanSnapshot(plans, context: context)
+            return
+        }
+        persistDayPlanSnapshot(context: context)
+    }
+
+    /// Pin each snapshot day's roster to those IDs. Extra lifts (re-seeded starters
+    /// that CloudKit re-imported) are removed from snapshot days only.
+    @discardableResult
+    static func applyDayPlanSnapshot(_ snapshot: [DayPlanBackup], context: ModelContext) -> Bool {
+        guard !snapshot.isEmpty else { return false }
+        let exercises = (try? context.fetch(FetchDescriptor<Exercise>())) ?? []
+        guard !exercises.isEmpty else { return false }
+        let byID = Dictionary(uniqueKeysWithValues: exercises.map { ($0.id, $0) })
+        let snapshotDays = Set(snapshot.map { $0.dayName.lowercased() })
+
+        var intended: [UUID: [DayType]] = [:]
+        for plan in snapshot {
+            let day = DayType(rawValue: plan.dayName)
+            for (index, id) in plan.exerciseIDs.enumerated() {
+                intended[id, default: []].append(day)
+                byID[id]?.setSortIndex(index, for: day)
+            }
+        }
+
+        var changed = false
+        for exercise in exercises {
+            let current = exercise.days
+            let keepOutsideSnapshot = current.filter {
+                !snapshotDays.contains($0.rawValue.lowercased())
+            }
+            let snapshotMembership = intended[exercise.id] ?? []
+            let next = snapshotMembership + keepOutsideSnapshot
+            let currentNames = Set(current.map { $0.rawValue.lowercased() })
+            let nextNames = Set(next.map { $0.rawValue.lowercased() })
+            if currentNames != nextNames {
+                exercise.setDayTypes(next)
+                changed = true
+            }
+        }
+        if changed {
+            try? context.save()
+        }
+        return changed
+    }
+
+    @discardableResult
+    static func reconcileDayPlansToSnapshot(context: ModelContext) -> Bool {
+        guard let snapshot = loadDayPlanSnapshot(), !snapshot.isEmpty else { return false }
+        return applyDayPlanSnapshot(snapshot, context: context)
     }
 
     /// Replace the local day list so it matches the saved snapshot (names + order).
@@ -326,7 +453,16 @@ struct SeedData {
             return
         }
 
-        insertPresetDays(.broSplit, context: context)
+        // Brand-new install: wait for the first-use picker. Do not invent Bro Split.
+    }
+
+    /// True when this phone has never chosen a split (first use, no iCloud snapshot).
+    static func needsFirstUseSplitSetup(context: ModelContext) -> Bool {
+        if UserDefaults.standard.bool(forKey: hasConfiguredSplitKey) { return false }
+        if loadSplitSnapshot() != nil { return false }
+        if loadDayPlanSnapshot() != nil { return false }
+        let splitCount = (try? context.fetchCount(FetchDescriptor<SplitDay>())) ?? 0
+        return splitCount == 0
     }
 
     private static let broSplitNameSet: Set<String> = ["arms", "legs", "full body"]
@@ -649,24 +785,78 @@ struct SeedData {
     static func seedIfNeeded(context: ModelContext, allowEmptyCatalogSeed: Bool = true) {
         seedSplitDaysIfNeeded(context: context)
 
-        let hasSeeded = UserDefaults.standard.bool(forKey: "hasSeededExercises")
+        let hasSeeded = UserDefaults.standard.bool(forKey: hasSeededExercisesKey)
         let count = (try? context.fetchCount(FetchDescriptor<Exercise>())) ?? 0
+        let hasRemotePlan = UserDefaults.standard.bool(forKey: hasConfiguredSplitKey)
+            || loadSplitSnapshot() != nil
+            || loadDayPlanSnapshot() != nil
 
         if !hasSeeded && count == 0 {
             guard allowEmptyCatalogSeed else { return }
-            // Library: full catalog, unassigned. Days: short starter templates only.
+            // Library: full catalog, unassigned. Days: short starter templates only
+            // on a brand-new user. A reinstall with iCloud/KVS must not pin starters
+            // onto the restored PPL-PC days before CloudKit brings the real roster.
             insertCatalogExercises(context: context, existingNames: [], assignCatalogDays: false)
             try? context.save()
-            applyStarterDayPlans(context: context, onlyIfDayEmpty: true)
-            UserDefaults.standard.set(true, forKey: "hasSeededExercises")
+            // Starters are a first-use / apply-preset choice — never pin them here.
+            markCatalogSeeded()
             UserDefaults.standard.set(catalogVersion, forKey: catalogVersionKey)
+            persistDayPlanSnapshot(context: context)
             return
         }
 
         // Existing install (or iCloud data): only add *new* catalog lifts on version bumps.
         // Never re-insert names the user deleted from the library.
-        UserDefaults.standard.set(true, forKey: "hasSeededExercises")
+        markCatalogSeeded()
         topUpCatalogIfNeeded(context: context)
+        stripUnusedStarterExtrasIfNeeded(context: context)
+    }
+
+    static func markCatalogSeeded() {
+        UserDefaults.standard.set(true, forKey: hasSeededExercisesKey)
+    }
+
+    /// Skip the unused-starter cleanup (restored backup or first-run templates).
+    static func markDayPlansTrusted() {
+        UserDefaults.standard.set(true, forKey: strippedUnusedStarterExtrasKey)
+    }
+
+    /// One-time repair: if a day already has the user's lifts, drop unused
+    /// starter-template names that a reinstall / CloudKit merge pinned back on.
+    static func stripUnusedStarterExtrasIfNeeded(context: ModelContext) {
+        guard !UserDefaults.standard.bool(forKey: strippedUnusedStarterExtrasKey) else { return }
+        let changed = stripUnusedStarterExtras(context: context)
+        UserDefaults.standard.set(true, forKey: strippedUnusedStarterExtrasKey)
+        if changed {
+            persistDayPlanSnapshot(context: context)
+        }
+    }
+
+    /// Remove starter-template lifts that have no history from days that also
+    /// contain at least one non-starter. Idempotent. Does not touch days that
+    /// are only the starter template (true first-run).
+    @discardableResult
+    static func stripUnusedStarterExtras(context: ModelContext) -> Bool {
+        let all = (try? context.fetch(FetchDescriptor<Exercise>())) ?? []
+        guard !all.isEmpty else { return false }
+        var changed = false
+        for (dayName, starterNames) in starterDayPlans {
+            let day = DayType(rawValue: dayName)
+            let starterSet = Set(starterNames.map { $0.lowercased() })
+            let onDay = all.filter { $0.belongs(to: day) }
+            let nonStarter = onDay.filter { !starterSet.contains($0.name.lowercased()) }
+            guard !nonStarter.isEmpty else { continue }
+            for exercise in onDay {
+                guard starterSet.contains(exercise.name.lowercased()) else { continue }
+                guard !exercise.hasTrainingHistory() else { continue }
+                exercise.removeDayType(day)
+                changed = true
+            }
+        }
+        if changed {
+            try? context.save()
+        }
+        return changed
     }
 
     /// Pin 3–5 starter lifts onto each active split day.

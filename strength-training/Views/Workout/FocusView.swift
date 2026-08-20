@@ -204,9 +204,15 @@ struct FocusView: View {
                 workoutVM.removeExerciseFromSession(exercise)
                 dismiss()
             }
+            if let day = workoutVM.activeSession?.day, !day.includesAllExercises {
+                Button(ListMutationCopy.removeFromDay(day.rawValue), role: .destructive) {
+                    workoutVM.removeExerciseFromDayPlan(exercise, day: day)
+                    dismiss()
+                }
+            }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Stays in your library. Sets logged this session for this exercise will be deleted.")
+            Text("This workout only hides it today. Remove from the day to drop it from the plan. Sets logged this session will be deleted.")
         }
     }
 

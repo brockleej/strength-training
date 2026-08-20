@@ -165,6 +165,7 @@ struct ExerciseLibraryView: View {
                         Button(ListMutationCopy.removeFromDay(dayType.rawValue)) {
                             exercise.removeDayType(dayType)
                             try? modelContext.save()
+                            SeedData.persistUserPlan(context: modelContext)
                         }
                         .tint(Color.uplift.customBadge)
                     }
@@ -183,6 +184,7 @@ struct ExerciseLibraryView: View {
                         Button {
                             exercise.removeDayType(dayType)
                             try? modelContext.save()
+                            SeedData.persistUserPlan(context: modelContext)
                         } label: {
                             Label(ListMutationCopy.removeFromDay(dayType.rawValue), systemImage: "minus.circle")
                         }

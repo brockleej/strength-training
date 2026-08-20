@@ -6,15 +6,233 @@
 //
 
 import SwiftUI
+import SwiftData
+internal import UniformTypeIdentifiers
 
 struct FirstRunView: View {
     var onFinished: () -> Void
+    /// First install only — pick a split, then starters vs empty days.
+    var showsSplitSetup: Bool = false
 
+    @Environment(\.modelContext) private var modelContext
     @State private var page = 0
+    @State private var setupStep: SetupStep
+    @State private var selectedPreset: SplitPreset?
+    @State private var includeStarters: Bool?
+    @State private var isImportingBackup = false
+    @State private var pendingRestoreData: Data?
+    @State private var pendingRestorePrompt = RestorePrompt(
+        title: "Restore backup?",
+        message: "Load this backup onto this phone?",
+        confirmTitle: "Restore",
+        cancelTitle: "Cancel"
+    )
+    @State private var showRestoreConfirmation = false
+    @State private var restoreErrorMessage = ""
+    @State private var showRestoreError = false
 
     private let pages = FirstRunPage.all
 
+    private enum SetupStep {
+        case pickSplit
+        case pickStarters
+        case welcome
+    }
+
+    init(onFinished: @escaping () -> Void, showsSplitSetup: Bool = false) {
+        self.onFinished = onFinished
+        self.showsSplitSetup = showsSplitSetup
+        _setupStep = State(initialValue: showsSplitSetup ? .pickSplit : .welcome)
+    }
+
     var body: some View {
+        VStack(spacing: 0) {
+            switch setupStep {
+            case .pickSplit:
+                splitPicker
+            case .pickStarters:
+                starterPicker
+            case .welcome:
+                welcomePager
+            }
+        }
+        .background(Color.uplift.bgElev.ignoresSafeArea())
+        .preferredColorScheme(.dark)
+        .interactiveDismissDisabled(showsSplitSetup && setupStep != .welcome)
+        .fileImporter(
+            isPresented: $isImportingBackup,
+            allowedContentTypes: [.json],
+            allowsMultipleSelection: false
+        ) { result in
+            handleRestorePick(result)
+        }
+        .alert(
+            pendingRestorePrompt.title,
+            isPresented: $showRestoreConfirmation
+        ) {
+            Button(pendingRestorePrompt.cancelTitle) {
+                pendingRestoreData = nil
+            }
+            Button(pendingRestorePrompt.confirmTitle, role: .destructive) {
+                confirmRestore()
+            }
+        } message: {
+            Text(pendingRestorePrompt.message)
+        }
+        .alert("Couldn’t restore", isPresented: $showRestoreError) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(restoreErrorMessage)
+        }
+    }
+
+    // MARK: - Pick a split
+
+    private var splitPicker: some View {
+        VStack(spacing: 0) {
+            setupHeader(
+                eyebrow: "First setup",
+                title: "Pick a split or restore",
+                lede: "Start a new split, or restore a RockLog backup with your days, exercises, and history."
+            )
+            ScrollView {
+                VStack(spacing: 8) {
+                    setupChoice(
+                        title: "Restore from backup",
+                        detail: "Use a RockLog JSON export. Replaces this empty setup with that split and log.",
+                        selected: false
+                    ) {
+                        selectedPreset = nil
+                        isImportingBackup = true
+                    }
+
+                    ForEach(SplitPreset.allCases) { preset in
+                        setupChoice(
+                            title: preset.rawValue,
+                            detail: preset.detail,
+                            selected: selectedPreset == preset
+                        ) {
+                            selectedPreset = preset
+                        }
+                    }
+                }
+                .padding(.horizontal, 24)
+                .padding(.bottom, 16)
+            }
+            .scrollIndicators(.hidden)
+            setupContinue("Continue", enabled: selectedPreset != nil) {
+                withAnimation(.easeInOut(duration: 0.25)) { setupStep = .pickStarters }
+            }
+        }
+    }
+
+    // MARK: - Starters vs empty
+
+    private var starterPicker: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.25)) { setupStep = .pickSplit }
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 13, weight: .bold))
+                        Text("Split")
+                            .font(.uplift.text(15, weight: .semibold))
+                    }
+                    .foregroundStyle(Color.uplift.fgMuted)
+                    .frame(minHeight: 44)
+                }
+                .buttonStyle(.plain)
+                Spacer()
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 8)
+
+            setupHeader(
+                eyebrow: "Your days",
+                title: "Starter exercises?",
+                lede: "Would you like us to add starter exercises, or leave the days empty for custom exercises?"
+            )
+            VStack(spacing: 8) {
+                setupChoice(
+                    title: "Add starter exercises",
+                    detail: "Pins 3–5 common lifts on each day. Swap or remove them anytime.",
+                    selected: includeStarters == true
+                ) {
+                    includeStarters = true
+                }
+                setupChoice(
+                    title: "Leave empty",
+                    detail: "Days start blank. Add your own from Exercises or when you train.",
+                    selected: includeStarters == false
+                ) {
+                    includeStarters = false
+                }
+            }
+            .padding(.horizontal, 24)
+            Spacer(minLength: 12)
+            setupContinue("Continue", enabled: includeStarters != nil) {
+                applySetupAndShowWelcome()
+            }
+        }
+    }
+
+    private func applySetupAndShowWelcome() {
+        guard let preset = selectedPreset, let includeStarters else { return }
+        DayTypeRegistry.shared.applyPreset(
+            preset,
+            context: modelContext,
+            includeStarters: includeStarters
+        )
+        withAnimation(.easeInOut(duration: 0.25)) { setupStep = .welcome }
+    }
+
+    private func handleRestorePick(_ result: Result<[URL], Error>) {
+        switch result {
+        case .success(let urls):
+            guard let url = urls.first else { return }
+            guard url.startAccessingSecurityScopedResource() else {
+                restoreErrorMessage = "Could not access the selected file."
+                showRestoreError = true
+                return
+            }
+            defer { url.stopAccessingSecurityScopedResource() }
+            do {
+                let data = try Data(contentsOf: url)
+                let backup = try BackupService.decode(data)
+                let current = BackupService.summarizeStore(context: modelContext)
+                let incoming = BackupService.summarize(backup: backup)
+                pendingRestoreData = data
+                pendingRestorePrompt = BackupService.restorePrompt(current: current, incoming: incoming)
+                showRestoreConfirmation = true
+            } catch {
+                restoreErrorMessage = error.localizedDescription
+                showRestoreError = true
+            }
+        case .failure(let error):
+            restoreErrorMessage = error.localizedDescription
+            showRestoreError = true
+        }
+    }
+
+    private func confirmRestore() {
+        guard let data = pendingRestoreData else { return }
+        pendingRestoreData = nil
+        Task { @MainActor in
+            do {
+                try await BackupService.restoreAfterTearingDownUI(from: data, context: modelContext)
+                withAnimation(.easeInOut(duration: 0.25)) { setupStep = .welcome }
+            } catch {
+                restoreErrorMessage = error.localizedDescription
+                showRestoreError = true
+            }
+        }
+    }
+
+    // MARK: - Welcome pages
+
+    private var welcomePager: some View {
         VStack(spacing: 0) {
             HStack {
                 Spacer()
@@ -31,7 +249,7 @@ struct FirstRunView: View {
 
             TabView(selection: $page) {
                 ForEach(Array(pages.enumerated()), id: \.offset) { index, item in
-                    pageContent(item)
+                    pageContent(item, mentionsSplitSetup: showsSplitSetup)
                         .tag(index)
                         .padding(.horizontal, 24)
                 }
@@ -69,11 +287,86 @@ struct FirstRunView: View {
             .padding(.horizontal, 24)
             .padding(.bottom, 28)
         }
-        .background(Color.uplift.bgElev.ignoresSafeArea())
-        .preferredColorScheme(.dark)
     }
 
-    private func pageContent(_ item: FirstRunPage) -> some View {
+    private func setupHeader(eyebrow: String, title: String, lede: String) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(eyebrow)
+                .textCase(.uppercase)
+                .font(.uplift.text(11, weight: .semibold))
+                .tracking(0.4)
+                .foregroundStyle(Color.uplift.fgMuted)
+            Text(title)
+                .font(.uplift.display(30, weight: .bold))
+                .kerning(-0.6)
+                .foregroundStyle(Color.uplift.fg)
+            Text(lede)
+                .font(.uplift.text(16, weight: .medium))
+                .foregroundStyle(Color.uplift.fgMuted)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 24)
+        .padding(.top, 12)
+        .padding(.bottom, 18)
+    }
+
+    private func setupChoice(
+        title: String,
+        detail: String,
+        selected: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.uplift.text(15, weight: .semibold))
+                        .foregroundStyle(Color.uplift.fg)
+                    Text(detail)
+                        .font(.uplift.text(13, weight: .medium))
+                        .foregroundStyle(Color.uplift.fgMuted)
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 8)
+                Image(systemName: selected ? "checkmark.circle.fill" : "circle")
+                    .font(.system(size: 22))
+                    .foregroundStyle(selected ? Color.uplift.accent : Color.uplift.fgDim)
+            }
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(selected ? Color.uplift.accent.opacity(0.10) : Color.uplift.surface1)
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .strokeBorder(selected ? Color.uplift.accent.opacity(0.45) : Color.clear, lineWidth: 1)
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func setupContinue(_ title: String, enabled: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.uplift.text(16, weight: .semibold))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 15)
+                .background(
+                    (enabled ? Color.uplift.accent : Color.uplift.fgFaint),
+                    in: RoundedRectangle(cornerRadius: 16, style: .continuous)
+                )
+                .foregroundStyle(enabled ? Color.uplift.onAccent : Color.uplift.fgDim)
+        }
+        .buttonStyle(.plain)
+        .disabled(!enabled)
+        .padding(.horizontal, 24)
+        .padding(.bottom, 28)
+    }
+
+    private func pageContent(_ item: FirstRunPage, mentionsSplitSetup: Bool) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 22) {
                 Image(systemName: item.symbol)
@@ -93,7 +386,9 @@ struct FirstRunView: View {
                         .font(.uplift.display(30, weight: .bold))
                         .kerning(-0.6)
                         .foregroundStyle(Color.uplift.fg)
-                    Text(item.lede)
+                    Text(mentionsSplitSetup && item.eyebrow == "Welcome"
+                     ? "Five tabs at the bottom are the whole app. Your split is already set. Open Settings once before you train for next-set fill, body weight, and gym pass."
+                     : item.lede)
                         .font(.uplift.text(16, weight: .medium))
                         .foregroundStyle(Color.uplift.fgMuted)
                         .fixedSize(horizontal: false, vertical: true)
@@ -144,7 +439,7 @@ private struct FirstRunPage: Identifiable {
         FirstRunPage(
             eyebrow: "Welcome",
             title: "RockLog",
-            lede: "Five tabs at the bottom are the whole app. After this welcome, open the Settings tab once before you train — set your split, how the next set fills, body weight, and gym pass. You can change any of it later.",
+            lede: "Five tabs at the bottom are the whole app. After this welcome, open the Settings tab once before you train — next set fill, body weight, and gym pass. You can change any of it later.",
             symbol: "dumbbell.fill",
             rows: [
                 .init(
@@ -170,7 +465,7 @@ private struct FirstRunPage: Identifiable {
                 .init(
                     symbol: "gearshape",
                     title: "Settings tab",
-                    detail: "Start here. Edit training split and Rolling/Weekly first, then Next set default, Progression, Timer, Body profile, and Gym pass."
+                    detail: "Next set default, Progression, Timer, Body profile, and Gym pass. Change your split anytime under Edit training split."
                 ),
             ]
         ),
@@ -193,7 +488,7 @@ private struct FirstRunPage: Identifiable {
                 .init(
                     symbol: "calendar",
                     title: "Your split",
-                    detail: "The day cards are your training split, in the order you set. Change days and order in Settings → Edit training split. Rolling vs weekly is the control right under that."
+                    detail: "The day cards are the split you picked. Change days and order in Settings → Edit training split. Rolling vs weekly is the control right under that."
                 ),
             ]
         ),

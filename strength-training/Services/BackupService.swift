@@ -8,6 +8,15 @@
 import SwiftData
 import Foundation
 
+extension Notification.Name {
+    /// Posted on the main actor *before* restore deletes SwiftData rows.
+    /// Drop session refs and tear down ExerciseListView first or the next
+    /// frame reads zombie records (TF 13 SIGTRAP).
+    static let rockLogStoreWillReplace = Notification.Name("rockLogStoreWillReplace")
+    /// Posted on the main actor after restore wipes and reloads the SwiftData store.
+    static let rockLogStoreReplaced = Notification.Name("rockLogStoreReplaced")
+}
+
 enum BackupError: LocalizedError {
     case unsupportedVersion(Int)
 
@@ -44,7 +53,8 @@ struct BackupService {
                 isCustom: e.isCustom,
                 notes: e.notes,
                 rotationTrack: e.rotationTrack,
-                extraDayTypes: e.extraDayTypes
+                extraDayTypes: e.extraDayTypes,
+                daySortOrdersRaw: e.daySortOrdersRaw
             )
         }
 
@@ -81,7 +91,8 @@ struct BackupService {
                                 }
                         )
                     },
-                rotationTrack: s.rotationTrack
+                rotationTrack: s.rotationTrack,
+                durationSeconds: s.durationSeconds > 0 ? s.durationSeconds : nil
             )
         }
 
@@ -102,7 +113,8 @@ struct BackupService {
             exportedAt: .now,
             exercises: exerciseBackups,
             sessions: sessionBackups,
-            splitDays: splitBackups
+            splitDays: splitBackups,
+            dayPlans: SeedData.captureDayPlans(from: exercises, splitDays: splitDays)
         )
 
         let encoder = JSONEncoder()
@@ -111,16 +123,106 @@ struct BackupService {
         return try encoder.encode(backup)
     }
 
-    // MARK: - Restore
+    // MARK: - Preview / confirm
 
-    static func restore(from data: Data, context: ModelContext) throws {
+    static func decode(_ data: Data) throws -> AppBackup {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         let backup = try decoder.decode(AppBackup.self, from: data)
-
         guard backup.version <= currentVersion else {
             throw BackupError.unsupportedVersion(backup.version)
         }
+        return backup
+    }
+
+    static func summarize(backup: AppBackup) -> BackupSummary {
+        let splitNames: [String]
+        if let stored = backup.splitDays, !stored.isEmpty {
+            splitNames = stored.sorted { $0.sortOrder < $1.sortOrder }.map(\.name)
+        } else {
+            splitNames = inferSplit(from: backup).map(\.name)
+        }
+        let assigned = backup.exercises.filter { exercise in
+            let primary = exercise.dayType.trimmingCharacters(in: .whitespacesAndNewlines)
+            let extras = (exercise.extraDayTypes ?? "")
+                .split(separator: ",")
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+            return !primary.isEmpty || !extras.isEmpty
+        }.count
+        return BackupSummary(
+            splitDayNames: splitNames,
+            assignedExerciseCount: assigned,
+            exerciseCount: backup.exercises.count,
+            sessionCount: backup.sessions.count
+        )
+    }
+
+    static func summarizeStore(context: ModelContext) -> BackupSummary {
+        let splitDays = (try? context.fetch(
+            FetchDescriptor<SplitDay>(sortBy: [
+                SortDescriptor(\SplitDay.sortOrder),
+                SortDescriptor(\SplitDay.name),
+            ])
+        )) ?? []
+        let exercises = (try? context.fetch(FetchDescriptor<Exercise>())) ?? []
+        let sessions = (try? context.fetch(FetchDescriptor<WorkoutSession>())) ?? []
+        let assigned = exercises.filter { !$0.isUnassigned }.count
+        return BackupSummary(
+            splitDayNames: splitDays.map(\.name),
+            assignedExerciseCount: assigned,
+            exerciseCount: exercises.count,
+            sessionCount: sessions.count
+        )
+    }
+
+    static func restorePrompt(current: BackupSummary, incoming: BackupSummary) -> RestorePrompt {
+        if current.hasSplitWithExercises {
+            return RestorePrompt(
+                title: "Replace current split?",
+                message: """
+                There is currently a split with exercises in this app (\(current.splitPhrase)). \
+                Restore will replace that split, the lifts on those days, and your workout history \
+                with this backup (\(incoming.splitPhrase)). This cannot be undone.
+                """,
+                confirmTitle: "Replace split and exercises",
+                cancelTitle: "Don't restore"
+            )
+        }
+        if current.sessionCount > 0 || current.assignedExerciseCount > 0 {
+            return RestorePrompt(
+                title: "Restore backup?",
+                message: """
+                This will replace the workout data on this phone with this backup \
+                (\(incoming.splitPhrase)). This cannot be undone.
+                """,
+                confirmTitle: "Replace all data",
+                cancelTitle: "Don't restore"
+            )
+        }
+        return RestorePrompt(
+            title: "Restore backup?",
+            message: "Load this backup onto this phone (\(incoming.splitPhrase))? It becomes your split, exercises, and workout history.",
+            confirmTitle: "Restore",
+            cancelTitle: "Don't restore"
+        )
+    }
+
+    // MARK: - Restore
+
+    /// Tear down live workout UI, then replace the store.
+    @MainActor
+    static func restoreAfterTearingDownUI(from data: Data, context: ModelContext) async throws {
+        NotificationCenter.default.post(name: .rockLogStoreWillReplace, object: nil)
+        // Two turns so SwiftUI can unmount TabView / FocusView before deletes.
+        await Task.yield()
+        try await Task.sleep(for: .milliseconds(200))
+        try restore(from: data, context: context)
+    }
+
+    @MainActor
+    static func restore(from data: Data, context: ModelContext) throws {
+        let backup = try decode(data)
 
         // context.delete(model:) is a SQL-level batch delete that bypasses the
         // object graph — cascade rules and inverse nullification never fire.
@@ -152,6 +254,7 @@ struct BackupService {
             exercise.id = eb.id
             exercise.notes = eb.notes
             exercise.extraDayTypes = eb.extraDayTypes ?? ""
+            exercise.daySortOrdersRaw = eb.daySortOrdersRaw ?? ""
             context.insert(exercise)
             exerciseMap[eb.id] = exercise
         }
@@ -167,6 +270,9 @@ struct BackupService {
             session.id = sb.id
             session.notes = sb.notes
             session.isCompleted = sb.isCompleted
+            if let duration = sb.durationSeconds, duration > 0 {
+                session.durationSeconds = duration
+            }
             context.insert(session)
 
             for rb in sb.exerciseRecords {
@@ -209,11 +315,14 @@ struct BackupService {
         SeedData.migrateExerciseNames(context: context)
 
         restoreSplitDays(from: backup, context: context)
+        SeedData.restoreDayPlans(from: backup, context: context)
+        SeedData.markCatalogSeeded()
+        SeedData.markDayPlansTrusted()
         SeedData.markSplitConfigured(context: context)
-
-        Task { @MainActor in
-            DayTypeRegistry.shared.reload(context: context)
-        }
+        // Reload on this call — a detached Task outlives test containers
+        // and the CloudKit store tear-down, then fetchCount traps (SIGTRAP).
+        DayTypeRegistry.shared.reload(context: context)
+        NotificationCenter.default.post(name: .rockLogStoreReplaced, object: nil)
     }
 
     /// Prefer the stored split. Older backups only have session/exercise names —

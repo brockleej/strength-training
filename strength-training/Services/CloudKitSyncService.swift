@@ -110,16 +110,17 @@ final class CloudKitSyncService {
         }
         guard accountStatus == .available else { return }
 
+        // Split days may already exist from the KVS snapshot. Still wait for
+        // the exercise library — otherwise we seed starters onto PPL-PC days
+        // and CloudKit later merges them with the user's roster.
         let exerciseCount = (try? modelContext.fetchCount(FetchDescriptor<Exercise>())) ?? 0
-        let splitCount = (try? modelContext.fetchCount(FetchDescriptor<SplitDay>())) ?? 0
-        if exerciseCount > 0 || splitCount > 0 { return }
+        if exerciseCount > 0 { return }
 
         let deadline = ContinuousClock.now + timeout
         while ContinuousClock.now < deadline {
             if lastSyncDate != nil { return }
             let e = (try? modelContext.fetchCount(FetchDescriptor<Exercise>())) ?? 0
-            let s = (try? modelContext.fetchCount(FetchDescriptor<SplitDay>())) ?? 0
-            if e > 0 || s > 0 { return }
+            if e > 0 { return }
             try? await Task.sleep(for: .milliseconds(250))
         }
     }

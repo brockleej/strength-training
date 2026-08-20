@@ -14,6 +14,59 @@ struct AppBackup: Codable {
     let sessions: [WorkoutSessionBackup]
     /// Active Today split, in display order. Missing on backups made before this field.
     let splitDays: [SplitDayBackup]?
+    /// Per-day exercise IDs in list order. Missing on backups made before this field.
+    let dayPlans: [DayPlanBackup]?
+
+    init(
+        version: Int,
+        exportedAt: Date,
+        exercises: [ExerciseBackup],
+        sessions: [WorkoutSessionBackup],
+        splitDays: [SplitDayBackup]? = nil,
+        dayPlans: [DayPlanBackup]? = nil
+    ) {
+        self.version = version
+        self.exportedAt = exportedAt
+        self.exercises = exercises
+        self.sessions = sessions
+        self.splitDays = splitDays
+        self.dayPlans = dayPlans
+    }
+}
+
+/// Ordered roster for one split day. Source of truth after restore / iCloud merge.
+struct DayPlanBackup: Codable, Equatable {
+    var dayName: String
+    var exerciseIDs: [UUID]
+}
+
+struct BackupSummary: Equatable {
+    var splitDayNames: [String]
+    var assignedExerciseCount: Int
+    var exerciseCount: Int
+    var sessionCount: Int
+
+    var hasSplitWithExercises: Bool {
+        !splitDayNames.isEmpty && assignedExerciseCount > 0
+    }
+
+    var hasAnyData: Bool {
+        !splitDayNames.isEmpty || exerciseCount > 0 || sessionCount > 0
+    }
+
+    var splitPhrase: String {
+        let days = splitDayNames.isEmpty ? "no split days" : splitDayNames.joined(separator: ", ")
+        let liftWord = assignedExerciseCount == 1 ? "exercise" : "exercises"
+        let workoutWord = sessionCount == 1 ? "workout" : "workouts"
+        return "\(days) · \(assignedExerciseCount) \(liftWord) on those days · \(sessionCount) \(workoutWord)"
+    }
+}
+
+struct RestorePrompt: Equatable {
+    var title: String
+    var message: String
+    var confirmTitle: String
+    var cancelTitle: String
 }
 
 struct SplitDayBackup: Codable, Equatable {
@@ -38,6 +91,8 @@ struct ExerciseBackup: Codable {
     let rotationTrack: String?
     /// Comma-separated extra day names — optional for older backups.
     let extraDayTypes: String?
+    /// Per-day list order (`Push:0,Legs:3`) — optional for older backups.
+    let daySortOrdersRaw: String?
 
     init(
         id: UUID,
@@ -48,7 +103,8 @@ struct ExerciseBackup: Codable {
         isCustom: Bool,
         notes: String,
         rotationTrack: String? = nil,
-        extraDayTypes: String? = nil
+        extraDayTypes: String? = nil,
+        daySortOrdersRaw: String? = nil
     ) {
         self.id = id
         self.name = name
@@ -59,6 +115,7 @@ struct ExerciseBackup: Codable {
         self.notes = notes
         self.rotationTrack = rotationTrack
         self.extraDayTypes = extraDayTypes
+        self.daySortOrdersRaw = daySortOrdersRaw
     }
 }
 
@@ -71,6 +128,8 @@ struct WorkoutSessionBackup: Codable {
     let exerciseRecords: [ExerciseRecordBackup]
     /// "" / "A" / "B" — optional for older backups.
     let rotationTrack: String?
+    /// Seconds; optional for older backups.
+    let durationSeconds: Double?
 
     init(
         id: UUID,
@@ -79,7 +138,8 @@ struct WorkoutSessionBackup: Codable {
         notes: String,
         isCompleted: Bool,
         exerciseRecords: [ExerciseRecordBackup],
-        rotationTrack: String? = nil
+        rotationTrack: String? = nil,
+        durationSeconds: Double? = nil
     ) {
         self.id = id
         self.date = date
@@ -88,6 +148,7 @@ struct WorkoutSessionBackup: Codable {
         self.isCompleted = isCompleted
         self.exerciseRecords = exerciseRecords
         self.rotationTrack = rotationTrack
+        self.durationSeconds = durationSeconds
     }
 }
 

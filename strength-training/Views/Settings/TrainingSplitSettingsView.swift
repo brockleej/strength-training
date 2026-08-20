@@ -92,17 +92,18 @@ struct TrainingSplitSettingsView: View {
             titleVisibility: .visible
         ) {
             if let preset = pendingPreset {
-                Button("Apply \(preset.rawValue)", role: .destructive) {
-                    DayTypeRegistry.shared.applyPreset(preset, context: modelContext)
-                    pendingPreset = nil
-                    syncOrderedIDs()
+                Button("Apply with starter exercises") {
+                    applyPreset(preset, includeStarters: true)
+                }
+                Button("Apply with empty days") {
+                    applyPreset(preset, includeStarters: false)
                 }
             }
             Button("Cancel", role: .cancel) {
                 pendingPreset = nil
             }
         } message: {
-            Text("Your day list will be replaced. Existing exercises keep their day tags. You can reorder afterward.")
+            Text("Your day list will be replaced. Starter exercises pin 3–5 common lifts on each new day. Empty days stay blank so you can add your own. Existing lifts keep their day tags.")
         }
         .confirmationDialog(
             "Delete \(dayPendingDelete?.name ?? "day")?",
@@ -173,7 +174,7 @@ struct TrainingSplitSettingsView: View {
                     .buttonStyle(.plain)
                 }
             }
-            sectionFooter("Applying a preset replaces your day list. Exercises keep their current day tags — reassign them in the library if needed.")
+            sectionFooter("Applying a preset replaces your day list. You choose starter exercises or empty days. Existing lifts keep their tags.")
         }
     }
 
@@ -196,12 +197,6 @@ struct TrainingSplitSettingsView: View {
                 VStack(spacing: 8) {
                     ForEach(Array(displayedDays.enumerated()), id: \.element.id) { index, day in
                         dayRow(day, weekPosition: index + 1)
-                            .reorderDropTarget(
-                                id: day.id,
-                                orderedIDs: $orderedIDs,
-                                draggingID: $draggingID,
-                                onReorder: persistOrder
-                            )
                     }
                 }
             }
@@ -255,8 +250,13 @@ struct TrainingSplitSettingsView: View {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .fill(draggingID == day.id ? Color.uplift.surface2 : Color.uplift.surface1)
         }
-        .reorderDragSource(id: day.id, displayName: day.name, draggingID: $draggingID)
-        .swipeToDelete(fullSwipeDeletes: false, onDelete: {
+        .longPressReorder(
+            id: day.id,
+            orderedIDs: $orderedIDs,
+            draggingID: $draggingID,
+            onReorder: persistOrder
+        )
+        .swipeToDelete(fullSwipeDeletes: false, isEnabled: draggingID == nil, onDelete: {
             // Soft reveal only; hard delete requires confirm (T2/T3).
             dayPendingDelete = day
         }, onTap: {
@@ -265,6 +265,16 @@ struct TrainingSplitSettingsView: View {
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(weekPosition). \(day.name)")
         .accessibilityHint("Long press and drag to reorder, swipe left to delete, double tap to edit")
+    }
+
+    private func applyPreset(_ preset: SplitPreset, includeStarters: Bool) {
+        DayTypeRegistry.shared.applyPreset(
+            preset,
+            context: modelContext,
+            includeStarters: includeStarters
+        )
+        pendingPreset = nil
+        syncOrderedIDs()
     }
 
     private func syncOrderedIDs() {

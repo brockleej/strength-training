@@ -59,11 +59,14 @@ struct DayPlanEditorView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
+            List {
+                Section {
                     Text(ListMutationCopy.reorderAndRemove + " Tap to edit.")
                         .font(.uplift.text(13, weight: .medium))
                         .foregroundStyle(Color.uplift.fgMuted)
+                        .listRowInsets(EdgeInsets(top: 12, leading: 20, bottom: 8, trailing: 20))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
 
                     UpliftSegmentedControl(
                         segments: [
@@ -79,6 +82,9 @@ struct DayPlanEditorView: View {
                             }
                         )
                     )
+                    .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 8, trailing: 20))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
 
                     HStack {
                         Text(dayType.rawValue.uppercased())
@@ -90,40 +96,57 @@ struct DayPlanEditorView: View {
                             .font(.uplift.mono(12, weight: .semibold))
                             .foregroundStyle(Color.uplift.fgDim)
                     }
-                    .padding(.top, 4)
+                    .listRowInsets(EdgeInsets(top: 8, leading: 20, bottom: 4, trailing: 20))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                }
 
-                    if displayedExercises.isEmpty {
+                if displayedExercises.isEmpty {
+                    Section {
                         EmptyListState(
                             title: "No exercises on this day",
                             description: "Add lifts from your library. Unassigned lifts live under Exercises → Unassigned.",
                             actionTitle: ListMutationCopy.addExercise,
                             action: { showAddPicker = true }
                         )
-                    } else {
-                        VStack(spacing: 8) {
-                            ForEach(Array(displayedExercises.enumerated()), id: \.element.id) { index, exercise in
-                                planRow(exercise, index: index)
-                                    .reorderDropTarget(
-                                        id: exercise.id,
-                                        orderedIDs: $orderedIDs,
-                                        draggingID: $draggingID,
-                                        onReorder: persistCurrentOrder
-                                    )
-                            }
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                        .listRowInsets(EdgeInsets(top: 8, leading: 20, bottom: 8, trailing: 20))
+                    }
+                } else {
+                    Section {
+                        ForEach(Array(displayedExercises.enumerated()), id: \.element.id) { index, exercise in
+                            planRow(exercise, index: index)
+                                .contentShape(Rectangle())
+                                .onTapGesture { editingExercise = exercise }
+                                .listRowBackground(
+                                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                        .fill(draggingID == exercise.id ? Color.uplift.surface2 : Color.uplift.surface1)
+                                        .padding(.vertical, 4)
+                                )
+                                .listRowSeparator(.hidden)
+                                .listRowInsets(EdgeInsets(top: 4, leading: 20, bottom: 4, trailing: 20))
+                                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                    Button(ListMutationCopy.removeFromDay(dayType.rawValue)) {
+                                        removeExercise(exercise)
+                                    }
+                                    .tint(Color.uplift.customBadge)
+                                }
                         }
                     }
 
-                    if !displayedExercises.isEmpty {
+                    Section {
                         AddItemRow(title: ListMutationCopy.addExercise) {
                             showAddPicker = true
                         }
-                        .padding(.top, 8)
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                        .listRowInsets(EdgeInsets(top: 8, leading: 20, bottom: 24, trailing: 20))
                     }
-                    Color.clear.frame(height: 24)
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 12)
             }
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
             .background(Color.uplift.bgElev)
             .navigationTitle("Edit \(dayType.rawValue)")
             .navigationBarTitleDisplayMode(.inline)
@@ -146,6 +169,7 @@ struct DayPlanEditorView: View {
                     onPick: { exercise, _ in
                         exercise.addDayType(dayType, atEndOf: allExercises)
                         try? modelContext.save()
+                        SeedData.persistUserPlan(context: modelContext)
                         syncOrderedIDsFromStore()
                     },
                     onCreated: { _ in
@@ -206,16 +230,24 @@ struct DayPlanEditorView: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background {
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(draggingID == exercise.id ? Color.uplift.surface2 : Color.uplift.surface1)
+        .longPressReorder(
+            id: exercise.id,
+            orderedIDs: $orderedIDs,
+            draggingID: $draggingID,
+            onReorder: persistCurrentOrder
+        )
+        .contextMenu {
+            Button {
+                editingExercise = exercise
+            } label: {
+                Label("Edit exercise", systemImage: "pencil")
+            }
+            Button {
+                removeExercise(exercise)
+            } label: {
+                Label(ListMutationCopy.removeFromDay(dayType.rawValue), systemImage: "minus.circle")
+            }
         }
-        .reorderDragSource(id: exercise.id, displayName: exercise.name, draggingID: $draggingID)
-        .swipeToDelete(fullSwipeDeletes: false, onDelete: {
-            removeExercise(exercise)
-        }, onTap: {
-            editingExercise = exercise
-        })
         .accessibilityElement(children: .combine)
         .accessibilityLabel(planAccessibility(index: index, exercise: exercise, personalBest: personalBest, hasHistory: hasHistory))
         .accessibilityHint("Long press and drag to reorder, swipe left to remove, double tap to edit")
@@ -246,11 +278,13 @@ struct DayPlanEditorView: View {
         guard !ordered.isEmpty else { return }
         Exercise.applyOrder(ordered, for: dayType)
         try? modelContext.save()
+        SeedData.persistUserPlan(context: modelContext)
     }
 
     private func removeExercise(_ exercise: Exercise) {
         exercise.removeDayType(dayType)
         try? modelContext.save()
+        SeedData.persistUserPlan(context: modelContext)
         syncOrderedIDsFromStore()
     }
 }

@@ -228,6 +228,7 @@ struct AddExerciseView: View {
         )
         modelContext.insert(exercise)
         try? modelContext.save()
+        SeedData.persistUserPlan(context: modelContext)
         onCreated?(exercise)
         if !embedded {
             dismiss()

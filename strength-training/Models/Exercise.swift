@@ -65,10 +65,11 @@ final class Exercise {
     /// completed History session in place — it stays `isCompleted == true`).
     func lastCompletedRecord(mode: TrainingMode, excludingSessionID: UUID? = nil) -> ExerciseRecord? {
         recordsArray
-            .filter {
-                $0.trainingMode == mode
-                    && $0.session?.isCompleted == true
-                    && $0.session?.id != excludingSessionID
+            .filter { record in
+                guard !record.isDeleted else { return false }
+                return record.trainingMode == mode
+                    && record.session?.isCompleted == true
+                    && record.session?.id != excludingSessionID
             }
             .max { ($0.session?.date ?? .distantPast) < ($1.session?.date ?? .distantPast) }
     }
@@ -76,10 +77,11 @@ final class Exercise {
     /// Completed records for mode, newest-first (excludes incomplete sessions).
     func completedRecords(mode: TrainingMode, excludingSessionID: UUID? = nil) -> [ExerciseRecord] {
         recordsArray
-            .filter {
-                $0.trainingMode == mode
-                    && $0.session?.isCompleted == true
-                    && $0.session?.id != excludingSessionID
+            .filter { record in
+                guard !record.isDeleted else { return false }
+                return record.trainingMode == mode
+                    && record.session?.isCompleted == true
+                    && record.session?.id != excludingSessionID
             }
             .sorted { ($0.session?.date ?? .distantPast) > ($1.session?.date ?? .distantPast) }
     }
@@ -191,7 +193,7 @@ final class Exercise {
 
     func belongs(to day: DayType) -> Bool {
         guard !day.rawValue.isEmpty else { return isUnassigned }
-        return dayTypeNames.contains(day.rawValue)
+        return dayTypeNames.contains { $0.caseInsensitiveCompare(day.rawValue) == .orderedSame }
     }
 
     /// Replace membership. Empty array = not on any day plan (library only).
@@ -242,11 +244,8 @@ final class Exercise {
     /// Remove from a day. If it was the last day, the exercise becomes unassigned
     /// (still in the library, not on any workout plan).
     func removeDayType(_ day: DayType) {
-        let remaining = days.filter { $0.rawValue != day.rawValue }
+        let remaining = days.filter { $0.rawValue.caseInsensitiveCompare(day.rawValue) != .orderedSame }
         setDayTypes(remaining)
-        var map = Self.parseDaySortMap(daySortOrdersRaw)
-        map.removeValue(forKey: day.rawValue)
-        daySortOrdersRaw = Self.encodeDaySortMap(map)
     }
 
     var track: RotationTrack {

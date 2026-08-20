@@ -185,17 +185,20 @@ final class TodayViewModel {
         }
     }
 
-    /// Fetch the duration string for each day type's most recent HK-backed session.
+    /// Fetch the duration string for each day type's most recent completed session.
     /// `sessions` must be completed sessions sorted newest-first.
     func fetchLastDurations(sessions: [WorkoutSession], healthKitService: HealthKitWorkoutService) async {
         for dayType in DayType.allCases {
-            guard let session = sessions.first(where: { $0.day == dayType && $0.healthKitWorkoutUUID != nil }),
-                  let uuid = session.healthKitWorkoutUUID
-            else { continue }
-            if let stats = await healthKitService.fetchWorkoutStats(for: uuid) {
-                let minutes = max(1, Int((stats.duration / 60).rounded()))
+            guard let session = sessions.first(where: { $0.day == dayType }) else { continue }
+            if let minutes = SessionMath.durationMinutesLabel(of: session) {
                 lastDurations[dayType] = "\(minutes) min"
+                continue
             }
+            guard let uuid = session.healthKitWorkoutUUID,
+                  let stats = await healthKitService.fetchWorkoutStats(for: uuid)
+            else { continue }
+            let minutes = max(1, Int((stats.duration / 60).rounded()))
+            lastDurations[dayType] = "\(minutes) min"
         }
     }
 }

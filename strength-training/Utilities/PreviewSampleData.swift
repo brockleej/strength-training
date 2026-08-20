@@ -20,6 +20,10 @@ let previewContainer: ModelContainer = {
         configurations: config
     )
     SeedData.seedIfNeeded(context: container.mainContext)
-    DayTypeRegistry.shared.reload(context: container.mainContext)
+    DayTypeRegistry.shared.applyPreset(
+        .pushPullLegs,
+        context: container.mainContext,
+        includeStarters: true
+    )
     return container
 }()

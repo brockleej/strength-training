@@ -20,6 +20,8 @@ final class WorkoutSession {
     var healthKitWorkoutUUID: UUID? = nil
     /// Optional, but CloudKit requires an explicit default (`nil` is fine).
     var effortRating: Int? = nil
+    /// Wall-clock session length in seconds. 0 = unknown (infer from set timestamps).
+    var durationSeconds: Double = 0
     /// Session filter: "A", "B", or "" (All). Drives which labeled exercises appear.
     var rotationTrack: String = RotationTrack.a.rawValue
     /// Library exercises hidden from this session only (comma-separated UUIDs).

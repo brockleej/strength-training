@@ -19,6 +19,12 @@ struct SettingsView: View {
 
     @State private var isImporting = false
     @State private var pendingRestoreData: Data?
+    @State private var pendingRestorePrompt = RestorePrompt(
+        title: "Restore backup?",
+        message: "This will replace the workout data on this phone.",
+        confirmTitle: "Replace all data",
+        cancelTitle: "Cancel"
+    )
     @State private var showRestoreConfirmation = false
     @State private var showError = false
     @State private var errorMessage = ""
@@ -389,7 +395,7 @@ struct SettingsView: View {
                 } header: {
                     sectionHeader("Backup")
                 } footer: {
-                    sectionFooter("This is your save/export — a JSON of this phone’s log. Restore replaces everything on this device. Coach files above cannot restore RockLog.")
+                    sectionFooter("This is your save/export — a JSON of this phone’s log. Restore asks before replacing your current split and exercises. Coach files above cannot restore RockLog.")
                 }
                 .listRowBackground(Color.uplift.surface1)
 
@@ -475,7 +481,7 @@ struct SettingsView: View {
                 GymPassView()
             }
             .fullScreenCover(isPresented: $showWelcomeGuide) {
-                FirstRunView { showWelcomeGuide = false }
+                FirstRunView(showsSplitSetup: false) { showWelcomeGuide = false }
             }
             .fileImporter(
                 isPresented: $isImporting,
@@ -484,21 +490,21 @@ struct SettingsView: View {
             ) { result in
                 handleImportResult(result)
             }
-            .confirmationDialog(
-                "Restore Backup?",
-                isPresented: $showRestoreConfirmation,
-                titleVisibility: .visible
+            .alert(
+                pendingRestorePrompt.title,
+                isPresented: $showRestoreConfirmation
             ) {
-                Button("Replace All Data", role: .destructive) {
+                Button(pendingRestorePrompt.cancelTitle) {
+                    pendingRestoreData = nil
+                }
+                Button(pendingRestorePrompt.confirmTitle, role: .destructive) {
                     if let data = pendingRestoreData {
                         performRestore(data: data)
                     }
-                }
-                Button("Cancel", role: .cancel) {
                     pendingRestoreData = nil
                 }
             } message: {
-                Text("This will permanently replace all current workout data. This cannot be undone.")
+                Text(pendingRestorePrompt.message)
             }
             .alert("Error", isPresented: $showError) {
                 Button("OK", role: .cancel) {}
@@ -725,7 +731,7 @@ struct SettingsView: View {
             let data = try BackupService.export(context: modelContext)
             let formatter = DateFormatter()
             formatter.dateFormat = "yyyy-MM-dd"
-            let filename = "strength-training-backup-\(formatter.string(from: .now)).json"
+            let filename = "RockLog-backup-\(formatter.string(from: .now)).json"
             let url = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
             try data.write(to: url)
             ShareSheetPresenter.presentFile(url)
@@ -780,7 +786,12 @@ struct SettingsView: View {
             }
             defer { url.stopAccessingSecurityScopedResource() }
             do {
-                pendingRestoreData = try Data(contentsOf: url)
+                let data = try Data(contentsOf: url)
+                let backup = try BackupService.decode(data)
+                let current = BackupService.summarizeStore(context: modelContext)
+                let incoming = BackupService.summarize(backup: backup)
+                pendingRestoreData = data
+                pendingRestorePrompt = BackupService.restorePrompt(current: current, incoming: incoming)
                 showRestoreConfirmation = true
             } catch {
                 errorMessage = error.localizedDescription
@@ -793,13 +804,15 @@ struct SettingsView: View {
     }
 
     private func performRestore(data: Data) {
-        do {
-            try BackupService.restore(from: data, context: modelContext)
-            successMessage = "Backup restored successfully."
-            showSuccess = true
-        } catch {
-            errorMessage = error.localizedDescription
-            showError = true
+        Task { @MainActor in
+            do {
+                try await BackupService.restoreAfterTearingDownUI(from: data, context: modelContext)
+                successMessage = "Backup restored successfully."
+                showSuccess = true
+            } catch {
+                errorMessage = error.localizedDescription
+                showError = true
+            }
         }
     }
 }

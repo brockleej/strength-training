@@ -35,7 +35,7 @@ enum ListMutationCopy {
     static let addDay = "Add day"
     /// In-session exercise list.
     static let workoutListHint =
-        "Swipe left to remove a lift from this workout. Long-press for edit or replace."
+        "Swipe left to remove a lift from this workout or from the day plan. Long-press for edit or replace."
 }
 
 // MARK: - Reorder (long-press drag, no Edit mode)
@@ -80,6 +80,22 @@ struct UUIDListDropDelegate: DropDelegate {
 }
 
 extension View {
+    /// Long-press, then drag vertically to reorder. Does not steal a short
+    /// horizontal swipe (that belongs to swipe-to-remove).
+    func longPressReorder(
+        id: UUID,
+        orderedIDs: Binding<[UUID]>,
+        draggingID: Binding<UUID?>,
+        onReorder: @escaping () -> Void
+    ) -> some View {
+        modifier(LongPressReorderModifier(
+            id: id,
+            orderedIDs: orderedIDs,
+            draggingID: draggingID,
+            onReorder: onReorder
+        ))
+    }
+
     /// Whole-row long-press drag source for reorderable UUID lists.
     func reorderDragSource(
         id: UUID,
@@ -113,6 +129,55 @@ extension View {
                 onReorder: onReorder
             )
         )
+    }
+}
+
+/// Reorder without `onDrag`, which on iOS also captures horizontal swipes.
+private struct LongPressReorderModifier: ViewModifier {
+    let id: UUID
+    @Binding var orderedIDs: [UUID]
+    @Binding var draggingID: UUID?
+    let onReorder: () -> Void
+
+    @State private var startIndex = 0
+    @State private var lastTarget = 0
+
+    func body(content: Content) -> some View {
+        content
+            .scaleEffect(draggingID == id ? 1.03 : 1)
+            .zIndex(draggingID == id ? 1 : 0)
+            .simultaneousGesture(
+                LongPressGesture(minimumDuration: 0.4)
+                    .onEnded { _ in
+                        startIndex = orderedIDs.firstIndex(of: id) ?? 0
+                        lastTarget = startIndex
+                        draggingID = id
+                        HapticService.stepperTick()
+                    }
+                    .sequenced(before: DragGesture(minimumDistance: 8, coordinateSpace: .local))
+                    .onChanged { value in
+                        guard case .second(true, let drag?) = value else { return }
+                        guard draggingID == id else { return }
+                        let rowHeight: CGFloat = 68
+                        let delta = Int((drag.translation.height / rowHeight).rounded())
+                        let target = max(0, min(orderedIDs.count - 1, startIndex + delta))
+                        guard target != lastTarget,
+                              let current = orderedIDs.firstIndex(of: id)
+                        else { return }
+                        lastTarget = target
+                        withAnimation(.easeInOut(duration: 0.15)) {
+                            orderedIDs.move(
+                                fromOffsets: IndexSet(integer: current),
+                                toOffset: target > current ? target + 1 : target
+                            )
+                        }
+                    }
+                    .onEnded { _ in
+                        guard draggingID == id else { return }
+                        draggingID = nil
+                        onReorder()
+                    }
+            )
     }
 }
 

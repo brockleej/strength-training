@@ -7,6 +7,9 @@
 
 import Foundation
 internal import HealthKit
+#if canImport(UIKit)
+import UIKit
+#endif
 
 struct HealthKitWorkoutStats {
     let duration: TimeInterval
@@ -35,9 +38,48 @@ final class HealthKitWorkoutService {
     private var workoutBuilder: HKWorkoutBuilder?
     private var sessionStartDate: Date?
     private var elapsedTimer: Timer?
+    private var sessionDelegate = HKSessionDelegateProxy()
+    private var foregroundObserver: NSObjectProtocol?
 
     private let kIsHKSessionActive = "hk_isSessionActive"
     private let kHKWorkoutStartDate = "hk_workoutStartDate"
+
+    /// Wall clock from the original start, even if the live builder died (lock / kill).
+    var wallClockElapsed: TimeInterval {
+        if let start = sessionStartDate ?? persistedStartDate {
+            return max(0, Date().timeIntervalSince(start))
+        }
+        return max(0, elapsedSeconds)
+    }
+
+    private var persistedStartDate: Date? {
+        UserDefaults.standard.object(forKey: kHKWorkoutStartDate) as? Date
+    }
+
+    init() {
+        if let start = persistedStartDate {
+            sessionStartDate = start
+            elapsedSeconds = Date().timeIntervalSince(start)
+        }
+        sessionDelegate.onFail = { error in
+            print("[HealthKit] session failed: \(error)")
+        }
+        #if canImport(UIKit)
+        foregroundObserver = NotificationCenter.default.addObserver(
+            forName: UIApplication.didBecomeActiveNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.restartElapsedTimerIfNeeded()
+        }
+        #endif
+    }
+
+    deinit {
+        if let foregroundObserver {
+            NotificationCenter.default.removeObserver(foregroundObserver)
+        }
+    }
 
     // MARK: - Data Types
 
@@ -106,8 +148,13 @@ final class HealthKitWorkoutService {
     func startWorkout() async throws {
         guard isAvailable, authorizationStatus == true else { return }
 
-        if workoutSession != nil {
+        if workoutSession != nil || workoutBuilder != nil {
             await endWorkout()
+        } else {
+            // Stale start from a killed session belongs to that workout's Finish,
+            // not a brand-new Start (which would write a multi-hour Health ghost).
+            UserDefaults.standard.removeObject(forKey: kHKWorkoutStartDate)
+            sessionStartDate = nil
         }
 
         let configuration = HKWorkoutConfiguration()
@@ -119,11 +166,13 @@ final class HealthKitWorkoutService {
 
         // Live HKWorkoutSession + HKLiveWorkoutDataSource on iPhone requires iOS 26+.
         // On iOS 17–25 use a plain HKWorkoutBuilder so sessions still save to Health.
+        // Don't call prepare() then startActivity immediately — startActivity prepares.
         if #available(iOS 26.0, *) {
             let session = try HKWorkoutSession(
                 healthStore: healthStore,
                 configuration: configuration
             )
+            session.delegate = sessionDelegate
             let builder = session.associatedWorkoutBuilder()
             builder.dataSource = HKLiveWorkoutDataSource(
                 healthStore: healthStore,
@@ -131,7 +180,6 @@ final class HealthKitWorkoutService {
             )
             self.workoutSession = session
             self.workoutBuilder = builder
-            session.prepare()
             session.startActivity(with: startDate)
             try await builder.beginCollection(at: startDate)
         } else {
@@ -167,23 +215,44 @@ final class HealthKitWorkoutService {
 
     @discardableResult
     func endWorkout() async -> UUID? {
-        guard let builder = workoutBuilder else {
-            clearState()
-            return nil
+        let start = sessionStartDate ?? persistedStartDate
+        let endDate = Date()
+        let builder = workoutBuilder
+
+        if let builder {
+            workoutSession?.end()
+            do {
+                try await builder.endCollection(at: endDate)
+                let finishedWorkout = try await builder.finishWorkout()
+                clearState()
+                return finishedWorkout?.uuid
+            } catch {
+                print("HealthKit workout finish error: \(error)")
+            }
         }
 
-        let endDate = Date()
-        workoutSession?.end()
+        clearState()
 
+        // Live session often dies when the phone locks (no workout-processing)
+        // or the app is killed. Write the full window so Health duration matches gym time.
+        if let start, endDate.timeIntervalSince(start) >= 30 {
+            return await saveHistoricalWorkout(start: start, end: endDate)
+        }
+        return nil
+    }
+
+    /// Start a live HK session unless we already have a start date to finish historically.
+    func recoverOrStartIfNeeded() async {
+        if workoutBuilder != nil { return }
+        if persistedStartDate != nil {
+            sessionStartDate = persistedStartDate
+            restartElapsedTimerIfNeeded()
+            return
+        }
         do {
-            try await builder.endCollection(at: endDate)
-            let finishedWorkout = try await builder.finishWorkout()
-            clearState()
-            return finishedWorkout?.uuid
+            try await startWorkout()
         } catch {
-            print("HealthKit workout finish error: \(error)")
-            clearState()
-            return nil
+            print("HealthKit recover/start error: \(error)")
         }
     }
 
@@ -207,9 +276,11 @@ final class HealthKitWorkoutService {
 
     func cleanUpOrphanedState() {
         let wasActive = UserDefaults.standard.bool(forKey: kIsHKSessionActive)
-        if wasActive && workoutSession == nil {
+        // After a kill, workoutSession is nil even if the gym session continues.
+        // Keep the start date so finish can write a full-length Health workout.
+        if wasActive && workoutSession == nil && workoutBuilder == nil {
+            isSessionActive = false
             UserDefaults.standard.set(false, forKey: kIsHKSessionActive)
-            UserDefaults.standard.removeObject(forKey: kHKWorkoutStartDate)
         }
     }
 
@@ -349,13 +420,46 @@ final class HealthKitWorkoutService {
         }
     }
 
+    private func saveHistoricalWorkout(start: Date, end: Date) async -> UUID? {
+        guard isAvailable, authorizationStatus == true else { return nil }
+        let configuration = HKWorkoutConfiguration()
+        configuration.activityType = .functionalStrengthTraining
+        configuration.locationType = .indoor
+        let builder = HKWorkoutBuilder(
+            healthStore: healthStore,
+            configuration: configuration,
+            device: .local()
+        )
+        do {
+            try await builder.beginCollection(at: start)
+            try await builder.endCollection(at: end)
+            let workout = try await builder.finishWorkout()
+            return workout?.uuid
+        } catch {
+            print("HealthKit historical workout error: \(error)")
+            return nil
+        }
+    }
+
+    private func restartElapsedTimerIfNeeded() {
+        if sessionStartDate == nil {
+            sessionStartDate = persistedStartDate
+        }
+        guard sessionStartDate != nil else { return }
+        elapsedSeconds = wallClockElapsed
+        if isSessionActive || workoutBuilder != nil || persistedStartDate != nil {
+            startElapsedTimer()
+        }
+    }
+
     private func startElapsedTimer() {
         stopElapsedTimer()
         elapsedTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            guard let self, let start = self.sessionStartDate else { return }
-            self.elapsedSeconds = Date().timeIntervalSince(start)
+            guard let self else { return }
+            self.elapsedSeconds = self.wallClockElapsed
             self.updateStatistics()
         }
+        RunLoop.main.add(elapsedTimer!, forMode: .common)
     }
 
     private func stopElapsedTimer() {
@@ -391,5 +495,21 @@ final class HealthKitWorkoutService {
 
         UserDefaults.standard.set(false, forKey: kIsHKSessionActive)
         UserDefaults.standard.removeObject(forKey: kHKWorkoutStartDate)
+    }
+}
+
+/// HKWorkoutSession.delegate is weak; keep this proxy alive on the service.
+private final class HKSessionDelegateProxy: NSObject, HKWorkoutSessionDelegate {
+    var onFail: ((Error) -> Void)?
+
+    func workoutSession(
+        _ workoutSession: HKWorkoutSession,
+        didChangeTo toState: HKWorkoutSessionState,
+        from fromState: HKWorkoutSessionState,
+        date: Date
+    ) {}
+
+    func workoutSession(_ workoutSession: HKWorkoutSession, didFailWithError error: Error) {
+        onFail?(error)
     }
 }

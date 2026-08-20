@@ -14,6 +14,7 @@ struct SwipeToDeleteModifier: ViewModifier {
     /// If true, a strong swipe past the threshold commits delete immediately.
     /// Global default is false (reveal trash, then tap).
     var fullSwipeDeletes: Bool = false
+    var isEnabled: Bool = true
 
     @State private var offsetX: CGFloat = 0
     @State private var isRevealed = false
@@ -46,8 +47,9 @@ struct SwipeToDeleteModifier: ViewModifier {
         .simultaneousGesture(
             DragGesture(minimumDistance: 16, coordinateSpace: .local)
                 .onChanged { value in
-                    // Horizontal-dominant only — leave vertical to the list.
-                    guard abs(value.translation.width) > abs(value.translation.height) * 1.1
+                    guard isEnabled else { return }
+                    // Horizontal-dominant only — leave vertical to the list / reorder.
+                    guard abs(value.translation.width) > abs(value.translation.height) * 1.2
                     else { return }
                     let base: CGFloat = isRevealed ? -revealWidth : 0
                     let next = base + value.translation.width
@@ -55,6 +57,10 @@ struct SwipeToDeleteModifier: ViewModifier {
                     offsetX = min(0, max(-revealWidth * 1.6, next))
                 }
                 .onEnded { value in
+                    guard isEnabled else {
+                        close()
+                        return
+                    }
                     let base: CGFloat = isRevealed ? -revealWidth : 0
                     let projected = base + value.translation.width
                     withAnimation(.easeOut(duration: 0.2)) {
@@ -117,13 +123,15 @@ extension View {
     /// When `onTap` is nil, taps pass through (e.g. to a NavigationLink).
     func swipeToDelete(
         fullSwipeDeletes: Bool = false,
+        isEnabled: Bool = true,
         onDelete: @escaping () -> Void,
         onTap: (() -> Void)? = nil
     ) -> some View {
         modifier(SwipeToDeleteModifier(
             onDelete: onDelete,
             onTap: onTap,
-            fullSwipeDeletes: fullSwipeDeletes
+            fullSwipeDeletes: fullSwipeDeletes,
+            isEnabled: isEnabled
         ))
     }
 }
