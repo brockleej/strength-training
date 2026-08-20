@@ -1,14 +1,14 @@
 # RockLog — session handoff
 
-**Shipped:** 2026-08-20  
+**Parked:** 2026-08-20  
 **Project:** `~/strength-training`  
 **App:** RockLog · bundle `com.lee.lift2026`  
-**Marketing version:** 1.0 · **Build:** 14 on TestFlight (uploaded; **VALID**).  
-**Git:** `main` — 13/14 work committed locally (see log). Do **not** bump past 14 until the next drop.  
+**Marketing version:** 1.0 · **Build:** 14 on TestFlight (**VALID**).  
+**Git:** `main` = `origin/main` (`835cc26`). Do **not** bump past 14 until the next drop.  
 **Branch:** `main`
 
-> Resume: *“Continue from ~/strength-training — load docs/SESSION.md. 14 is live on TestFlight.”*  
-> HA parked 2026-08-20 (`~/Documents/Hobbies/Home Automation/docs/HA-SESSION.md`). ASC: attach TF **14** to the 1.0 listing if you want the store icon to follow.
+> Resume: *“Continue from ~/strength-training — load docs/SESSION.md. Parked after TF 14.”*  
+> HA also parked: `~/Documents/Hobbies/Home Automation/docs/HA-SESSION.md`.
 
 ---
 
@@ -79,7 +79,8 @@ Same failure on Cloud runs 4–10. Cloud’s own next-build number is behind han
 - Optional: attach TF **14** to ASC 1.0 listing icon.
 - **iCloud UI:** still later — quiet status only.
 - Screenshots still stale (`docs/SCREENSHOTS.md`).
-- Push `main` when you want GitHub to match TestFlight (Xcode Cloud upload is still behind; TF is local archive).
+- RockCoach TestFlight: not yet. Source is on GitHub; run from Xcode.
+- Xcode Cloud on `main` may still fail uploading 14 (already on TF). Ignore unless you mean a new RockLog drop.
 
 **ASC API (local, not in git):** `~/Documents/Hobbies/RockLog/secrets/` + `source …/scripts/asc-env.sh`.
 
@@ -128,4 +129,4 @@ xcodebuild -exportArchive -archivePath build/RockLog-14.xcarchive \
 
 ## One-line
 
-**Shipped 2026-08-20. RockLog 1.0 build 14 VALID on TestFlight. RockCoach on GitHub, not TestFlight.**
+**Parked 2026-08-20. RockLog 1.0 build 14 VALID on TestFlight. RockCoach on GitHub, not TestFlight. HA parked separately.**
