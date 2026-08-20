@@ -111,21 +111,15 @@ struct SessionDetailView: View {
             Text("Adjust sets, add a skipped lift, then Save Changes. Any in-progress workout is parked until you’re done.")
         }
         .task {
-            if session.durationSeconds <= 0 {
-                let inferred = SessionMath.durationSeconds(of: session)
-                if inferred > 0 {
-                    session.durationSeconds = inferred
-                    try? modelContext.save()
-                }
+            let resolved = SessionMath.durationSeconds(of: session)
+            if resolved > 0, abs(session.durationSeconds - resolved) > 1 {
+                session.durationSeconds = resolved
+                try? modelContext.save()
             }
             guard !loadedStats, let uuid = session.healthKitWorkoutUUID else { return }
             loadedStats = true
             let service = HealthKitWorkoutService()
             healthStats = await service.fetchWorkoutStats(for: uuid)
-            if session.durationSeconds <= 0, let hk = healthStats?.duration, hk > 0 {
-                session.durationSeconds = hk
-                try? modelContext.save()
-            }
         }
     }
 

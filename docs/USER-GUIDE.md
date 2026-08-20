@@ -95,7 +95,7 @@ After **Start**, the Workout tab is the session list — your map of the hour.
 **Finish Workout** (bottom)
 - Saves the session to History, then **Rate Your Effort**, then the summary (duration, volume, sets, PRs).
 - When every lift is marked **Done**, RockLog also asks **Finish this workout?** so you do not have to hunt for the button.
-- Duration is stored on the workout (not only Apple Health). If Health was interrupted (phone locked), you still get effort and a time. History uses that time; older sessions without a stored time use first set → last set.
+- Duration is **first set → last set** (plus a short wrap-up). Starting early or tapping Finish hours later does not make a 200-minute workout. If Health was interrupted (phone locked), you still get effort and a time.
 
 ---
 

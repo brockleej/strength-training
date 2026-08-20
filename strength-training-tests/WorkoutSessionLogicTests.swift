@@ -37,14 +37,24 @@ final class WorkoutSessionLogicTests: XCTestCase {
 
     // MARK: - Duration
 
-    func test_duration_storedWinsOverSetSpan() {
+    func test_duration_storedWinsWhenCloseToSetSpan() {
         let start = Date(timeIntervalSince1970: 1_000)
         let seconds = WorkoutDurationLogic.resolvedSeconds(
-            stored: 3_600,
+            stored: 90 * 60,
             sessionStart: start,
-            setDates: [start.addingTimeInterval(60), start.addingTimeInterval(120)]
+            setDates: [start, start.addingTimeInterval(80 * 60)]
         )
-        XCTAssertEqual(seconds, 3_600)
+        XCTAssertEqual(seconds, 90 * 60)
+    }
+
+    func test_duration_ignoresStoredWhenStartOrLateFinishInflatedIt() {
+        let start = Date(timeIntervalSince1970: 1_000)
+        let seconds = WorkoutDurationLogic.resolvedSeconds(
+            stored: 220 * 60,
+            sessionStart: start,
+            setDates: [start.addingTimeInterval(60), start.addingTimeInterval(50 * 60)]
+        )
+        XCTAssertEqual(seconds, 49 * 60)
     }
 
     func test_duration_infersFromFirstToLastSet() {
@@ -54,16 +64,16 @@ final class WorkoutSessionLogicTests: XCTestCase {
             sessionStart: start,
             setDates: [start.addingTimeInterval(60), start.addingTimeInterval(3_600)]
         )
-        XCTAssertEqual(seconds, 3_600)
+        XCTAssertEqual(seconds, 3_540)
     }
 
-    func test_duration_usesSessionStartWhenEarlierThanFirstSet() {
+    func test_duration_doesNotCountIdleBeforeFirstSet() {
         let start = Date(timeIntervalSince1970: 1_000)
         let seconds = WorkoutDurationLogic.inferredSeconds(
             sessionStart: start,
             setDates: [start.addingTimeInterval(120), start.addingTimeInterval(720)]
         )
-        XCTAssertEqual(seconds, 720)
+        XCTAssertEqual(seconds, 600)
     }
 
     func test_duration_zeroWithoutSetsOrStored() {
@@ -83,16 +93,29 @@ final class WorkoutSessionLogicTests: XCTestCase {
         XCTAssertEqual(WorkoutDurationLogic.minutesLabel(47 * 60), "47")
     }
 
-    func test_duration_secondsToStoreTakesTheLongestSignal() {
+    func test_duration_secondsToStoreUsesSetSpanNotStartToFinishWall() {
         let start = Date(timeIntervalSince1970: 1_000)
-        let now = start.addingTimeInterval(1_800)
+        let now = start.addingTimeInterval(4 * 3_600)
         let seconds = WorkoutDurationLogic.secondsToStore(
-            liveElapsed: 1_200,
+            liveElapsed: 4 * 3_600,
             sessionStart: start,
-            setDates: [start.addingTimeInterval(60), start.addingTimeInterval(900)],
+            setDates: [start.addingTimeInterval(3_600), start.addingTimeInterval(3_600 + 45 * 60)],
             now: now
         )
-        XCTAssertEqual(seconds, 1_800)
+        XCTAssertEqual(seconds, 45 * 60 + WorkoutDurationLogic.wrapUpAllowance)
+    }
+
+    func test_duration_secondsToStoreCapsWrapUpAfterLastSet() {
+        let start = Date(timeIntervalSince1970: 1_000)
+        let last = start.addingTimeInterval(3_600)
+        let now = last.addingTimeInterval(3_600)
+        let seconds = WorkoutDurationLogic.secondsToStore(
+            liveElapsed: 0,
+            sessionStart: start,
+            setDates: [start, last],
+            now: now
+        )
+        XCTAssertEqual(seconds, 3_600 + WorkoutDurationLogic.wrapUpAllowance)
     }
 
     // MARK: - Delete set + renumber

@@ -7,6 +7,22 @@ App Apple ID: `6797695631` · bundle `com.lee.lift2026`
 
 ---
 
+## Build 15 (1.0) — queued, do not paste until upload
+
+```
+Build 15 — duration is time under the bar, not Start→Finish.
+
+What’s new
+• Workout time is first logged set → last logged set (plus up to 15 minutes after the last set).
+• Starting a session early or tapping Finish late no longer makes a 200+ minute workout.
+• History rows that already stored a huge time show the set span instead.
+
+What to test
+• Start, wait a while, then log as usual and Finish. Duration should match the lifting block, not the wait.
+• Log a session, leave it open for a long time, then Finish. Duration should not include that idle.
+• Open the two old >200 min History rows — minutes should look like the real gym time.
+```
+
 ## Build 14 (1.0)
 
 ```

@@ -48,7 +48,7 @@ enum SessionMath {
             setDates: setDates,
             now: now
         )
-        if seconds > session.durationSeconds {
+        if seconds > 0 {
             session.durationSeconds = seconds
         }
     }
@@ -211,21 +211,30 @@ enum SessionMath {
     }
 }
 
-/// Session length without HealthKit. Stored value wins; otherwise first→last set.
+/// Gym duration is first logged set → last logged set.
+/// Start-button idle and a late Finish must not inflate the time.
 enum WorkoutDurationLogic {
+    /// Max extra after the last set when Finish is tapped (put-away / effort screen).
+    static let wrapUpAllowance: TimeInterval = 15 * 60
+
     static func resolvedSeconds(
         stored: TimeInterval,
         sessionStart: Date,
         setDates: [Date]
     ) -> TimeInterval {
-        if stored > 0 { return stored }
-        return inferredSeconds(sessionStart: sessionStart, setDates: setDates)
+        let inferred = inferredSeconds(sessionStart: sessionStart, setDates: setDates)
+        if stored > 0 {
+            if inferred > 0, stored > inferred + wrapUpAllowance {
+                return inferred
+            }
+            return stored
+        }
+        return inferred
     }
 
     static func inferredSeconds(sessionStart: Date, setDates: [Date]) -> TimeInterval {
-        guard let last = setDates.max() else { return 0 }
-        let start = min(sessionStart, setDates.min() ?? sessionStart)
-        return max(0, last.timeIntervalSince(start))
+        guard let first = setDates.min(), let last = setDates.max() else { return 0 }
+        return max(0, last.timeIntervalSince(first))
     }
 
     static func secondsToStore(
@@ -235,8 +244,11 @@ enum WorkoutDurationLogic {
         now: Date
     ) -> TimeInterval {
         let inferred = inferredSeconds(sessionStart: sessionStart, setDates: setDates)
-        let wall = now.timeIntervalSince(sessionStart)
-        return max(0, liveElapsed, inferred, wall)
+        guard let last = setDates.max() else {
+            return 0
+        }
+        let wrapUp = min(max(0, now.timeIntervalSince(last)), wrapUpAllowance)
+        return inferred + wrapUp
     }
 
     static func minutesLabel(_ seconds: TimeInterval) -> String? {

@@ -4,10 +4,10 @@
 **Project:** `~/strength-training`  
 **App:** RockLog · bundle `com.lee.lift2026`  
 **Marketing version:** 1.0 · **Build:** 14 on TestFlight (**VALID**).  
-**Git:** `main` = `origin/main`. Do **not** bump past 14 until the next drop.  
+**Git:** `main` = `origin/main` plus queued **15** duration fix (commit with this handoff). Do **not** bump or upload 15 until the next drop.  
 **Branch:** `main`
 
-> Resume: *“Continue from ~/strength-training — load docs/SESSION.md. Parked after TF 14.”*  
+> Resume: *“Continue from ~/strength-training — load docs/SESSION.md. TF 14 live; 15 is set-span duration.”*  
 > HA also parked: `~/Documents/Hobbies/Home Automation/docs/HA-SESSION.md`.
 
 ---
@@ -54,6 +54,7 @@ Notes: `docs/RELEASE-NOTES.md`, tester copy: `docs/TESTFLIGHT-WHAT-TO-TEST.md` (
 | Restore-crash fix (T1/T2) | **Shipped in 14.** |
 | Backup filename | **Shipped in 14.** `RockLog-backup-YYYY-MM-DD.json`. Old `strength-training-backup-*.json` still restores. |
 | Finish effort + duration | **Shipped in 14.** Effort even if HK UUID missing. Local duration; infer old sessions from sets. |
+| Duration Start→Finish wall | **Queue for 15.** 14 counted Start→Finish, so idle Start / late Finish showed >200 min. Gym time is first set → last set (+15 min wrap-up). Inflated stored times yield to set span on display. |
 
 Path 1: `docs/coaching-companion/PATH-1.md`.
 
@@ -72,6 +73,11 @@ Same failure on Cloud runs 4–10. Cloud’s own next-build number is behind han
 **13 testers should get** a local `xcodebuild archive` to `build/RockLog-13.xcarchive` (see below). `ci_scripts/ci_pre_xcodebuild.sh` pins Cloud’s RockLog version to **max(13, CI_BUILD_NUMBER)** so a push to `main` should not fail with “bundle version must be higher.” RockCoach stays at **1**.
 
 ---
+
+## Next drop (**15**, not now)
+
+- Bump `CURRENT_PROJECT_VERSION` to **15** (strength-training only). Archive `build/RockLog-15.xcarchive`.
+- **Duration:** first logged set → last logged set, plus at most 15 min after the last set. Do not use Start→Finish wall or HealthKit elapsed. History rewrite of >200 min rows happens on open. Include in What to Test.
 
 ## Next (not now)
 
@@ -129,4 +135,4 @@ xcodebuild -exportArchive -archivePath build/RockLog-14.xcarchive \
 
 ## One-line
 
-**Parked 2026-08-20. RockLog 1.0 build 14 VALID on TestFlight. RockCoach on GitHub, not TestFlight. HA parked separately.**
+**Parked 2026-08-20. RockLog 1.0 build 14 VALID on TestFlight. 15 queued: set-span duration (not Start→Finish). RockCoach on GitHub, not TestFlight. HA parked separately.**

@@ -1,5 +1,11 @@
 # RockLog release notes
 
+## 1.0 (15) — queued
+
+Not uploaded. Duration is **first set → last set** (plus ≤15 min after the last set). Build 14 used Start→Finish wall clock, so a session started early or finished late could show **>200 min**. Inflated stored times yield to the set span in History.
+
+---
+
 ## 1.0 (14) — 2026-08-20
 
 TestFlight build **14**. Previous: **13**. RockCoach stays local (not on TestFlight).
