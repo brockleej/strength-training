@@ -1,5 +1,40 @@
 # RockLog release notes
 
+## 1.0 (14) — 2026-08-20
+
+TestFlight build **14**. Previous: **13**. RockCoach stays local (not on TestFlight).
+
+### What’s new
+
+- **Finish:** marking the last lift Done still asks to finish, then **always** asks for effort. Apple Health no longer has to succeed first.
+- **Duration:** saved on the workout (not only Apple Health). Older sessions without a stored time use first→last set. History / summary / Today last-session time should no longer show "—".
+- **Apple Health:** if the live session dies (locked phone), RockLog still writes the full start→finish window so Health duration matches the gym session.
+- **Restore:** tearing down the workout tab before a backup restore so an open session does not crash (TF 13 SIGTRAP).
+- **Export:** `RockLog-backup-YYYY-MM-DD.json`. Old `strength-training-backup-*.json` still restores.
+
+### What to Test
+
+See `docs/TESTFLIGHT-WHAT-TO-TEST.md` (build 14).
+
+---
+
+## 1.0 (13) — 2026-08-18
+
+TestFlight build **13**. Previous: **12**. RockCoach stays local (not on TestFlight).
+
+### What’s new
+
+- **Day plan:** your split and which lifts sit on each day survive backup, restore, and iCloud reinstall. Starter templates are not pinned back onto a split you already set.
+- **First use:** pick a split or restore a JSON backup. If you pick a split, choose starter exercises or empty days. Full Body is a real roster (squat / press / row / overhead), not a catch-all.
+- **Restore:** asks before overwrite. **Don’t restore** leaves this phone as-is. **Replace split and exercises** swaps the plan, library, and history.
+- **Edit day:** swipe left uses the system swipe (same as Exercises) to remove a lift from that day. Long-press the number to reorder; long-press the name for the menu.
+
+### What to Test
+
+See `docs/TESTFLIGHT-WHAT-TO-TEST.md` (build 13).
+
+---
+
 ## 1.0 (12) — 2026-08-17
 
 TestFlight build **12**. Previous: **11**. RockCoach stays local (not on TestFlight).

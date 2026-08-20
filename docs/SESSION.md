@@ -1,22 +1,29 @@
 # RockLog — session handoff
 
-**Parked:** 2026-08-17  
+**Shipped:** 2026-08-20  
 **Project:** `~/strength-training`  
 **App:** RockLog · bundle `com.lee.lift2026`  
-**Marketing version:** 1.0 · **Build:** 12 on TestFlight (VALID)  
-**Git:** `main` at `c0bc533` on GitHub; local isolation-warning commit may sit on top — **do not push** until the next real 13.  
+**Marketing version:** 1.0 · **Build:** 14 on TestFlight (uploaded; **VALID**).  
+**Git:** `main` — 13/14 work committed locally (see log). Do **not** bump past 14 until the next drop.  
 **Branch:** `main`
 
-> Resume: *“Continue from ~/strength-training — load docs/SESSION.md, README.md, docs/RELEASE-NOTES.md, CLAUDE.md.”*  
-> HA is parked. ASC: RockLog 1.0 still has **build 11** selected on the store listing (Prepare for Submission). Attach **12** if you want the listing icon to follow. Aequis 1.0 has build 2 attached (not submitted).
+> Resume: *“Continue from ~/strength-training — load docs/SESSION.md. 14 is live on TestFlight.”*  
+> HA parked 2026-08-20 (`~/Documents/Hobbies/Home Automation/docs/HA-SESSION.md`). ASC: attach TF **14** to the 1.0 listing if you want the store icon to follow.
 
 ---
 
 ## Where we left it
 
-RockLog **12** is live for internal **Friends** testers. What to Test is set. RockCoach is **in the repo only** — scheme `RockCoach`, bundle `com.lee.rockcoach`. Do **not** archive or upload it.
+**14 is live for Friends** (ASC `2448ec97-e7ff-46ee-a0b3-1a885dd2066b`, VALID). Archive `build/RockLog-14.xcarchive`. What to Test is set.
 
-Isolation/`nonisolated` cleanups on coach helpers landed after 12 (warnings only). Sit on them until the next real change. Testers do not need a 13 for that.
+Shipped in 14:
+- Finish always asks effort (no longer gated on HealthKit UUID).
+- Local `durationSeconds`; older sessions infer first→last set so History is not “—”.
+- If the live Health session died, write a full start→finish Health workout at Finish. (`workout-processing` rejected by ASC; iPhone cannot use that background mode.)
+- Restore-while-open teardown (TF 13 SIGTRAP).
+- Export filename `RockLog-backup-YYYY-MM-DD.json`.
+
+RockCoach stays local — do **not** archive or upload it.
 
 ---
 
@@ -30,7 +37,7 @@ Isolation/`nonisolated` cleanups on coach helpers landed after 12 (warnings only
 - Apple Health row opens **Settings → RockLog** after the first ask (no public deep link into Health → Apps).
 - **Use RockCoach** is **off**. Send UI hidden until that switch is on. `.rocklogcoach` is for a coach, not a backup.
 
-Notes: `docs/RELEASE-NOTES.md`, tester copy: `docs/TESTFLIGHT-WHAT-TO-TEST.md` (build 12).
+Notes: `docs/RELEASE-NOTES.md`, tester copy: `docs/TESTFLIGHT-WHAT-TO-TEST.md` (build **14**). User guide: `docs/USER-GUIDE.md`.
 
 ---
 
@@ -42,8 +49,11 @@ Notes: `docs/RELEASE-NOTES.md`, tester copy: `docs/TESTFLIGHT-WHAT-TO-TEST.md` (
 | Share vs backup | **Stay separate.** Coach file ≠ restore. Backup is Settings → Export backup. |
 | Coach UI | Hidden behind **Use RockCoach** (default off). One Settings row when off. |
 | RockCoach TestFlight | **No.** Local Xcode only. Share extension `RockCoachShare` is part of that app. |
-| Isolation warnings | **Do not burn a TF 13** on them. |
+| Isolation warnings | Sit until a real drop (now 14+). |
 | Tonnage in coach | **Still no.** Session v1 locked. Batch is sibling `rocklog.coach.batch` v1. |
+| Restore-crash fix (T1/T2) | **Shipped in 14.** |
+| Backup filename | **Shipped in 14.** `RockLog-backup-YYYY-MM-DD.json`. Old `strength-training-backup-*.json` still restores. |
+| Finish effort + duration | **Shipped in 14.** Effort even if HK UUID missing. Local duration; infer old sessions from sets. |
 
 Path 1: `docs/coaching-companion/PATH-1.md`.
 
@@ -59,21 +69,17 @@ Same failure on Cloud runs 4–10. Cloud’s own next-build number is behind han
 
 **12 testers have** is a **local** `xcodebuild archive` + `ExportOptions.plist` upload (`build/`). What to Test via `~/Documents/Hobbies/RockLog/scripts/asc-set-what-to-test.sh 12`.
 
-Next Cloud ship: set Cloud **next build number ≥ 13**, or keep uploading from this Mac after bumping `CURRENT_PROJECT_VERSION` to **13**. Do not push a docs-only commit expecting Cloud to ship 12 again.
+**13 testers should get** a local `xcodebuild archive` to `build/RockLog-13.xcarchive` (see below). `ci_scripts/ci_pre_xcodebuild.sh` pins Cloud’s RockLog version to **max(13, CI_BUILD_NUMBER)** so a push to `main` should not fail with “bundle version must be higher.” RockCoach stays at **1**.
 
 ---
 
 ## Next (not now)
 
-On the **next real** RockLog drop (build **13+**):
-
-- Bump `CURRENT_PROJECT_VERSION` in the **strength-training** target only (not RockCoach).
-- Include the parked `nonisolated` coach-format cleanup if not already committed.
-- **iCloud UI:** remove Settings **Retry sync** and pull-to-refresh-as-resync. Quiet status only (signed in / last synced / real failure). Don’t flip red on a later retryable export after a good import.
-- Optional: attach TF **12** (or 13) to ASC version 1.0 so the store header icon follows.
-- Optional: set Xcode Cloud next build number to 13+ if you want Cloud to succeed.
+- Phone: install **14**, finish a session (lock the phone during rest), confirm effort + duration. History should show minutes on old sessions too.
+- Optional: attach TF **14** to ASC 1.0 listing icon.
+- **iCloud UI:** still later — quiet status only.
 - Screenshots still stale (`docs/SCREENSHOTS.md`).
-- Friends testers **Invited** may still need a resend / correct Apple ID.
+- Push `main` when you want GitHub to match TestFlight (Xcode Cloud upload is still behind; TF is local archive).
 
 **ASC API (local, not in git):** `~/Documents/Hobbies/RockLog/secrets/` + `source …/scripts/asc-env.sh`.
 
@@ -110,16 +116,16 @@ Ship RockLog (when you mean it):
 
 ```bash
 xcodebuild archive -scheme strength-training -configuration Release \
-  -destination generic/platform=iOS -archivePath build/RockLog.xcarchive \
+  -destination generic/platform=iOS -archivePath build/RockLog-14.xcarchive \
   -allowProvisioningUpdates DEVELOPMENT_TEAM=53AH938CUW
-xcodebuild -exportArchive -archivePath build/RockLog.xcarchive \
-  -exportPath build/export -exportOptionsPlist build/ExportOptions.plist \
+xcodebuild -exportArchive -archivePath build/RockLog-14.xcarchive \
+  -exportPath build/export-14 -exportOptionsPlist build/ExportOptions.plist \
   -allowProvisioningUpdates DEVELOPMENT_TEAM=53AH938CUW
-~/Documents/Hobbies/RockLog/scripts/asc-set-what-to-test.sh 13
+~/Documents/Hobbies/RockLog/scripts/asc-set-what-to-test.sh 14
 ```
 
 ---
 
 ## One-line
 
-**Parked. RockLog 1.0 (12) on TestFlight. RockCoach local. Isolation warning fix not shipped. Next drop is 13.**
+**Shipped 2026-08-20. RockLog 1.0 build 14 VALID on TestFlight. RockCoach local.**

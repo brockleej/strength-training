@@ -7,6 +7,47 @@ App Apple ID: `6797695631` · bundle `com.lee.lift2026`
 
 ---
 
+## Build 14 (1.0)
+
+```
+Build 14 — finish always asks effort; duration stays in RockLog; restore no longer crashes an open workout.
+
+What’s new
+• Finish a workout (including Done on the last lift) always asks Rate Your Effort. Apple Health no longer has to succeed first.
+• Duration is saved on the workout. Older sessions without a Health time use first set → last set, so History should not show “—”.
+• Restore while a workout is open should not crash. Export backup is named RockLog-backup-YYYY-MM-DD.json (old strength-training-backup files still restore).
+
+What to test
+• Log a real session, lock the phone during rest, then mark the last lift Done → Finish. You should get effort, then a summary with minutes — not a blank duration.
+• History for that session (and older ones) should show a duration. Open the session — Duration is a number, not “—”.
+• Optional: Settings → Restore a backup with a workout still open. After restore, start or resume a workout. Should not crash.
+• Optional: Export backup — filename starts with RockLog-backup-.
+
+If effort is skipped or duration is still blank, note whether Apple Health was on and if the phone locked during the session.
+```
+
+## Build 13 (1.0)
+
+```
+Build 13 — day plan is yours; first-use picker; restore asks first.
+
+What’s new
+• Custom split + which lifts sit on each day persist across backup, restore, and iCloud reinstall.
+• First launch (no iCloud split): pick a split or restore a JSON. Then starters or empty days.
+• Full Body is a real day with 4 starters, not “every lift in the library.”
+• Restore asks Don’t restore vs Replace split and exercises. Cancel does not change the plan.
+• Edit a day: swipe left → Remove from that day. Long-press the number to reorder.
+
+What to test
+• Fresh install signed into iCloud: your days and lifts come back. No extra unused templates.
+• Fresh install not signed in: first screen is Pick a split or restore. Empty days stay empty. Starters are only the short list.
+• Settings → Restore: Don’t restore leaves Today unchanged. Replace matches the file (counts and names).
+• Edit Push (or Upper): swipe a lift left and remove. Leave, come back — still gone.
+• Long-press a lift name → Remove from this day still works.
+
+If defaults reappear on a day you already customized, say whether you restored a file and which one.
+```
+
 ## Build 12 (1.0)
 
 ```

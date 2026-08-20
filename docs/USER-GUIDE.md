@@ -11,8 +11,9 @@ Five tabs sit at the bottom: **Workout**, **History**, **Progress**, **Exercises
 
 ### First open
 
-1. Allow **Apple Health** if you want finished sessions on your rings. You can skip this and turn it on later in Settings.
-2. Open **Settings** once before the first gym visit. You can change any of this later.
+1. On a **new phone** (no iCloud split yet) you pick a training split or restore a JSON backup. Starter lifts are optional; empty days stay empty. Full Body is four lifts, not the whole catalog.
+2. Allow **Apple Health** if you want finished sessions on your rings. You can skip this and turn it on later in Settings.
+3. Open **Settings** once before the first gym visit. You can change any of this later.
 
 ### Setup (do this first)
 
@@ -86,14 +87,15 @@ After **Start**, the Workout tab is the session list — your map of the hour.
 **Each lift row**
 - Name, last session (or tap that line to flip to the progression **target**).
 - Tap the row to open logging (Focus).
-- Swipe left → **Remove from this workout** (stays in the library; today’s sets for that lift are deleted).
+- Swipe left → **Remove from this workout** (today only) or **Remove from [day]** (drops it from that day’s plan; stays in the library).
 - Long-press for edit / replace.
 
 **Add exercise** — pull in a library lift or create a new one for today only (or assign it to this day).
 
 **Finish Workout** (bottom)
-- Saves the session to History, stops Apple Health if it was running, then effort rating + summary.
+- Saves the session to History, then **Rate Your Effort**, then the summary (duration, volume, sets, PRs).
 - When every lift is marked **Done**, RockLog also asks **Finish this workout?** so you do not have to hunt for the button.
+- Duration is stored on the workout (not only Apple Health). If Health was interrupted (phone locked), you still get effort and a time. History uses that time; older sessions without a stored time use first set → last set.
 
 ---
 
@@ -260,8 +262,8 @@ One workout is a session file. Two or more unsent workouts go as one batch file.
 
 **Settings → Backup** is how you save or move *this* phone’s log.
 
-- **Export backup** — JSON of the library, split, and sessions.
-- **Restore from backup** — replaces everything on this phone.
+- **Export backup** — JSON of the library, split, day plans, and sessions. The file is named `RockLog-backup-YYYY-MM-DD.json`. Older `strength-training-backup-*.json` files still restore.
+- **Restore from backup** — asks before replacing your current split and exercises. **Don’t restore** leaves this phone as-is.
 
 Use this for safekeeping or another device. Do not restore a `.rocklogcoach` file.
 
@@ -276,7 +278,7 @@ Use this for safekeeping or another device. Do not restore a `.rocklogcoach` fil
 | Log a set | Open lift → **Log set** |
 | Fix a wrong set | Tap the set → change it → **Update set**, or swipe to delete |
 | Skip a lift | **Done** with zero sets |
-| Finish the hour | **Finish Workout**, or **Done** on the last lift |
+| Finish the hour | **Finish Workout**, or **Done** on the last lift — then rate effort |
 | Assisted pull-ups | **Assist** on + body weight saved |
 | Each-side lunges | **Sides** on |
 | Warm-ups | **Warm** on, then **Log set** |
