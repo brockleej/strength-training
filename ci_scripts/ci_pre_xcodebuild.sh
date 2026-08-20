@@ -3,7 +3,13 @@
 # TestFlight 12). App Store then rejected: "bundle version must be higher".
 # Pin only RockLog (com.lee.lift2026) to max(14, Cloud incrementer).
 # Leave RockCoach and the share extension at 1.
+# RockCoach is in this GitHub repo for local Xcode; it is not a TestFlight product.
 set -eu
+
+if [ "${CI_XCODE_SCHEME:-}" = "RockCoach" ]; then
+  echo "ci_pre_xcodebuild: scheme RockCoach is GitHub/local only — not TestFlight. Failing this Cloud job."
+  exit 1
+fi
 
 ROOT="${CI_PRIMARY_REPOSITORY_PATH:-$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)}"
 PBX="$ROOT/strength-training.xcodeproj/project.pbxproj"

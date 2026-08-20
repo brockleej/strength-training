@@ -234,7 +234,7 @@ xcodebuild test -scheme ProgressionLab -destination 'platform=macOS'
 
 ## TestFlight
 
-**Xcode Cloud** on this fork ships every push to **`main`** to internal TestFlight.
+**Xcode Cloud** on this fork ships **RockLog** (`com.lee.lift2026`) to internal TestFlight on every push to **`main`**. **RockCoach** lives in this repo for local Xcode builds — it is not on TestFlight.
 
 Request beta access via [Issues](https://github.com/brockleej/strength-training/issues).
 

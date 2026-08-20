@@ -23,7 +23,7 @@ Shipped in 14:
 - Restore-while-open teardown (TF 13 SIGTRAP).
 - Export filename `RockLog-backup-YYYY-MM-DD.json`.
 
-RockCoach stays local — do **not** archive or upload it.
+RockCoach **source is on GitHub** in this repo (`RockCoach/`, scheme `RockCoach`). Do **not** archive or upload it to TestFlight. Xcode Cloud must stay on the RockLog scheme; `ci_pre_xcodebuild.sh` fails if Cloud is pointed at RockCoach.
 
 ---
 
@@ -48,7 +48,7 @@ Notes: `docs/RELEASE-NOTES.md`, tester copy: `docs/TESTFLIGHT-WHAT-TO-TEST.md` (
 | One RockLog vs a share-only SKU | **One app.** Share is optional. |
 | Share vs backup | **Stay separate.** Coach file ≠ restore. Backup is Settings → Export backup. |
 | Coach UI | Hidden behind **Use RockCoach** (default off). One Settings row when off. |
-| RockCoach TestFlight | **No.** Local Xcode only. Share extension `RockCoachShare` is part of that app. |
+| RockCoach TestFlight | **No.** Source is on GitHub; run it from Xcode. Share extension `RockCoachShare` is part of that app. |
 | Isolation warnings | Sit until a real drop (now 14+). |
 | Tonnage in coach | **Still no.** Session v1 locked. Batch is sibling `rocklog.coach.batch` v1. |
 | Restore-crash fix (T1/T2) | **Shipped in 14.** |
@@ -128,4 +128,4 @@ xcodebuild -exportArchive -archivePath build/RockLog-14.xcarchive \
 
 ## One-line
 
-**Shipped 2026-08-20. RockLog 1.0 build 14 VALID on TestFlight. RockCoach local.**
+**Shipped 2026-08-20. RockLog 1.0 build 14 VALID on TestFlight. RockCoach on GitHub, not TestFlight.**

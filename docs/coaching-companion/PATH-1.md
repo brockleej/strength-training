@@ -109,7 +109,7 @@ Do not add fields to `rocklog.coach.session` without bumping that schema. Batch 
 | Schema + codec | `Shared/CoachFormat/` — session v1 unchanged; batch v1 envelope |
 | RockLog export | This workout **or** since last share (unsent completed IDs). 1 → session file; 2+ → batch |
 | Share-after-finish | Settings toggle → share **this** workout |
-| RockCoach app | target **RockCoach** · bundle `com.lee.rockcoach` · local SwiftData roster |
+| RockCoach app | target **RockCoach** · bundle `com.lee.rockcoach` · in this GitHub repo · **not TestFlight** · local SwiftData roster |
 | Not started | avahost Path 1.5, assign workouts, App Store listing |
 
 ---

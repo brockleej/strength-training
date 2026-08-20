@@ -24,7 +24,7 @@ xcodebuild -scheme strength-training -destination 'platform=iOS Simulator,name=i
 # Open in Xcode
 open strength-training.xcodeproj
 
-# RockCoach companion (Path 1 — local import only, scheme RockCoach)
+# RockCoach companion (Path 1 — in this GitHub repo, not TestFlight)
 xcodebuild -scheme RockCoach -destination 'platform=iOS Simulator,name=iPhone 17' build
 ```
 
@@ -54,7 +54,7 @@ xcodebuild test -scheme ProgressionLab -destination 'platform=macOS'
 
 ### Deployment
 
-**Xcode Cloud auto-deploys every push to `main` to TestFlight.** Treat `main` as a release branch — anything pushed ships to internal testers automatically. Direct pushes to `main` are allowed; PRs are optional.
+**Xcode Cloud auto-deploys RockLog on every push to `main` to TestFlight.** RockCoach is in this repo but must not be a Cloud/TestFlight product (`ci_pre_xcodebuild.sh` fails that scheme). Treat `main` as a release branch for RockLog. Direct pushes to `main` are allowed; PRs are optional.
 
 ### Local-dev caveats
 
