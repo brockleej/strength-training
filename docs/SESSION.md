@@ -4,7 +4,7 @@
 **Project:** `~/strength-training`  
 **App:** RockLog · bundle `com.lee.lift2026`  
 **Marketing version:** 1.0 · **Build:** 14 on TestFlight (**VALID**).  
-**Git:** `main` = `origin/main` (`835cc26`). Do **not** bump past 14 until the next drop.  
+**Git:** `main` = `origin/main`. Do **not** bump past 14 until the next drop.  
 **Branch:** `main`
 
 > Resume: *“Continue from ~/strength-training — load docs/SESSION.md. Parked after TF 14.”*  
