@@ -4,10 +4,10 @@
 **Project:** `~/strength-training`  
 **App:** RockLog · bundle `com.lee.lift2026`  
 **Marketing version:** 1.0 · **Build:** 14 on TestFlight (**VALID**).  
-**Git:** `main` = `origin/main` plus queued **15** duration fix (commit with this handoff). Do **not** bump or upload 15 until the next drop.  
+**Git:** `main` = `origin/main`. **15** duration fix is committed, not uploaded. Do **not** bump or ship 15 until the next drop.  
 **Branch:** `main`
 
-> Resume: *“Continue from ~/strength-training — load docs/SESSION.md. TF 14 live; 15 is set-span duration.”*  
+> Resume: *“Continue from ~/strength-training — load docs/SESSION.md. Parked. TF 14 live; 15 is set-span duration, not shipped.”*  
 > HA also parked: `~/Documents/Hobbies/Home Automation/docs/HA-SESSION.md`.
 
 ---
@@ -135,4 +135,4 @@ xcodebuild -exportArchive -archivePath build/RockLog-14.xcarchive \
 
 ## One-line
 
-**Parked 2026-08-20. RockLog 1.0 build 14 VALID on TestFlight. 15 queued: set-span duration (not Start→Finish). RockCoach on GitHub, not TestFlight. HA parked separately.**
+**Parked 2026-08-20. RockLog 14 on TestFlight. 15 (set-span duration) committed, not shipped. RockCoach on GitHub, not TestFlight. HA parked.**
