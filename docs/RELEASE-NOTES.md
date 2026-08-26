@@ -1,8 +1,18 @@
 # RockLog release notes
 
-## 1.0 (15) — queued
+## 1.0 (17) — 2026-08-26
 
-Not uploaded. Duration is **first set → last set** (plus ≤15 min after the last set). Build 14 used Start→Finish wall clock, so a session started early or finished late could show **>200 min**. Inflated stored times yield to the set span in History.
+TestFlight / App Store listing screenshots. Testers jump **14 → 17** (15 queued internally; 16 internal only).
+
+### What’s new
+
+- **Duration:** first logged set → last logged set (plus ≤15 min after the last set). Idle Start / late Finish no longer inflate gym time. Old >200 min History rows show the set span.
+- **Note keyboard:** on the lift screen, Cancel/Save stay reachable; drag the list to dismiss. No landscape workaround.
+- **Listing screenshots:** Today, workout list, Focus, Progress, History, Exercises from a real log (`docs/screenshots/`).
+
+### What to Test
+
+See `docs/TESTFLIGHT-WHAT-TO-TEST.md` (build 17).
 
 ---
 

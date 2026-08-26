@@ -1,7 +1,7 @@
 #!/bin/sh
 # Xcode Cloud used to stamp CI_BUILD_NUMBER (stuck on 11 after we hand-uploaded
 # TestFlight 12). App Store then rejected: "bundle version must be higher".
-# Pin only RockLog (com.lee.lift2026) to max(14, Cloud incrementer).
+# Pin only RockLog (com.lee.lift2026) to max(17, Cloud incrementer).
 # Leave RockCoach and the share extension at 1.
 # RockCoach is in this GitHub repo for local Xcode; it is not a TestFlight product.
 set -eu
@@ -13,7 +13,7 @@ fi
 
 ROOT="${CI_PRIMARY_REPOSITORY_PATH:-$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)}"
 PBX="$ROOT/strength-training.xcodeproj/project.pbxproj"
-MIN=14
+MIN=17
 CLOUD="${CI_BUILD_NUMBER:-0}"
 
 if [ "$CLOUD" -ge "$MIN" ] 2>/dev/null; then

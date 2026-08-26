@@ -27,6 +27,8 @@ struct FocusView: View {
     @State private var showRemoveConfirm = false
     @State private var showReplaceSheet = false
     @State private var historyExpanded = false
+    /// Note field has the keyboard. Hide the log footer so Cancel/Save stay reachable.
+    @State private var isNoteEditing = false
 
     private var loggedSets: [SetRecord] {
         let _ = workoutVM.setMutationEpoch
@@ -104,6 +106,7 @@ struct FocusView: View {
                 }
                 .padding(.bottom, 16)
             }
+            .scrollDismissesKeyboard(.interactively)
             .background(Color.uplift.bgElev)
             .scrollIndicators(.hidden)
 
@@ -140,7 +143,7 @@ struct FocusView: View {
             }
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            if let focusVM {
+            if !isNoteEditing, let focusVM {
                 VStack(spacing: 12) {
                     stepperFooter(focusVM)
                     actionBar(focusVM)
@@ -173,6 +176,7 @@ struct FocusView: View {
         .onChange(of: exercise.id) { _, _ in
             focusVM = makeFocusVM()
             historyExpanded = false
+            isNoteEditing = false
         }
         .sheet(isPresented: $showEditExercise) {
             EditExerciseView(
@@ -328,7 +332,7 @@ struct FocusView: View {
                 .foregroundStyle(Color.uplift.fg)
                 .lineLimit(2)
 
-            ExerciseNoteCard(exercise: exercise) { text in
+            ExerciseNoteCard(exercise: exercise, isEditing: $isNoteEditing) { text in
                 workoutVM.saveExerciseNote(text, for: exercise)
             }
         }

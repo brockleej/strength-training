@@ -10,10 +10,12 @@ import SwiftUI
 
 struct ExerciseNoteCard: View {
     let exercise: Exercise
+    @Binding var isEditing: Bool
     var onSave: (String) -> Void
 
-    @State private var isEditing = false
     @State private var draft = ""
+    /// Set when Cancel/Save already handled persist so `onChange(isEditing)` does not save twice.
+    @State private var handledExit = false
     @FocusState private var fieldFocused: Bool
 
     private var stored: String {
@@ -33,30 +35,32 @@ struct ExerciseNoteCard: View {
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
                             .fill(Color.uplift.surface2)
                     }
+                    .task {
+                        try? await Task.sleep(for: .milliseconds(80))
+                        fieldFocused = true
+                    }
 
                 HStack {
-                    Button("Cancel") {
-                        isEditing = false
-                        fieldFocused = false
-                    }
-                    .font(.uplift.text(13, weight: .semibold))
-                    .foregroundStyle(Color.uplift.fgMuted)
+                    Button("Cancel") { close(save: false) }
+                        .font(.uplift.text(13, weight: .semibold))
+                        .foregroundStyle(Color.uplift.fgMuted)
+                        .padding(.vertical, 8)
+                        .padding(.trailing, 12)
+                        .contentShape(Rectangle())
 
                     Spacer()
 
-                    Button("Save") {
-                        onSave(draft)
-                        isEditing = false
-                        fieldFocused = false
-                    }
-                    .font(.uplift.text(13, weight: .semibold))
-                    .foregroundStyle(Color.uplift.accent)
+                    Button("Save") { close(save: true) }
+                        .font(.uplift.text(13, weight: .semibold))
+                        .foregroundStyle(Color.uplift.accent)
+                        .padding(.vertical, 8)
+                        .padding(.leading, 12)
+                        .contentShape(Rectangle())
                 }
             } else {
                 Button {
                     draft = stored
                     isEditing = true
-                    fieldFocused = true
                 } label: {
                     HStack(alignment: .top, spacing: 8) {
                         Image(systemName: stored.isEmpty ? "note.text.badge.plus" : "note.text")
@@ -84,5 +88,28 @@ struct ExerciseNoteCard: View {
             }
         }
         .padding(.top, 4)
+        .onChange(of: isEditing) { _, editing in
+            if editing {
+                if draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    draft = stored
+                }
+                handledExit = false
+            } else {
+                if !handledExit { onSave(draft) }
+                fieldFocused = false
+                handledExit = false
+            }
+        }
+        .onDisappear {
+            if isEditing { onSave(draft) }
+        }
+    }
+
+    private func close(save: Bool) {
+        guard isEditing else { return }
+        if save { onSave(draft) }
+        handledExit = true
+        isEditing = false
+        fieldFocused = false
     }
 }

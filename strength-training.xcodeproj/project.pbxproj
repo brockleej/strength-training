@@ -1160,7 +1160,7 @@
 				CODE_SIGN_ENTITLEMENTS = "strength-training/strength-training.entitlements";
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 14;
+				CURRENT_PROJECT_VERSION = 17;
 				DEVELOPMENT_TEAM = 53AH938CUW;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -1199,7 +1199,7 @@
 				CODE_SIGN_ENTITLEMENTS = "strength-training/strength-training.entitlements";
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 14;
+				CURRENT_PROJECT_VERSION = 17;
 				DEVELOPMENT_TEAM = 53AH938CUW;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;

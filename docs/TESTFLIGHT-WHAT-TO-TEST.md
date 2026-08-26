@@ -7,21 +7,25 @@ App Apple ID: `6797695631` · bundle `com.lee.lift2026`
 
 ---
 
-## Build 15 (1.0) — queued, do not paste until upload
+## Build 17 (1.0) — paste after Cloud/upload
 
 ```
-Build 15 — duration is time under the bar, not Start→Finish.
+Build 17 — gym duration + note keyboard you can actually dismiss.
 
 What’s new
-• Workout time is first logged set → last logged set (plus up to 15 minutes after the last set).
-• Starting a session early or tapping Finish late no longer makes a 200+ minute workout.
-• History rows that already stored a huge time show the set span instead.
+• Workout time is first logged set → last logged set (plus up to 15 minutes after the last set). Idle Start / late Finish no longer make a 200+ minute workout.
+• Accidental note keyboard on the lift screen: Cancel/Save stay on screen; drag the list to dismiss. No landscape workaround.
+• History rows that stored a huge time show the set span instead.
 
 What to test
 • Start, wait a while, then log as usual and Finish. Duration should match the lifting block, not the wait.
-• Log a session, leave it open for a long time, then Finish. Duration should not include that idle.
+• On a lift, tap Add a note so the keyboard opens. Cancel or Save should return you to Log set without rotating the phone.
 • Open the two old >200 min History rows — minutes should look like the real gym time.
 ```
+
+## Build 15–16
+
+Internal / not for testers. 15 was the duration queue; 16 stayed internal. Testers jump 14 → 17.
 
 ## Build 14 (1.0)
 
