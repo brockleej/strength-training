@@ -1,35 +1,28 @@
 # Screenshots — README + App Store
 
-**Status:** owed. Files in `docs/screenshots/` (workout / exercises / history / progress) are from an older UI.
+**Status:** current as of 2026-08-26. Captured on iPhone 17 Pro Max simulator (1320×2868), dark mode, ice accent, 9:41 status bar. Source log: `RockLog-backup-2026-08-26.json`. Uploaded to App Store Connect 1.0 (en-US, iPhone 6.7/6.9" set).
 
-Capture on a **physical device or iPhone 16/17 simulator**, dark mode, ice accent, no debug banners. Prefer a real-looking session (named lifts, last-vs-this sets, a note, rest timer idle).
+To recapture: simulator or device, dark mode, no debug banners. Prefer a real session (named lifts, last-vs-this, rest idle or running). Don’t letterbox.
 
 ## README (`docs/screenshots/`)
 
-Replace these four (plus icon if the mark changes):
-
 | File | Frame |
 |------|--------|
-| `workout.png` | Focus or workout list mid-session (last-vs-this, Log set) |
-| `exercises.png` | Library or day plan |
-| `history.png` | History list or session detail |
-| `progress.png` | Progress dashboard (strength score, not old tonnage) |
-| `app_icon.png` | Current Icon Composer export (optional) |
+| `workout.png` | Focus — Hack Squat, last vs this, warmup logged, rest running |
+| `exercises.png` | Library — Push / Posterior Chain, PR column |
+| `history.png` | History list — August 2026, day chips, volume / PRs |
+| `progress.png` | Progress — strength score, workout bars, FFMI body card |
+| `app_icon.png` | Icon Composer export |
 
-Also worth a fifth later: lift screen with **exercise note** + **Done** row.
+## App Store Connect (`docs/screenshots/asc-6.9/`)
 
-## App Store Connect
+Same pixel size as README (6.9"). Listing order:
 
-iPhone, 6.9" required (e.g. iPhone 16/17 Pro Max). Optional 6.3"/6.5" if ASC still asks.
+1. `01-today.png` — day picker, Start Legs, today’s Pull  
+2. `02-workout-list.png` — Legs list, last-session recipes  
+3. `03-focus-hack-squat.png` — same as `workout.png`  
+4. `04-progress.png` — same as `progress.png`  
+5. `05-history.png` — same as `history.png`  
+6. `06-exercises.png` — same as `exercises.png`  
 
-Suggested five frames (short captions):
-
-1. **Today** — day picker + start / gym pass  
-2. **Workout list** — lifts, last-session line, Finish  
-3. **Focus** — last vs this, steppers, note  
-4. **Progress** — strength score + charts  
-5. **History or gym pass** — pick whichever looks stronger  
-
-No status bar junk, no empty states as the hero shot. Crop to device screenshot size; don’t letterbox.
-
-Do this in a dedicated session after build 8 is on a device you actually train with.
+iPad 13" not captured yet.

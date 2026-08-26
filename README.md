@@ -80,7 +80,8 @@ Layered on the foundation above for a more freeform, physique-aware gym log:
 - **Explicit “Done with this lift”** (any set count) + **Next** that skips only marked-done lifts
 - **Finish prompt** when every lift is marked done
 - **Swipe to delete** an extra logged set
-- **Per-exercise notes** — difficulty / next time / modifications (Focus + Edit)
+- **Per-exercise notes** — difficulty / next time / modifications (Focus + Edit); Cancel/Save stay on screen if the keyboard opens
+- **Session duration** — first logged set → last logged set (not Start→Finish wall clock)
 - **Rest timer** — defaults + **per-exercise** on/off (supersets), countdown sounds
 - **Assisted lifts** — assist amount, effective load for volume/e1RM everywhere
 - **Each-side** volume doubling
@@ -115,13 +116,17 @@ Many UI screens still **sit on original ViewModels and services**; RockLog chang
 
 ## Screenshots
 
-> Current PNGs are **stale** (pre–build 8 UI). Recapture for README + App Store — see [docs/SCREENSHOTS.md](docs/SCREENSHOTS.md).
+Dark UI from a real log (August 2026, iPhone 17 Pro Max). App Store 6.9" frames live in [`docs/screenshots/asc-6.9/`](docs/screenshots/asc-6.9/). What each file is: [docs/SCREENSHOTS.md](docs/SCREENSHOTS.md).
 
 <p align="center">
-  <img src="docs/screenshots/workout.png" alt="Workout" width="200" />
-  <img src="docs/screenshots/exercises.png" alt="Exercises" width="200" />
-  <img src="docs/screenshots/history.png" alt="History" width="200" />
-  <img src="docs/screenshots/progress.png" alt="Progress" width="200" />
+  <img src="docs/screenshots/workout.png" alt="Focus: Hack Squat last vs this" width="200" />
+  <img src="docs/screenshots/exercises.png" alt="Exercise library" width="200" />
+  <img src="docs/screenshots/history.png" alt="History list" width="200" />
+  <img src="docs/screenshots/progress.png" alt="Progress: strength score and FFMI" width="200" />
+</p>
+
+<p align="center">
+  <sub>Focus (last vs this) · Exercises · History · Progress (strength score + body)</sub>
 </p>
 
 ## Feature map (full product)
