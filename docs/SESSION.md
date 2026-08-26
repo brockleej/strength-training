@@ -105,7 +105,7 @@ Same failure on Cloud runs 4–10. Cloud’s own next-build number is behind han
 | `progression-lab/` | macOS algo lab (local only) |
 | `docs/RELEASE-NOTES.md` | TF / ship notes |
 | `docs/coaching-companion/` | Path 1 + locked schemas |
-| `CLAUDE.md` | Architecture + build commands |
+| `AGENTS.md` | Architecture + build commands (Claude Code still loads a stub `CLAUDE.md`) |
 
 **CloudKit:** `iCloud.com.lee.lift2026`  
 **Pushing `main` starts Xcode Cloud.** Treat `main` as release. Cloud upload is currently broken on version; TF still needs a local archive or a Cloud number bump.

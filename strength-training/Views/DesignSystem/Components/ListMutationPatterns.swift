@@ -3,7 +3,7 @@
 //  strength-training
 //
 //  Global copy + helpers for list remove / reorder / add.
-//  See CLAUDE.md “List mutation patterns”.
+//  See AGENTS.md “List mutation patterns”.
 //
 
 import Foundation

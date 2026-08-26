@@ -261,13 +261,13 @@ progression-lab/      # macOS tool — previous distro
 strength-training-tests/
 ```
 
-Agent notes: [CLAUDE.md](CLAUDE.md).
+Agent notes: [AGENTS.md](AGENTS.md).
 
 ## Contributing
 
 - Conventional commits: `feat:`, `fix:`, `refactor:`, `docs:`, …
 - Focused PRs
-- Respect the architecture Daniel established (MVVM + `@Observable` + SwiftData) — see [CLAUDE.md](CLAUDE.md)
+- Respect the architecture Daniel established (MVVM + `@Observable` + SwiftData) — see [AGENTS.md](AGENTS.md)
 - Prefer real gym workflows over generic “fitness app” checklists
 - **Pushes to `main` auto-deploy to TestFlight** on this fork
 
