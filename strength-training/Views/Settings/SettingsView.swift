@@ -26,6 +26,14 @@ struct SettingsView: View {
         cancelTitle: "Cancel"
     )
     @State private var showRestoreConfirmation = false
+    @State private var pendingProgram: ProgramDocument?
+    @State private var pendingProgramPrompt = RestorePrompt(
+        title: "Add planned workouts?",
+        message: ProgramImportService.confirmationMessage(weekCount: 8),
+        confirmTitle: "Add workouts",
+        cancelTitle: "Don't add"
+    )
+    @State private var showProgramConfirmation = false
     @State private var showError = false
     @State private var errorMessage = ""
     @State private var showSuccess = false
@@ -381,6 +389,20 @@ struct SettingsView: View {
                 .listRowBackground(Color.uplift.surface1)
 
                 Section {
+                    Button {
+                        isImporting = true
+                    } label: {
+                        Label("Add planned workouts", systemImage: "calendar.badge.plus")
+                            .foregroundStyle(Color.uplift.accent)
+                    }
+                } header: {
+                    sectionHeader("Planned workouts")
+                } footer: {
+                    sectionFooter("Adds upcoming workouts from a file. Your history, lifts, and split stay put.")
+                }
+                .listRowBackground(Color.uplift.surface1)
+
+                Section {
                     Button(action: exportBackup) {
                         Label("Export backup", systemImage: "square.and.arrow.up")
                             .foregroundStyle(Color.uplift.accent)
@@ -395,7 +417,7 @@ struct SettingsView: View {
                 } header: {
                     sectionHeader("Backup")
                 } footer: {
-                    sectionFooter("This is your save/export — a JSON of this phone’s log. Restore asks before replacing your current split and exercises. Coach files above cannot restore RockLog.")
+                    sectionFooter("This is your save/export — a JSON of this phone’s log. Restore asks before replacing your current split and exercises. Planned-workout files above do not replace history.")
                 }
                 .listRowBackground(Color.uplift.surface1)
 
@@ -485,10 +507,26 @@ struct SettingsView: View {
             }
             .fileImporter(
                 isPresented: $isImporting,
-                allowedContentTypes: [.json],
+                allowedContentTypes: [.json, .rockLogProgram],
                 allowsMultipleSelection: false
             ) { result in
                 handleImportResult(result)
+            }
+            .alert(
+                pendingProgramPrompt.title,
+                isPresented: $showProgramConfirmation
+            ) {
+                Button(pendingProgramPrompt.cancelTitle) {
+                    pendingProgram = nil
+                }
+                Button(pendingProgramPrompt.confirmTitle) {
+                    if let document = pendingProgram {
+                        performProgramImport(document)
+                    }
+                    pendingProgram = nil
+                }
+            } message: {
+                Text(pendingProgramPrompt.message)
             }
             .alert(
                 pendingRestorePrompt.title,
@@ -787,17 +825,41 @@ struct SettingsView: View {
             defer { url.stopAccessingSecurityScopedResource() }
             do {
                 let data = try Data(contentsOf: url)
-                let backup = try BackupService.decode(data)
-                let current = BackupService.summarizeStore(context: modelContext)
-                let incoming = BackupService.summarize(backup: backup)
-                pendingRestoreData = data
-                pendingRestorePrompt = BackupService.restorePrompt(current: current, incoming: incoming)
-                showRestoreConfirmation = true
+                switch try IncomingRockLogFile.parse(data) {
+                case .program(let document):
+                    pendingProgram = document
+                    pendingProgramPrompt = ProgramImportService.summarize(document).confirmationPrompt
+                    showProgramConfirmation = true
+                case .backup(let backupData):
+                    let backup = try BackupService.decode(backupData)
+                    let current = BackupService.summarizeStore(context: modelContext)
+                    let incoming = BackupService.summarize(backup: backup)
+                    pendingRestoreData = backupData
+                    pendingRestorePrompt = BackupService.restorePrompt(current: current, incoming: incoming)
+                    showRestoreConfirmation = true
+                }
             } catch {
                 errorMessage = error.localizedDescription
                 showError = true
             }
         case .failure(let error):
+            errorMessage = error.localizedDescription
+            showError = true
+        }
+    }
+
+    private func performProgramImport(_ document: ProgramDocument) {
+        do {
+            let result = try ProgramImportService.importDocument(document, context: modelContext)
+            if result.summary.sessionCount == 0 {
+                successMessage = "Those planned workouts are already on this phone."
+            } else {
+                let weeks = result.summary.weekCount
+                let weekWord = weeks == 1 ? "week" : "weeks"
+                successMessage = "Added \(weeks) \(weekWord) of planned workouts. Your history is unchanged."
+            }
+            showSuccess = true
+        } catch {
             errorMessage = error.localizedDescription
             showError = true
         }

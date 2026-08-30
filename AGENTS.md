@@ -67,7 +67,7 @@ xcodebuild test -scheme ProgressionLab -destination 'platform=macOS'
 
 ```
 Models/        -> SwiftData @Model classes (Exercise, WorkoutSession, ExerciseRecord, SetRecord,
-                  SplitDay, BodyMetricEntry) + day/rotation types, SeedData
+                  SplitDay, BodyMetricEntry, TrainingBlock) + day/rotation types, SeedData
 ViewModels/    -> @Observable classes managing state per feature (incl. BodyMetricsViewModel)
 Views/         -> SwiftUI views by feature (DesignSystem, Today, Workout, History, Progress, Library, Settings)
 Services/      -> Backup, coach export/share, progression, E1RM, PRs, rest timer, body composition (Navy/FFMI),

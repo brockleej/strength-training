@@ -23,12 +23,13 @@ final class TodayViewModel {
     private(set) var lastDurations: [DayType: String] = [:]
 
     /// Re-sync selection every time Today appears.
-    /// Priority: suspended session → schedule suggestion → default.
+    /// Priority: suspended session → today’s planned day → schedule suggestion → default.
     func syncSelection(
         suspended: WorkoutSession?,
         completedSessions: [WorkoutSession],
         orderedDays: [DayType],
-        suggestedTrack: (DayType) -> RotationTrack
+        suggestedTrack: (DayType) -> RotationTrack,
+        plannedDayType: DayType? = nil
     ) {
         pruneCarryover(completedSessions: completedSessions)
 
@@ -51,6 +52,12 @@ final class TodayViewModel {
             )
         } else {
             incompleteWeekPrompt = nil
+        }
+
+        if let plannedDayType, orderedDays.contains(plannedDayType) {
+            selectedDayType = plannedDayType
+            syncRotationTrack(suspended: nil, suggestedTrack: suggestedTrack)
+            return
         }
 
         let suggested = SplitScheduleLogic.suggestedDay(

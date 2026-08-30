@@ -38,6 +38,27 @@
 				</array>
 			</dict>
 		</dict>
+		<dict>
+			<key>UTTypeIdentifier</key>
+			<string>com.lee.rocklog.program</string>
+			<key>UTTypeDescription</key>
+			<string>RockLog Planned Workouts</string>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.json</string>
+			</array>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>rocklogprogram</string>
+				</array>
+				<key>public.mime-type</key>
+				<array>
+					<string>application/json</string>
+				</array>
+			</dict>
+		</dict>
 	</array>
 	<key>CFBundleDocumentTypes</key>
 	<array>
@@ -49,6 +70,16 @@
 			<key>LSItemContentTypes</key>
 			<array>
 				<string>com.lee.rocklog.coach.session</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>RockLog Planned Workouts</string>
+			<key>LSHandlerRank</key>
+			<string>Owner</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>com.lee.rocklog.program</string>
 			</array>
 		</dict>
 	</array>

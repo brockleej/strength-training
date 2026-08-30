@@ -267,6 +267,15 @@ One workout is a session file. Two or more unsent workouts go as one batch file.
 
 Use this for safekeeping or another device. Do not restore a `.rocklogcoach` file.
 
+### Planned workouts
+
+A planned-workout file (`.rocklogprogram` or a JSON whose format is `rocklog.program`) adds upcoming days with the target sets already filled in. It does **not** replace your history, lifts, or split.
+
+- **Settings → Add planned workouts**, or open the file from Files / a share sheet.
+- Confirm **Add workouts**. The prompt says this does not replace your history.
+- Today shows **Coming up**. Starting that day’s type loads the ramps and work sets. Starting a different day leaves the plan alone.
+- If you miss a planned day, it is not saved as a finished workout.
+
 ---
 
 ## Quick reference
@@ -289,3 +298,4 @@ Use this for safekeeping or another device. Do not restore a `.rocklogcoach` fil
 | Show or hide coach send | Settings → **RockCoach** → **Use RockCoach** |
 | Send a workout to your coach | Turn Use RockCoach on, then summary or History paper plane |
 | Save / move this phone’s log | Settings → **Export backup** |
+| Add planned workouts | Settings → **Add planned workouts**, or open the file |

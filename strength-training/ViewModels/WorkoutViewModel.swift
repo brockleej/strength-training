@@ -239,17 +239,20 @@ final class WorkoutViewModel {
 
     // MARK: - Session Lifecycle
 
-    /// On launch: resume today's session, auto-complete stale ones, or start fresh.
+    /// On launch: resume today's live session, expire missed plans, or stay idle.
+    /// Planned (not started) days are never auto-activated.
     func resolveSessionState() {
         autoCompleteStaleSession()
 
         let calendar = Calendar.current
         let startOfToday = calendar.startOfDay(for: .now)
         let endOfToday = calendar.date(byAdding: .day, value: 1, to: startOfToday)!
+        let liveState = SessionPlanState.none.rawValue
 
         var descriptor = FetchDescriptor<WorkoutSession>(
             predicate: #Predicate<WorkoutSession> {
                 $0.isCompleted == false &&
+                $0.planState == liveState &&
                 $0.date >= startOfToday &&
                 $0.date < endOfToday
             }
@@ -259,8 +262,9 @@ final class WorkoutViewModel {
         activeSession = try? modelContext.fetch(descriptor).first
     }
 
-    /// Auto-complete any sessions from previous days that were never finished.
-    /// Empty sessions (no sets) are deleted so History stays clean.
+    /// Auto-complete unfinished *live* sessions from previous days.
+    /// Planned days expire as skipped — never as trained History rows.
+    /// Empty live sessions (no sets) are deleted so History stays clean.
     func autoCompleteStaleSession() {
         let startOfToday = Calendar.current.startOfDay(for: .now)
 
@@ -273,7 +277,17 @@ final class WorkoutViewModel {
 
         if let staleSessions = try? modelContext.fetch(descriptor) {
             for session in staleSessions {
-                let hasSets = session.exerciseRecordsArray.contains { !$0.setsArray.isEmpty }
+                if session.isPlanned || session.isSkippedPlan {
+                    session.planStatus = .skipped
+                    session.isCompleted = false
+                    continue
+                }
+                if session.trainingBlock != nil && !Self.hasAthleteLoggedSets(session) {
+                    session.planStatus = .skipped
+                    session.isCompleted = false
+                    continue
+                }
+                let hasSets = Self.hasAthleteLoggedSets(session)
                 if hasSets {
                     session.isCompleted = true
                     SessionMath.stampDuration(on: session, liveElapsed: 0)
@@ -283,6 +297,44 @@ final class WorkoutViewModel {
             }
             try? modelContext.save()
         }
+    }
+
+    /// Planned session for `date` (default today). Pass `dayType` to require a match.
+    func plannedSession(on date: Date = .now, dayType: DayType? = nil) -> WorkoutSession? {
+        let calendar = Calendar.current
+        let start = calendar.startOfDay(for: date)
+        let end = calendar.date(byAdding: .day, value: 1, to: start) ?? start
+        let planned = SessionPlanState.planned.rawValue
+        let descriptor = FetchDescriptor<WorkoutSession>(
+            predicate: #Predicate<WorkoutSession> {
+                $0.isCompleted == false &&
+                $0.planState == planned &&
+                $0.date >= start &&
+                $0.date < end
+            },
+            sortBy: [SortDescriptor(\WorkoutSession.date)]
+        )
+        let matches = (try? modelContext.fetch(descriptor)) ?? []
+        if let dayType {
+            return matches.first { $0.day == dayType }
+        }
+        return matches.first
+    }
+
+    /// Upcoming planned days, soonest first (includes today).
+    func upcomingPlannedSessions(limit: Int = 8) -> [WorkoutSession] {
+        let start = Calendar.current.startOfDay(for: .now)
+        let planned = SessionPlanState.planned.rawValue
+        var descriptor = FetchDescriptor<WorkoutSession>(
+            predicate: #Predicate<WorkoutSession> {
+                $0.isCompleted == false &&
+                $0.planState == planned &&
+                $0.date >= start
+            },
+            sortBy: [SortDescriptor(\WorkoutSession.date)]
+        )
+        descriptor.fetchLimit = limit
+        return (try? modelContext.fetch(descriptor)) ?? []
     }
 
     func startSession(dayType: DayType, rotationTrack: RotationTrack? = nil) {
@@ -310,12 +362,7 @@ final class WorkoutViewModel {
         }
         clearRevisiting()
         let track = rotationTrack ?? suggestedRotationTrack(for: dayType)
-        let session = WorkoutSession(dayType: dayType, rotationTrack: track)
-        modelContext.insert(session)
-        try? modelContext.save()
-        activeSession = session
-        celebratedExerciseIDsThisSession = []
-        startHealthKitWorkout()
+        activateOrCreateSession(dayType: dayType, rotationTrack: track)
     }
 
     /// Alternate A↔B from the last completed session of this day type (any day).
@@ -433,13 +480,26 @@ final class WorkoutViewModel {
             clearRevisiting()
             return
         }
-        let hasSets = session.exerciseRecordsArray.contains { !$0.setsArray.isEmpty }
+        if session.trainingBlock != nil && !Self.hasAthleteLoggedSets(session) {
+            session.planStatus = .planned
+            session.isCompleted = false
+            try? modelContext.save()
+            return
+        }
+        let hasSets = Self.hasAthleteLoggedSets(session)
         if !discardLiveWork, hasSets {
             session.isCompleted = true
         } else {
             modelContext.delete(session)
         }
         try? modelContext.save()
+    }
+
+    /// Target rows from an imported plan do not count as trained work.
+    static func hasAthleteLoggedSets(_ session: WorkoutSession) -> Bool {
+        session.exerciseRecordsArray.contains { record in
+            record.setsArray.contains { !$0.isTarget }
+        }
     }
 
     /// Called when the HealthKit keep/delete dialog dismisses without an explicit button tap.
@@ -500,12 +560,7 @@ final class WorkoutViewModel {
         case .cancelOnly:
             break
         case .replaceWith(let dayType, let rotationTrack):
-            let session = WorkoutSession(dayType: dayType, rotationTrack: rotationTrack)
-            modelContext.insert(session)
-            try? modelContext.save()
-            activeSession = session
-            celebratedExerciseIDsThisSession = []
-            startHealthKitWorkout()
+            activateOrCreateSession(dayType: dayType, rotationTrack: rotationTrack)
         }
     }
 
@@ -515,6 +570,11 @@ final class WorkoutViewModel {
         // History edits stay completed the whole time; live sessions complete here.
         if !session.isCompleted {
             session.isCompleted = true
+        }
+        for record in session.exerciseRecordsArray {
+            for set in record.setsArray {
+                set.isTarget = false
+            }
         }
         let capturedSession = session
         pendingCoachShare = !wasRevisit && CoachAthletePreferences.shouldOfferAfterFinish
@@ -893,6 +953,7 @@ final class WorkoutViewModel {
         set.isEachSide = isEachSide
         set.isAssisted = isAssisted
         set.completedAt = .now
+        set.isTarget = false
         // Editing while marked done keeps the lift open again.
         set.exerciseRecord?.isCompleted = false
         setMutationEpoch &+= 1
@@ -931,6 +992,41 @@ final class WorkoutViewModel {
     }
 
     // MARK: - Helpers
+
+    /// Use today's matching plan (targets already filled) or a blank day-plan session.
+    /// A different day type leaves the plan untouched.
+    private func activateOrCreateSession(dayType: DayType, rotationTrack: RotationTrack) {
+        if let planned = plannedSession(on: .now, dayType: dayType) {
+            activatePlannedSession(planned, rotationTrack: rotationTrack)
+            return
+        }
+        let session = WorkoutSession(dayType: dayType, rotationTrack: rotationTrack)
+        modelContext.insert(session)
+        try? modelContext.save()
+        activeSession = session
+        celebratedExerciseIDsThisSession = []
+        startHealthKitWorkout()
+    }
+
+    private func activatePlannedSession(_ session: WorkoutSession, rotationTrack: RotationTrack) {
+        session.planStatus = .none
+        session.track = rotationTrack
+        session.isCompleted = false
+        suppressUnplannedDayLifts(on: session)
+        try? modelContext.save()
+        activeSession = session
+        celebratedExerciseIDsThisSession = []
+        startHealthKitWorkout()
+    }
+
+    /// Hide day-plan lifts that are not in this planned session (session-only).
+    private func suppressUnplannedDayLifts(on session: WorkoutSession) {
+        let plannedIDs = Set(session.exerciseRecordsArray.compactMap { $0.exercise?.id })
+        guard !plannedIDs.isEmpty else { return }
+        for exercise in exercises(for: session.day) where !plannedIDs.contains(exercise.id) {
+            session.suppressExercise(id: exercise.id)
+        }
+    }
 
     private func startHealthKitWorkout() {
         Task {

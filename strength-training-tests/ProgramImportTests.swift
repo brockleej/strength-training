@@ -1,0 +1,319 @@
+//
+//  ProgramImportTests.swift
+//  strength-training-tests
+//
+//  Merge import, warmup round-trip, stale planned days, start-from-plan.
+//
+
+import XCTest
+import SwiftData
+@testable import strength_training
+
+@MainActor
+final class ProgramImportTests: XCTestCase {
+
+    func test_confirmationCopy_isPlainLanguage() {
+        XCTAssertEqual(
+            ProgramImportService.confirmationMessage(weekCount: 8),
+            "Add 8 weeks of planned workouts? This does not replace your history."
+        )
+        XCTAssertEqual(
+            ProgramImportService.confirmationMessage(weekCount: 1),
+            "Add 1 week of planned workouts? This does not replace your history."
+        )
+        XCTAssertFalse(ProgramImportService.confirmationMessage(weekCount: 8).localizedCaseInsensitiveContains("schema"))
+        XCTAssertFalse(ProgramImportService.confirmationMessage(weekCount: 8).localizedCaseInsensitiveContains("JSON"))
+    }
+
+    func test_weekCount_spansEightWeeks() {
+        let start = Date(timeIntervalSince1970: 1_767_571_200) // 2026-01-05
+        let dates = (0..<8).flatMap { week -> [Date] in
+            let monday = start.addingTimeInterval(Double(week) * 7 * 86_400)
+            return [monday, monday.addingTimeInterval(2 * 86_400), monday.addingTimeInterval(4 * 86_400)]
+        }
+        XCTAssertEqual(ProgramImportService.weekCount(from: dates), 8)
+    }
+
+    func test_warmupFlags_roundTripThroughCodec() throws {
+        let document = sampleDocument(firstSession: Date(timeIntervalSince1970: 1_800_000_000))
+        let data = try ProgramCodec.encode(document)
+        let decoded = try ProgramCodec.decode(data)
+
+        let sets = decoded.block.sessions[0].exercises[0].sets
+        XCTAssertEqual(sets.map(\.resolvedWarmup), [true, true, false])
+        XCTAssertEqual(decoded.format, ProgramFormat.formatName)
+        XCTAssertEqual(decoded.schemaVersion, 1)
+    }
+
+    func test_codec_acceptsDateOnlyStrings() throws {
+        let json = """
+        {
+          "format": "rocklog.program",
+          "schemaVersion": 1,
+          "exportedAt": "2026-08-30T00:00:00Z",
+          "block": {
+            "id": "00000000-0000-4000-8000-0000000000aa",
+            "name": "Demo",
+            "startDate": "2026-01-05",
+            "sessions": [
+              {
+                "id": "00000000-0000-4000-8000-0000000000bb",
+                "date": "2026-01-05",
+                "dayType": "Push",
+                "exercises": [
+                  {
+                    "id": "00000000-0000-4000-8000-0000000000cc",
+                    "name": "Barbell Bench Press",
+                    "sets": [
+                      { "setNumber": 1, "weightLbs": 95, "reps": 8, "isWarmup": true }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        }
+        """
+        let doc = try ProgramCodec.decode(Data(json.utf8))
+        XCTAssertEqual(doc.block.sessions.count, 1)
+        XCTAssertTrue(doc.block.sessions[0].exercises[0].sets[0].resolvedWarmup)
+    }
+
+    func test_incomingFile_routesProgramVersusBackup() throws {
+        let program = try ProgramCodec.encode(sampleDocument(firstSession: .now))
+        switch try IncomingRockLogFile.parse(program) {
+        case .program: break
+        case .backup: XCTFail("program file must not parse as a backup")
+        }
+
+        let coach = Data(#"{"format":"rocklog.coach.session","schemaVersion":1}"#.utf8)
+        XCTAssertThrowsError(try IncomingRockLogFile.parse(coach))
+    }
+
+    func test_merge_doesNotDeleteExistingCompletedSession() throws {
+        let container = try inMemoryContainer()
+        let context = container.mainContext
+
+        let squat = Exercise(name: "Barbell Back Squat", dayType: .legs, muscleGroup: "Quads")
+        let historyID = UUID()
+        let history = WorkoutSession(dayType: .legs, date: Date(timeIntervalSince1970: 1_700_000_000))
+        history.id = historyID
+        history.isCompleted = true
+        let record = ExerciseRecord(trainingMode: .highWeightLowReps)
+        record.exercise = squat
+        record.session = history
+        let logged = SetRecord(setNumber: 1, weightLbs: 225, reps: 5, isWarmup: false)
+        logged.exerciseRecord = record
+        context.insert(squat)
+        context.insert(history)
+        context.insert(record)
+        context.insert(logged)
+        try context.save()
+
+        let document = sampleDocument(firstSession: Date(timeIntervalSince1970: 1_800_000_000))
+        _ = try ProgramImportService.importDocument(
+            document,
+            context: context,
+            anchoringStartTo: Date(timeIntervalSince1970: 1_800_000_000)
+        )
+
+        let sessions = try context.fetch(FetchDescriptor<WorkoutSession>())
+        XCTAssertTrue(sessions.contains { $0.id == historyID && $0.isCompleted })
+        XCTAssertEqual(sessions.filter { $0.id == historyID }.count, 1)
+
+        let exercises = try context.fetch(FetchDescriptor<Exercise>())
+        XCTAssertEqual(exercises.filter { $0.name == "Barbell Back Squat" }.count, 1)
+    }
+
+    func test_import_matchesExistingExerciseByName_withoutDuplicating() throws {
+        let container = try inMemoryContainer()
+        let context = container.mainContext
+
+        let existingID = UUID()
+        let bench = Exercise(name: "Barbell Bench Press", dayType: .push, muscleGroup: "Chest")
+        bench.id = existingID
+        bench.rotationTrack = RotationTrack.a.rawValue
+        context.insert(bench)
+        try context.save()
+
+        let document = sampleDocument(firstSession: Date(timeIntervalSince1970: 1_800_000_000))
+        let result = try ProgramImportService.importDocument(
+            document,
+            context: context,
+            anchoringStartTo: Date(timeIntervalSince1970: 1_800_000_000)
+        )
+
+        let benches = try context.fetch(FetchDescriptor<Exercise>())
+            .filter { $0.name.caseInsensitiveCompare("Barbell Bench Press") == .orderedSame }
+        XCTAssertEqual(benches.count, 1)
+        XCTAssertEqual(benches.first?.id, existingID)
+        XCTAssertEqual(benches.first?.track, .a)
+        XCTAssertEqual(result.summary.createdExerciseCount, 1) // Demo Floor Press only
+    }
+
+    func test_staleAutoComplete_doesNotMarkPlannedSessionAsTrained() throws {
+        let container = try inMemoryContainer()
+        let context = container.mainContext
+        let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: .now)!
+
+        let document = sampleDocument(firstSession: yesterday)
+        _ = try ProgramImportService.importDocument(
+            document,
+            context: context,
+            anchoringStartTo: Calendar.current.startOfDay(for: yesterday)
+        )
+
+        let vm = WorkoutViewModel(
+            modelContext: context,
+            healthKitService: HealthKitWorkoutService()
+        )
+        vm.autoCompleteStaleSession()
+
+        let plannedID = document.block.sessions[0].id
+        let session = try context.fetch(FetchDescriptor<WorkoutSession>())
+            .first { $0.id == plannedID }
+        XCTAssertNotNil(session)
+        XCTAssertFalse(session?.isCompleted ?? true)
+        XCTAssertEqual(session?.planStatus, .skipped)
+
+        let trained = try context.fetch(
+            FetchDescriptor<WorkoutSession>(
+                predicate: #Predicate { $0.isCompleted == true }
+            )
+        )
+        XCTAssertFalse(trained.contains { $0.id == plannedID })
+    }
+
+    func test_startToday_loadsTodaysPlanTargetsIncludingWarmups() throws {
+        let container = try inMemoryContainer()
+        let context = container.mainContext
+        let today = Calendar.current.startOfDay(for: .now)
+
+        let document = sampleDocument(firstSession: today)
+        _ = try ProgramImportService.importDocument(
+            document,
+            context: context,
+            anchoringStartTo: today
+        )
+
+        let vm = WorkoutViewModel(
+            modelContext: context,
+            healthKitService: HealthKitWorkoutService()
+        )
+        XCTAssertNil(vm.activeSession, "planned days must not auto-start")
+
+        vm.startSession(dayType: .push, rotationTrack: .a)
+
+        let session = try XCTUnwrap(vm.activeSession)
+        XCTAssertEqual(session.id, document.block.sessions[0].id)
+        XCTAssertEqual(session.planStatus, .none)
+        XCTAssertFalse(session.isCompleted)
+
+        let bench = try XCTUnwrap(
+            session.exerciseRecordsArray.first { $0.exercise?.name == "Barbell Bench Press" }
+        )
+        let flags = bench.setsArray.sorted { $0.setNumber < $1.setNumber }.map(\.isWarmup)
+        XCTAssertEqual(flags, [true, true, false])
+        XCTAssertEqual(bench.setsArray.first { $0.setNumber == 1 }?.weightLbs, 95)
+        XCTAssertEqual(bench.setsArray.first { $0.setNumber == 3 }?.weightLbs, 155)
+        XCTAssertTrue(bench.setsArray.allSatisfy(\.isTarget))
+    }
+
+    func test_startDifferentDayType_doesNotStealPlan() throws {
+        let container = try inMemoryContainer()
+        let context = container.mainContext
+        let today = Calendar.current.startOfDay(for: .now)
+
+        let document = sampleDocument(firstSession: today)
+        _ = try ProgramImportService.importDocument(
+            document,
+            context: context,
+            anchoringStartTo: today
+        )
+
+        let vm = WorkoutViewModel(
+            modelContext: context,
+            healthKitService: HealthKitWorkoutService()
+        )
+        vm.startSession(dayType: .legs, rotationTrack: .a)
+
+        let live = try XCTUnwrap(vm.activeSession)
+        XCTAssertEqual(live.day, .legs)
+        XCTAssertNotEqual(live.id, document.block.sessions[0].id)
+        XCTAssertTrue(live.exerciseRecordsArray.isEmpty)
+
+        let planned = try XCTUnwrap(
+            context.fetch(FetchDescriptor<WorkoutSession>())
+                .first { $0.id == document.block.sessions[0].id }
+        )
+        XCTAssertTrue(planned.isPlanned)
+        XCTAssertFalse(planned.isCompleted)
+    }
+
+    // MARK: - Helpers
+
+    private func sampleDocument(firstSession: Date) -> ProgramDocument {
+        let benchID = UUID()
+        let floorID = UUID()
+        let sessionID = UUID()
+        return ProgramDocument(
+            format: ProgramFormat.formatName,
+            schemaVersion: ProgramFormat.schemaVersion,
+            exportedAt: Date(timeIntervalSince1970: 1_775_000_000),
+            block: ProgramBlockPayload(
+                id: UUID(),
+                name: "Demo Strength Block",
+                notes: "Synthetic fixture — fake lifts only.",
+                startDate: firstSession,
+                sessions: [
+                    ProgramSessionPayload(
+                        id: sessionID,
+                        date: firstSession,
+                        dayType: "Push",
+                        rotationTrack: "A",
+                        notes: nil,
+                        exercises: [
+                            ProgramExercisePayload(
+                                id: benchID,
+                                name: "Barbell Bench Press",
+                                muscleGroup: "Chest, Triceps, Shoulders",
+                                trainingMode: "Strength",
+                                notes: nil,
+                                sets: [
+                                    ProgramSetPayload(setNumber: 1, weightLbs: 95, reps: 8, isWarmup: true, isEachSide: false, isAssisted: false),
+                                    ProgramSetPayload(setNumber: 2, weightLbs: 135, reps: 5, isWarmup: true, isEachSide: false, isAssisted: false),
+                                    ProgramSetPayload(setNumber: 3, weightLbs: 155, reps: 5, isWarmup: false, isEachSide: false, isAssisted: false),
+                                ]
+                            ),
+                            ProgramExercisePayload(
+                                id: floorID,
+                                name: "Demo Floor Press",
+                                muscleGroup: "Chest, Triceps",
+                                trainingMode: "Strength",
+                                notes: nil,
+                                sets: [
+                                    ProgramSetPayload(setNumber: 1, weightLbs: 95, reps: 8, isWarmup: true, isEachSide: false, isAssisted: false),
+                                    ProgramSetPayload(setNumber: 2, weightLbs: 115, reps: 8, isWarmup: false, isEachSide: false, isAssisted: false),
+                                ]
+                            ),
+                        ]
+                    )
+                ]
+            )
+        )
+    }
+
+    private func inMemoryContainer() throws -> ModelContainer {
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        return try ModelContainer(
+            for: Exercise.self,
+            WorkoutSession.self,
+            ExerciseRecord.self,
+            SetRecord.self,
+            SplitDay.self,
+            BodyMetricEntry.self,
+            TrainingBlock.self,
+            configurations: config
+        )
+    }
+}

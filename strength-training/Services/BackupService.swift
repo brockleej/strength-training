@@ -86,13 +86,15 @@ struct BackupService {
                                         isWarmup: s.isWarmup,
                                         isEachSide: s.isEachSide,
                                         isAssisted: s.isAssisted,
-                                        completedAt: s.completedAt
+                                        completedAt: s.completedAt,
+                                        isTarget: s.isTarget
                                     )
                                 }
                         )
                     },
                 rotationTrack: s.rotationTrack,
-                durationSeconds: s.durationSeconds > 0 ? s.durationSeconds : nil
+                durationSeconds: s.durationSeconds > 0 ? s.durationSeconds : nil,
+                planState: s.planState.isEmpty ? nil : s.planState
             )
         }
 
@@ -238,6 +240,8 @@ struct BackupService {
         exercises.forEach { context.delete($0) }
         let splitDays = (try? context.fetch(FetchDescriptor<SplitDay>())) ?? []
         splitDays.forEach { context.delete($0) }
+        let blocks = (try? context.fetch(FetchDescriptor<TrainingBlock>())) ?? []
+        blocks.forEach { context.delete($0) }
 
         // Re-insert exercises, building an ID → Exercise map for linking records
         var exerciseMap: [UUID: Exercise] = [:]
@@ -270,6 +274,7 @@ struct BackupService {
             session.id = sb.id
             session.notes = sb.notes
             session.isCompleted = sb.isCompleted
+            session.planState = sb.planState ?? ""
             if let duration = sb.durationSeconds, duration > 0 {
                 session.durationSeconds = duration
             }
@@ -296,7 +301,8 @@ struct BackupService {
                         reps: setb.reps,
                         isWarmup: setb.isWarmup,
                         isEachSide: setb.resolvedEachSide,
-                        isAssisted: setb.resolvedAssisted
+                        isAssisted: setb.resolvedAssisted,
+                        isTarget: setb.resolvedTarget
                     )
                     set.id = setb.id
                     set.completedAt = setb.completedAt

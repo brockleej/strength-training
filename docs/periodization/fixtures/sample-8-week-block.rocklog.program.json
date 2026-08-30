@@ -1,0 +1,2439 @@
+{
+  "format": "rocklog.program",
+  "schemaVersion": 1,
+  "exportedAt": "2026-08-30T00:00:00Z",
+  "block": {
+    "id": "72db6fc9-2367-539e-a34c-322126cd6ced",
+    "name": "Demo 8-Week Strength Block",
+    "notes": "Synthetic demo data. Fake lifts and weights only \u2014 not anyone\u2019s real training log.",
+    "startDate": "2026-01-05",
+    "sessions": [
+      {
+        "id": "82244f15-b660-5fb4-b568-d2ab95604de8",
+        "date": "2026-01-05",
+        "dayType": "Push",
+        "rotationTrack": "A",
+        "exercises": [
+          {
+            "id": "b06e59e1-7c0d-5892-8000-10a6ae199453",
+            "name": "Barbell Bench Press",
+            "muscleGroup": "Chest, Triceps, Shoulders",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 95,
+                "reps": 8,
+                "isWarmup": true
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 135,
+                "reps": 5,
+                "isWarmup": true
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 155,
+                "reps": 5,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 4,
+                "weightLbs": 155,
+                "reps": 5,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 5,
+                "weightLbs": 155,
+                "reps": 5,
+                "isWarmup": false
+              }
+            ]
+          },
+          {
+            "id": "cb6c9f05-e8a6-5065-a076-5834738d6d5c",
+            "name": "Overhead Press",
+            "muscleGroup": "Shoulders, Triceps",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 65,
+                "reps": 8,
+                "isWarmup": true
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 85,
+                "reps": 6,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 85,
+                "reps": 6,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 4,
+                "weightLbs": 85,
+                "reps": 6,
+                "isWarmup": false
+              }
+            ]
+          },
+          {
+            "id": "bf44c290-d92b-5e8a-9bb5-f76699c2851a",
+            "name": "Lateral Raise",
+            "muscleGroup": "Shoulders",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 15,
+                "reps": 12,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 15,
+                "reps": 12,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 15,
+                "reps": 12,
+                "isWarmup": false
+              }
+            ]
+          },
+          {
+            "id": "74379b69-0641-5024-b7c3-8ab996cd0aaf",
+            "name": "Demo Floor Press",
+            "muscleGroup": "Chest, Triceps",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 95,
+                "reps": 8,
+                "isWarmup": true
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 115,
+                "reps": 8,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 115,
+                "reps": 8,
+                "isWarmup": false
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "aa6c11c2-fddd-5db9-b907-da4b5768053a",
+        "date": "2026-01-07",
+        "dayType": "Pull",
+        "rotationTrack": "A",
+        "exercises": [
+          {
+            "id": "8b2b5278-e6f9-55ce-ae91-921e1e53d8ae",
+            "name": "Barbell Bent-Over Row",
+            "muscleGroup": "Back, Biceps, Lower Back",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 95,
+                "reps": 8,
+                "isWarmup": true
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 135,
+                "reps": 8,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 135,
+                "reps": 8,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 4,
+                "weightLbs": 135,
+                "reps": 8,
+                "isWarmup": false
+              }
+            ]
+          },
+          {
+            "id": "b9d5ccc8-6ad7-58ac-bf66-2ff2def7ef32",
+            "name": "Lat Pulldown",
+            "muscleGroup": "Back, Biceps",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 80,
+                "reps": 10,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 80,
+                "reps": 10,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 80,
+                "reps": 10,
+                "isWarmup": false
+              }
+            ]
+          },
+          {
+            "id": "fda90b97-cf8d-503e-8665-087a738fe0ac",
+            "name": "Biceps Curl",
+            "muscleGroup": "Biceps",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 30,
+                "reps": 10,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 30,
+                "reps": 10,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 30,
+                "reps": 10,
+                "isWarmup": false
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "5070fa13-9b2f-536c-89fa-39ee9238b39c",
+        "date": "2026-01-09",
+        "dayType": "Legs",
+        "rotationTrack": "A",
+        "exercises": [
+          {
+            "id": "5b649c31-4127-5b2a-be6e-e3bcf8bb5e80",
+            "name": "Barbell Back Squat",
+            "muscleGroup": "Quads, Glutes, Lower Back",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 95,
+                "reps": 8,
+                "isWarmup": true
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 135,
+                "reps": 5,
+                "isWarmup": true
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 155,
+                "reps": 5,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 4,
+                "weightLbs": 155,
+                "reps": 5,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 5,
+                "weightLbs": 155,
+                "reps": 5,
+                "isWarmup": false
+              }
+            ]
+          },
+          {
+            "id": "ae4a8f4f-68a0-5aa0-8ca2-2a2d73f470e1",
+            "name": "Romanian Deadlift",
+            "muscleGroup": "Hamstrings, Glutes, Lower Back",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 95,
+                "reps": 8,
+                "isWarmup": true
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 135,
+                "reps": 8,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 135,
+                "reps": 8,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 4,
+                "weightLbs": 135,
+                "reps": 8,
+                "isWarmup": false
+              }
+            ]
+          },
+          {
+            "id": "dac7691e-5773-575c-9bba-a1124ff2fc33",
+            "name": "Goblet Squat",
+            "muscleGroup": "Quads, Glutes, Core",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 40,
+                "reps": 10,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 40,
+                "reps": 10,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 40,
+                "reps": 10,
+                "isWarmup": false
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "44a6e074-75a4-52d9-9a74-4e47d2966b3b",
+        "date": "2026-01-12",
+        "dayType": "Push",
+        "rotationTrack": "B",
+        "exercises": [
+          {
+            "id": "b06e59e1-7c0d-5892-8000-10a6ae199453",
+            "name": "Barbell Bench Press",
+            "muscleGroup": "Chest, Triceps, Shoulders",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 95,
+                "reps": 8,
+                "isWarmup": true
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 135,
+                "reps": 5,
+                "isWarmup": true
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 155,
+                "reps": 5,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 4,
+                "weightLbs": 155,
+                "reps": 5,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 5,
+                "weightLbs": 155,
+                "reps": 5,
+                "isWarmup": false
+              }
+            ]
+          },
+          {
+            "id": "cb6c9f05-e8a6-5065-a076-5834738d6d5c",
+            "name": "Overhead Press",
+            "muscleGroup": "Shoulders, Triceps",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 65,
+                "reps": 8,
+                "isWarmup": true
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 85,
+                "reps": 6,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 85,
+                "reps": 6,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 4,
+                "weightLbs": 85,
+                "reps": 6,
+                "isWarmup": false
+              }
+            ]
+          },
+          {
+            "id": "bf44c290-d92b-5e8a-9bb5-f76699c2851a",
+            "name": "Lateral Raise",
+            "muscleGroup": "Shoulders",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 15,
+                "reps": 12,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 15,
+                "reps": 12,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 15,
+                "reps": 12,
+                "isWarmup": false
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "34995811-3e58-53ea-96da-336a6ae5f246",
+        "date": "2026-01-14",
+        "dayType": "Pull",
+        "rotationTrack": "B",
+        "exercises": [
+          {
+            "id": "8b2b5278-e6f9-55ce-ae91-921e1e53d8ae",
+            "name": "Barbell Bent-Over Row",
+            "muscleGroup": "Back, Biceps, Lower Back",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 95,
+                "reps": 8,
+                "isWarmup": true
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 135,
+                "reps": 8,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 135,
+                "reps": 8,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 4,
+                "weightLbs": 135,
+                "reps": 8,
+                "isWarmup": false
+              }
+            ]
+          },
+          {
+            "id": "b9d5ccc8-6ad7-58ac-bf66-2ff2def7ef32",
+            "name": "Lat Pulldown",
+            "muscleGroup": "Back, Biceps",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 80,
+                "reps": 10,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 80,
+                "reps": 10,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 80,
+                "reps": 10,
+                "isWarmup": false
+              }
+            ]
+          },
+          {
+            "id": "fda90b97-cf8d-503e-8665-087a738fe0ac",
+            "name": "Biceps Curl",
+            "muscleGroup": "Biceps",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 30,
+                "reps": 10,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 30,
+                "reps": 10,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 30,
+                "reps": 10,
+                "isWarmup": false
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "0e21d965-7026-5fe3-9c8d-baed720c8151",
+        "date": "2026-01-16",
+        "dayType": "Legs",
+        "rotationTrack": "B",
+        "exercises": [
+          {
+            "id": "5b649c31-4127-5b2a-be6e-e3bcf8bb5e80",
+            "name": "Barbell Back Squat",
+            "muscleGroup": "Quads, Glutes, Lower Back",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 95,
+                "reps": 8,
+                "isWarmup": true
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 135,
+                "reps": 5,
+                "isWarmup": true
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 155,
+                "reps": 5,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 4,
+                "weightLbs": 155,
+                "reps": 5,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 5,
+                "weightLbs": 155,
+                "reps": 5,
+                "isWarmup": false
+              }
+            ]
+          },
+          {
+            "id": "ae4a8f4f-68a0-5aa0-8ca2-2a2d73f470e1",
+            "name": "Romanian Deadlift",
+            "muscleGroup": "Hamstrings, Glutes, Lower Back",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 95,
+                "reps": 8,
+                "isWarmup": true
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 135,
+                "reps": 8,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 135,
+                "reps": 8,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 4,
+                "weightLbs": 135,
+                "reps": 8,
+                "isWarmup": false
+              }
+            ]
+          },
+          {
+            "id": "dac7691e-5773-575c-9bba-a1124ff2fc33",
+            "name": "Goblet Squat",
+            "muscleGroup": "Quads, Glutes, Core",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 40,
+                "reps": 10,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 40,
+                "reps": 10,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 40,
+                "reps": 10,
+                "isWarmup": false
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "a45b6bd3-549e-5e4e-9be3-89d56d9e9252",
+        "date": "2026-01-19",
+        "dayType": "Push",
+        "rotationTrack": "A",
+        "exercises": [
+          {
+            "id": "b06e59e1-7c0d-5892-8000-10a6ae199453",
+            "name": "Barbell Bench Press",
+            "muscleGroup": "Chest, Triceps, Shoulders",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 95,
+                "reps": 8,
+                "isWarmup": true
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 135,
+                "reps": 5,
+                "isWarmup": true
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 160,
+                "reps": 5,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 4,
+                "weightLbs": 160,
+                "reps": 5,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 5,
+                "weightLbs": 160,
+                "reps": 5,
+                "isWarmup": false
+              }
+            ]
+          },
+          {
+            "id": "cb6c9f05-e8a6-5065-a076-5834738d6d5c",
+            "name": "Overhead Press",
+            "muscleGroup": "Shoulders, Triceps",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 65,
+                "reps": 8,
+                "isWarmup": true
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 90,
+                "reps": 6,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 90,
+                "reps": 6,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 4,
+                "weightLbs": 90,
+                "reps": 6,
+                "isWarmup": false
+              }
+            ]
+          },
+          {
+            "id": "bf44c290-d92b-5e8a-9bb5-f76699c2851a",
+            "name": "Lateral Raise",
+            "muscleGroup": "Shoulders",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 15,
+                "reps": 12,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 15,
+                "reps": 12,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 15,
+                "reps": 12,
+                "isWarmup": false
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "25f420a9-15ac-5111-a775-481fcd123184",
+        "date": "2026-01-21",
+        "dayType": "Pull",
+        "rotationTrack": "A",
+        "exercises": [
+          {
+            "id": "8b2b5278-e6f9-55ce-ae91-921e1e53d8ae",
+            "name": "Barbell Bent-Over Row",
+            "muscleGroup": "Back, Biceps, Lower Back",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 95,
+                "reps": 8,
+                "isWarmup": true
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 140,
+                "reps": 8,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 140,
+                "reps": 8,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 4,
+                "weightLbs": 140,
+                "reps": 8,
+                "isWarmup": false
+              }
+            ]
+          },
+          {
+            "id": "b9d5ccc8-6ad7-58ac-bf66-2ff2def7ef32",
+            "name": "Lat Pulldown",
+            "muscleGroup": "Back, Biceps",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 80,
+                "reps": 10,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 80,
+                "reps": 10,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 80,
+                "reps": 10,
+                "isWarmup": false
+              }
+            ]
+          },
+          {
+            "id": "fda90b97-cf8d-503e-8665-087a738fe0ac",
+            "name": "Biceps Curl",
+            "muscleGroup": "Biceps",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 30,
+                "reps": 10,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 30,
+                "reps": 10,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 30,
+                "reps": 10,
+                "isWarmup": false
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "25470bf2-1d69-5c1f-94d6-21bc06d811e7",
+        "date": "2026-01-23",
+        "dayType": "Legs",
+        "rotationTrack": "A",
+        "exercises": [
+          {
+            "id": "5b649c31-4127-5b2a-be6e-e3bcf8bb5e80",
+            "name": "Barbell Back Squat",
+            "muscleGroup": "Quads, Glutes, Lower Back",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 95,
+                "reps": 8,
+                "isWarmup": true
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 135,
+                "reps": 5,
+                "isWarmup": true
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 160,
+                "reps": 5,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 4,
+                "weightLbs": 160,
+                "reps": 5,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 5,
+                "weightLbs": 160,
+                "reps": 5,
+                "isWarmup": false
+              }
+            ]
+          },
+          {
+            "id": "ae4a8f4f-68a0-5aa0-8ca2-2a2d73f470e1",
+            "name": "Romanian Deadlift",
+            "muscleGroup": "Hamstrings, Glutes, Lower Back",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 95,
+                "reps": 8,
+                "isWarmup": true
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 140,
+                "reps": 8,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 140,
+                "reps": 8,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 4,
+                "weightLbs": 140,
+                "reps": 8,
+                "isWarmup": false
+              }
+            ]
+          },
+          {
+            "id": "dac7691e-5773-575c-9bba-a1124ff2fc33",
+            "name": "Goblet Squat",
+            "muscleGroup": "Quads, Glutes, Core",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 40,
+                "reps": 10,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 40,
+                "reps": 10,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 40,
+                "reps": 10,
+                "isWarmup": false
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "36b1fff5-4e06-566b-9878-5e256d2d6c98",
+        "date": "2026-01-26",
+        "dayType": "Push",
+        "rotationTrack": "B",
+        "exercises": [
+          {
+            "id": "b06e59e1-7c0d-5892-8000-10a6ae199453",
+            "name": "Barbell Bench Press",
+            "muscleGroup": "Chest, Triceps, Shoulders",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 95,
+                "reps": 8,
+                "isWarmup": true
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 135,
+                "reps": 5,
+                "isWarmup": true
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 160,
+                "reps": 5,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 4,
+                "weightLbs": 160,
+                "reps": 5,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 5,
+                "weightLbs": 160,
+                "reps": 5,
+                "isWarmup": false
+              }
+            ]
+          },
+          {
+            "id": "cb6c9f05-e8a6-5065-a076-5834738d6d5c",
+            "name": "Overhead Press",
+            "muscleGroup": "Shoulders, Triceps",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 65,
+                "reps": 8,
+                "isWarmup": true
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 90,
+                "reps": 6,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 90,
+                "reps": 6,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 4,
+                "weightLbs": 90,
+                "reps": 6,
+                "isWarmup": false
+              }
+            ]
+          },
+          {
+            "id": "bf44c290-d92b-5e8a-9bb5-f76699c2851a",
+            "name": "Lateral Raise",
+            "muscleGroup": "Shoulders",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 15,
+                "reps": 12,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 15,
+                "reps": 12,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 15,
+                "reps": 12,
+                "isWarmup": false
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "f32e8ccb-8495-50ff-ad27-206ade04d149",
+        "date": "2026-01-28",
+        "dayType": "Pull",
+        "rotationTrack": "B",
+        "exercises": [
+          {
+            "id": "8b2b5278-e6f9-55ce-ae91-921e1e53d8ae",
+            "name": "Barbell Bent-Over Row",
+            "muscleGroup": "Back, Biceps, Lower Back",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 95,
+                "reps": 8,
+                "isWarmup": true
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 140,
+                "reps": 8,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 140,
+                "reps": 8,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 4,
+                "weightLbs": 140,
+                "reps": 8,
+                "isWarmup": false
+              }
+            ]
+          },
+          {
+            "id": "b9d5ccc8-6ad7-58ac-bf66-2ff2def7ef32",
+            "name": "Lat Pulldown",
+            "muscleGroup": "Back, Biceps",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 80,
+                "reps": 10,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 80,
+                "reps": 10,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 80,
+                "reps": 10,
+                "isWarmup": false
+              }
+            ]
+          },
+          {
+            "id": "fda90b97-cf8d-503e-8665-087a738fe0ac",
+            "name": "Biceps Curl",
+            "muscleGroup": "Biceps",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 30,
+                "reps": 10,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 30,
+                "reps": 10,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 30,
+                "reps": 10,
+                "isWarmup": false
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "57b07469-30b6-538e-91c4-ea5494a5433d",
+        "date": "2026-01-30",
+        "dayType": "Legs",
+        "rotationTrack": "B",
+        "exercises": [
+          {
+            "id": "5b649c31-4127-5b2a-be6e-e3bcf8bb5e80",
+            "name": "Barbell Back Squat",
+            "muscleGroup": "Quads, Glutes, Lower Back",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 95,
+                "reps": 8,
+                "isWarmup": true
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 135,
+                "reps": 5,
+                "isWarmup": true
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 160,
+                "reps": 5,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 4,
+                "weightLbs": 160,
+                "reps": 5,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 5,
+                "weightLbs": 160,
+                "reps": 5,
+                "isWarmup": false
+              }
+            ]
+          },
+          {
+            "id": "ae4a8f4f-68a0-5aa0-8ca2-2a2d73f470e1",
+            "name": "Romanian Deadlift",
+            "muscleGroup": "Hamstrings, Glutes, Lower Back",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 95,
+                "reps": 8,
+                "isWarmup": true
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 140,
+                "reps": 8,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 140,
+                "reps": 8,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 4,
+                "weightLbs": 140,
+                "reps": 8,
+                "isWarmup": false
+              }
+            ]
+          },
+          {
+            "id": "dac7691e-5773-575c-9bba-a1124ff2fc33",
+            "name": "Goblet Squat",
+            "muscleGroup": "Quads, Glutes, Core",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 40,
+                "reps": 10,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 40,
+                "reps": 10,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 40,
+                "reps": 10,
+                "isWarmup": false
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "19ebf079-f189-5541-bf95-7711f2240c63",
+        "date": "2026-02-02",
+        "dayType": "Push",
+        "rotationTrack": "A",
+        "exercises": [
+          {
+            "id": "b06e59e1-7c0d-5892-8000-10a6ae199453",
+            "name": "Barbell Bench Press",
+            "muscleGroup": "Chest, Triceps, Shoulders",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 95,
+                "reps": 8,
+                "isWarmup": true
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 135,
+                "reps": 5,
+                "isWarmup": true
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 165,
+                "reps": 5,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 4,
+                "weightLbs": 165,
+                "reps": 5,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 5,
+                "weightLbs": 165,
+                "reps": 5,
+                "isWarmup": false
+              }
+            ]
+          },
+          {
+            "id": "cb6c9f05-e8a6-5065-a076-5834738d6d5c",
+            "name": "Overhead Press",
+            "muscleGroup": "Shoulders, Triceps",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 65,
+                "reps": 8,
+                "isWarmup": true
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 95,
+                "reps": 6,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 95,
+                "reps": 6,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 4,
+                "weightLbs": 95,
+                "reps": 6,
+                "isWarmup": false
+              }
+            ]
+          },
+          {
+            "id": "bf44c290-d92b-5e8a-9bb5-f76699c2851a",
+            "name": "Lateral Raise",
+            "muscleGroup": "Shoulders",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 15,
+                "reps": 12,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 15,
+                "reps": 12,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 15,
+                "reps": 12,
+                "isWarmup": false
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "837ccbdd-5351-5510-9ba7-9d7ff445ce97",
+        "date": "2026-02-04",
+        "dayType": "Pull",
+        "rotationTrack": "A",
+        "exercises": [
+          {
+            "id": "8b2b5278-e6f9-55ce-ae91-921e1e53d8ae",
+            "name": "Barbell Bent-Over Row",
+            "muscleGroup": "Back, Biceps, Lower Back",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 95,
+                "reps": 8,
+                "isWarmup": true
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 145,
+                "reps": 8,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 145,
+                "reps": 8,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 4,
+                "weightLbs": 145,
+                "reps": 8,
+                "isWarmup": false
+              }
+            ]
+          },
+          {
+            "id": "b9d5ccc8-6ad7-58ac-bf66-2ff2def7ef32",
+            "name": "Lat Pulldown",
+            "muscleGroup": "Back, Biceps",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 80,
+                "reps": 10,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 80,
+                "reps": 10,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 80,
+                "reps": 10,
+                "isWarmup": false
+              }
+            ]
+          },
+          {
+            "id": "fda90b97-cf8d-503e-8665-087a738fe0ac",
+            "name": "Biceps Curl",
+            "muscleGroup": "Biceps",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 30,
+                "reps": 10,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 30,
+                "reps": 10,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 30,
+                "reps": 10,
+                "isWarmup": false
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "df0f8622-cef1-5297-83f9-2fe1d6530809",
+        "date": "2026-02-06",
+        "dayType": "Legs",
+        "rotationTrack": "A",
+        "exercises": [
+          {
+            "id": "5b649c31-4127-5b2a-be6e-e3bcf8bb5e80",
+            "name": "Barbell Back Squat",
+            "muscleGroup": "Quads, Glutes, Lower Back",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 95,
+                "reps": 8,
+                "isWarmup": true
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 135,
+                "reps": 5,
+                "isWarmup": true
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 165,
+                "reps": 5,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 4,
+                "weightLbs": 165,
+                "reps": 5,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 5,
+                "weightLbs": 165,
+                "reps": 5,
+                "isWarmup": false
+              }
+            ]
+          },
+          {
+            "id": "ae4a8f4f-68a0-5aa0-8ca2-2a2d73f470e1",
+            "name": "Romanian Deadlift",
+            "muscleGroup": "Hamstrings, Glutes, Lower Back",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 95,
+                "reps": 8,
+                "isWarmup": true
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 145,
+                "reps": 8,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 145,
+                "reps": 8,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 4,
+                "weightLbs": 145,
+                "reps": 8,
+                "isWarmup": false
+              }
+            ]
+          },
+          {
+            "id": "dac7691e-5773-575c-9bba-a1124ff2fc33",
+            "name": "Goblet Squat",
+            "muscleGroup": "Quads, Glutes, Core",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 40,
+                "reps": 10,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 40,
+                "reps": 10,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 40,
+                "reps": 10,
+                "isWarmup": false
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "705b1073-1661-5b3f-9fc2-4092a90674eb",
+        "date": "2026-02-09",
+        "dayType": "Push",
+        "rotationTrack": "B",
+        "exercises": [
+          {
+            "id": "b06e59e1-7c0d-5892-8000-10a6ae199453",
+            "name": "Barbell Bench Press",
+            "muscleGroup": "Chest, Triceps, Shoulders",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 95,
+                "reps": 8,
+                "isWarmup": true
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 135,
+                "reps": 5,
+                "isWarmup": true
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 165,
+                "reps": 5,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 4,
+                "weightLbs": 165,
+                "reps": 5,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 5,
+                "weightLbs": 165,
+                "reps": 5,
+                "isWarmup": false
+              }
+            ]
+          },
+          {
+            "id": "cb6c9f05-e8a6-5065-a076-5834738d6d5c",
+            "name": "Overhead Press",
+            "muscleGroup": "Shoulders, Triceps",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 65,
+                "reps": 8,
+                "isWarmup": true
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 95,
+                "reps": 6,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 95,
+                "reps": 6,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 4,
+                "weightLbs": 95,
+                "reps": 6,
+                "isWarmup": false
+              }
+            ]
+          },
+          {
+            "id": "bf44c290-d92b-5e8a-9bb5-f76699c2851a",
+            "name": "Lateral Raise",
+            "muscleGroup": "Shoulders",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 15,
+                "reps": 12,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 15,
+                "reps": 12,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 15,
+                "reps": 12,
+                "isWarmup": false
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "cc87db57-a22f-5c1d-b268-0258e29e3c96",
+        "date": "2026-02-11",
+        "dayType": "Pull",
+        "rotationTrack": "B",
+        "exercises": [
+          {
+            "id": "8b2b5278-e6f9-55ce-ae91-921e1e53d8ae",
+            "name": "Barbell Bent-Over Row",
+            "muscleGroup": "Back, Biceps, Lower Back",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 95,
+                "reps": 8,
+                "isWarmup": true
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 145,
+                "reps": 8,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 145,
+                "reps": 8,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 4,
+                "weightLbs": 145,
+                "reps": 8,
+                "isWarmup": false
+              }
+            ]
+          },
+          {
+            "id": "b9d5ccc8-6ad7-58ac-bf66-2ff2def7ef32",
+            "name": "Lat Pulldown",
+            "muscleGroup": "Back, Biceps",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 80,
+                "reps": 10,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 80,
+                "reps": 10,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 80,
+                "reps": 10,
+                "isWarmup": false
+              }
+            ]
+          },
+          {
+            "id": "fda90b97-cf8d-503e-8665-087a738fe0ac",
+            "name": "Biceps Curl",
+            "muscleGroup": "Biceps",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 30,
+                "reps": 10,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 30,
+                "reps": 10,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 30,
+                "reps": 10,
+                "isWarmup": false
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "3fea99f9-bb68-5313-a5eb-e8953337bb67",
+        "date": "2026-02-13",
+        "dayType": "Legs",
+        "rotationTrack": "B",
+        "exercises": [
+          {
+            "id": "5b649c31-4127-5b2a-be6e-e3bcf8bb5e80",
+            "name": "Barbell Back Squat",
+            "muscleGroup": "Quads, Glutes, Lower Back",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 95,
+                "reps": 8,
+                "isWarmup": true
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 135,
+                "reps": 5,
+                "isWarmup": true
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 165,
+                "reps": 5,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 4,
+                "weightLbs": 165,
+                "reps": 5,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 5,
+                "weightLbs": 165,
+                "reps": 5,
+                "isWarmup": false
+              }
+            ]
+          },
+          {
+            "id": "ae4a8f4f-68a0-5aa0-8ca2-2a2d73f470e1",
+            "name": "Romanian Deadlift",
+            "muscleGroup": "Hamstrings, Glutes, Lower Back",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 95,
+                "reps": 8,
+                "isWarmup": true
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 145,
+                "reps": 8,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 145,
+                "reps": 8,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 4,
+                "weightLbs": 145,
+                "reps": 8,
+                "isWarmup": false
+              }
+            ]
+          },
+          {
+            "id": "dac7691e-5773-575c-9bba-a1124ff2fc33",
+            "name": "Goblet Squat",
+            "muscleGroup": "Quads, Glutes, Core",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 40,
+                "reps": 10,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 40,
+                "reps": 10,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 40,
+                "reps": 10,
+                "isWarmup": false
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "a0ff37ea-2ae7-5f90-816d-6f065c1a98c0",
+        "date": "2026-02-16",
+        "dayType": "Push",
+        "rotationTrack": "A",
+        "exercises": [
+          {
+            "id": "b06e59e1-7c0d-5892-8000-10a6ae199453",
+            "name": "Barbell Bench Press",
+            "muscleGroup": "Chest, Triceps, Shoulders",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 95,
+                "reps": 8,
+                "isWarmup": true
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 135,
+                "reps": 5,
+                "isWarmup": true
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 170,
+                "reps": 5,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 4,
+                "weightLbs": 170,
+                "reps": 5,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 5,
+                "weightLbs": 170,
+                "reps": 5,
+                "isWarmup": false
+              }
+            ]
+          },
+          {
+            "id": "cb6c9f05-e8a6-5065-a076-5834738d6d5c",
+            "name": "Overhead Press",
+            "muscleGroup": "Shoulders, Triceps",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 65,
+                "reps": 8,
+                "isWarmup": true
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 100,
+                "reps": 6,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 100,
+                "reps": 6,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 4,
+                "weightLbs": 100,
+                "reps": 6,
+                "isWarmup": false
+              }
+            ]
+          },
+          {
+            "id": "bf44c290-d92b-5e8a-9bb5-f76699c2851a",
+            "name": "Lateral Raise",
+            "muscleGroup": "Shoulders",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 15,
+                "reps": 12,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 15,
+                "reps": 12,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 15,
+                "reps": 12,
+                "isWarmup": false
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "80baf6d2-4b92-5642-a369-40ce56656cc4",
+        "date": "2026-02-18",
+        "dayType": "Pull",
+        "rotationTrack": "A",
+        "exercises": [
+          {
+            "id": "8b2b5278-e6f9-55ce-ae91-921e1e53d8ae",
+            "name": "Barbell Bent-Over Row",
+            "muscleGroup": "Back, Biceps, Lower Back",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 95,
+                "reps": 8,
+                "isWarmup": true
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 150,
+                "reps": 8,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 150,
+                "reps": 8,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 4,
+                "weightLbs": 150,
+                "reps": 8,
+                "isWarmup": false
+              }
+            ]
+          },
+          {
+            "id": "b9d5ccc8-6ad7-58ac-bf66-2ff2def7ef32",
+            "name": "Lat Pulldown",
+            "muscleGroup": "Back, Biceps",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 80,
+                "reps": 10,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 80,
+                "reps": 10,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 80,
+                "reps": 10,
+                "isWarmup": false
+              }
+            ]
+          },
+          {
+            "id": "fda90b97-cf8d-503e-8665-087a738fe0ac",
+            "name": "Biceps Curl",
+            "muscleGroup": "Biceps",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 30,
+                "reps": 10,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 30,
+                "reps": 10,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 30,
+                "reps": 10,
+                "isWarmup": false
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "12e4eabf-ed26-5c8d-a745-2e461c23948f",
+        "date": "2026-02-20",
+        "dayType": "Legs",
+        "rotationTrack": "A",
+        "exercises": [
+          {
+            "id": "5b649c31-4127-5b2a-be6e-e3bcf8bb5e80",
+            "name": "Barbell Back Squat",
+            "muscleGroup": "Quads, Glutes, Lower Back",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 95,
+                "reps": 8,
+                "isWarmup": true
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 135,
+                "reps": 5,
+                "isWarmup": true
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 170,
+                "reps": 5,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 4,
+                "weightLbs": 170,
+                "reps": 5,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 5,
+                "weightLbs": 170,
+                "reps": 5,
+                "isWarmup": false
+              }
+            ]
+          },
+          {
+            "id": "ae4a8f4f-68a0-5aa0-8ca2-2a2d73f470e1",
+            "name": "Romanian Deadlift",
+            "muscleGroup": "Hamstrings, Glutes, Lower Back",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 95,
+                "reps": 8,
+                "isWarmup": true
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 150,
+                "reps": 8,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 150,
+                "reps": 8,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 4,
+                "weightLbs": 150,
+                "reps": 8,
+                "isWarmup": false
+              }
+            ]
+          },
+          {
+            "id": "dac7691e-5773-575c-9bba-a1124ff2fc33",
+            "name": "Goblet Squat",
+            "muscleGroup": "Quads, Glutes, Core",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 40,
+                "reps": 10,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 40,
+                "reps": 10,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 40,
+                "reps": 10,
+                "isWarmup": false
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "d22998ce-1f35-5320-8928-037b44891323",
+        "date": "2026-02-23",
+        "dayType": "Push",
+        "rotationTrack": "B",
+        "exercises": [
+          {
+            "id": "b06e59e1-7c0d-5892-8000-10a6ae199453",
+            "name": "Barbell Bench Press",
+            "muscleGroup": "Chest, Triceps, Shoulders",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 95,
+                "reps": 8,
+                "isWarmup": true
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 135,
+                "reps": 5,
+                "isWarmup": true
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 170,
+                "reps": 5,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 4,
+                "weightLbs": 170,
+                "reps": 5,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 5,
+                "weightLbs": 170,
+                "reps": 5,
+                "isWarmup": false
+              }
+            ]
+          },
+          {
+            "id": "cb6c9f05-e8a6-5065-a076-5834738d6d5c",
+            "name": "Overhead Press",
+            "muscleGroup": "Shoulders, Triceps",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 65,
+                "reps": 8,
+                "isWarmup": true
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 100,
+                "reps": 6,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 100,
+                "reps": 6,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 4,
+                "weightLbs": 100,
+                "reps": 6,
+                "isWarmup": false
+              }
+            ]
+          },
+          {
+            "id": "bf44c290-d92b-5e8a-9bb5-f76699c2851a",
+            "name": "Lateral Raise",
+            "muscleGroup": "Shoulders",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 15,
+                "reps": 12,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 15,
+                "reps": 12,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 15,
+                "reps": 12,
+                "isWarmup": false
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "1b9fd5d3-a7b6-57d5-8c85-8a30274e753b",
+        "date": "2026-02-25",
+        "dayType": "Pull",
+        "rotationTrack": "B",
+        "exercises": [
+          {
+            "id": "8b2b5278-e6f9-55ce-ae91-921e1e53d8ae",
+            "name": "Barbell Bent-Over Row",
+            "muscleGroup": "Back, Biceps, Lower Back",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 95,
+                "reps": 8,
+                "isWarmup": true
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 150,
+                "reps": 8,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 150,
+                "reps": 8,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 4,
+                "weightLbs": 150,
+                "reps": 8,
+                "isWarmup": false
+              }
+            ]
+          },
+          {
+            "id": "b9d5ccc8-6ad7-58ac-bf66-2ff2def7ef32",
+            "name": "Lat Pulldown",
+            "muscleGroup": "Back, Biceps",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 80,
+                "reps": 10,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 80,
+                "reps": 10,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 80,
+                "reps": 10,
+                "isWarmup": false
+              }
+            ]
+          },
+          {
+            "id": "fda90b97-cf8d-503e-8665-087a738fe0ac",
+            "name": "Biceps Curl",
+            "muscleGroup": "Biceps",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 30,
+                "reps": 10,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 30,
+                "reps": 10,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 30,
+                "reps": 10,
+                "isWarmup": false
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "5abfebb6-7626-5db1-9c1f-e97a792c39d5",
+        "date": "2026-02-27",
+        "dayType": "Legs",
+        "rotationTrack": "B",
+        "exercises": [
+          {
+            "id": "5b649c31-4127-5b2a-be6e-e3bcf8bb5e80",
+            "name": "Barbell Back Squat",
+            "muscleGroup": "Quads, Glutes, Lower Back",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 95,
+                "reps": 8,
+                "isWarmup": true
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 135,
+                "reps": 5,
+                "isWarmup": true
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 170,
+                "reps": 5,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 4,
+                "weightLbs": 170,
+                "reps": 5,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 5,
+                "weightLbs": 170,
+                "reps": 5,
+                "isWarmup": false
+              }
+            ]
+          },
+          {
+            "id": "ae4a8f4f-68a0-5aa0-8ca2-2a2d73f470e1",
+            "name": "Romanian Deadlift",
+            "muscleGroup": "Hamstrings, Glutes, Lower Back",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 95,
+                "reps": 8,
+                "isWarmup": true
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 150,
+                "reps": 8,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 150,
+                "reps": 8,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 4,
+                "weightLbs": 150,
+                "reps": 8,
+                "isWarmup": false
+              }
+            ]
+          },
+          {
+            "id": "dac7691e-5773-575c-9bba-a1124ff2fc33",
+            "name": "Goblet Squat",
+            "muscleGroup": "Quads, Glutes, Core",
+            "trainingMode": "Strength",
+            "sets": [
+              {
+                "setNumber": 1,
+                "weightLbs": 40,
+                "reps": 10,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 2,
+                "weightLbs": 40,
+                "reps": 10,
+                "isWarmup": false
+              },
+              {
+                "setNumber": 3,
+                "weightLbs": 40,
+                "reps": 10,
+                "isWarmup": false
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

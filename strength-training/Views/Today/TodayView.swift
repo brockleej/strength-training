@@ -28,6 +28,14 @@ struct TodayView: View {
     )
     private var completedSessions: [WorkoutSession]
 
+    @Query(
+        filter: #Predicate<WorkoutSession> {
+            $0.isCompleted == false && $0.planState == "planned"
+        },
+        sort: \WorkoutSession.date
+    )
+    private var plannedSessions: [WorkoutSession]
+
     @Query private var allExercises: [Exercise]
 
     private var mostRecent: WorkoutSession? { completedSessions.first }
@@ -66,6 +74,7 @@ struct TodayView: View {
                     if workoutVM.suspendedSession != nil {
                         cancelLink
                     }
+                    plannedSection
                     yesterdaySection
                     thisWeekSection
                 }
@@ -84,6 +93,7 @@ struct TodayView: View {
         }
         .onAppear { resyncDaySelection() }
         .onChange(of: completedSessions.count) { _, _ in resyncDaySelection() }
+        .onChange(of: plannedSessions.count) { _, _ in resyncDaySelection() }
         .onChange(of: workoutVM.suspendedSession?.id) { _, _ in resyncDaySelection() }
         .task {
             await todayVM.fetchLastDurations(
@@ -212,7 +222,8 @@ struct TodayView: View {
             suspended: workoutVM.suspendedSession,
             completedSessions: completedSessions,
             orderedDays: dayCatalog.activeDays,
-            suggestedTrack: { workoutVM.suggestedRotationTrack(for: $0) }
+            suggestedTrack: { workoutVM.suggestedRotationTrack(for: $0) },
+            plannedDayType: plannedSessionToday?.day
         )
     }
 
@@ -394,11 +405,23 @@ struct TodayView: View {
         .buttonStyle(.plain)
     }
 
+    private var plannedSessionToday: WorkoutSession? {
+        let start = Calendar.current.startOfDay(for: .now)
+        return plannedSessions.first { Calendar.current.isDate($0.date, inSameDayAs: start) }
+    }
+
+    private var selectedDayHasPlanToday: Bool {
+        plannedSessionToday?.day == todayVM.selectedDayType
+    }
+
     private var startButtonTitle: String {
         let day = todayVM.selectedDayType.rawValue
         let week = todayVM.selectedRotationTrack.sessionFilterLabel
         if isResume {
             return "Resume \(day) · \(week)"
+        }
+        if selectedDayHasPlanToday {
+            return "Start planned \(day) · \(week)"
         }
         return "Start \(day) · \(week)"
     }
@@ -433,6 +456,38 @@ struct TodayView: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+    }
+
+    @ViewBuilder
+    private var plannedSection: some View {
+        let upcoming = upcomingPlannedRows
+        if !upcoming.isEmpty {
+            SectionHeader("Coming up")
+            PlannedWorkoutsCard(
+                blockName: upcomingBlockName,
+                rows: upcoming
+            )
+        }
+    }
+
+    private var upcomingBlockName: String {
+        plannedSessions.first?.trainingBlock?.name ?? ""
+    }
+
+    private var upcomingPlannedRows: [PlannedWorkoutsCard.Row] {
+        let start = Calendar.current.startOfDay(for: .now)
+        return plannedSessions
+            .filter { $0.date >= start }
+            .prefix(6)
+            .map { session in
+                PlannedWorkoutsCard.Row(
+                    id: session.id,
+                    date: session.date,
+                    dayType: session.day,
+                    liftCount: session.exerciseRecordsArray.count,
+                    isToday: Calendar.current.isDate(session.date, inSameDayAs: start)
+                )
+            }
     }
 
     @ViewBuilder

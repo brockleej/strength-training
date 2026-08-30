@@ -26,6 +26,10 @@ final class WorkoutSession {
     var rotationTrack: String = RotationTrack.a.rawValue
     /// Library exercises hidden from this session only (comma-separated UUIDs).
     var suppressedExerciseIDsRaw: String = ""
+    /// "" / "planned" / "skipped". Planned days are imported targets, not trained work.
+    var planState: String = ""
+    /// Optional block this session was imported with. CloudKit requires a default.
+    var trainingBlock: TrainingBlock? = nil
 
     @Relationship(deleteRule: .cascade, inverse: \ExerciseRecord.session)
     var exerciseRecords: [ExerciseRecord]?
@@ -39,6 +43,17 @@ final class WorkoutSession {
         get { RotationTrack(storage: rotationTrack) }
         set { rotationTrack = newValue.rawValue }
     }
+
+    var planStatus: SessionPlanState {
+        get { SessionPlanState(storage: planState) }
+        set { planState = newValue.rawValue }
+    }
+
+    /// True when this row is an imported plan that has not been started.
+    var isPlanned: Bool { planStatus == .planned }
+
+    /// True when a missed plan expired without being logged.
+    var isSkippedPlan: Bool { planStatus == .skipped }
 
     var suppressedExerciseIDs: Set<UUID> {
         get {
@@ -73,6 +88,7 @@ final class WorkoutSession {
         self.isCompleted = false
         self.rotationTrack = rotationTrack.rawValue
         self.suppressedExerciseIDsRaw = ""
+        self.planState = ""
         self.exerciseRecords = []
     }
 }

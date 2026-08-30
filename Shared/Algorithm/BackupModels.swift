@@ -130,6 +130,8 @@ struct WorkoutSessionBackup: Codable {
     let rotationTrack: String?
     /// Seconds; optional for older backups.
     let durationSeconds: Double?
+    /// "" / "planned" / "skipped" — optional for older backups.
+    let planState: String?
 
     init(
         id: UUID,
@@ -139,7 +141,8 @@ struct WorkoutSessionBackup: Codable {
         isCompleted: Bool,
         exerciseRecords: [ExerciseRecordBackup],
         rotationTrack: String? = nil,
-        durationSeconds: Double? = nil
+        durationSeconds: Double? = nil,
+        planState: String? = nil
     ) {
         self.id = id
         self.date = date
@@ -149,6 +152,7 @@ struct WorkoutSessionBackup: Codable {
         self.exerciseRecords = exerciseRecords
         self.rotationTrack = rotationTrack
         self.durationSeconds = durationSeconds
+        self.planState = planState
     }
 }
 
@@ -172,6 +176,8 @@ struct SetRecordBackup: Codable {
     let isEachSide: Bool?
     let isAssisted: Bool?
     let completedAt: Date
+    /// Optional for older backups that predate plan targets.
+    let isTarget: Bool?
 
     init(
         id: UUID,
@@ -181,7 +187,8 @@ struct SetRecordBackup: Codable {
         isWarmup: Bool,
         isEachSide: Bool = false,
         isAssisted: Bool = false,
-        completedAt: Date
+        completedAt: Date,
+        isTarget: Bool = false
     ) {
         self.id = id
         self.setNumber = setNumber
@@ -191,8 +198,10 @@ struct SetRecordBackup: Codable {
         self.isEachSide = isEachSide
         self.isAssisted = isAssisted
         self.completedAt = completedAt
+        self.isTarget = isTarget
     }
 
     var resolvedEachSide: Bool { isEachSide ?? false }
     var resolvedAssisted: Bool { isAssisted ?? false }
+    var resolvedTarget: Bool { isTarget ?? false }
 }

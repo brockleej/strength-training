@@ -61,7 +61,7 @@ struct FirstRunView: View {
         .interactiveDismissDisabled(showsSplitSetup && setupStep != .welcome)
         .fileImporter(
             isPresented: $isImportingBackup,
-            allowedContentTypes: [.json],
+            allowedContentTypes: [.json, .rockLogProgram],
             allowsMultipleSelection: false
         ) { result in
             handleRestorePick(result)
@@ -200,12 +200,18 @@ struct FirstRunView: View {
             defer { url.stopAccessingSecurityScopedResource() }
             do {
                 let data = try Data(contentsOf: url)
-                let backup = try BackupService.decode(data)
-                let current = BackupService.summarizeStore(context: modelContext)
-                let incoming = BackupService.summarize(backup: backup)
-                pendingRestoreData = data
-                pendingRestorePrompt = BackupService.restorePrompt(current: current, incoming: incoming)
-                showRestoreConfirmation = true
+                switch try IncomingRockLogFile.parse(data) {
+                case .program:
+                    restoreErrorMessage = "This file adds planned workouts. Finish setup first, then use Settings → Add planned workouts. It will not replace your history."
+                    showRestoreError = true
+                case .backup(let backupData):
+                    let backup = try BackupService.decode(backupData)
+                    let current = BackupService.summarizeStore(context: modelContext)
+                    let incoming = BackupService.summarize(backup: backup)
+                    pendingRestoreData = backupData
+                    pendingRestorePrompt = BackupService.restorePrompt(current: current, incoming: incoming)
+                    showRestoreConfirmation = true
+                }
             } catch {
                 restoreErrorMessage = error.localizedDescription
                 showRestoreError = true

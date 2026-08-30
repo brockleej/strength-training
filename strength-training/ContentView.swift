@@ -20,6 +20,16 @@ struct ContentView: View {
     /// While true the TabView (including Focus / workout list) is torn down
     /// so restore can delete SwiftData rows without those views reading them.
     @State private var storeReplaceInProgress = false
+    @State private var pendingIncomingProgram: ProgramDocument?
+    @State private var incomingProgramPrompt = RestorePrompt(
+        title: "Add planned workouts?",
+        message: ProgramImportService.confirmationMessage(weekCount: 8),
+        confirmTitle: "Add workouts",
+        cancelTitle: "Don't add"
+    )
+    @State private var showIncomingProgramConfirm = false
+    @State private var incomingFileMessage = ""
+    @State private var showIncomingFileMessage = false
 
     var body: some View {
         Group {
@@ -146,8 +156,71 @@ struct ContentView: View {
             selectedTab = "workout"
             awakenedTabs = ["workout"]
         }
+        .onOpenURL { url in
+            handleIncomingURL(url)
+        }
+        .alert(
+            incomingProgramPrompt.title,
+            isPresented: $showIncomingProgramConfirm
+        ) {
+            Button(incomingProgramPrompt.cancelTitle) {
+                pendingIncomingProgram = nil
+            }
+            Button(incomingProgramPrompt.confirmTitle) {
+                if let document = pendingIncomingProgram {
+                    importIncomingProgram(document)
+                }
+                pendingIncomingProgram = nil
+            }
+        } message: {
+            Text(incomingProgramPrompt.message)
+        }
+        .alert("RockLog", isPresented: $showIncomingFileMessage) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(incomingFileMessage)
+        }
         // Don't auto-prompt HealthKit on cold launch — that dialog can stall the
         // first frame. Settings (and starting a workout) request access instead.
+    }
+
+    private func handleIncomingURL(_ url: URL) {
+        let accessed = url.startAccessingSecurityScopedResource()
+        defer {
+            if accessed { url.stopAccessingSecurityScopedResource() }
+        }
+        do {
+            let data = try Data(contentsOf: url)
+            switch try IncomingRockLogFile.parse(data) {
+            case .program(let document):
+                pendingIncomingProgram = document
+                incomingProgramPrompt = ProgramImportService.summarize(document).confirmationPrompt
+                showIncomingProgramConfirm = true
+            case .backup:
+                incomingFileMessage = "This looks like a backup. Open Settings → Restore from backup to replace data on this phone."
+                showIncomingFileMessage = true
+            }
+        } catch {
+            incomingFileMessage = error.localizedDescription
+            showIncomingFileMessage = true
+        }
+    }
+
+    private func importIncomingProgram(_ document: ProgramDocument) {
+        do {
+            let result = try ProgramImportService.importDocument(document, context: modelContext)
+            if result.summary.sessionCount == 0 {
+                incomingFileMessage = "Those planned workouts are already on this phone."
+            } else {
+                let weeks = result.summary.weekCount
+                let weekWord = weeks == 1 ? "week" : "weeks"
+                incomingFileMessage = "Added \(weeks) \(weekWord) of planned workouts. Your history is unchanged."
+            }
+            showIncomingFileMessage = true
+        } catch {
+            incomingFileMessage = error.localizedDescription
+            showIncomingFileMessage = true
+        }
     }
 
     @ViewBuilder

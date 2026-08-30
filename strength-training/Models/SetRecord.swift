@@ -21,6 +21,8 @@ final class SetRecord {
     /// Assisted bodyweight movement: `weightLbs` is assistance, not bar load.
     var isAssisted: Bool = false
     var completedAt: Date = Date.now
+    /// Imported plan target, not yet logged. Default false so existing sets stay trained work.
+    var isTarget: Bool = false
 
     var exerciseRecord: ExerciseRecord?
 
@@ -30,7 +32,8 @@ final class SetRecord {
         reps: Int,
         isWarmup: Bool = false,
         isEachSide: Bool = false,
-        isAssisted: Bool = false
+        isAssisted: Bool = false,
+        isTarget: Bool = false
     ) {
         self.id = UUID()
         self.setNumber = setNumber
@@ -40,6 +43,7 @@ final class SetRecord {
         self.isEachSide = isEachSide
         self.isAssisted = isAssisted
         self.completedAt = .now
+        self.isTarget = isTarget
     }
 
     /// Load used for tonnage / e1RM. Assisted: max(0, bodyWeight − assistance). Never negative.

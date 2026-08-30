@@ -61,6 +61,7 @@ struct strength_trainingApp: App {
             SetRecord.self,
             SplitDay.self,
             BodyMetricEntry.self,
+            TrainingBlock.self,
         ])
         let config = ModelConfiguration(
             schema: schema,
