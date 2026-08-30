@@ -23,7 +23,7 @@ final class TodayViewModel {
     private(set) var lastDurations: [DayType: String] = [:]
 
     /// Re-sync selection every time Today appears.
-    /// Priority: suspended session → today’s planned day → schedule suggestion → default.
+    /// Priority: suspended session → next unused planned day → schedule suggestion → default.
     func syncSelection(
         suspended: WorkoutSession?,
         completedSessions: [WorkoutSession],

@@ -32,14 +32,15 @@ struct ProgramImportResult: Equatable {
 }
 
 enum ProgramImportService {
-    /// Explicit opt-in; default import keeps the file’s calendar dates.
+    /// Explicit opt-in. Default import keeps file dates as metadata; the
+    /// unused queue still rolls to the first unstarted session.
     static let startThisBlockTodayTitle = "Start this block today"
 
     /// Human copy for the Files / share-sheet confirm. No jargon.
     static func confirmationMessage(weekCount: Int) -> String {
         let weeks = max(1, weekCount)
         let weekWord = weeks == 1 ? "week" : "weeks"
-        return "Add \(weeks) \(weekWord) of planned workouts? This does not replace your history. Workouts stay on the dates in the file."
+        return "Add \(weeks) \(weekWord) of planned workouts? This does not replace your history. The next unused workout waits until you start it."
     }
 
     static func weekCount(from dates: [Date], calendar: Calendar = .current) -> Int {
@@ -125,8 +126,8 @@ enum ProgramImportService {
         var imported = 0
         var skipped = 0
 
-        // One row per dated payload. Same dayType twice in a week stays two sessions.
-        for payload in sessions.sorted(by: { $0.date < $1.date }) {
+        // File order is the queue. Same dayType twice in a week stays two sessions.
+        for (index, payload) in sessions.enumerated() {
             if existingIDs.contains(payload.id) {
                 skipped += 1
                 continue
@@ -142,6 +143,7 @@ enum ProgramImportService {
             session.notes = payload.notes ?? ""
             session.isCompleted = false
             session.planStatus = .planned
+            session.planOrder = index
             session.followsSessionRoster = true
             session.trainingBlock = block
             context.insert(session)

@@ -12,7 +12,8 @@ enum SessionPlanState: String, Codable, Sendable {
     case none = ""
     /// Imported target session; not started. Must not count as trained.
     case planned = "planned"
-    /// Dated plan the athlete never logged. Still not trained work.
+    /// Legacy: a calendar miss used to flip planned → skipped. Unused
+    /// skipped rows stay in the queue and are healed back to planned.
     case skipped = "skipped"
 
     init(storage: String?) {

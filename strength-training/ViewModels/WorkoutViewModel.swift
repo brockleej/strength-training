@@ -239,8 +239,8 @@ final class WorkoutViewModel {
 
     // MARK: - Session Lifecycle
 
-    /// On launch: resume today's live session, expire missed plans, or stay idle.
-    /// Planned (not started) days are never auto-activated.
+    /// On launch: resume today's live session or stay idle.
+    /// Unused planned sessions stay in the queue — never auto-activated or skipped.
     func resolveSessionState() {
         autoCompleteStaleSession()
 
@@ -263,10 +263,10 @@ final class WorkoutViewModel {
     }
 
     /// Auto-complete unfinished *live* sessions from previous days.
-    /// Planned days expire as skipped — never as trained History rows.
+    /// Unused planned sessions stay queued — never skipped, never History.
     /// Empty live sessions (no sets) are deleted so History stays clean.
-    func autoCompleteStaleSession() {
-        let startOfToday = Calendar.current.startOfDay(for: .now)
+    func autoCompleteStaleSession(now: Date = .now) {
+        let startOfToday = Calendar.current.startOfDay(for: now)
 
         let descriptor = FetchDescriptor<WorkoutSession>(
             predicate: #Predicate<WorkoutSession> {
@@ -277,20 +277,15 @@ final class WorkoutViewModel {
 
         if let staleSessions = try? modelContext.fetch(descriptor) {
             for session in staleSessions {
-                if session.isPlanned || session.isSkippedPlan {
-                    session.planStatus = .skipped
-                    session.isCompleted = false
-                    continue
-                }
-                if session.trainingBlock != nil && !Self.hasAthleteLoggedSets(session) {
-                    session.planStatus = .skipped
+                if PlannedBlockQueue.isUnused(session) {
+                    session.planStatus = .planned
                     session.isCompleted = false
                     continue
                 }
                 let hasSets = Self.hasAthleteLoggedSets(session)
                 if hasSets {
                     session.isCompleted = true
-                    SessionMath.stampDuration(on: session, liveElapsed: 0)
+                    SessionMath.stampDuration(on: session, liveElapsed: 0, now: now)
                 } else {
                     modelContext.delete(session)
                 }
@@ -299,45 +294,18 @@ final class WorkoutViewModel {
         }
     }
 
-    /// Planned session for `date` (default today). Pass `dayType` to require a match.
-    func plannedSession(on date: Date = .now, dayType: DayType? = nil) -> WorkoutSession? {
-        let calendar = Calendar.current
-        let start = calendar.startOfDay(for: date)
-        let end = calendar.date(byAdding: .day, value: 1, to: start) ?? start
-        let planned = SessionPlanState.planned.rawValue
-        let descriptor = FetchDescriptor<WorkoutSession>(
-            predicate: #Predicate<WorkoutSession> {
-                $0.isCompleted == false &&
-                $0.planState == planned &&
-                $0.date >= start &&
-                $0.date < end
-            },
-            sortBy: [SortDescriptor(\WorkoutSession.date)]
-        )
-        let matches = (try? modelContext.fetch(descriptor)) ?? []
-        if let dayType {
-            return matches.first { $0.day == dayType }
-        }
-        return matches.first
+    /// First unused session in the imported block (file order).
+    func nextUnusedPlannedSession() -> WorkoutSession? {
+        PlannedBlockQueue.nextUnused(in: unusedPlannedSessions())
     }
 
-    /// Upcoming planned days, soonest first (includes today).
-    func upcomingPlannedSessions(limit: Int = 8) -> [WorkoutSession] {
-        let start = Calendar.current.startOfDay(for: .now)
-        let planned = SessionPlanState.planned.rawValue
-        var descriptor = FetchDescriptor<WorkoutSession>(
-            predicate: #Predicate<WorkoutSession> {
-                $0.isCompleted == false &&
-                $0.planState == planned &&
-                $0.date >= start
-            },
-            sortBy: [SortDescriptor(\WorkoutSession.date)]
-        )
-        descriptor.fetchLimit = limit
-        return (try? modelContext.fetch(descriptor)) ?? []
+    /// Unused planned sessions, queue order (includes past calendar dates).
+    func unusedPlannedSessions(limit: Int = 8) -> [WorkoutSession] {
+        let unused = PlannedBlockQueue.unusedSessions(in: allIncompleteSessions())
+        return Array(unused.prefix(limit))
     }
 
-    func startSession(dayType: DayType, rotationTrack: RotationTrack? = nil) {
+    func startSession(dayType: DayType, rotationTrack: RotationTrack? = nil, now: Date = .now) {
         // Resume a suspended session of the same type
         if let suspended = suspendedSession, suspended.day == dayType {
             activeSession = suspended
@@ -362,7 +330,7 @@ final class WorkoutViewModel {
         }
         clearRevisiting()
         let track = rotationTrack ?? suggestedRotationTrack(for: dayType)
-        activateOrCreateSession(dayType: dayType, rotationTrack: track)
+        activateOrCreateSession(dayType: dayType, rotationTrack: track, now: now)
     }
 
     /// Alternate A↔B from the last completed session of this day type (any day).
@@ -497,9 +465,7 @@ final class WorkoutViewModel {
 
     /// Target rows from an imported plan do not count as trained work.
     static func hasAthleteLoggedSets(_ session: WorkoutSession) -> Bool {
-        session.exerciseRecordsArray.contains { record in
-            record.setsArray.contains { !$0.isTarget }
-        }
+        PlannedBlockQueue.hasAthleteLoggedSets(session)
     }
 
     /// Called when the HealthKit keep/delete dialog dismisses without an explicit button tap.
@@ -993,14 +959,18 @@ final class WorkoutViewModel {
 
     // MARK: - Helpers
 
-    /// Use today's matching plan (targets already filled) or a blank day-plan session.
-    /// A different day type leaves the plan untouched.
-    private func activateOrCreateSession(dayType: DayType, rotationTrack: RotationTrack) {
-        if let planned = plannedSession(on: .now, dayType: dayType) {
-            activatePlannedSession(planned, rotationTrack: rotationTrack)
+    /// Start the next unused queued session when its day type matches.
+    /// A different day type leaves the queue untouched.
+    private func activateOrCreateSession(
+        dayType: DayType,
+        rotationTrack: RotationTrack,
+        now: Date = .now
+    ) {
+        if let planned = nextUnusedPlannedSession(), planned.day == dayType {
+            activatePlannedSession(planned, rotationTrack: rotationTrack, now: now)
             return
         }
-        let session = WorkoutSession(dayType: dayType, rotationTrack: rotationTrack)
+        let session = WorkoutSession(dayType: dayType, date: now, rotationTrack: rotationTrack)
         modelContext.insert(session)
         try? modelContext.save()
         activeSession = session
@@ -1008,15 +978,32 @@ final class WorkoutViewModel {
         startHealthKitWorkout()
     }
 
-    private func activatePlannedSession(_ session: WorkoutSession, rotationTrack: RotationTrack) {
+    private func activatePlannedSession(
+        _ session: WorkoutSession,
+        rotationTrack: RotationTrack,
+        now: Date
+    ) {
         session.planStatus = .none
         session.track = rotationTrack
         session.isCompleted = false
+        session.date = now
+        for record in session.exerciseRecordsArray {
+            for set in record.setsArray where set.isTarget {
+                set.completedAt = now
+            }
+        }
         suppressUnplannedDayLifts(on: session)
         try? modelContext.save()
         activeSession = session
         celebratedExerciseIDsThisSession = []
         startHealthKitWorkout()
+    }
+
+    private func allIncompleteSessions() -> [WorkoutSession] {
+        let descriptor = FetchDescriptor<WorkoutSession>(
+            predicate: #Predicate<WorkoutSession> { $0.isCompleted == false }
+        )
+        return (try? modelContext.fetch(descriptor)) ?? []
     }
 
     /// Hide day-plan lifts that are not in this planned session (session-only).

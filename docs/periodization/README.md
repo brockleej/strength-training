@@ -2,11 +2,11 @@
 
 What's new: You can add a planned training block from a file. It does not erase your old workouts.
 
-Please try: 1) Settings → Add planned workouts, pick the file. 2) Confirm Add workouts — old history should still be there. 3) Today should show the next planned day. 4) Start it — warmup and work sets should already be filled in. 5) Screenshot anything that looks off.
+Please try: 1) Settings → Add planned workouts, pick the file. 2) Confirm Add workouts — old history should still be there. 3) Today should say **Next up: Lower** (or the first unused day), even if you skipped a calendar day. 4) Start it — warmup and work sets should already be filled in. 5) Screenshot anything that looks off.
 
-## Dates
+## Queue, not calendar
 
-Workouts stay on the dates in the file. The sample starts **Monday 2026-08-31** (Lower A / deadlift), then Mon / Tue / Thu / Fri. Import does **not** move day 1 to today. **Start this block today** is optional — leave it off.
+The file is an ordered queue. Missed days stay waiting — they are not skipped or written to History. The sample starts with **Lower A / deadlift**. If you import Sunday and fly past Monday, Start still loads that Lower. The session date becomes the day you actually train. **Start this block today** is optional (slides every date); leave it off. Rolling-on-train is the default either way.
 
 ## The file
 
@@ -22,7 +22,7 @@ Lifts match ones you already have (same id, or same name). New names are added; 
 
 ## When you train
 
-Start the day type that matches that date. You get that day’s warmups and work sets, not every lift on the day plan. Start a different day and the plan is left alone. If you miss a planned day, it is not saved as a finished workout.
+Start the next unused day. You get that session’s warmups and work sets, not every lift on the day plan. Start a different day and the queue is left alone. Missed calendar days stay in the queue and are not saved as finished workouts.
 
 ## Later
 

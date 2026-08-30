@@ -28,6 +28,8 @@ final class WorkoutSession {
     var suppressedExerciseIDsRaw: String = ""
     /// "" / "planned" / "skipped". Planned days are imported targets, not trained work.
     var planState: String = ""
+    /// File-order index in the imported block. Queue order — not a calendar slot.
+    var planOrder: Int = 0
     /// When true, this session’s exercise records are the roster (not the day-plan list).
     var followsSessionRoster: Bool = false
     /// Optional block this session was imported with. CloudKit requires a default.
@@ -54,7 +56,7 @@ final class WorkoutSession {
     /// True when this row is an imported plan that has not been started.
     var isPlanned: Bool { planStatus == .planned }
 
-    /// True when a missed plan expired without being logged.
+    /// Legacy calendar-skip flag. Unused skipped rows stay in the queue.
     var isSkippedPlan: Bool { planStatus == .skipped }
 
     var suppressedExerciseIDs: Set<UUID> {
@@ -91,6 +93,7 @@ final class WorkoutSession {
         self.rotationTrack = rotationTrack.rawValue
         self.suppressedExerciseIDsRaw = ""
         self.planState = ""
+        self.planOrder = 0
         self.followsSessionRoster = false
         self.exerciseRecords = []
     }
