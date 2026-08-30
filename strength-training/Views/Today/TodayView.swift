@@ -288,16 +288,28 @@ struct TodayView: View {
             .foregroundStyle(Color.uplift.fgMuted)
     }
 
+    /// Split days plus any planned day types that are not on the split (e.g. Lower).
+    private var pickerDays: [DayType] {
+        var days = dayCatalog.activeDays
+        var seen = Set(days.map(\.rawValue))
+        for session in plannedSessions where session.date >= Calendar.current.startOfDay(for: .now) {
+            if seen.insert(session.day.rawValue).inserted {
+                days.append(session.day)
+            }
+        }
+        return days
+    }
+
     private var dayPicker: some View {
         VStack(spacing: 8) {
-            // Order comes from Settings → Training Split (drag to match your week).
-            ForEach(Array(dayCatalog.activeDays.enumerated()), id: \.element.id) { index, dayType in
+            // Split order first; planned-only day types (not on the split) follow.
+            ForEach(Array(pickerDays.enumerated()), id: \.element.id) { index, dayType in
                 DayPickerCard(
                     dayType: dayType,
                     lastDuration: todayVM.lastDurations[dayType],
                     isSelected: todayVM.selectedDayType == dayType,
                     inProgressCount: suspendedBadgeCount(for: dayType),
-                    weekPosition: dayCatalog.activeDays.count > 1 ? index + 1 : nil,
+                    weekPosition: pickerDays.count > 1 ? index + 1 : nil,
                     isCompletedInCycle: cycleCompletedDayNames.contains(dayType.rawValue)
                 ) {
                     todayVM.selectDayType(

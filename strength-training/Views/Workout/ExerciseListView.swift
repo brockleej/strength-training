@@ -74,7 +74,11 @@ struct ExerciseListView: View {
 
     /// Ordered sections: own day (or all tags for Full Body-style), plus any
     /// cross-day / orphan-tag exercises the picker added this session.
+    /// A planned session’s records are the roster — not the day-plan catalog.
     private var sections: [(dayType: DayType, exercises: [Exercise])] {
+        if let session = workoutVM.activeSession, SessionRosterLogic.usesSessionRoster(session) {
+            return [(session.day, SessionRosterLogic.exercises(in: session))]
+        }
         if dayType.includesAllExercises {
             return groupedLibrarySections(from: allExercises)
         }
@@ -166,7 +170,7 @@ struct ExerciseListView: View {
                         }
                         titleSection
                         progressBar
-                        if hasABLabeledLifts {
+                        if hasABLabeledLifts && !SessionRosterLogic.usesSessionRoster(workoutVM.activeSession) {
                             rotationToggle
                         }
                         modeToggle

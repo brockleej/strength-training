@@ -28,6 +28,8 @@ final class WorkoutSession {
     var suppressedExerciseIDsRaw: String = ""
     /// "" / "planned" / "skipped". Planned days are imported targets, not trained work.
     var planState: String = ""
+    /// When true, this session’s exercise records are the roster (not the day-plan list).
+    var followsSessionRoster: Bool = false
     /// Optional block this session was imported with. CloudKit requires a default.
     var trainingBlock: TrainingBlock? = nil
 
@@ -89,6 +91,7 @@ final class WorkoutSession {
         self.rotationTrack = rotationTrack.rawValue
         self.suppressedExerciseIDsRaw = ""
         self.planState = ""
+        self.followsSessionRoster = false
         self.exerciseRecords = []
     }
 }

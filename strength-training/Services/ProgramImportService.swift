@@ -114,6 +114,7 @@ enum ProgramImportService {
         var imported = 0
         var skipped = 0
 
+        // One row per dated payload. Same dayType twice in a week stays two sessions.
         for payload in sessions.sorted(by: { $0.date < $1.date }) {
             if existingIDs.contains(payload.id) {
                 skipped += 1
@@ -130,6 +131,7 @@ enum ProgramImportService {
             session.notes = payload.notes ?? ""
             session.isCompleted = false
             session.planStatus = .planned
+            session.followsSessionRoster = true
             session.trainingBlock = block
             context.insert(session)
             if block.sessions == nil { block.sessions = [] }

@@ -132,6 +132,8 @@ struct WorkoutSessionBackup: Codable {
     let durationSeconds: Double?
     /// "" / "planned" / "skipped" — optional for older backups.
     let planState: String?
+    /// Optional for older backups. Planned sessions use their own lift list.
+    let followsSessionRoster: Bool?
 
     init(
         id: UUID,
@@ -142,7 +144,8 @@ struct WorkoutSessionBackup: Codable {
         exerciseRecords: [ExerciseRecordBackup],
         rotationTrack: String? = nil,
         durationSeconds: Double? = nil,
-        planState: String? = nil
+        planState: String? = nil,
+        followsSessionRoster: Bool? = nil
     ) {
         self.id = id
         self.date = date
@@ -153,6 +156,7 @@ struct WorkoutSessionBackup: Codable {
         self.rotationTrack = rotationTrack
         self.durationSeconds = durationSeconds
         self.planState = planState
+        self.followsSessionRoster = followsSessionRoster
     }
 }
 

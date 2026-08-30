@@ -54,7 +54,7 @@ final class TodayViewModel {
             incompleteWeekPrompt = nil
         }
 
-        if let plannedDayType, orderedDays.contains(plannedDayType) {
+        if let plannedDayType {
             selectedDayType = plannedDayType
             syncRotationTrack(suspended: nil, suggestedTrack: suggestedTrack)
             return

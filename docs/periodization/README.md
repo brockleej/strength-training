@@ -22,9 +22,11 @@ This is **not** a backup. Restore still replaces the store. This is **not** a Ro
 
 Import shifts the block so the first day lands on **today**.
 
+Each dated session is its own roster. The same day type can appear twice in a week with different lifts (Lower + Conventional Deadlift, then Lower + Romanian Deadlift). A running 3-day split trained 4 days a week (Lower → Push → Pull → Lower, then continue — no Monday reset) is valid. Import does **not** merge sessions by day type or week.
+
 ## Lifting against the plan
 
-Starting the matching day type on a planned date loads those target sets (ramps show as warm-ups). Starting a different day type leaves the plan alone.
+Starting the matching day type on a planned date loads **that date’s** target sets (ramps show as warm-ups), not the whole day-plan catalog. Starting a different day type leaves the plan alone.
 
 Missing a planned day does **not** mark it completed. It stays planned until it expires as skipped. History only shows trained work.
 

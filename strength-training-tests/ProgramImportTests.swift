@@ -207,7 +207,9 @@ final class ProgramImportTests: XCTestCase {
         let session = try XCTUnwrap(vm.activeSession)
         XCTAssertEqual(session.id, document.block.sessions[0].id)
         XCTAssertEqual(session.planStatus, .none)
+        XCTAssertTrue(session.followsSessionRoster)
         XCTAssertFalse(session.isCompleted)
+        XCTAssertEqual(SessionRosterLogic.names(in: session), ["Barbell Bench Press", "Demo Floor Press"])
 
         let bench = try XCTUnwrap(
             session.exerciseRecordsArray.first { $0.exercise?.name == "Barbell Bench Press" }
@@ -248,6 +250,110 @@ final class ProgramImportTests: XCTestCase {
         )
         XCTAssertTrue(planned.isPlanned)
         XCTAssertFalse(planned.isCompleted)
+    }
+
+    func test_import_sameDayTypeTwiceInOneWeek_keepsDifferentRosters() throws {
+        let container = try inMemoryContainer()
+        let context = container.mainContext
+        let monday = Date(timeIntervalSince1970: 1_767_571_200)
+        let thursday = monday.addingTimeInterval(3 * 86_400)
+        let document = rotatingLowerDocument(dlDate: monday, rdlDate: thursday)
+
+        _ = try ProgramImportService.importDocument(
+            document,
+            context: context,
+            anchoringStartTo: monday
+        )
+
+        let sessions = try context.fetch(FetchDescriptor<WorkoutSession>())
+            .filter { $0.day == .lower }
+            .sorted { $0.date < $1.date }
+        XCTAssertEqual(sessions.count, 2)
+        XCTAssertTrue(sessions.allSatisfy(\.followsSessionRoster))
+        XCTAssertEqual(SessionRosterLogic.names(in: sessions[0]), ["Conventional Deadlift"])
+        XCTAssertEqual(SessionRosterLogic.names(in: sessions[1]), ["Romanian Deadlift"])
+        XCTAssertFalse(SessionRosterLogic.names(in: sessions[0]).contains("Romanian Deadlift"))
+        XCTAssertFalse(SessionRosterLogic.names(in: sessions[1]).contains("Conventional Deadlift"))
+    }
+
+    func test_import_runningSplit_doesNotResetOrMergeByMonday() throws {
+        let container = try inMemoryContainer()
+        let context = container.mainContext
+        let start = Date(timeIntervalSince1970: 1_767_571_200)
+        let document = runningThreeDayDocument(start: start)
+
+        _ = try ProgramImportService.importDocument(
+            document,
+            context: context,
+            anchoringStartTo: start
+        )
+
+        let sessions = try context.fetch(FetchDescriptor<WorkoutSession>())
+            .sorted { $0.date < $1.date }
+        XCTAssertEqual(sessions.map(\.dayType), [
+            "Lower", "Push", "Pull", "Lower",
+            "Push", "Pull", "Lower", "Push",
+        ])
+        let lowers = sessions.filter { $0.day == .lower }
+        XCTAssertEqual(lowers.count, 3)
+        XCTAssertEqual(SessionRosterLogic.names(in: lowers[0]).first, "Conventional Deadlift")
+        XCTAssertEqual(SessionRosterLogic.names(in: lowers[1]).first, "Romanian Deadlift")
+        XCTAssertEqual(SessionRosterLogic.names(in: lowers[2]).first, "Conventional Deadlift")
+    }
+
+    func test_start_usesDatedRoster_notDayPlanUnion() throws {
+        let container = try inMemoryContainer()
+        let context = container.mainContext
+        let today = Calendar.current.startOfDay(for: .now)
+
+        let conv = Exercise(name: "Conventional Deadlift", dayType: .lower, muscleGroup: "Hamstrings")
+        let rdl = Exercise(name: "Romanian Deadlift", dayType: .lower, muscleGroup: "Hamstrings")
+        context.insert(conv)
+        context.insert(rdl)
+        try context.save()
+
+        let document = rotatingLowerDocument(dlDate: today, rdlDate: today.addingTimeInterval(3 * 86_400))
+        _ = try ProgramImportService.importDocument(
+            document,
+            context: context,
+            anchoringStartTo: today
+        )
+
+        let vm = WorkoutViewModel(
+            modelContext: context,
+            healthKitService: HealthKitWorkoutService()
+        )
+        vm.startSession(dayType: .lower, rotationTrack: .a)
+
+        let session = try XCTUnwrap(vm.activeSession)
+        XCTAssertTrue(SessionRosterLogic.usesSessionRoster(session))
+        XCTAssertEqual(SessionRosterLogic.names(in: session), ["Conventional Deadlift"])
+        XCTAssertFalse(SessionRosterLogic.names(in: session).contains("Romanian Deadlift"))
+        XCTAssertTrue(session.followsSessionRoster)
+    }
+
+    func test_startLaterLower_loadsRDLOnly() throws {
+        let container = try inMemoryContainer()
+        let context = container.mainContext
+        let today = Calendar.current.startOfDay(for: .now)
+        let earlier = Calendar.current.date(byAdding: .day, value: -3, to: today)!
+
+        let document = rotatingLowerDocument(dlDate: earlier, rdlDate: today)
+        _ = try ProgramImportService.importDocument(
+            document,
+            context: context,
+            anchoringStartTo: earlier
+        )
+
+        let vm = WorkoutViewModel(
+            modelContext: context,
+            healthKitService: HealthKitWorkoutService()
+        )
+        vm.startSession(dayType: .lower, rotationTrack: .a)
+
+        let session = try XCTUnwrap(vm.activeSession)
+        XCTAssertEqual(SessionRosterLogic.names(in: session), ["Romanian Deadlift"])
+        XCTAssertFalse(SessionRosterLogic.names(in: session).contains("Conventional Deadlift"))
     }
 
     // MARK: - Helpers
@@ -300,6 +406,98 @@ final class ProgramImportTests: XCTestCase {
                     )
                 ]
             )
+        )
+    }
+
+    private func rotatingLowerDocument(dlDate: Date, rdlDate: Date) -> ProgramDocument {
+        ProgramDocument(
+            format: ProgramFormat.formatName,
+            schemaVersion: ProgramFormat.schemaVersion,
+            exportedAt: Date(timeIntervalSince1970: 1_775_000_000),
+            block: ProgramBlockPayload(
+                id: UUID(),
+                name: "Demo Running Split",
+                notes: "Two Lower days: Conventional then Romanian.",
+                startDate: dlDate,
+                sessions: [
+                    hingeSession(id: UUID(), date: dlDate, name: "Conventional Deadlift"),
+                    hingeSession(id: UUID(), date: rdlDate, name: "Romanian Deadlift"),
+                ]
+            )
+        )
+    }
+
+    private func runningThreeDayDocument(start: Date) -> ProgramDocument {
+        let cycle = ["Lower", "Push", "Pull"]
+        let offsets = [0, 1, 3, 4, 7, 8, 10, 11]
+        var lowerCount = 0
+        let sessions: [ProgramSessionPayload] = offsets.enumerated().map { index, dayOffset in
+            let date = start.addingTimeInterval(TimeInterval(dayOffset) * 86_400)
+            let day = cycle[index % 3]
+            if day == "Lower" {
+                let name = lowerCount.isMultiple(of: 2) ? "Conventional Deadlift" : "Romanian Deadlift"
+                lowerCount += 1
+                return hingeSession(id: UUID(), date: date, name: name, dayType: "Lower")
+            }
+            return ProgramSessionPayload(
+                id: UUID(),
+                date: date,
+                dayType: day,
+                rotationTrack: nil,
+                notes: nil,
+                exercises: [
+                    ProgramExercisePayload(
+                        id: UUID(),
+                        name: day == "Push" ? "Barbell Bench Press" : "Barbell Bent-Over Row",
+                        muscleGroup: day == "Push" ? "Chest" : "Back",
+                        trainingMode: "Strength",
+                        notes: nil,
+                        sets: [
+                            ProgramSetPayload(setNumber: 1, weightLbs: 135, reps: 5, isWarmup: false, isEachSide: false, isAssisted: false),
+                        ]
+                    )
+                ]
+            )
+        }
+        return ProgramDocument(
+            format: ProgramFormat.formatName,
+            schemaVersion: ProgramFormat.schemaVersion,
+            exportedAt: Date(timeIntervalSince1970: 1_775_000_000),
+            block: ProgramBlockPayload(
+                id: UUID(),
+                name: "Demo Running 3-Day",
+                notes: nil,
+                startDate: start,
+                sessions: sessions
+            )
+        )
+    }
+
+    private func hingeSession(
+        id: UUID,
+        date: Date,
+        name: String,
+        dayType: String = "Lower"
+    ) -> ProgramSessionPayload {
+        ProgramSessionPayload(
+            id: id,
+            date: date,
+            dayType: dayType,
+            rotationTrack: nil,
+            notes: nil,
+            exercises: [
+                ProgramExercisePayload(
+                    id: UUID(),
+                    name: name,
+                    muscleGroup: "Hamstrings, Glutes, Lower Back",
+                    trainingMode: "Strength",
+                    notes: nil,
+                    sets: [
+                        ProgramSetPayload(setNumber: 1, weightLbs: 135, reps: 5, isWarmup: true, isEachSide: false, isAssisted: false),
+                        ProgramSetPayload(setNumber: 2, weightLbs: 225, reps: 5, isWarmup: false, isEachSide: false, isAssisted: false),
+                    ]
+                )
+            ]
         )
     }
 

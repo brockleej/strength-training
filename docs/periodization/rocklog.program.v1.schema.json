@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://rocklog.app/schema/rocklog.program.v1.json",
   "title": "rocklog.program",
-  "description": "A dated training block with target sets (warmup + work). Import is a merge into RockLog. Not a backup. Not a RockCoach session file.",
+  "description": "A dated training block with target sets (warmup + work). Each session is independent: the same dayType may appear twice in one week with different lifts (e.g. Lower + Conventional Deadlift, then Lower + Romanian Deadlift). Import must not merge sessions by day type or reset the sequence on Monday. Import is a merge into RockLog. Not a backup. Not a RockCoach session file.",
   "type": "object",
   "additionalProperties": false,
   "required": ["format", "schemaVersion", "exportedAt", "block"],
@@ -38,7 +38,10 @@
       "properties": {
         "id": { "type": "string", "format": "uuid" },
         "date": { "type": "string" },
-        "dayType": { "type": "string" },
+        "dayType": {
+          "type": "string",
+          "description": "Display name only. Repeats are allowed; do not treat as a unique week slot."
+        },
         "rotationTrack": { "type": "string" },
         "notes": { "type": "string" },
         "exercises": {
