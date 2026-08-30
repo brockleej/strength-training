@@ -20,7 +20,10 @@ Edit a day: long-press the number to reorder; swipe left → Remove from that da
 
 ---
 
-## Build 17 (1.0) — paste after Cloud/upload
+## Build 17–19 (1.0)
+
+17, 18, and 19 are the same app (three Cloud jobs 2026-08-26). Testers used **19**. Jump **14 → 19**.
+
 
 ```
 Build 17 — gym duration + note keyboard you can actually dismiss.
