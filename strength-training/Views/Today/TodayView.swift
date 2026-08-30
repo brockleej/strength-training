@@ -29,12 +29,10 @@ struct TodayView: View {
     private var completedSessions: [WorkoutSession]
 
     @Query(
-        filter: #Predicate<WorkoutSession> {
-            $0.isCompleted == false && $0.planState == "planned"
-        },
+        filter: #Predicate<WorkoutSession> { $0.isCompleted == false },
         sort: \WorkoutSession.date
     )
-    private var plannedSessions: [WorkoutSession]
+    private var incompleteSessions: [WorkoutSession]
 
     @Query private var allExercises: [Exercise]
 
@@ -93,7 +91,7 @@ struct TodayView: View {
         }
         .onAppear { resyncDaySelection() }
         .onChange(of: completedSessions.count) { _, _ in resyncDaySelection() }
-        .onChange(of: plannedSessions.count) { _, _ in resyncDaySelection() }
+        .onChange(of: unusedPlannedSessions.count) { _, _ in resyncDaySelection() }
         .onChange(of: workoutVM.suspendedSession?.id) { _, _ in resyncDaySelection() }
         .task {
             await todayVM.fetchLastDurations(
@@ -223,7 +221,7 @@ struct TodayView: View {
             completedSessions: completedSessions,
             orderedDays: dayCatalog.activeDays,
             suggestedTrack: { workoutVM.suggestedRotationTrack(for: $0) },
-            plannedDayType: plannedSessionToday?.day
+            plannedDayType: nextUnusedPlanned?.day
         )
     }
 
@@ -288,11 +286,11 @@ struct TodayView: View {
             .foregroundStyle(Color.uplift.fgMuted)
     }
 
-    /// Split days plus any planned day types that are not on the split (e.g. Lower).
+    /// Split days plus unused planned day types that are not on the split (e.g. Lower).
     private var pickerDays: [DayType] {
         var days = dayCatalog.activeDays
         var seen = Set(days.map(\.rawValue))
-        for session in plannedSessions where session.date >= Calendar.current.startOfDay(for: .now) {
+        for session in unusedPlannedSessions {
             if seen.insert(session.day.rawValue).inserted {
                 days.append(session.day)
             }
@@ -417,13 +415,16 @@ struct TodayView: View {
         .buttonStyle(.plain)
     }
 
-    private var plannedSessionToday: WorkoutSession? {
-        let start = Calendar.current.startOfDay(for: .now)
-        return plannedSessions.first { Calendar.current.isDate($0.date, inSameDayAs: start) }
+    private var unusedPlannedSessions: [WorkoutSession] {
+        PlannedBlockQueue.unusedSessions(in: incompleteSessions)
     }
 
-    private var selectedDayHasPlanToday: Bool {
-        plannedSessionToday?.day == todayVM.selectedDayType
+    private var nextUnusedPlanned: WorkoutSession? {
+        unusedPlannedSessions.first
+    }
+
+    private var selectedDayIsNextPlanned: Bool {
+        nextUnusedPlanned?.day == todayVM.selectedDayType
     }
 
     private var startButtonTitle: String {
@@ -432,7 +433,7 @@ struct TodayView: View {
         if isResume {
             return "Resume \(day) · \(week)"
         }
-        if selectedDayHasPlanToday {
+        if selectedDayIsNextPlanned {
             return "Start planned \(day) · \(week)"
         }
         return "Start \(day) · \(week)"
@@ -472,34 +473,50 @@ struct TodayView: View {
 
     @ViewBuilder
     private var plannedSection: some View {
-        let upcoming = upcomingPlannedRows
-        if !upcoming.isEmpty {
-            SectionHeader("Coming up")
+        let queued = queuedPlannedRows
+        if !queued.isEmpty {
+            SectionHeader(nextUpSectionTitle)
             PlannedWorkoutsCard(
                 blockName: upcomingBlockName,
-                rows: upcoming
+                rows: queued,
+                onStartNext: startNextUnusedIfSelected
             )
         }
     }
 
-    private var upcomingBlockName: String {
-        plannedSessions.first?.trainingBlock?.name ?? ""
+    private var nextUpSectionTitle: String {
+        if let next = nextUnusedPlanned {
+            return PlannedBlockQueue.nextUpLabel(dayName: next.day.rawValue)
+        }
+        return "Next up"
     }
 
-    private var upcomingPlannedRows: [PlannedWorkoutsCard.Row] {
-        let start = Calendar.current.startOfDay(for: .now)
-        return plannedSessions
-            .filter { $0.date >= start }
+    private var upcomingBlockName: String {
+        nextUnusedPlanned?.trainingBlock?.name ?? unusedPlannedSessions.first?.trainingBlock?.name ?? ""
+    }
+
+    private var queuedPlannedRows: [PlannedWorkoutsCard.Row] {
+        unusedPlannedSessions
             .prefix(6)
-            .map { session in
+            .enumerated()
+            .map { index, session in
                 PlannedWorkoutsCard.Row(
                     id: session.id,
-                    date: session.date,
                     dayType: session.day,
                     liftCount: session.exerciseRecordsArray.count,
-                    isToday: Calendar.current.isDate(session.date, inSameDayAs: start)
+                    isNext: index == 0
                 )
             }
+    }
+
+    private func startNextUnusedIfSelected() {
+        guard let next = nextUnusedPlanned else { return }
+        todayVM.selectDayType(
+            next.day,
+            suspended: workoutVM.suspendedSession,
+            suggestedTrack: { workoutVM.suggestedRotationTrack(for: $0) }
+        )
+        startTapped()
     }
 
     @ViewBuilder

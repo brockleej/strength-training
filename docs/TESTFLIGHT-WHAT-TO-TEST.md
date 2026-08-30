@@ -10,11 +10,11 @@ App Apple ID: `6797695631` · bundle `com.lee.lift2026`
 ## Next TestFlight — planned workouts (paste after Cloud/upload)
 
 ```
-What's new: You can add a planned training block from a file. It does not erase your old workouts.
-Please try: 1) Settings → Add planned workouts, pick the file. 2) Confirm Add workouts — old history should still be there. 3) Today should show the next planned day. 4) Start it — warmup and work sets should already be filled in. 5) Screenshot anything that looks off.
+What's new: You can add a planned training block from a file. It does not erase your old workouts. Missed gym days stay next up — they are not skipped.
+Please try: 1) Settings → Add planned workouts, pick the file. 2) Confirm Add workouts — old history should still be there. 3) Today should say Next up: Lower (first unused), even if you missed a calendar day. 4) Start it — warmup and work sets should already be filled in. 5) Screenshot anything that looks off.
 ```
 
-Dates stay as written in the file (sample starts Monday 31 Aug 2026). Use **Start this block today** only if you want to slide the whole block. Sample: `docs/periodization/fixtures/sample-8-week-block.rocklog.program.json`.
+The file is a queue. Sample starts with Lower A / deadlift (Monday 31 Aug 2026). You do not need **Start this block today** — unused sessions wait until you train. Sample: `docs/periodization/fixtures/sample-8-week-block.rocklog.program.json`.
 
 ---
 

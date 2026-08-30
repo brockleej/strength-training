@@ -134,6 +134,8 @@ struct WorkoutSessionBackup: Codable {
     let planState: String?
     /// Optional for older backups. Planned sessions use their own lift list.
     let followsSessionRoster: Bool?
+    /// File-order index in an imported block. Optional for older backups.
+    let planOrder: Int?
 
     init(
         id: UUID,
@@ -145,7 +147,8 @@ struct WorkoutSessionBackup: Codable {
         rotationTrack: String? = nil,
         durationSeconds: Double? = nil,
         planState: String? = nil,
-        followsSessionRoster: Bool? = nil
+        followsSessionRoster: Bool? = nil,
+        planOrder: Int? = nil
     ) {
         self.id = id
         self.date = date
@@ -157,6 +160,7 @@ struct WorkoutSessionBackup: Codable {
         self.durationSeconds = durationSeconds
         self.planState = planState
         self.followsSessionRoster = followsSessionRoster
+        self.planOrder = planOrder
     }
 }
 

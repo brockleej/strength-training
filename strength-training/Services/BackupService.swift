@@ -95,7 +95,8 @@ struct BackupService {
                 rotationTrack: s.rotationTrack,
                 durationSeconds: s.durationSeconds > 0 ? s.durationSeconds : nil,
                 planState: s.planState.isEmpty ? nil : s.planState,
-                followsSessionRoster: s.followsSessionRoster ? true : nil
+                followsSessionRoster: s.followsSessionRoster ? true : nil,
+                planOrder: s.planOrder
             )
         }
 
@@ -277,6 +278,7 @@ struct BackupService {
             session.isCompleted = sb.isCompleted
             session.planState = sb.planState ?? ""
             session.followsSessionRoster = sb.followsSessionRoster ?? false
+            session.planOrder = sb.planOrder ?? 0
             if let duration = sb.durationSeconds, duration > 0 {
                 session.durationSeconds = duration
             }

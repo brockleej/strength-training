@@ -398,7 +398,7 @@ struct SettingsView: View {
                 } header: {
                     sectionHeader("Planned workouts")
                 } footer: {
-                    sectionFooter("Adds upcoming workouts from a file. Your history, lifts, and split stay put.")
+                    sectionFooter("Adds a queue of workouts from a file. Missed days stay next up. History, lifts, and split stay put.")
                 }
                 .listRowBackground(Color.uplift.surface1)
 

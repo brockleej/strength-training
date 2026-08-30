@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://rocklog.app/schema/rocklog.program.v1.json",
   "title": "rocklog.program",
-  "description": "A dated training block with target sets (warmup + work). Each session is independent: the same dayType may appear twice in one week with different lifts (e.g. Lower + Conventional Deadlift, then Lower + Romanian Deadlift). Import must not merge sessions by day type or reset the sequence on Monday. Import is a merge into RockLog. Not a backup. Not a RockCoach session file.",
+  "description": "An ordered training block with target sets (warmup + work). File order is the queue. Each session is independent: the same dayType may appear twice in one week with different lifts (e.g. Lower + Conventional Deadlift, then Lower + Romanian Deadlift). Missed calendar days must not skip or consume unused sessions. Import is a merge into RockLog. Not a backup. Not a RockCoach session file.",
   "type": "object",
   "additionalProperties": false,
   "required": ["format", "schemaVersion", "exportedAt", "block"],
@@ -20,7 +20,7 @@
         "notes": { "type": "string" },
         "startDate": {
           "type": "string",
-          "description": "ISO-8601 date or date-time. Import keeps this calendar date by default. An explicit “Start this block today” option may shift the block."
+          "description": "ISO-8601 date or date-time. Import keeps file dates as stored metadata. Unused sessions stay in queue order until started. An explicit “Start this block today” option may shift the block."
         },
         "sessions": {
           "type": "array",

@@ -2,7 +2,7 @@
 //  SessionRosterLogic.swift
 //  strength-training
 //
-//  A dated planned session owns its lift list. The day-plan catalog is not
+//  A queued planned session owns its lift list. The day-plan catalog is not
 //  consulted — two Lowers in one week can be Conventional vs Romanian.
 //
 

@@ -2,8 +2,8 @@
 //  ProgramDocument.swift
 //  strength-training
 //
-//  rocklog.program v1 — a dated training block with target sets.
-//  Import is a merge. This is not a backup and not a RockCoach file.
+//  rocklog.program v1 — an ordered training block with target sets.
+//  File order is the queue. Import is a merge. Not a backup / RockCoach file.
 //
 
 import Foundation
