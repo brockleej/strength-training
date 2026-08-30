@@ -150,7 +150,12 @@ struct TodayView: View {
             titleVisibility: .visible
         ) {
             if let dayType = confirmingDayType {
-                Button("Start \(dayType.rawValue) · \(todayVM.selectedRotationTrack.sessionFilterLabel)", role: .destructive) {
+                Button(
+                    usesPlannedQueue
+                        ? "Start \(dayType.rawValue)"
+                        : "Start \(dayType.rawValue) · \(todayVM.selectedRotationTrack.sessionFilterLabel)",
+                    role: .destructive
+                ) {
                     workoutVM.abandonSuspendedAndStart(
                         dayType: dayType,
                         rotationTrack: todayVM.selectedRotationTrack

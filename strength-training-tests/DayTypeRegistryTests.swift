@@ -13,6 +13,13 @@ import SwiftData
 @MainActor
 final class DayTypeRegistryTests: XCTestCase {
 
+    override func tearDown() {
+        if let container = try? inMemoryContainer() {
+            DayTypeRegistry.shared.reload(context: container.mainContext)
+        }
+        super.tearDown()
+    }
+
     func test_uniquedDefinitions_keepsFirstName_caseInsensitive() {
         let defs = [
             DayTypeDefinition(
