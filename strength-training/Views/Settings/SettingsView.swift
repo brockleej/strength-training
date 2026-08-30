@@ -34,6 +34,9 @@ struct SettingsView: View {
         cancelTitle: "Don't add"
     )
     @State private var showProgramConfirmation = false
+    @State private var pendingReplaceSplitDocument: ProgramDocument?
+    @State private var pendingReplaceSplitSummary: ProgramImportSummary?
+    @State private var showReplaceSplitConfirm = false
     @State private var showError = false
     @State private var errorMessage = ""
     @State private var showSuccess = false
@@ -398,7 +401,7 @@ struct SettingsView: View {
                 } header: {
                     sectionHeader("Planned workouts")
                 } footer: {
-                    sectionFooter("Adds a queue of workouts from a file. Missed days stay next up. History, lifts, and split stay put.")
+                    sectionFooter("Adds a queue of workouts from a file. Missed days stay next up. After you add them you can use the block as your training split. History stays.")
                 }
                 .listRowBackground(Color.uplift.surface1)
 
@@ -533,6 +536,22 @@ struct SettingsView: View {
                 }
             } message: {
                 Text(pendingProgramPrompt.message)
+            }
+            .alert(
+                ProgramImportService.useThisSplitTitle,
+                isPresented: $showReplaceSplitConfirm
+            ) {
+                Button(ProgramImportService.keepCurrentSplitTitle, role: .cancel) {
+                    finishProgramImport(replacedSplit: false)
+                }
+                Button(ProgramImportService.useThisSplitConfirmTitle) {
+                    if let document = pendingReplaceSplitDocument {
+                        ProgramImportService.replaceSplit(from: document, context: modelContext)
+                    }
+                    finishProgramImport(replacedSplit: true)
+                }
+            } message: {
+                Text(ProgramImportService.replaceSplitMessage())
             }
             .alert(
                 pendingRestorePrompt.title,
@@ -861,17 +880,30 @@ struct SettingsView: View {
                 context: modelContext,
                 shiftingStartTo: shiftStartToToday ? Calendar.current.startOfDay(for: .now) : nil
             )
-            if result.summary.sessionCount == 0 {
-                successMessage = "Those planned workouts are already on this phone."
-            } else {
-                let weeks = result.summary.weekCount
-                let weekWord = weeks == 1 ? "week" : "weeks"
-                successMessage = "Added \(weeks) \(weekWord) of planned workouts. Your history is unchanged."
+            pendingReplaceSplitDocument = document
+            pendingReplaceSplitSummary = result.summary
+            // Next run loop so this alert can replace the import confirm.
+            Task { @MainActor in
+                showReplaceSplitConfirm = true
             }
-            showSuccess = true
         } catch {
             errorMessage = error.localizedDescription
             showError = true
+        }
+    }
+
+    private func finishProgramImport(replacedSplit: Bool) {
+        let summary = pendingReplaceSplitSummary
+        pendingReplaceSplitDocument = nil
+        pendingReplaceSplitSummary = nil
+        guard let summary else { return }
+        let message = ProgramImportService.resultMessage(
+            summary: summary,
+            replacedSplit: replacedSplit
+        )
+        Task { @MainActor in
+            successMessage = message
+            showSuccess = true
         }
     }
 

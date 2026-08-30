@@ -15,7 +15,7 @@ internal import UniformTypeIdentifiers
 enum ListMutationCopy {
     /// Ordered plan lists (day plan, training split days).
     static let reorderAndRemove =
-        "Long-press and drag to reorder. Swipe left to remove."
+        "Long-press the number and drag to reorder. Swipe left to remove."
 
     /// Library browsing (no reorder).
     static let librarySwipe =
@@ -133,12 +133,18 @@ extension View {
 }
 
 /// Reorder without `onDrag`, which on iOS also captures horizontal swipes.
+///
+/// Long-press alone must not lock the row. The old sequence set `draggingID`
+/// when the press fired; lifting without a drag cancelled the sequence and
+/// never cleared that lock — the row (and swipe-to-remove) stayed frozen.
 private struct LongPressReorderModifier: ViewModifier {
     let id: UUID
     @Binding var orderedIDs: [UUID]
     @Binding var draggingID: UUID?
     let onReorder: () -> Void
 
+    /// Auto-resets when the finger lifts or the gesture cancels.
+    @GestureState private var isGestureActive = false
     @State private var startIndex = 0
     @State private var lastTarget = 0
 
@@ -146,38 +152,61 @@ private struct LongPressReorderModifier: ViewModifier {
         content
             .scaleEffect(draggingID == id ? 1.03 : 1)
             .zIndex(draggingID == id ? 1 : 0)
-            .simultaneousGesture(
-                LongPressGesture(minimumDuration: 0.4)
-                    .onEnded { _ in
-                        startIndex = orderedIDs.firstIndex(of: id) ?? 0
-                        lastTarget = startIndex
-                        draggingID = id
-                        HapticService.stepperTick()
-                    }
-                    .sequenced(before: DragGesture(minimumDistance: 8, coordinateSpace: .local))
-                    .onChanged { value in
-                        guard case .second(true, let drag?) = value else { return }
-                        guard draggingID == id else { return }
-                        let rowHeight: CGFloat = 68
-                        let delta = Int((drag.translation.height / rowHeight).rounded())
-                        let target = max(0, min(orderedIDs.count - 1, startIndex + delta))
-                        guard target != lastTarget,
-                              let current = orderedIDs.firstIndex(of: id)
-                        else { return }
-                        lastTarget = target
-                        withAnimation(.easeInOut(duration: 0.15)) {
-                            orderedIDs.move(
-                                fromOffsets: IndexSet(integer: current),
-                                toOffset: target > current ? target + 1 : target
-                            )
-                        }
-                    }
-                    .onEnded { _ in
-                        guard draggingID == id else { return }
-                        draggingID = nil
-                        onReorder()
-                    }
-            )
+            .simultaneousGesture(reorderGesture)
+            .onChange(of: isGestureActive) { _, active in
+                if !active { finishDragIfNeeded() }
+            }
+    }
+
+    private var reorderGesture: some Gesture {
+        LongPressGesture(minimumDuration: 0.4)
+            .sequenced(before: DragGesture(minimumDistance: 6, coordinateSpace: .local))
+            .updating($isGestureActive) { value, state, _ in
+                switch value {
+                case .first(true), .second(true, _):
+                    state = true
+                default:
+                    break
+                }
+            }
+            .onChanged { value in
+                guard case .second(true, let drag?) = value else { return }
+                // Wait for a vertical-dominant drag. A long-press then release,
+                // or a horizontal swipe, must not arm the row.
+                let horizontal = abs(drag.translation.width)
+                let vertical = abs(drag.translation.height)
+                guard draggingID == id || vertical >= horizontal else { return }
+
+                if draggingID != id {
+                    startIndex = orderedIDs.firstIndex(of: id) ?? 0
+                    lastTarget = startIndex
+                    draggingID = id
+                    HapticService.stepperTick()
+                }
+
+                let rowHeight: CGFloat = 68
+                let delta = Int((drag.translation.height / rowHeight).rounded())
+                let target = max(0, min(orderedIDs.count - 1, startIndex + delta))
+                guard target != lastTarget,
+                      let current = orderedIDs.firstIndex(of: id)
+                else { return }
+                lastTarget = target
+                withAnimation(.easeInOut(duration: 0.15)) {
+                    orderedIDs.move(
+                        fromOffsets: IndexSet(integer: current),
+                        toOffset: target > current ? target + 1 : target
+                    )
+                }
+            }
+            .onEnded { _ in
+                finishDragIfNeeded()
+            }
+    }
+
+    private func finishDragIfNeeded() {
+        guard draggingID == id else { return }
+        draggingID = nil
+        onReorder()
     }
 }
 

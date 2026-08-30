@@ -37,44 +37,16 @@ struct SwipeToDeleteModifier: ViewModifier {
                 }
                 .buttonStyle(.plain)
                 .opacity(min(1, Double(-offsetX / revealWidth)))
+                .zIndex(1)
                 .accessibilityLabel("Remove")
             }
 
             content
                 .offset(x: offsetX)
+                // Drag on the row only. A parent DragGesture eats the trash tap.
+                .simultaneousGesture(dragGesture)
         }
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 16, coordinateSpace: .local)
-                .onChanged { value in
-                    guard isEnabled else { return }
-                    // Horizontal-dominant only — leave vertical to the list / reorder.
-                    guard abs(value.translation.width) > abs(value.translation.height) * 1.2
-                    else { return }
-                    let base: CGFloat = isRevealed ? -revealWidth : 0
-                    let next = base + value.translation.width
-                    // Allow a bit past reveal for full-swipe feel.
-                    offsetX = min(0, max(-revealWidth * 1.6, next))
-                }
-                .onEnded { value in
-                    guard isEnabled else {
-                        close()
-                        return
-                    }
-                    let base: CGFloat = isRevealed ? -revealWidth : 0
-                    let projected = base + value.translation.width
-                    withAnimation(.easeOut(duration: 0.2)) {
-                        if fullSwipeDeletes, projected < -revealWidth * 1.25 {
-                            commitDelete()
-                        } else if projected < -revealWidth / 2 {
-                            isRevealed = true
-                            offsetX = -revealWidth
-                        } else {
-                            close()
-                        }
-                    }
-                }
-        )
         // Close overlay covers the row only — trailing `revealWidth` stays on the trash.
         .overlay {
             if isRevealed {
@@ -90,6 +62,38 @@ struct SwipeToDeleteModifier: ViewModifier {
             withAnimation(.easeOut(duration: 0.2)) { close() }
         }))
         .accessibilityAction(named: "Remove") { onDelete() }
+    }
+
+    private var dragGesture: some Gesture {
+        DragGesture(minimumDistance: 16, coordinateSpace: .local)
+            .onChanged { value in
+                guard isEnabled else { return }
+                // Horizontal-dominant only — leave vertical to the list / reorder.
+                guard abs(value.translation.width) > abs(value.translation.height) * 1.2
+                else { return }
+                let base: CGFloat = isRevealed ? -revealWidth : 0
+                let next = base + value.translation.width
+                // Allow a bit past reveal for full-swipe feel.
+                offsetX = min(0, max(-revealWidth * 1.6, next))
+            }
+            .onEnded { value in
+                guard isEnabled else {
+                    close()
+                    return
+                }
+                let base: CGFloat = isRevealed ? -revealWidth : 0
+                let projected = base + value.translation.width
+                withAnimation(.easeOut(duration: 0.2)) {
+                    if fullSwipeDeletes, projected < -revealWidth * 1.25 {
+                        commitDelete()
+                    } else if projected < -revealWidth / 2 {
+                        isRevealed = true
+                        offsetX = -revealWidth
+                    } else {
+                        close()
+                    }
+                }
+            }
     }
 
     private func commitDelete() {

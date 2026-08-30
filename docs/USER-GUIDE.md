@@ -269,10 +269,10 @@ Use this for safekeeping or another device. Do not restore a `.rocklogcoach` fil
 
 ### Planned workouts
 
-A planned-workout file (`.rocklogprogram` or a JSON whose format is `rocklog.program`) adds upcoming days with the target sets already filled in. It does **not** replace your history, lifts, or split.
+A planned-workout file (`.rocklogprogram` or a JSON whose format is `rocklog.program`) adds upcoming days with the target sets already filled in. It does **not** replace your history. After you add the file, RockLog asks if you want to **use this as your training split** (days + lifts on each day). **Keep my current split** leaves Today’s days as they are.
 
 - **Settings → Add planned workouts**, or open the file from Files / a share sheet.
-- Confirm **Add workouts**. The file is a queue — missed gym days stay next up. **Start this block today** is optional (slides every date); you do not need it for rolling-on-train.
+- Confirm **Add workouts**. Then choose **Use this split** or **Keep my current split**. The file is a queue — missed gym days stay next up. **Start this block today** is optional (slides every date); you do not need it for rolling-on-train.
 - Today shows **Next up: Lower** (or whatever is first unused). Start that day to load those ramps and work sets — not every lift on the day plan. Two Lowers in one week can be different (deadlift first, Romanian later).
 - Starting a different day leaves the queue alone.
 - A missed calendar day is not saved as a finished workout. History uses the day you actually trained.

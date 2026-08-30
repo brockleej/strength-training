@@ -16,7 +16,7 @@ The file is an ordered queue. Missed days stay waiting — they are not skipped 
 
 ## What import does
 
-Adds the planned days. Your old workouts, lifts, and split stay. Each day in the file is its own list of lifts — two Lowers in one week can be different (deadlift one day, Romanian the next). A 3-day split trained 4 days a week does not have to restart on Monday.
+Adds the planned days. Your old workouts stay. After import, RockLog asks if you want to use the block as your training split (days + lifts). Keep my current split leaves Today’s days as they are. Each day in the file is its own list of lifts — two Lowers in one week can be different (deadlift one day, Romanian the next). A 3-day split trained 4 days a week does not have to restart on Monday.
 
 Lifts match ones you already have (same id, or same name). New names are added; nothing is duplicated on purpose.
 

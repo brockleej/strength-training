@@ -217,7 +217,15 @@ struct TrainingSplitSettingsView: View {
             Text("\(weekPosition)")
                 .font(.uplift.mono(13, weight: .bold))
                 .foregroundStyle(Color.uplift.fgDim)
-                .frame(width: 22, alignment: .center)
+                .frame(width: 28, height: 36)
+                .contentShape(Rectangle())
+                .longPressReorder(
+                    id: day.id,
+                    orderedIDs: $orderedIDs,
+                    draggingID: $draggingID,
+                    onReorder: persistOrder
+                )
+                .accessibilityLabel("Reorder \(day.name)")
 
             DayChip(dayType: day.asDayType, size: .sm)
 
@@ -250,12 +258,6 @@ struct TrainingSplitSettingsView: View {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .fill(draggingID == day.id ? Color.uplift.surface2 : Color.uplift.surface1)
         }
-        .longPressReorder(
-            id: day.id,
-            orderedIDs: $orderedIDs,
-            draggingID: $draggingID,
-            onReorder: persistOrder
-        )
         .swipeToDelete(fullSwipeDeletes: false, isEnabled: draggingID == nil, onDelete: {
             // Soft reveal only; hard delete requires confirm (T2/T3).
             dayPendingDelete = day
@@ -264,7 +266,7 @@ struct TrainingSplitSettingsView: View {
         })
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(weekPosition). \(day.name)")
-        .accessibilityHint("Long press and drag to reorder, swipe left to delete, double tap to edit")
+        .accessibilityHint("Long press the number and drag to reorder, swipe left to delete, double tap to edit")
     }
 
     private func applyPreset(_ preset: SplitPreset, includeStarters: Bool) {

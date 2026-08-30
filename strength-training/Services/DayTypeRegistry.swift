@@ -206,6 +206,33 @@ final class DayTypeRegistry {
         reload(context: context)
     }
 
+    /// Replace the live day list (names + weekly order). Does not touch history.
+    func replaceDays(names: [String], context: ModelContext) {
+        let trimmed = names
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty && $0.caseInsensitiveCompare("Unassigned") != .orderedSame }
+        guard !trimmed.isEmpty else { return }
+
+        let existing = (try? context.fetch(FetchDescriptor<SplitDay>())) ?? []
+        existing.forEach { context.delete($0) }
+        for (index, name) in trimmed.enumerated() {
+            let def = DayTypePalette.fallback(for: name)
+            context.insert(
+                SplitDay(
+                    name: name,
+                    systemImage: def.systemImage,
+                    subtitle: def.subtitle,
+                    colorHex: def.colorHex,
+                    includesAllExercises: false,
+                    sortOrder: index
+                )
+            )
+        }
+        try? context.save()
+        SeedData.markSplitConfigured(context: context)
+        reload(context: context)
+    }
+
     /// Persist order from a long-press-drag list (same pattern as day-plan exercises).
     func applyOrder(ids: [UUID], context: ModelContext) {
         let rows = (try? context.fetch(FetchDescriptor<SplitDay>())) ?? []
