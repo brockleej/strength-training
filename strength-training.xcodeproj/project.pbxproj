@@ -41,6 +41,7 @@
 		A86332EC74EEB61D502B9A66 /* ProgressionLabApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2375B8872C6A1C21691DF866 /* ProgressionLabApp.swift */; };
 		AB75C1610447582730CCCB17 /* TrainingMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = E15010E72FA7E5AB009EF2FB /* TrainingMode.swift */; };
 		B2C3D4E5F60718293A4B5C6D /* BodyCompositionMathTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B5C /* BodyCompositionMathTests.swift */; };
+		B8E4F2A01C3D5E7082A4B6C2 /* MonthlyOverloadTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8E4F2A01C3D5E7082A4B6C1 /* MonthlyOverloadTests.swift */; };
 		B30B972F00BEB5024C59291A /* ExerciseDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA1089E656CA94B6914585FB /* ExerciseDetailView.swift */; };
 		B5CE50F29CC09192CC7D822B /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AA363F8D7BCEA2FCDE96CCEE /* Cocoa.framework */; };
 		BC3117F994C6BEF049F4F098 /* ProgressionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87211BB2F7AB169D53339453 /* ProgressionService.swift */; };
@@ -145,6 +146,7 @@
 		A0C0AC01C0AC0100000001 /* RockCoach.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RockCoach.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A0C0AC02C0AC0200000001 /* RockCoachShare.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = RockCoachShare.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		A1B2C3D4E5F60718293A4B5C /* BodyCompositionMathTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BodyCompositionMathTests.swift; sourceTree = "<group>"; };
+		B8E4F2A01C3D5E7082A4B6C1 /* MonthlyOverloadTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MonthlyOverloadTests.swift; sourceTree = "<group>"; };
 		A284E56C056FDF4F4E7CE02C /* ProgressionServicePureFunctionTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ProgressionServicePureFunctionTests.swift; sourceTree = "<group>"; };
 		A7E2C91B4D6F80E1A2B3C4D5 /* WorkoutSessionLogicTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkoutSessionLogicTests.swift; sourceTree = "<group>"; };
 		A9D1927AD35565C0B0F0CB4D /* EffortScaleTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EffortScaleTests.swift; sourceTree = "<group>"; };
@@ -354,6 +356,7 @@
 				2C13DB8B2815F5DFA66CB019 /* E1RMDetectionTests.swift */,
 				A9D1927AD35565C0B0F0CB4D /* EffortScaleTests.swift */,
 				A1B2C3D4E5F60718293A4B5C /* BodyCompositionMathTests.swift */,
+				B8E4F2A01C3D5E7082A4B6C1 /* MonthlyOverloadTests.swift */,
 				C0ACF001D0C000000000000A /* CoachFormatTests.swift */,
 			);
 			path = "strength-training-tests";
@@ -733,6 +736,7 @@
 				08F2D596CD1C0AF37A4D316E /* E1RMDetectionTests.swift in Sources */,
 				E817E9DE7E0C2E2F33F7A626 /* EffortScaleTests.swift in Sources */,
 				B2C3D4E5F60718293A4B5C6D /* BodyCompositionMathTests.swift in Sources */,
+				B8E4F2A01C3D5E7082A4B6C2 /* MonthlyOverloadTests.swift in Sources */,
 				C0ACF001D0C000000000000B /* CoachFormatTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

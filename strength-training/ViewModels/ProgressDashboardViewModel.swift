@@ -313,6 +313,46 @@ final class ProgressDashboardViewModel {
         return prs.sorted { $0.date > $1.date }
     }
 
+    // MARK: - Monthly overload (calendar month vs prior month)
+
+    /// Best working set this calendar month vs last, combined across Strength
+    /// and Endurance. Warm-ups excluded. Independent of `selectedTimeRange`.
+    var monthlyOverload: MonthlyOverload.Review {
+        monthlyOverload(now: .now, calendar: .current)
+    }
+
+    func monthlyOverload(now: Date, calendar: Calendar) -> MonthlyOverload.Review {
+        let inputs = fetchAllCompletedSessions().map(Self.sessionInput(from:))
+        return MonthlyOverload.review(
+            sessions: inputs,
+            now: now,
+            calendar: calendar,
+            dayOrder: DayTypeRegistry.shared.exerciseHomeDays.map(\.rawValue)
+        )
+    }
+
+    private static func sessionInput(from session: WorkoutSession) -> MonthlyOverload.SessionInput {
+        MonthlyOverload.SessionInput(
+            date: session.date,
+            lifts: session.exerciseRecordsArray.compactMap { record in
+                guard !record.isDeleted, let exercise = record.exercise else { return nil }
+                return MonthlyOverload.LiftInput(
+                    exerciseID: exercise.id,
+                    exerciseName: exercise.name,
+                    dayTypeName: exercise.dayTypeNames.first ?? DayType.unassigned.rawValue,
+                    sortOrder: exercise.sortIndex(for: exercise.day),
+                    sets: record.setsArray.map {
+                        MonthlyOverload.SetInput(
+                            weightLbs: $0.effectiveLoadLbs(),
+                            reps: $0.reps,
+                            isWarmup: $0.isWarmup
+                        )
+                    }
+                )
+            }
+        )
+    }
+
     // MARK: - Muscle group attention (working-set counts)
 
     /// How many working sets hit each primary muscle group in range (not tonnage).

@@ -47,6 +47,12 @@ private struct ProgressDashboardContent: View {
                     .padding(.top, 8)
                 PRsThisMonthCard(prs: viewModel.prsThisMonth)
                     .padding(.top, 8)
+                MonthlyOverloadCard(
+                    review: viewModel.monthlyOverload,
+                    exercises: viewModel.allExercises(),
+                    modelContext: viewModel.modelContext
+                )
+                .padding(.top, 8)
                 SectionHeader("Sets by muscle")
                 MuscleGroupVolumeChart(volumes: viewModel.muscleGroupSetCounts)
                 SectionHeader("Strength vs endurance")
