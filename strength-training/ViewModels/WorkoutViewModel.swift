@@ -464,6 +464,7 @@ final class WorkoutViewModel {
     }
 
     /// Target rows from an imported plan do not count as trained work.
+    @MainActor
     static func hasAthleteLoggedSets(_ session: WorkoutSession) -> Bool {
         PlannedBlockQueue.hasAthleteLoggedSets(session)
     }
