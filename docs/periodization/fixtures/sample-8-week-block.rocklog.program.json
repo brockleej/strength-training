@@ -5,12 +5,12 @@
   "block": {
     "id": "14fbcd3f-1a51-56e7-bbf9-24b67417f2d8",
     "name": "Demo 8-Week Running Split",
-    "notes": "Synthetic demo. Running 3-day split (Lower / Push / Pull) trained 4 days a week \u2014 does not reset Monday. Lower slots alternate Conventional Deadlift and Romanian Deadlift; never both in one session. Fake lifts and weights only.",
-    "startDate": "2026-01-05",
+    "notes": "Synthetic demo. Running 3-day split (Lower / Push / Pull) trained 4 days a week on the dates in the file (starts Monday 2026-08-31). Does not reset Monday. Lower A is Conventional Deadlift; the next Lower is Romanian Deadlift. Fake lifts and weights only.",
+    "startDate": "2026-08-31",
     "sessions": [
       {
-        "id": "8581181e-70d3-5bfb-8041-eed82f112f3a",
-        "date": "2026-01-05",
+        "id": "c9751495-7644-5d02-859e-09f45f4fab24",
+        "date": "2026-08-31",
         "dayType": "Lower",
         "exercises": [
           {
@@ -109,11 +109,12 @@
               }
             ]
           }
-        ]
+        ],
+        "rotationTrack": "A"
       },
       {
-        "id": "79642da3-341f-5554-a4f6-5f5933498acd",
-        "date": "2026-01-06",
+        "id": "f3d7851f-1774-537a-955d-f322e8baa9d9",
+        "date": "2026-09-01",
         "dayType": "Push",
         "exercises": [
           {
@@ -215,8 +216,8 @@
         ]
       },
       {
-        "id": "5e485b91-e210-569c-8e72-ebb5e39befcb",
-        "date": "2026-01-08",
+        "id": "eac46394-f91c-5168-99ca-943e5349f17c",
+        "date": "2026-09-03",
         "dayType": "Pull",
         "exercises": [
           {
@@ -306,8 +307,8 @@
         ]
       },
       {
-        "id": "57470bb3-8c6b-53f0-abf8-aa63cdf66cfa",
-        "date": "2026-01-09",
+        "id": "915cadd5-b5aa-597f-a906-89f044e960d6",
+        "date": "2026-09-04",
         "dayType": "Lower",
         "exercises": [
           {
@@ -400,11 +401,12 @@
               }
             ]
           }
-        ]
+        ],
+        "rotationTrack": "B"
       },
       {
-        "id": "f53eea2d-8f15-5004-bce2-eeef98450a8d",
-        "date": "2026-01-12",
+        "id": "8675919f-7da5-517b-b531-0bcf80aff804",
+        "date": "2026-09-07",
         "dayType": "Push",
         "exercises": [
           {
@@ -506,8 +508,8 @@
         ]
       },
       {
-        "id": "cda58510-6a5c-512e-aa81-57e29e1efea5",
-        "date": "2026-01-13",
+        "id": "64c20160-cef1-501e-a040-fd52964cf032",
+        "date": "2026-09-08",
         "dayType": "Pull",
         "exercises": [
           {
@@ -597,8 +599,8 @@
         ]
       },
       {
-        "id": "e8f18749-fc3b-5898-9a01-63745eec38b2",
-        "date": "2026-01-15",
+        "id": "5172c8a4-f12b-5d01-94b1-b012b377f5e6",
+        "date": "2026-09-10",
         "dayType": "Lower",
         "exercises": [
           {
@@ -697,11 +699,12 @@
               }
             ]
           }
-        ]
+        ],
+        "rotationTrack": "A"
       },
       {
-        "id": "24b197da-c8ca-5f50-805e-7c1a0abedd5b",
-        "date": "2026-01-16",
+        "id": "c38f5dac-6a1d-57a1-872b-c9f4efb531d5",
+        "date": "2026-09-11",
         "dayType": "Push",
         "exercises": [
           {
@@ -803,8 +806,8 @@
         ]
       },
       {
-        "id": "ba6ecef2-f864-5158-9561-1a82290b79ac",
-        "date": "2026-01-19",
+        "id": "85703be0-d656-5ebd-a663-845bb25b66f9",
+        "date": "2026-09-14",
         "dayType": "Pull",
         "exercises": [
           {
@@ -894,8 +897,8 @@
         ]
       },
       {
-        "id": "0637a110-6a03-5e4a-b306-c9d7c9df03fd",
-        "date": "2026-01-20",
+        "id": "9b91301e-7e16-5e45-aa27-d9447d4a0ba8",
+        "date": "2026-09-15",
         "dayType": "Lower",
         "exercises": [
           {
@@ -988,11 +991,12 @@
               }
             ]
           }
-        ]
+        ],
+        "rotationTrack": "B"
       },
       {
-        "id": "581e4b2e-7c5d-5b28-9204-d84314f4c763",
-        "date": "2026-01-22",
+        "id": "ff766d96-01ea-5149-a418-d12d7d7438e8",
+        "date": "2026-09-17",
         "dayType": "Push",
         "exercises": [
           {
@@ -1094,8 +1098,8 @@
         ]
       },
       {
-        "id": "287472ea-513f-528b-9bd4-d7b198c1230d",
-        "date": "2026-01-23",
+        "id": "ff06bc0b-8cad-562f-b5f6-c49445c605a1",
+        "date": "2026-09-18",
         "dayType": "Pull",
         "exercises": [
           {
@@ -1185,8 +1189,8 @@
         ]
       },
       {
-        "id": "ed3cbaa8-4a2a-548d-8404-9248a9763ad2",
-        "date": "2026-01-26",
+        "id": "c050ee5f-a5ce-5890-b585-41be109f5e3e",
+        "date": "2026-09-21",
         "dayType": "Lower",
         "exercises": [
           {
@@ -1285,11 +1289,12 @@
               }
             ]
           }
-        ]
+        ],
+        "rotationTrack": "A"
       },
       {
-        "id": "7da9f4b8-e082-506c-abb3-00fd09cf625b",
-        "date": "2026-01-27",
+        "id": "d0377b12-ddd3-5b46-bd5a-d03c9799b29d",
+        "date": "2026-09-22",
         "dayType": "Push",
         "exercises": [
           {
@@ -1391,8 +1396,8 @@
         ]
       },
       {
-        "id": "eb4ed146-ae35-5ea4-be7b-9b6137fee918",
-        "date": "2026-01-29",
+        "id": "681a5d7f-d3aa-5be4-b829-e6c98f8fcf60",
+        "date": "2026-09-24",
         "dayType": "Pull",
         "exercises": [
           {
@@ -1482,8 +1487,8 @@
         ]
       },
       {
-        "id": "0860ced8-f765-5841-99dc-ec37d782c303",
-        "date": "2026-01-30",
+        "id": "0cad4195-c2dd-58a4-a177-22ba6158c7fb",
+        "date": "2026-09-25",
         "dayType": "Lower",
         "exercises": [
           {
@@ -1576,11 +1581,12 @@
               }
             ]
           }
-        ]
+        ],
+        "rotationTrack": "B"
       },
       {
-        "id": "b371109b-d0b4-50dd-932b-6005bf42cd73",
-        "date": "2026-02-02",
+        "id": "5e54a580-0fba-501a-be4c-8e3cbca4e9a9",
+        "date": "2026-09-28",
         "dayType": "Push",
         "exercises": [
           {
@@ -1682,8 +1688,8 @@
         ]
       },
       {
-        "id": "77ebe6c9-c404-55b1-b064-ab73d9253f9e",
-        "date": "2026-02-03",
+        "id": "3ff29e75-6ff1-5482-adad-b87e73c68246",
+        "date": "2026-09-29",
         "dayType": "Pull",
         "exercises": [
           {
@@ -1773,8 +1779,8 @@
         ]
       },
       {
-        "id": "a476ffb5-6687-5983-b310-4a71b9ca9a7c",
-        "date": "2026-02-05",
+        "id": "c93ca59f-5248-54ea-a5bc-5fdd137d9d1d",
+        "date": "2026-10-01",
         "dayType": "Lower",
         "exercises": [
           {
@@ -1873,11 +1879,12 @@
               }
             ]
           }
-        ]
+        ],
+        "rotationTrack": "A"
       },
       {
-        "id": "a4fa5f88-6440-53c7-b114-68fe78f9e2a9",
-        "date": "2026-02-06",
+        "id": "abe71042-e705-59a7-8fd1-a22c35c6be77",
+        "date": "2026-10-02",
         "dayType": "Push",
         "exercises": [
           {
@@ -1979,8 +1986,8 @@
         ]
       },
       {
-        "id": "8cfe661e-52df-56ac-a23a-4b66d9e17abd",
-        "date": "2026-02-09",
+        "id": "6e337e0d-8743-5a41-995d-b2d55a73f537",
+        "date": "2026-10-05",
         "dayType": "Pull",
         "exercises": [
           {
@@ -2070,8 +2077,8 @@
         ]
       },
       {
-        "id": "957b49a4-ba05-53f9-afda-cae1cef02b41",
-        "date": "2026-02-10",
+        "id": "b65df9c0-c910-5a81-9cc2-84359cad015d",
+        "date": "2026-10-06",
         "dayType": "Lower",
         "exercises": [
           {
@@ -2164,11 +2171,12 @@
               }
             ]
           }
-        ]
+        ],
+        "rotationTrack": "B"
       },
       {
-        "id": "87493fa6-b476-5551-905e-23f7b3d09c6d",
-        "date": "2026-02-12",
+        "id": "0eecc961-6273-5941-85c6-7bdb757b9a7a",
+        "date": "2026-10-08",
         "dayType": "Push",
         "exercises": [
           {
@@ -2270,8 +2278,8 @@
         ]
       },
       {
-        "id": "d8c6c06c-dfc7-5a1d-9c70-61ea0638d1b0",
-        "date": "2026-02-13",
+        "id": "dc9790f1-c5e4-5eaa-95f2-e88fd56c61ac",
+        "date": "2026-10-09",
         "dayType": "Pull",
         "exercises": [
           {
@@ -2361,8 +2369,8 @@
         ]
       },
       {
-        "id": "bef0a6f7-46e1-520e-b856-3891baaef22f",
-        "date": "2026-02-16",
+        "id": "8461ae97-b71f-59b5-9f9a-5196a991b6a4",
+        "date": "2026-10-12",
         "dayType": "Lower",
         "exercises": [
           {
@@ -2461,11 +2469,12 @@
               }
             ]
           }
-        ]
+        ],
+        "rotationTrack": "A"
       },
       {
-        "id": "4acfb4a7-a772-5c75-a026-7cc09b542f99",
-        "date": "2026-02-17",
+        "id": "95ca010d-b25f-51b1-9246-5ed08fe6919e",
+        "date": "2026-10-13",
         "dayType": "Push",
         "exercises": [
           {
@@ -2567,8 +2576,8 @@
         ]
       },
       {
-        "id": "bb42c5aa-fc96-5e69-894c-b5a09fe579c9",
-        "date": "2026-02-19",
+        "id": "1d44b8ac-b1bf-5bf0-a161-dd688d3327be",
+        "date": "2026-10-15",
         "dayType": "Pull",
         "exercises": [
           {
@@ -2658,8 +2667,8 @@
         ]
       },
       {
-        "id": "e2cc0f68-cf49-577d-94ac-74a29b9b6eaa",
-        "date": "2026-02-20",
+        "id": "aab677b1-e0bf-5930-aa11-e0b1bb42ba6d",
+        "date": "2026-10-16",
         "dayType": "Lower",
         "exercises": [
           {
@@ -2752,11 +2761,12 @@
               }
             ]
           }
-        ]
+        ],
+        "rotationTrack": "B"
       },
       {
-        "id": "8de93f6f-df39-5018-98da-be563b81252f",
-        "date": "2026-02-23",
+        "id": "722f8461-9a6b-5cce-ac1a-46cf402524c6",
+        "date": "2026-10-19",
         "dayType": "Push",
         "exercises": [
           {
@@ -2858,8 +2868,8 @@
         ]
       },
       {
-        "id": "1aab1c3b-01ef-5f53-801f-8af0f6e77dcc",
-        "date": "2026-02-24",
+        "id": "9f183214-097c-5431-aea1-5091368643f6",
+        "date": "2026-10-20",
         "dayType": "Pull",
         "exercises": [
           {
@@ -2949,8 +2959,8 @@
         ]
       },
       {
-        "id": "3364b2bc-73bc-5605-b593-62da6c761c4c",
-        "date": "2026-02-26",
+        "id": "eae06d8e-6c67-5bc2-b168-56dee2048cb2",
+        "date": "2026-10-22",
         "dayType": "Lower",
         "exercises": [
           {
@@ -3049,11 +3059,12 @@
               }
             ]
           }
-        ]
+        ],
+        "rotationTrack": "A"
       },
       {
-        "id": "d781799a-6b16-5b4c-8499-705b8c3b2dd1",
-        "date": "2026-02-27",
+        "id": "8fe083f8-a86d-5c68-8cbc-0dd634736c7c",
+        "date": "2026-10-23",
         "dayType": "Push",
         "exercises": [
           {

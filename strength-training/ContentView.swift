@@ -168,7 +168,13 @@ struct ContentView: View {
             }
             Button(incomingProgramPrompt.confirmTitle) {
                 if let document = pendingIncomingProgram {
-                    importIncomingProgram(document)
+                    importIncomingProgram(document, shiftStartToToday: false)
+                }
+                pendingIncomingProgram = nil
+            }
+            Button(ProgramImportService.startThisBlockTodayTitle) {
+                if let document = pendingIncomingProgram {
+                    importIncomingProgram(document, shiftStartToToday: true)
                 }
                 pendingIncomingProgram = nil
             }
@@ -206,9 +212,13 @@ struct ContentView: View {
         }
     }
 
-    private func importIncomingProgram(_ document: ProgramDocument) {
+    private func importIncomingProgram(_ document: ProgramDocument, shiftStartToToday: Bool) {
         do {
-            let result = try ProgramImportService.importDocument(document, context: modelContext)
+            let result = try ProgramImportService.importDocument(
+                document,
+                context: modelContext,
+                shiftingStartTo: shiftStartToToday ? Calendar.current.startOfDay(for: .now) : nil
+            )
             if result.summary.sessionCount == 0 {
                 incomingFileMessage = "Those planned workouts are already on this phone."
             } else {

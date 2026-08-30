@@ -32,11 +32,14 @@ struct ProgramImportResult: Equatable {
 }
 
 enum ProgramImportService {
+    /// Explicit opt-in; default import keeps the file’s calendar dates.
+    static let startThisBlockTodayTitle = "Start this block today"
+
     /// Human copy for the Files / share-sheet confirm. No jargon.
     static func confirmationMessage(weekCount: Int) -> String {
         let weeks = max(1, weekCount)
         let weekWord = weeks == 1 ? "week" : "weeks"
-        return "Add \(weeks) \(weekWord) of planned workouts? This does not replace your history."
+        return "Add \(weeks) \(weekWord) of planned workouts? This does not replace your history. Workouts stay on the dates in the file."
     }
 
     static func weekCount(from dates: [Date], calendar: Calendar = .current) -> Int {
@@ -57,7 +60,7 @@ enum ProgramImportService {
         )
     }
 
-    /// Shift every session so the block’s first day lands on `anchor`.
+    /// Opt-in only. Shift every session so the block’s first day lands on `anchor`.
     static func anchoredSessions(
         in document: ProgramDocument,
         to anchor: Date,
@@ -76,13 +79,19 @@ enum ProgramImportService {
         }
     }
 
+    /// Merge the file’s sessions. Dates stay as written unless `shiftingStartTo` is set.
     @MainActor
     static func importDocument(
         _ document: ProgramDocument,
         context: ModelContext,
-        anchoringStartTo anchor: Date = Calendar.current.startOfDay(for: .now)
+        shiftingStartTo anchor: Date? = nil
     ) throws -> ProgramImportResult {
-        let sessions = anchoredSessions(in: document, to: anchor)
+        let sessions: [ProgramSessionPayload]
+        if let anchor {
+            sessions = anchoredSessions(in: document, to: anchor)
+        } else {
+            sessions = document.block.sessions
+        }
         guard !sessions.isEmpty else {
             throw ProgramDocument.ProgramFormatError.emptyBlock
         }
@@ -101,7 +110,9 @@ enum ProgramImportService {
             }
         }
 
-        let startDate = Calendar.current.startOfDay(for: sessions.map(\.date).min() ?? anchor)
+        let startDate = Calendar.current.startOfDay(
+            for: sessions.map(\.date).min() ?? document.block.startDate
+        )
         let block = TrainingBlock(
             name: document.block.name,
             startDate: startDate,

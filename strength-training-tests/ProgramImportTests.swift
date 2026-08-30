@@ -15,12 +15,13 @@ final class ProgramImportTests: XCTestCase {
     func test_confirmationCopy_isPlainLanguage() {
         XCTAssertEqual(
             ProgramImportService.confirmationMessage(weekCount: 8),
-            "Add 8 weeks of planned workouts? This does not replace your history."
+            "Add 8 weeks of planned workouts? This does not replace your history. Workouts stay on the dates in the file."
         )
         XCTAssertEqual(
             ProgramImportService.confirmationMessage(weekCount: 1),
-            "Add 1 week of planned workouts? This does not replace your history."
+            "Add 1 week of planned workouts? This does not replace your history. Workouts stay on the dates in the file."
         )
+        XCTAssertEqual(ProgramImportService.startThisBlockTodayTitle, "Start this block today")
         XCTAssertFalse(ProgramImportService.confirmationMessage(weekCount: 8).localizedCaseInsensitiveContains("schema"))
         XCTAssertFalse(ProgramImportService.confirmationMessage(weekCount: 8).localizedCaseInsensitiveContains("JSON"))
     }
@@ -111,11 +112,7 @@ final class ProgramImportTests: XCTestCase {
         try context.save()
 
         let document = sampleDocument(firstSession: Date(timeIntervalSince1970: 1_800_000_000))
-        _ = try ProgramImportService.importDocument(
-            document,
-            context: context,
-            anchoringStartTo: Date(timeIntervalSince1970: 1_800_000_000)
-        )
+        _ = try ProgramImportService.importDocument(document, context: context)
 
         let sessions = try context.fetch(FetchDescriptor<WorkoutSession>())
         XCTAssertTrue(sessions.contains { $0.id == historyID && $0.isCompleted })
@@ -137,11 +134,7 @@ final class ProgramImportTests: XCTestCase {
         try context.save()
 
         let document = sampleDocument(firstSession: Date(timeIntervalSince1970: 1_800_000_000))
-        let result = try ProgramImportService.importDocument(
-            document,
-            context: context,
-            anchoringStartTo: Date(timeIntervalSince1970: 1_800_000_000)
-        )
+        let result = try ProgramImportService.importDocument(document, context: context)
 
         let benches = try context.fetch(FetchDescriptor<Exercise>())
             .filter { $0.name.caseInsensitiveCompare("Barbell Bench Press") == .orderedSame }
@@ -157,11 +150,7 @@ final class ProgramImportTests: XCTestCase {
         let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: .now)!
 
         let document = sampleDocument(firstSession: yesterday)
-        _ = try ProgramImportService.importDocument(
-            document,
-            context: context,
-            anchoringStartTo: Calendar.current.startOfDay(for: yesterday)
-        )
+        _ = try ProgramImportService.importDocument(document, context: context)
 
         let vm = WorkoutViewModel(
             modelContext: context,
@@ -190,11 +179,7 @@ final class ProgramImportTests: XCTestCase {
         let today = Calendar.current.startOfDay(for: .now)
 
         let document = sampleDocument(firstSession: today)
-        _ = try ProgramImportService.importDocument(
-            document,
-            context: context,
-            anchoringStartTo: today
-        )
+        _ = try ProgramImportService.importDocument(document, context: context)
 
         let vm = WorkoutViewModel(
             modelContext: context,
@@ -227,11 +212,7 @@ final class ProgramImportTests: XCTestCase {
         let today = Calendar.current.startOfDay(for: .now)
 
         let document = sampleDocument(firstSession: today)
-        _ = try ProgramImportService.importDocument(
-            document,
-            context: context,
-            anchoringStartTo: today
-        )
+        _ = try ProgramImportService.importDocument(document, context: context)
 
         let vm = WorkoutViewModel(
             modelContext: context,
@@ -259,11 +240,7 @@ final class ProgramImportTests: XCTestCase {
         let thursday = monday.addingTimeInterval(3 * 86_400)
         let document = rotatingLowerDocument(dlDate: monday, rdlDate: thursday)
 
-        _ = try ProgramImportService.importDocument(
-            document,
-            context: context,
-            anchoringStartTo: monday
-        )
+        _ = try ProgramImportService.importDocument(document, context: context)
 
         let sessions = try context.fetch(FetchDescriptor<WorkoutSession>())
             .filter { $0.day == .lower }
@@ -282,11 +259,7 @@ final class ProgramImportTests: XCTestCase {
         let start = Date(timeIntervalSince1970: 1_767_571_200)
         let document = runningThreeDayDocument(start: start)
 
-        _ = try ProgramImportService.importDocument(
-            document,
-            context: context,
-            anchoringStartTo: start
-        )
+        _ = try ProgramImportService.importDocument(document, context: context)
 
         let sessions = try context.fetch(FetchDescriptor<WorkoutSession>())
             .sorted { $0.date < $1.date }
@@ -313,11 +286,7 @@ final class ProgramImportTests: XCTestCase {
         try context.save()
 
         let document = rotatingLowerDocument(dlDate: today, rdlDate: today.addingTimeInterval(3 * 86_400))
-        _ = try ProgramImportService.importDocument(
-            document,
-            context: context,
-            anchoringStartTo: today
-        )
+        _ = try ProgramImportService.importDocument(document, context: context)
 
         let vm = WorkoutViewModel(
             modelContext: context,
@@ -339,11 +308,7 @@ final class ProgramImportTests: XCTestCase {
         let earlier = Calendar.current.date(byAdding: .day, value: -3, to: today)!
 
         let document = rotatingLowerDocument(dlDate: earlier, rdlDate: today)
-        _ = try ProgramImportService.importDocument(
-            document,
-            context: context,
-            anchoringStartTo: earlier
-        )
+        _ = try ProgramImportService.importDocument(document, context: context)
 
         let vm = WorkoutViewModel(
             modelContext: context,
@@ -354,6 +319,50 @@ final class ProgramImportTests: XCTestCase {
         let session = try XCTUnwrap(vm.activeSession)
         XCTAssertEqual(SessionRosterLogic.names(in: session), ["Romanian Deadlift"])
         XCTAssertFalse(SessionRosterLogic.names(in: session).contains("Conventional Deadlift"))
+    }
+
+    func test_import_keepsFileCalendarDatesByDefault() throws {
+        let container = try inMemoryContainer()
+        let context = container.mainContext
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let monday = calendar.date(from: DateComponents(year: 2026, month: 8, day: 31))!
+        let thursday = calendar.date(byAdding: .day, value: 3, to: monday)!
+        let document = rotatingLowerDocument(dlDate: monday, rdlDate: thursday)
+
+        _ = try ProgramImportService.importDocument(document, context: context)
+
+        let sessions = try context.fetch(FetchDescriptor<WorkoutSession>())
+            .sorted { $0.date < $1.date }
+        XCTAssertEqual(sessions.count, 2)
+        XCTAssertTrue(calendar.isDate(sessions[0].date, inSameDayAs: monday))
+        XCTAssertTrue(calendar.isDate(sessions[1].date, inSameDayAs: thursday))
+        XCTAssertEqual(sessions[0].day, .lower)
+        XCTAssertEqual(SessionRosterLogic.names(in: sessions[0]), ["Conventional Deadlift"])
+    }
+
+    func test_import_shiftStartToToday_isOptIn() throws {
+        let container = try inMemoryContainer()
+        let context = container.mainContext
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let monday = calendar.date(from: DateComponents(year: 2026, month: 8, day: 31))!
+        let thursday = calendar.date(byAdding: .day, value: 3, to: monday)!
+        let document = rotatingLowerDocument(dlDate: monday, rdlDate: thursday)
+        let today = calendar.startOfDay(for: Date(timeIntervalSince1970: 1_700_000_000))
+
+        _ = try ProgramImportService.importDocument(
+            document,
+            context: context,
+            shiftingStartTo: today
+        )
+
+        let sessions = try context.fetch(FetchDescriptor<WorkoutSession>())
+            .sorted { $0.date < $1.date }
+        XCTAssertTrue(calendar.isDate(sessions[0].date, inSameDayAs: today))
+        let shiftedThursday = calendar.date(byAdding: .day, value: 3, to: today)!
+        XCTAssertTrue(calendar.isDate(sessions[1].date, inSameDayAs: shiftedThursday))
+        XCTAssertFalse(calendar.isDate(sessions[0].date, inSameDayAs: monday))
     }
 
     // MARK: - Helpers

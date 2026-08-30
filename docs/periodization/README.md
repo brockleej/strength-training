@@ -8,19 +8,17 @@ RockLog can import a **planned training block** and you lift against it. History
 - Schema version: `1`
 - Formal schema: [rocklog.program.v1.schema.json](rocklog.program.v1.schema.json)
 - Extension: `.rocklogprogram` (JSON also works)
-- Sample (fake lifts only): [fixtures/sample-8-week-block.rocklog.program.json](fixtures/sample-8-week-block.rocklog.program.json)
+- Sample (fake lifts only): [fixtures/sample-8-week-block.rocklog.program.json](fixtures/sample-8-week-block.rocklog.program.json) — starts **Monday 2026-08-31** (Lower A / deadlift). Import keeps those dates.
 
 This is **not** a backup. Restore still replaces the store. This is **not** a RockCoach file (those are finished sessions going out).
 
 ## How import works
 
 1. Settings → **Add planned workouts**, or open the file from Files / a share sheet.
-2. Confirm: “Add 8 weeks of planned workouts? This does not replace your history.”
-3. RockLog inserts upcoming planned days with target sets (`isWarmup` honored).
+2. Confirm: “Add 8 weeks of planned workouts? This does not replace your history. Workouts stay on the dates in the file.”
+3. RockLog inserts those dated days with target sets (`isWarmup` honored). Dates in the file are kept. **Start this block today** is optional and off by default.
 4. Existing completed sessions, the exercise catalog, and the split are left alone.
 5. Lifts match by UUID, then by name. A name already in the library is reused.
-
-Import shifts the block so the first day lands on **today**.
 
 Each dated session is its own roster. The same day type can appear twice in a week with different lifts (Lower + Conventional Deadlift, then Lower + Romanian Deadlift). A running 3-day split trained 4 days a week (Lower → Push → Pull → Lower, then continue — no Monday reset) is valid. Import does **not** merge sessions by day type or week.
 
