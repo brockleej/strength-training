@@ -10,6 +10,14 @@ struct ClientDetailView: View {
     @Bindable var client: CoachClient
     @Environment(\.modelContext) private var modelContext
     @State private var snapshots: [CoachProgression.Snapshot] = []
+    @State private var monthly = MonthlyOverload.Review(
+        thisMonthLabel: "",
+        lastMonthLabel: "",
+        thisMonthWorkoutCount: 0,
+        lastMonthWorkoutCount: 0,
+        groups: []
+    )
+    @State private var compareDayType: String?
 
     private var sessions: [CoachStoredSession] { client.sortedSessions }
 
@@ -54,6 +62,21 @@ struct ClientDetailView: View {
                             }
                         }
                     }
+                }
+            }
+
+            if !sessions.isEmpty {
+                Section {
+                    MonthlyOverloadTable(
+                        review: monthly,
+                        palette: .coach,
+                        emptyMessage: "Import sessions from this month or last to compare each lift’s best set.",
+                        onSelect: { compareDayType = $0.dayTypeName },
+                        selectionHint: "Opens side-by-side compare"
+                    )
+                    .listRowInsets(EdgeInsets(top: 14, leading: 16, bottom: 14, trailing: 16))
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.coach.surface)
                 }
             }
 
@@ -112,11 +135,24 @@ struct ClientDetailView: View {
         .onAppear {
             CoachImportService.refreshSummary(client)
             refreshProgression()
+            refreshMonthly()
         }
         .onChange(of: sessions.count) { _, _ in
             CoachImportService.refreshSummary(client)
             refreshProgression()
+            refreshMonthly()
         }
+        .navigationDestination(item: $compareDayType) { day in
+            LiftCompareView(client: client, initialDayType: day)
+        }
+    }
+
+    private func refreshMonthly() {
+        monthly = MonthlyOverload.review(
+            documents: client.sortedSessions.compactMap(\.document),
+            now: .now,
+            calendar: .current
+        )
     }
 
     private func refreshProgression() {
@@ -178,4 +214,20 @@ struct ClientDetailView: View {
         CoachImportService.refreshSummary(client)
         try? modelContext.save()
     }
+}
+
+extension MonthlyOverloadPalette {
+    static let coach = MonthlyOverloadPalette(
+        nest: Color.coach.surface2,
+        foreground: Color.coach.fg,
+        muted: Color.coach.muted,
+        dim: Color.coach.dim,
+        faint: Color.coach.faint,
+        accent: Color.coach.accent,
+        up: Color.coach.up,
+        down: Color.coach.down,
+        flat: Color.coach.flat,
+        hairline: Color.white.opacity(0.06),
+        dayInk: { _ in Color.coach.accent }
+    )
 }
