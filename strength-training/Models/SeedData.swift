@@ -302,8 +302,15 @@ struct SeedData {
 
     /// Pin each snapshot day's roster to those IDs. Extra lifts (re-seeded starters
     /// that CloudKit re-imported) are removed from snapshot days only.
+    /// - Parameter replaceAllMembership: When true, lifts not in the snapshot
+    ///   become unassigned (library only). Used when a planned block replaces
+    ///   the whole split — not a backup restore.
     @discardableResult
-    static func applyDayPlanSnapshot(_ snapshot: [DayPlanBackup], context: ModelContext) -> Bool {
+    static func applyDayPlanSnapshot(
+        _ snapshot: [DayPlanBackup],
+        context: ModelContext,
+        replaceAllMembership: Bool = false
+    ) -> Bool {
         guard !snapshot.isEmpty else { return false }
         let exercises = (try? context.fetch(FetchDescriptor<Exercise>())) ?? []
         guard !exercises.isEmpty else { return false }
@@ -322,9 +329,11 @@ struct SeedData {
         var changed = false
         for exercise in exercises {
             let current = exercise.days
-            let keepOutsideSnapshot = current.filter {
-                !snapshotDays.contains($0.rawValue.lowercased())
-            }
+            let keepOutsideSnapshot = replaceAllMembership
+                ? []
+                : current.filter {
+                    !snapshotDays.contains($0.rawValue.lowercased())
+                }
             let snapshotMembership = intended[exercise.id] ?? []
             let next = snapshotMembership + keepOutsideSnapshot
             let currentNames = Set(current.map { $0.rawValue.lowercased() })

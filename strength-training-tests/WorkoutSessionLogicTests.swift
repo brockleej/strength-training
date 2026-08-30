@@ -474,6 +474,40 @@ final class SplitPersistenceTests: XCTestCase {
         XCTAssertTrue(starter.belongs(to: .push))
     }
 
+    func test_removeDayType_dropsLiftFromDayPlanAndKeepsLibrary() throws {
+        let container = try inMemoryContainer()
+        let context = container.mainContext
+        let def = DayTypePalette.fallback(for: "Push")
+        context.insert(
+            SplitDay(
+                name: def.name,
+                systemImage: def.systemImage,
+                subtitle: def.subtitle,
+                colorHex: def.colorHex,
+                includesAllExercises: def.includesAllExercises,
+                sortOrder: 0
+            )
+        )
+        let bench = Exercise(name: "Barbell Bench Press", dayType: .push, muscleGroup: "Chest")
+        let extra = Exercise(name: "Lateral Raise", dayType: .push, muscleGroup: "Shoulders")
+        context.insert(bench)
+        context.insert(extra)
+        try context.save()
+        SeedData.persistUserPlan(context: context)
+
+        extra.removeDayType(.push)
+        try context.save()
+        SeedData.persistUserPlan(context: context)
+
+        XCTAssertTrue(bench.belongs(to: .push))
+        XCTAssertFalse(extra.belongs(to: .push))
+        XCTAssertTrue(extra.isUnassigned)
+        let snapshot = try XCTUnwrap(SeedData.loadDayPlanSnapshot())
+        let pushPlan = try XCTUnwrap(snapshot.first { $0.dayName == "Push" })
+        XCTAssertEqual(pushPlan.exerciseIDs, [bench.id])
+        XCTAssertFalse(pushPlan.exerciseIDs.contains(extra.id))
+    }
+
     func test_applyDayPlanSnapshot_stripsCloudKitStarterExtras() throws {
         let container = try inMemoryContainer()
         let context = container.mainContext

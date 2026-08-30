@@ -28,6 +28,9 @@ struct ContentView: View {
         cancelTitle: "Don't add"
     )
     @State private var showIncomingProgramConfirm = false
+    @State private var pendingReplaceSplitDocument: ProgramDocument?
+    @State private var pendingReplaceSplitSummary: ProgramImportSummary?
+    @State private var showReplaceSplitConfirm = false
     @State private var incomingFileMessage = ""
     @State private var showIncomingFileMessage = false
 
@@ -181,6 +184,22 @@ struct ContentView: View {
         } message: {
             Text(incomingProgramPrompt.message)
         }
+        .alert(
+            ProgramImportService.useThisSplitTitle,
+            isPresented: $showReplaceSplitConfirm
+        ) {
+            Button(ProgramImportService.keepCurrentSplitTitle, role: .cancel) {
+                finishIncomingProgramImport(replacedSplit: false)
+            }
+            Button(ProgramImportService.useThisSplitConfirmTitle) {
+                if let document = pendingReplaceSplitDocument {
+                    ProgramImportService.replaceSplit(from: document, context: modelContext)
+                }
+                finishIncomingProgramImport(replacedSplit: true)
+            }
+        } message: {
+            Text(ProgramImportService.replaceSplitMessage())
+        }
         .alert("RockLog", isPresented: $showIncomingFileMessage) {
             Button("OK", role: .cancel) {}
         } message: {
@@ -219,16 +238,29 @@ struct ContentView: View {
                 context: modelContext,
                 shiftingStartTo: shiftStartToToday ? Calendar.current.startOfDay(for: .now) : nil
             )
-            if result.summary.sessionCount == 0 {
-                incomingFileMessage = "Those planned workouts are already on this phone."
-            } else {
-                let weeks = result.summary.weekCount
-                let weekWord = weeks == 1 ? "week" : "weeks"
-                incomingFileMessage = "Added \(weeks) \(weekWord) of planned workouts. Your history is unchanged."
+            pendingReplaceSplitDocument = document
+            pendingReplaceSplitSummary = result.summary
+            // Next run loop so this alert can replace the import confirm.
+            Task { @MainActor in
+                showReplaceSplitConfirm = true
             }
-            showIncomingFileMessage = true
         } catch {
             incomingFileMessage = error.localizedDescription
+            showIncomingFileMessage = true
+        }
+    }
+
+    private func finishIncomingProgramImport(replacedSplit: Bool) {
+        let summary = pendingReplaceSplitSummary
+        pendingReplaceSplitDocument = nil
+        pendingReplaceSplitSummary = nil
+        guard let summary else { return }
+        let message = ProgramImportService.resultMessage(
+            summary: summary,
+            replacedSplit: replacedSplit
+        )
+        Task { @MainActor in
+            incomingFileMessage = message
             showIncomingFileMessage = true
         }
     }

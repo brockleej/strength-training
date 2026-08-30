@@ -106,7 +106,7 @@ Keep remove / reorder / add **identical** across ordered lists (day plan, traini
 |--------|---------|
 | **Remove (soft)** | Verb **Remove** (from day / workout). Swipe reveals trash, then tap — `swipeToDelete(fullSwipeDeletes: false)` or List `allowsFullSwipe: false`. No confirm for soft unassign/session hide. |
 | **Delete (hard)** | Verb **Delete** (library exercise, workout history, day type). Always **confirmation dialog** with a one-line consequence. Never full-swipe-commit hard deletes. |
-| **Reorder** | Long-press + drag whole row (no Edit/Done, no system move handles). Shared `UUIDListDropDelegate` / `reorderDragSource` / `reorderDropTarget`. Hint: `ListMutationCopy.reorderAndRemove`. |
+| **Reorder** | Long-press the number + drag (no Edit/Done, no system move handles). Shared `UUIDListDropDelegate` / `reorderDragSource` / `reorderDropTarget`. Hint: `ListMutationCopy.reorderAndRemove`. |
 | **Add to context** | Dashed `AddItemRow` (“Add exercise” / “Add day”). Exercise-in-context uses `AddExerciseSheet` (Library \| New). Library toolbar `+` is create-only. |
 | **Empty lists** | `EmptyListState` with optional primary `AddItemRow`. |
 

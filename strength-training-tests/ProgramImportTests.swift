@@ -26,9 +26,43 @@ final class ProgramImportTests: XCTestCase {
         XCTAssertEqual(PlannedBlockQueue.cardSecondary(isNext: false, liftCount: 1), "Then · 1 lift")
         XCTAssertFalse(PlannedBlockQueue.nextUpLabel(dayName: "Lower").localizedCaseInsensitiveContains("missed"))
         XCTAssertEqual(ProgramImportService.startThisBlockTodayTitle, "Start this block today")
+        XCTAssertEqual(ProgramImportService.useThisSplitTitle, "Use this as your training split?")
+        XCTAssertEqual(ProgramImportService.useThisSplitConfirmTitle, "Use this split")
+        XCTAssertEqual(ProgramImportService.keepCurrentSplitTitle, "Keep my current split")
+        XCTAssertEqual(
+            ProgramImportService.replaceSplitMessage(),
+            "This replaces your current days and the lifts on each day with this block. Your old workouts stay in History."
+        )
+        XCTAssertFalse(ProgramImportService.replaceSplitMessage().localizedCaseInsensitiveContains("backup"))
+        XCTAssertFalse(ProgramImportService.replaceSplitMessage().localizedCaseInsensitiveContains("JSON"))
         XCTAssertFalse(ProgramImportService.confirmationMessage(weekCount: 8).localizedCaseInsensitiveContains("schema"))
         XCTAssertFalse(ProgramImportService.confirmationMessage(weekCount: 8).localizedCaseInsensitiveContains("JSON"))
         XCTAssertFalse(ProgramImportService.confirmationMessage(weekCount: 8).localizedCaseInsensitiveContains("dates in the file"))
+        let added = ProgramImportSummary(
+            blockName: "Demo",
+            sessionCount: 8,
+            weekCount: 8,
+            createdExerciseCount: 0,
+            skippedDuplicateSessionCount: 0
+        )
+        XCTAssertEqual(
+            ProgramImportService.resultMessage(summary: added, replacedSplit: false),
+            "Added 8 weeks of planned workouts. Your history is unchanged."
+        )
+        XCTAssertTrue(
+            ProgramImportService.resultMessage(summary: added, replacedSplit: true)
+                .contains("Your training split now matches this block")
+        )
+    }
+
+    func test_splitSchedule_uniqueDaysInFileOrder_unionsLifts() {
+        let start = Date(timeIntervalSince1970: 1_767_571_200)
+        let document = runningThreeDayDocument(start: start)
+        let schedule = ProgramImportService.splitSchedule(from: document)
+        XCTAssertEqual(schedule.map(\.name), ["Lower", "Push", "Pull"])
+        XCTAssertEqual(schedule[0].exercises.map(\.name), ["Conventional Deadlift", "Romanian Deadlift"])
+        XCTAssertEqual(schedule[1].exercises.map(\.name), ["Barbell Bench Press"])
+        XCTAssertEqual(schedule[2].exercises.map(\.name), ["Barbell Bent-Over Row"])
     }
 
     func test_weekCount_spansEightWeeks() {
@@ -486,7 +520,92 @@ final class ProgramImportTests: XCTestCase {
         XCTAssertFalse(calendar.isDate(sessions[0].date, inSameDayAs: monday))
     }
 
+    func test_import_withoutReplace_leavesExistingSplit() throws {
+        let container = try inMemoryContainer()
+        let context = container.mainContext
+        insertSplit(names: ["Arms", "Legs"], context: context)
+        let curl = Exercise(name: "Barbell Curl", dayType: .arms, muscleGroup: "Biceps")
+        context.insert(curl)
+        try context.save()
+
+        let document = sampleDocument(firstSession: Date(timeIntervalSince1970: 1_800_000_000))
+        _ = try ProgramImportService.importDocument(document, context: context)
+
+        let days = try context.fetch(
+            FetchDescriptor<SplitDay>(sortBy: [SortDescriptor(\SplitDay.sortOrder)])
+        )
+        XCTAssertEqual(days.map(\.name), ["Arms", "Legs"])
+        XCTAssertTrue(curl.belongs(to: .arms))
+        let benches = try context.fetch(FetchDescriptor<Exercise>())
+            .filter { $0.name == "Barbell Bench Press" }
+        XCTAssertEqual(benches.count, 1)
+        XCTAssertTrue(benches[0].isUnassigned)
+    }
+
+    func test_replaceSplit_replacesDaysAndLifts_keepsHistory() throws {
+        let container = try inMemoryContainer()
+        let context = container.mainContext
+        insertSplit(names: ["Arms", "Legs"], context: context)
+
+        let curl = Exercise(name: "Barbell Curl", dayType: .arms, muscleGroup: "Biceps")
+        let historyID = UUID()
+        let history = WorkoutSession(dayType: .arms, date: Date(timeIntervalSince1970: 1_700_000_000))
+        history.id = historyID
+        history.isCompleted = true
+        let record = ExerciseRecord(trainingMode: .highWeightLowReps)
+        record.exercise = curl
+        record.session = history
+        let logged = SetRecord(setNumber: 1, weightLbs: 45, reps: 10, isWarmup: false)
+        logged.exerciseRecord = record
+        context.insert(curl)
+        context.insert(history)
+        context.insert(record)
+        context.insert(logged)
+        try context.save()
+
+        let start = Date(timeIntervalSince1970: 1_767_571_200)
+        let document = runningThreeDayDocument(start: start)
+        _ = try ProgramImportService.importDocument(document, context: context)
+        ProgramImportService.replaceSplit(from: document, context: context)
+
+        let days = try context.fetch(
+            FetchDescriptor<SplitDay>(sortBy: [SortDescriptor(\SplitDay.sortOrder)])
+        )
+        XCTAssertEqual(days.map(\.name), ["Lower", "Push", "Pull"])
+        XCTAssertFalse(days.contains { $0.name == "Arms" || $0.name == "Legs" })
+
+        let exercises = try context.fetch(FetchDescriptor<Exercise>())
+        let byName = Dictionary(uniqueKeysWithValues: exercises.map { ($0.name, $0) })
+        XCTAssertTrue(byName["Conventional Deadlift"]?.belongs(to: .lower) == true)
+        XCTAssertTrue(byName["Romanian Deadlift"]?.belongs(to: .lower) == true)
+        XCTAssertTrue(byName["Barbell Bench Press"]?.belongs(to: .push) == true)
+        XCTAssertTrue(byName["Barbell Bent-Over Row"]?.belongs(to: .pull) == true)
+        XCTAssertTrue(curl.isUnassigned)
+        XCTAssertFalse(curl.belongs(to: .arms))
+
+        let sessions = try context.fetch(FetchDescriptor<WorkoutSession>())
+        XCTAssertTrue(sessions.contains { $0.id == historyID && $0.isCompleted })
+        XCTAssertEqual(sessions.filter { $0.id == historyID }.count, 1)
+        XCTAssertGreaterThan(sessions.filter { $0.planStatus == .planned }.count, 0)
+    }
+
     // MARK: - Helpers
+
+    private func insertSplit(names: [String], context: ModelContext) {
+        for (index, name) in names.enumerated() {
+            let def = DayTypePalette.fallback(for: name)
+            context.insert(
+                SplitDay(
+                    name: def.name,
+                    systemImage: def.systemImage,
+                    subtitle: def.subtitle,
+                    colorHex: def.colorHex,
+                    includesAllExercises: def.includesAllExercises,
+                    sortOrder: index
+                )
+            )
+        }
+    }
 
     private func sampleDocument(firstSession: Date) -> ProgramDocument {
         let benchID = UUID()

@@ -2,8 +2,9 @@
 //  ProgramImportService.swift
 //  strength-training
 //
-//  Merge a rocklog.program file into the live store. Never deletes history,
-//  the library, or the split. Exercise match: UUID, then name.
+//  Merge a rocklog.program file into the live store. Never deletes history
+//  or the library. Split stays unless the user taps Use this split.
+//  Exercise match: UUID, then name.
 //
 
 import Foundation
@@ -31,16 +32,126 @@ struct ProgramImportResult: Equatable {
     var summary: ProgramImportSummary
 }
 
+struct ProgramSplitDayPlan: Equatable {
+    var name: String
+    var exercises: [ProgramSplitExercise]
+}
+
+struct ProgramSplitExercise: Equatable {
+    var id: UUID
+    var name: String
+}
+
 enum ProgramImportService {
     /// Explicit opt-in. Default import keeps file dates as metadata; the
     /// unused queue still rolls to the first unstarted session.
     static let startThisBlockTodayTitle = "Start this block today"
+    static let useThisSplitTitle = "Use this as your training split?"
+    static let useThisSplitConfirmTitle = "Use this split"
+    static let keepCurrentSplitTitle = "Keep my current split"
 
     /// Human copy for the Files / share-sheet confirm. No jargon.
     static func confirmationMessage(weekCount: Int) -> String {
         let weeks = max(1, weekCount)
         let weekWord = weeks == 1 ? "week" : "weeks"
         return "Add \(weeks) \(weekWord) of planned workouts? This does not replace your history. The next unused workout waits until you start it."
+    }
+
+    static func replaceSplitMessage() -> String {
+        "This replaces your current days and the lifts on each day with this block. Your old workouts stay in History."
+    }
+
+    static func replaceSplitPrompt() -> RestorePrompt {
+        RestorePrompt(
+            title: useThisSplitTitle,
+            message: replaceSplitMessage(),
+            confirmTitle: useThisSplitConfirmTitle,
+            cancelTitle: keepCurrentSplitTitle
+        )
+    }
+
+    static func resultMessage(summary: ProgramImportSummary, replacedSplit: Bool) -> String {
+        if summary.sessionCount == 0 {
+            return replacedSplit
+                ? "Those planned workouts are already on this phone. Your training split now matches this block."
+                : "Those planned workouts are already on this phone."
+        }
+        let weeks = max(1, summary.weekCount)
+        let weekWord = weeks == 1 ? "week" : "weeks"
+        if replacedSplit {
+            return "Added \(weeks) \(weekWord) of planned workouts. Your training split now matches this block. History is unchanged."
+        }
+        return "Added \(weeks) \(weekWord) of planned workouts. Your history is unchanged."
+    }
+
+    /// Unique days in file order, each with first-seen lifts (id, then name).
+    static func splitSchedule(from document: ProgramDocument) -> [ProgramSplitDayPlan] {
+        var days: [ProgramSplitDayPlan] = []
+        var indexByKey: [String: Int] = [:]
+        for session in document.block.sessions {
+            let name = session.dayType.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !name.isEmpty, name.caseInsensitiveCompare("Unassigned") != .orderedSame else {
+                continue
+            }
+            let key = name.lowercased()
+            if indexByKey[key] == nil {
+                indexByKey[key] = days.count
+                days.append(ProgramSplitDayPlan(name: name, exercises: []))
+            }
+            guard let dayIndex = indexByKey[key] else { continue }
+            var seenIDs = Set(days[dayIndex].exercises.map(\.id))
+            var seenNames = Set(days[dayIndex].exercises.map { nameKey($0.name) })
+            for exercise in session.exercises {
+                let trimmed = exercise.name.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !trimmed.isEmpty else { continue }
+                let keyName = nameKey(trimmed)
+                if seenIDs.contains(exercise.id) || seenNames.contains(keyName) { continue }
+                seenIDs.insert(exercise.id)
+                seenNames.insert(keyName)
+                days[dayIndex].exercises.append(
+                    ProgramSplitExercise(id: exercise.id, name: trimmed)
+                )
+            }
+        }
+        return days
+    }
+
+    /// Replace the live split (days + which lifts sit on each day). History,
+    /// the library, and planned sessions stay. Call after a successful import
+    /// so exercise IDs/names already match the store.
+    @MainActor
+    static func replaceSplit(from document: ProgramDocument, context: ModelContext) {
+        let schedule = splitSchedule(from: document)
+        guard !schedule.isEmpty else { return }
+
+        let exercises = (try? context.fetch(FetchDescriptor<Exercise>())) ?? []
+        var byID: [UUID: Exercise] = [:]
+        var byName: [String: Exercise] = [:]
+        for exercise in exercises {
+            byID[exercise.id] = exercise
+            let key = nameKey(exercise.name)
+            if byName[key] == nil {
+                byName[key] = exercise
+            }
+        }
+
+        var plans: [DayPlanBackup] = []
+        for day in schedule {
+            var ids: [UUID] = []
+            var seen = Set<UUID>()
+            for item in day.exercises {
+                let resolved = byID[item.id] ?? byName[nameKey(item.name)]
+                guard let exercise = resolved, seen.insert(exercise.id).inserted else { continue }
+                ids.append(exercise.id)
+            }
+            plans.append(DayPlanBackup(dayName: day.name, exerciseIDs: ids))
+        }
+
+        DayTypeRegistry.shared.replaceDays(names: schedule.map(\.name), context: context)
+        _ = SeedData.applyDayPlanSnapshot(plans, context: context, replaceAllMembership: true)
+        SeedData.storeDayPlanSnapshot(plans)
+        SeedData.persistUserPlan(context: context)
+        DayTypeRegistry.shared.reload(context: context)
     }
 
     static func weekCount(from dates: [Date], calendar: Calendar = .current) -> Int {
