@@ -1,9 +1,8 @@
 //
 //  MonthlyOverload.swift
-//  strength-training
+//  Shared by RockLog Progress and RockCoach client review.
 //
-//  Calendar-month progressive-overload recap for the Progress tab.
-//  Derived view only — no new persisted entities.
+//  Calendar-month progressive-overload recap. Derived view only.
 //
 //  Best working set: heaviest non-warmup set; if weights tie, higher reps
 //  wins; if those tie, the first occurrence is kept.
@@ -15,17 +14,20 @@
 
 import Foundation
 
-enum MonthlyOverload {
+nonisolated enum MonthlyOverload {
+
+    /// Home-day label when a lift is not on any split day.
+    static let unassignedDayName = "Unassigned"
 
     // MARK: - Public types
 
-    struct WorkingSet: Equatable {
+    struct WorkingSet: Equatable, Sendable {
         let weightLbs: Double
         let reps: Int
 
         /// Compact lift label, e.g. `"225×5"` or `"47.5×8"`.
         var formatted: String {
-            "\(StepperLogic.format(weightLbs))×\(reps)"
+            "\(formatWeight(weightLbs))×\(reps)"
         }
     }
 
@@ -33,7 +35,7 @@ enum MonthlyOverload {
     ///
     /// Missing a month is **not** treated as a zero — `.new` / `.missing`
     /// rather than inventing `0×0`. Deloads are `.down` without extra emphasis.
-    enum Comparison: Equatable {
+    enum Comparison: Equatable, Sendable {
         case up
         case down
         case flat
@@ -41,13 +43,13 @@ enum MonthlyOverload {
         case missing
     }
 
-    struct SetInput: Equatable {
+    struct SetInput: Equatable, Sendable {
         let weightLbs: Double
         let reps: Int
         var isWarmup: Bool = false
     }
 
-    struct LiftInput: Equatable {
+    struct LiftInput: Equatable, Sendable {
         let exerciseID: UUID
         let exerciseName: String
         let dayTypeName: String
@@ -55,12 +57,12 @@ enum MonthlyOverload {
         let sets: [SetInput]
     }
 
-    struct SessionInput: Equatable {
+    struct SessionInput: Equatable, Sendable {
         let date: Date
         let lifts: [LiftInput]
     }
 
-    struct Row: Equatable, Identifiable {
+    struct Row: Equatable, Identifiable, Sendable {
         var id: UUID { exerciseID }
         let exerciseID: UUID
         let exerciseName: String
@@ -73,13 +75,13 @@ enum MonthlyOverload {
         let deltaLabel: String
     }
 
-    struct Group: Equatable, Identifiable {
+    struct Group: Equatable, Identifiable, Sendable {
         var id: String { dayTypeName }
         let dayTypeName: String
         let rows: [Row]
     }
 
-    struct Review: Equatable {
+    struct Review: Equatable, Sendable {
         let thisMonthLabel: String
         let lastMonthLabel: String
         let thisMonthWorkoutCount: Int
@@ -158,7 +160,7 @@ enum MonthlyOverload {
             let weightDelta = current.weightLbs - previous.weightLbs
             if weightDelta != 0 {
                 let sign = weightDelta > 0 ? "+" : "−"
-                return "\(sign)\(StepperLogic.format(abs(weightDelta))) lb"
+                return "\(sign)\(formatWeight(abs(weightDelta))) lb"
             }
             let repsDelta = current.reps - previous.reps
             let sign = repsDelta > 0 ? "+" : "−"
@@ -242,6 +244,58 @@ enum MonthlyOverload {
         )
     }
 
+    /// Coach import path: sessions are `.rocklogcoach` documents.
+    ///
+    /// Exercise payloads use per-record IDs, so the same lift name across
+    /// files is collapsed (case-insensitive). Grouping uses the session’s
+    /// day type — coach files have no library home day.
+    static func review(
+        documents: [CoachSessionDocument],
+        now: Date,
+        calendar: Calendar
+    ) -> Review {
+        var idsByName: [String: UUID] = [:]
+        func identity(for name: String) -> UUID {
+            let key = name.lowercased()
+            if let existing = idsByName[key] { return existing }
+            let id = UUID()
+            idsByName[key] = id
+            return id
+        }
+
+        var dayOrder: [String] = []
+        var seenDays = Set<String>()
+        for doc in documents.sorted(by: { $0.session.startedAt > $1.session.startedAt }) {
+            let day = doc.session.dayType
+            if !day.isEmpty, seenDays.insert(day).inserted {
+                dayOrder.append(day)
+            }
+        }
+
+        let sessions = documents.map { doc in
+            SessionInput(
+                date: doc.session.startedAt,
+                lifts: doc.session.exercises.enumerated().map { index, exercise in
+                    LiftInput(
+                        exerciseID: identity(for: exercise.name),
+                        exerciseName: exercise.name,
+                        dayTypeName: doc.session.dayType.isEmpty ? unassignedDayName : doc.session.dayType,
+                        sortOrder: index,
+                        sets: exercise.sets.map {
+                            SetInput(
+                                weightLbs: $0.weightLbs,
+                                reps: $0.reps,
+                                isWarmup: $0.resolvedWarmup
+                            )
+                        }
+                    )
+                }
+            )
+        }
+
+        return review(sessions: sessions, now: now, calendar: calendar, dayOrder: dayOrder)
+    }
+
     // MARK: - Private
 
     private static func bestSetsByExercise(in sessions: [SessionInput]) -> [UUID: WorkingSet] {
@@ -264,7 +318,7 @@ enum MonthlyOverload {
         if let index = dayOrder.firstIndex(of: name) {
             return (index, name)
         }
-        if name == DayType.unassigned.rawValue {
+        if name == unassignedDayName {
             return (Int.max - 1, name)
         }
         return (Int.max, name)
@@ -277,5 +331,12 @@ enum MonthlyOverload {
         formatter.timeZone = calendar.timeZone
         formatter.setLocalizedDateFormatFromTemplate("MMM")
         return formatter.string(from: interval.start)
+    }
+
+    /// Whole pounds as `"225"`; otherwise one decimal (`"47.5"`).
+    static func formatWeight(_ value: Double) -> String {
+        value.truncatingRemainder(dividingBy: 1) == 0
+            ? String(Int(value))
+            : String(format: "%.1f", value)
     }
 }

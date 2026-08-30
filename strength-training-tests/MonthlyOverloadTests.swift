@@ -265,6 +265,8 @@ final class MonthlyOverloadTests: XCTestCase {
     func test_workingSet_formatsHalfPounds() {
         XCTAssertEqual(MonthlyOverload.WorkingSet(weightLbs: 47.5, reps: 8).formatted, "47.5×8")
         XCTAssertEqual(MonthlyOverload.WorkingSet(weightLbs: 225, reps: 5).formatted, "225×5")
+        XCTAssertEqual(MonthlyOverload.formatWeight(2.5), "2.5")
+        XCTAssertEqual(MonthlyOverload.formatWeight(5), "5")
     }
 
     // MARK: - Review assembly
@@ -425,5 +427,88 @@ final class MonthlyOverloadTests: XCTestCase {
         ])
         XCTAssertEqual(result.rows.first { $0.exerciseID == julyLift }?.comparison, .missing)
         XCTAssertEqual(result.rows.first { $0.exerciseID == augustLift }?.comparison, .new)
+    }
+
+    // MARK: - Coach documents (RockCoach path)
+
+    func test_reviewFromDocuments_collapsesSameLiftNameAcrossFiles() {
+        let july = coachDocument(
+            startedAt: date(2026, 7, 10),
+            dayType: "Push",
+            lifts: [("Bench", 225, 5, false), ("OHP", 135, 8, false)]
+        )
+        let august = coachDocument(
+            startedAt: date(2026, 8, 10),
+            dayType: "Push",
+            lifts: [("bench", 230, 5, false)]
+        )
+        let result = MonthlyOverload.review(documents: [july, august], now: now, calendar: calendar)
+        XCTAssertEqual(result.rows.count, 2)
+        let bench = result.rows.first { $0.exerciseName.caseInsensitiveCompare("Bench") == .orderedSame }
+        XCTAssertEqual(bench?.lastMonth, MonthlyOverload.WorkingSet(weightLbs: 225, reps: 5))
+        XCTAssertEqual(bench?.thisMonth, MonthlyOverload.WorkingSet(weightLbs: 230, reps: 5))
+        XCTAssertEqual(bench?.comparison, .up)
+        XCTAssertEqual(result.rows.first { $0.exerciseName == "OHP" }?.comparison, .missing)
+    }
+
+    func test_reviewFromDocuments_excludesWarmupsAndGroupsBySessionDay() {
+        let pull = coachDocument(
+            startedAt: date(2026, 8, 4),
+            dayType: "Pull",
+            lifts: [("Row", 315, 1, true), ("Row", 185, 8, false)]
+        )
+        let legs = coachDocument(
+            startedAt: date(2026, 7, 20),
+            dayType: "Legs",
+            lifts: [("Squat", 315, 5, false)]
+        )
+        let result = MonthlyOverload.review(documents: [pull, legs], now: now, calendar: calendar)
+        XCTAssertEqual(result.groups.map(\.dayTypeName), ["Pull", "Legs"])
+        let row = result.rows.first { $0.exerciseName == "Row" }
+        XCTAssertEqual(row?.thisMonth, MonthlyOverload.WorkingSet(weightLbs: 185, reps: 8))
+        XCTAssertEqual(row?.comparison, .new)
+        XCTAssertEqual(result.thisMonthWorkoutCount, 1)
+        XCTAssertEqual(result.lastMonthWorkoutCount, 1)
+    }
+
+    private func coachDocument(
+        startedAt: Date,
+        dayType: String,
+        lifts: [(name: String, weight: Double, reps: Int, warmup: Bool)]
+    ) -> CoachSessionDocument {
+        CoachSessionDocument(
+            format: CoachFormat.formatName,
+            schemaVersion: CoachFormat.schemaVersion,
+            exportedAt: startedAt,
+            athlete: CoachAthlete(id: UUID(), displayName: "Lee"),
+            session: CoachSessionPayload(
+                id: UUID(),
+                startedAt: startedAt,
+                dayType: dayType,
+                rotationTrack: "A",
+                notes: nil,
+                effortRating: nil,
+                exercises: lifts.map { lift in
+                    CoachExercisePayload(
+                        id: UUID(),
+                        name: lift.name,
+                        muscleGroup: nil,
+                        trainingMode: TrainingMode.highWeightLowReps.rawValue,
+                        notes: nil,
+                        sets: [
+                            CoachSetPayload(
+                                setNumber: 1,
+                                weightLbs: lift.weight,
+                                reps: lift.reps,
+                                isWarmup: lift.warmup,
+                                isEachSide: false,
+                                isAssisted: false,
+                                completedAt: startedAt
+                            )
+                        ]
+                    )
+                }
+            )
+        )
     }
 }

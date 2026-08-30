@@ -339,7 +339,7 @@ final class ProgressDashboardViewModel {
                 return MonthlyOverload.LiftInput(
                     exerciseID: exercise.id,
                     exerciseName: exercise.name,
-                    dayTypeName: exercise.dayTypeNames.first ?? DayType.unassigned.rawValue,
+                    dayTypeName: exercise.dayTypeNames.first ?? MonthlyOverload.unassignedDayName,
                     sortOrder: exercise.sortIndex(for: exercise.day),
                     sets: record.setsArray.map {
                         MonthlyOverload.SetInput(
