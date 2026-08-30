@@ -26,7 +26,7 @@ struct TrainingSplitSettingsView: View {
     private var scheduleModeRaw: String = SplitScheduleMode.rolling.rawValue
 
     private var displayedDays: [SplitDay] {
-        let byID = Dictionary(uniqueKeysWithValues: splitDays.map { ($0.id, $0) })
+        let byID = Dictionary(splitDays.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         var seen = Set<UUID>()
         var result: [SplitDay] = []
         for id in orderedIDs {

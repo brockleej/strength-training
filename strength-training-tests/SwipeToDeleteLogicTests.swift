@@ -71,6 +71,52 @@ final class SwipeToDeleteLogicTests: XCTestCase {
         )
     }
 
+    func test_tapAction_revealedTrashDeletesNotCloses() {
+        let trashX = rowWidth - reveal + 8
+        XCTAssertEqual(
+            SwipeToDeleteLogic.tapAction(
+                x: trashX,
+                rowWidth: rowWidth,
+                isRevealed: true,
+                hasEditAction: true
+            ),
+            .delete
+        )
+    }
+
+    func test_tapAction_revealedRowCloses() {
+        XCTAssertEqual(
+            SwipeToDeleteLogic.tapAction(
+                x: 80,
+                rowWidth: rowWidth,
+                isRevealed: true,
+                hasEditAction: true
+            ),
+            .close
+        )
+    }
+
+    func test_tapAction_closedRowEditsWhenActionExists() {
+        XCTAssertEqual(
+            SwipeToDeleteLogic.tapAction(
+                x: rowWidth - 8,
+                rowWidth: rowWidth,
+                isRevealed: false,
+                hasEditAction: true
+            ),
+            .edit
+        )
+        XCTAssertEqual(
+            SwipeToDeleteLogic.tapAction(
+                x: rowWidth - 8,
+                rowWidth: rowWidth,
+                isRevealed: false,
+                hasEditAction: false
+            ),
+            .ignore
+        )
+    }
+
     func test_endAction_fullSwipeDeletesOnlyWhenEnabled() {
         let strong = -reveal * 1.25 - 1
         XCTAssertEqual(

@@ -29,7 +29,8 @@ final class TodayViewModel {
         completedSessions: [WorkoutSession],
         orderedDays: [DayType],
         suggestedTrack: (DayType) -> RotationTrack,
-        plannedDayType: DayType? = nil
+        plannedDayType: DayType? = nil,
+        plannedQueueOwnsToday: Bool = false
     ) {
         pruneCarryover(completedSessions: completedSessions)
 
@@ -37,6 +38,16 @@ final class TodayViewModel {
             selectedDayType = suspended.day
             syncRotationTrack(suspended: suspended, suggestedTrack: suggestedTrack)
             incompleteWeekPrompt = nil
+            return
+        }
+
+        // Planned queue owns “what’s next.” Do not prompt about the rolling split.
+        if plannedQueueOwnsToday {
+            incompleteWeekPrompt = nil
+            if let plannedDayType {
+                selectedDayType = plannedDayType
+                syncRotationTrack(suspended: nil, suggestedTrack: suggestedTrack)
+            }
             return
         }
 

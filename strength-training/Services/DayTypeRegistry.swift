@@ -56,30 +56,37 @@ final class DayTypeRegistry {
     func reload(context: ModelContext) {
         SeedData.seedSplitDaysIfNeeded(context: context)
         SeedData.migrateDayTypeIcons(context: context)
+        // Persist-dedupe before mapping. Leftover sim / CloudKit rows with the
+        // same name used to crash reindex via uniqueKeysWithValues.
+        SeedData.deduplicateSplitDays(context: context, reloadCatalog: false)
         let descriptor = FetchDescriptor<SplitDay>(
             sortBy: [SortDescriptor(\SplitDay.sortOrder), SortDescriptor(\SplitDay.name)]
         )
         let rows = (try? context.fetch(descriptor)) ?? []
         if rows.isEmpty {
             if let snapshot = SeedData.loadSplitSnapshot(), !snapshot.isEmpty {
-                definitions = snapshot
-                    .sorted { $0.sortOrder < $1.sortOrder }
-                    .map {
-                        DayTypeDefinition(
-                            name: $0.name,
-                            systemImage: $0.systemImage,
-                            subtitle: $0.subtitle,
-                            colorHex: UInt32(truncatingIfNeeded: $0.colorHex),
-                            includesAllExercises: $0.includesAllExercises,
-                            sortOrder: $0.sortOrder
-                        )
-                    }
+                definitions = uniquedDefinitions(
+                    snapshot
+                        .sorted { $0.sortOrder < $1.sortOrder }
+                        .map {
+                            DayTypeDefinition(
+                                name: $0.name,
+                                systemImage: $0.systemImage,
+                                subtitle: $0.subtitle,
+                                colorHex: UInt32(truncatingIfNeeded: $0.colorHex),
+                                includesAllExercises: $0.includesAllExercises,
+                                sortOrder: $0.sortOrder
+                            )
+                        }
+                )
             } else {
                 let raw = UserDefaults.standard.string(forKey: SeedData.preferredSplitPresetKey) ?? ""
-                definitions = (SplitPreset(rawValue: raw) ?? .broSplit).definitions
+                definitions = uniquedDefinitions(
+                    (SplitPreset(rawValue: raw) ?? .broSplit).definitions
+                )
             }
         } else {
-            definitions = rows.map(\.definition)
+            definitions = uniquedDefinitions(rows.map(\.definition))
         }
         reindex()
     }
@@ -236,7 +243,7 @@ final class DayTypeRegistry {
     /// Persist order from a long-press-drag list (same pattern as day-plan exercises).
     func applyOrder(ids: [UUID], context: ModelContext) {
         let rows = (try? context.fetch(FetchDescriptor<SplitDay>())) ?? []
-        let byID = Dictionary(uniqueKeysWithValues: rows.map { ($0.id, $0) })
+        let byID = Dictionary(rows.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         for (index, id) in ids.enumerated() {
             byID[id]?.sortOrder = index
         }
@@ -247,8 +254,23 @@ final class DayTypeRegistry {
 
     // MARK: - Private
 
+    /// First name wins (case-insensitive). Duplicate keys must never fatal.
+    static func uniquedDefinitions(_ definitions: [DayTypeDefinition]) -> [DayTypeDefinition] {
+        var seen = Set<String>()
+        var result: [DayTypeDefinition] = []
+        for definition in definitions {
+            let key = definition.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            guard !key.isEmpty, seen.insert(key).inserted else { continue }
+            result.append(definition)
+        }
+        return result
+    }
+
     private func reindex() {
-        byName = Dictionary(uniqueKeysWithValues: definitions.map { ($0.name, $0) })
+        byName = Dictionary(
+            uniquedDefinitions(definitions).map { ($0.name, $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
     }
 
     private func renameDayType(from old: String, to new: String, context: ModelContext) {

@@ -112,7 +112,7 @@ struct SeedData {
 
     /// Collapses duplicate split days (same name, case-insensitive) that can appear when
     /// a fresh install seeds before CloudKit imports an existing split from iCloud.
-    static func deduplicateSplitDays(context: ModelContext) {
+    static func deduplicateSplitDays(context: ModelContext, reloadCatalog: Bool = true) {
         let days = (try? context.fetch(FetchDescriptor<SplitDay>())) ?? []
         var grouped: [String: [SplitDay]] = [:]
         for day in days {
@@ -134,7 +134,10 @@ struct SeedData {
         }
         if changed {
             try? context.save()
-            DayTypeRegistry.shared.reload(context: context)
+            // reload() calls this with reloadCatalog: false to avoid recursion.
+            if reloadCatalog {
+                DayTypeRegistry.shared.reload(context: context)
+            }
         }
     }
 

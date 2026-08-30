@@ -45,7 +45,7 @@ struct DayPlanEditorView: View {
     }
 
     private var displayedExercises: [Exercise] {
-        let byID = Dictionary(uniqueKeysWithValues: dayExercisesSorted.map { ($0.id, $0) })
+        let byID = Dictionary(dayExercisesSorted.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         var seen = Set<UUID>()
         var result: [Exercise] = []
         for id in orderedIDs {
@@ -255,7 +255,7 @@ struct DayPlanEditorView: View {
     }
 
     private func persistCurrentOrder() {
-        let byID = Dictionary(uniqueKeysWithValues: allExercises.map { ($0.id, $0) })
+        let byID = Dictionary(allExercises.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         let ordered = orderedIDs.compactMap { byID[$0] }
         guard !ordered.isEmpty else { return }
         Exercise.applyOrder(ordered, for: dayType)

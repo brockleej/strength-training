@@ -19,6 +19,20 @@ enum PlannedBlockQueue {
         return isNext ? "Next up · \(lifts)" : "Then · \(lifts)"
     }
 
+    /// Today / Settings copy while unused planned sessions are waiting.
+    static let whatsNextEyebrow = "What's next"
+    static let splitPausedWhileQueued =
+        "You have planned workouts waiting. Today shows that list instead of your training split. The split comes back when the list is empty."
+
+    /// Planned queue owns “what’s next.” The rolling split stays stored but is not the Today driver.
+    static func ownsToday(unusedCount: Int) -> Bool {
+        unusedCount > 0
+    }
+
+    static func ownsToday(_ sessions: [WorkoutSession]) -> Bool {
+        ownsToday(unusedCount: unusedSessions(in: sessions).count)
+    }
+
     /// Still waiting in the block: not trained, not started for real.
     static func isUnused(_ session: WorkoutSession) -> Bool {
         guard !session.isCompleted else { return false }

@@ -41,6 +41,30 @@ enum SwipeToDeleteLogic {
         }
         return .close
     }
+
+    enum TapAction: Equatable {
+        case delete
+        case close
+        case edit
+        case ignore
+    }
+
+    /// Location-based tap routing. Sibling trash controls lose to ScrollView
+    /// on device; the row itself must dispatch trash vs close vs edit.
+    static func tapAction(
+        x: CGFloat,
+        rowWidth: CGFloat,
+        isRevealed: Bool,
+        hasEditAction: Bool
+    ) -> TapAction {
+        switch hitZone(x: x, rowWidth: rowWidth, isRevealed: isRevealed) {
+        case .trash:
+            return .delete
+        case .row:
+            if isRevealed { return .close }
+            return hasEditAction ? .edit : .ignore
+        }
+    }
 }
 
 struct SwipeToDeleteModifier: ViewModifier {
@@ -53,26 +77,34 @@ struct SwipeToDeleteModifier: ViewModifier {
 
     @State private var offsetX: CGFloat = 0
     @State private var isRevealed = false
+    @State private var rowWidth: CGFloat = 0
 
     private var revealWidth: CGFloat { SwipeToDeleteLogic.revealWidth }
 
     func body(content: Content) -> some View {
         ZStack(alignment: .trailing) {
-            content
-                .offset(x: offsetX)
-                // Drag on the row only. A parent DragGesture eats the trash tap.
-                .simultaneousGesture(dragGesture)
-                .modifier(SwipeOptionalTap(onTap: onTap, isRevealed: isRevealed, onClose: {
-                    withAnimation(.easeOut(duration: 0.2)) { close() }
-                }))
-
-            // Last sibling so it wins hit-testing. Do not wrap this ZStack in an
-            // overlay — `.contentShape` after trailing padding covers the trash
-            // and the tap closes the swipe instead of deleting.
+            // Visual only. Taps are dispatched on the container via hitZone so a
+            // ScrollView / sibling overlay cannot swallow the trash.
             if offsetX < -4 {
                 trashControl
             }
+
+            content
+                .offset(x: offsetX)
         }
+        .contentShape(Rectangle())
+        .onGeometryChange(for: CGFloat.self) { proxy in
+            proxy.size.width
+        } action: { _, width in
+            rowWidth = width
+        }
+        .simultaneousGesture(dragGesture)
+        .modifier(SwipeRowTap(
+            isEnabled: isEnabled && (isRevealed || onTap != nil),
+            onTap: { location in
+                handleTap(x: location.x)
+            }
+        ))
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         .accessibilityAction(named: "Remove") { onDelete() }
     }
@@ -84,11 +116,27 @@ struct SwipeToDeleteModifier: ViewModifier {
             .frame(width: revealWidth)
             .frame(maxHeight: .infinity)
             .background(Color.uplift.down)
-            .contentShape(Rectangle())
             .opacity(min(1, Double(-offsetX / revealWidth)))
-            .highPriorityGesture(TapGesture().onEnded { commitDelete() })
-            .accessibilityAddTraits(.isButton)
-            .accessibilityLabel("Remove")
+            .accessibilityHidden(true)
+    }
+
+    private func handleTap(x: CGFloat) {
+        guard isEnabled else { return }
+        switch SwipeToDeleteLogic.tapAction(
+            x: x,
+            rowWidth: rowWidth,
+            isRevealed: isRevealed,
+            hasEditAction: onTap != nil
+        ) {
+        case .delete:
+            commitDelete()
+        case .close:
+            withAnimation(.easeOut(duration: 0.2)) { close() }
+        case .edit:
+            onTap?()
+        case .ignore:
+            break
+        }
     }
 
     private var dragGesture: some Gesture {
@@ -138,18 +186,19 @@ struct SwipeToDeleteModifier: ViewModifier {
     }
 }
 
-/// Tap on the sliding row: edit when closed, dismiss when revealed.
-/// Never attached to a full-width overlay — that steals the trash tap.
-private struct SwipeOptionalTap: ViewModifier {
-    let onTap: (() -> Void)?
-    let isRevealed: Bool
-    let onClose: () -> Void
+/// Location-based tap on the swipe container. Used instead of a sibling
+/// trash control so ScrollView cannot swallow the trailing strip.
+private struct SwipeRowTap: ViewModifier {
+    let isEnabled: Bool
+    let onTap: (CGPoint) -> Void
 
     func body(content: Content) -> some View {
-        if isRevealed {
-            content.onTapGesture(perform: onClose)
-        } else if let onTap {
-            content.onTapGesture(perform: onTap)
+        if isEnabled {
+            content.highPriorityGesture(
+                SpatialTapGesture().onEnded { value in
+                    onTap(value.location)
+                }
+            )
         } else {
             content
         }

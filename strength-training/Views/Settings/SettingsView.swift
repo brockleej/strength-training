@@ -82,41 +82,64 @@ struct SettingsView: View {
     @State private var showGymPass = false
     @State private var showWelcomeGuide = false
 
+    @Query(
+        filter: #Predicate<WorkoutSession> { $0.isCompleted == false },
+        sort: \WorkoutSession.date
+    )
+    private var incompleteSessions: [WorkoutSession]
+
+    private var plannedQueueOwnsToday: Bool {
+        PlannedBlockQueue.ownsToday(incompleteSessions)
+    }
+
     var body: some View {
         NavigationStack {
             List {
-                Section {
-                    NavigationLink {
-                        TrainingSplitSettingsView()
-                    } label: {
-                        Label("Edit training split", systemImage: "calendar")
-                    }
-                } header: {
-                    sectionHeader("Training split")
-                }
-                .listRowBackground(Color.uplift.surface1)
-
-                Section {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("Today’s day schedule")
-                            .font(.uplift.text(15, weight: .semibold))
-                            .foregroundStyle(Color.uplift.fg)
-                        UpliftSegmentedControl(
-                            segments: SplitScheduleMode.allCases.map {
-                                UpliftSegment(id: $0.rawValue, label: $0.shortTitle)
-                            },
-                            selection: $splitScheduleModeRaw
-                        )
-                        Text((SplitScheduleMode(rawValue: splitScheduleModeRaw) ?? .rolling).detail)
-                            .font(.uplift.text(12, weight: .medium))
-                            .foregroundStyle(Color.uplift.fgDim)
+                if plannedQueueOwnsToday {
+                    Section {
+                        Text(PlannedBlockQueue.splitPausedWhileQueued)
+                            .font(.uplift.text(14, weight: .medium))
+                            .foregroundStyle(Color.uplift.fgMuted)
                             .fixedSize(horizontal: false, vertical: true)
+                            .padding(.vertical, 4)
+                    } header: {
+                        sectionHeader("Training split")
                     }
-                    .padding(.vertical, 4)
-                } header: {
-                    sectionHeader("Rolling / Weekly")
+                    .listRowBackground(Color.uplift.surface1)
+                } else {
+                    Section {
+                        NavigationLink {
+                            TrainingSplitSettingsView()
+                        } label: {
+                            Label("Edit training split", systemImage: "calendar")
+                        }
+                    } header: {
+                        sectionHeader("Training split")
+                    }
+                    .listRowBackground(Color.uplift.surface1)
+
+                    Section {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("Today’s day schedule")
+                                .font(.uplift.text(15, weight: .semibold))
+                                .foregroundStyle(Color.uplift.fg)
+                            UpliftSegmentedControl(
+                                segments: SplitScheduleMode.allCases.map {
+                                    UpliftSegment(id: $0.rawValue, label: $0.shortTitle)
+                                },
+                                selection: $splitScheduleModeRaw
+                            )
+                            Text((SplitScheduleMode(rawValue: splitScheduleModeRaw) ?? .rolling).detail)
+                                .font(.uplift.text(12, weight: .medium))
+                                .foregroundStyle(Color.uplift.fgDim)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .padding(.vertical, 4)
+                    } header: {
+                        sectionHeader("Rolling / Weekly")
+                    }
+                    .listRowBackground(Color.uplift.surface1)
                 }
-                .listRowBackground(Color.uplift.surface1)
 
                 Section {
                     VStack(alignment: .leading, spacing: 10) {
