@@ -25,6 +25,26 @@ final class ProgramImportTests: XCTestCase {
         XCTAssertEqual(PlannedBlockQueue.cardSecondary(isNext: true, liftCount: 6), "Next up · 6 lifts")
         XCTAssertEqual(PlannedBlockQueue.cardSecondary(isNext: false, liftCount: 1), "Then · 1 lift")
         XCTAssertFalse(PlannedBlockQueue.nextUpLabel(dayName: "Lower").localizedCaseInsensitiveContains("missed"))
+        XCTAssertTrue(PlannedBlockQueue.ownsToday(unusedCount: 1))
+        XCTAssertFalse(PlannedBlockQueue.ownsToday(unusedCount: 0))
+        XCTAssertEqual(PlannedBlockQueue.whatsNextEyebrow, "What's next")
+        XCTAssertTrue(
+            PlannedBlockQueue.splitPausedWhileQueued.contains("planned workouts waiting")
+        )
+        XCTAssertFalse(PlannedBlockQueue.splitPausedWhileQueued.localizedCaseInsensitiveContains("JSON"))
+        XCTAssertFalse(PlannedBlockQueue.splitPausedWhileQueued.localizedCaseInsensitiveContains("schema"))
+        XCTAssertFalse(PlannedBlockQueue.splitPausedWhileQueued.localizedCaseInsensitiveContains("DayType"))
+        let todayVM = TodayViewModel()
+        todayVM.syncSelection(
+            suspended: nil,
+            completedSessions: [],
+            orderedDays: [.push, .pull],
+            suggestedTrack: { _ in .a },
+            plannedDayType: .lower,
+            plannedQueueOwnsToday: true
+        )
+        XCTAssertEqual(todayVM.selectedDayType, .lower)
+        XCTAssertNil(todayVM.incompleteWeekPrompt)
         XCTAssertEqual(ProgramImportService.startThisBlockTodayTitle, "Start this block today")
         XCTAssertEqual(ProgramImportService.useThisSplitTitle, "Use this as your training split?")
         XCTAssertEqual(ProgramImportService.useThisSplitConfirmTitle, "Use this split")
@@ -156,6 +176,7 @@ final class ProgramImportTests: XCTestCase {
         let sessions = try context.fetch(FetchDescriptor<WorkoutSession>())
         XCTAssertTrue(sessions.contains { $0.id == historyID && $0.isCompleted })
         XCTAssertEqual(sessions.filter { $0.id == historyID }.count, 1)
+        XCTAssertTrue(PlannedBlockQueue.ownsToday(sessions))
 
         let exercises = try context.fetch(FetchDescriptor<Exercise>())
         XCTAssertEqual(exercises.filter { $0.name == "Barbell Back Squat" }.count, 1)

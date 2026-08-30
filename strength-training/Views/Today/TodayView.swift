@@ -58,21 +58,11 @@ struct TodayView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     header
-                    eyebrow("What are you training?")
-                        .padding(.top, 20)
-                        .padding(.bottom, 10)
-                    dayPicker
-                    if hasABLabeledLifts {
-                        rotationPicker
-                            .padding(.top, 14)
+                    if usesPlannedQueue {
+                        plannedQueueBlock
+                    } else {
+                        splitTrainingBlock
                     }
-                    startButton
-                        .padding(.top, 14)
-                    editDayPlanLink
-                    if workoutVM.suspendedSession != nil {
-                        cancelLink
-                    }
-                    plannedSection
                     yesterdaySection
                     thisWeekSection
                 }
@@ -160,7 +150,12 @@ struct TodayView: View {
             titleVisibility: .visible
         ) {
             if let dayType = confirmingDayType {
-                Button("Start \(dayType.rawValue) · \(todayVM.selectedRotationTrack.sessionFilterLabel)", role: .destructive) {
+                Button(
+                    usesPlannedQueue
+                        ? "Start \(dayType.rawValue)"
+                        : "Start \(dayType.rawValue) · \(todayVM.selectedRotationTrack.sessionFilterLabel)",
+                    role: .destructive
+                ) {
                     workoutVM.abandonSuspendedAndStart(
                         dayType: dayType,
                         rotationTrack: todayVM.selectedRotationTrack
@@ -221,8 +216,14 @@ struct TodayView: View {
             completedSessions: completedSessions,
             orderedDays: dayCatalog.activeDays,
             suggestedTrack: { workoutVM.suggestedRotationTrack(for: $0) },
-            plannedDayType: nextUnusedPlanned?.day
+            plannedDayType: nextUnusedPlanned?.day,
+            plannedQueueOwnsToday: usesPlannedQueue
         )
+    }
+
+    /// Unused planned sessions own Today. The stored split is not the driver.
+    private var usesPlannedQueue: Bool {
+        PlannedBlockQueue.ownsToday(unusedCount: unusedPlannedSessions.count)
     }
 
     private var incompleteWeekTitle: String {
@@ -239,6 +240,39 @@ struct TodayView: View {
     }
 
     // MARK: - Sections
+
+    /// Split days, A/B week, and Edit [day] — only when no planned queue is waiting.
+    @ViewBuilder
+    private var splitTrainingBlock: some View {
+        eyebrow("What are you training?")
+            .padding(.top, 20)
+            .padding(.bottom, 10)
+        dayPicker
+        if hasABLabeledLifts {
+            rotationPicker
+                .padding(.top, 14)
+        }
+        startButton
+            .padding(.top, 14)
+        editDayPlanLink
+        if workoutVM.suspendedSession != nil {
+            cancelLink
+        }
+    }
+
+    /// Next unused workouts as a simple list. No split picker or split editor.
+    @ViewBuilder
+    private var plannedQueueBlock: some View {
+        eyebrow(PlannedBlockQueue.whatsNextEyebrow)
+            .padding(.top, 20)
+            .padding(.bottom, 10)
+        plannedSection
+        startButton
+            .padding(.top, 14)
+        if workoutVM.suspendedSession != nil {
+            cancelLink
+        }
+    }
 
     private var header: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -429,17 +463,29 @@ struct TodayView: View {
 
     private var startButtonTitle: String {
         let day = todayVM.selectedDayType.rawValue
-        let week = todayVM.selectedRotationTrack.sessionFilterLabel
         if isResume {
-            return "Resume \(day) · \(week)"
+            if usesPlannedQueue {
+                return "Resume \(day)"
+            }
+            return "Resume \(day) · \(todayVM.selectedRotationTrack.sessionFilterLabel)"
+        }
+        if usesPlannedQueue {
+            return "Start \(day)"
         }
         if selectedDayIsNextPlanned {
-            return "Start planned \(day) · \(week)"
+            return "Start planned \(day) · \(todayVM.selectedRotationTrack.sessionFilterLabel)"
         }
-        return "Start \(day) · \(week)"
+        return "Start \(day) · \(todayVM.selectedRotationTrack.sessionFilterLabel)"
     }
 
     private func startTapped() {
+        if usesPlannedQueue, let next = nextUnusedPlanned, !isResume {
+            todayVM.selectDayType(
+                next.day,
+                suspended: workoutVM.suspendedSession,
+                suggestedTrack: { workoutVM.suggestedRotationTrack(for: $0) }
+            )
+        }
         let target = todayVM.selectedDayType
         let track = todayVM.selectedRotationTrack
         if let suspended = workoutVM.suspendedSession,
@@ -475,20 +521,12 @@ struct TodayView: View {
     private var plannedSection: some View {
         let queued = queuedPlannedRows
         if !queued.isEmpty {
-            SectionHeader(nextUpSectionTitle)
             PlannedWorkoutsCard(
                 blockName: upcomingBlockName,
                 rows: queued,
                 onStartNext: startNextUnusedIfSelected
             )
         }
-    }
-
-    private var nextUpSectionTitle: String {
-        if let next = nextUnusedPlanned {
-            return PlannedBlockQueue.nextUpLabel(dayName: next.day.rawValue)
-        }
-        return "Next up"
     }
 
     private var upcomingBlockName: String {

@@ -7,16 +7,16 @@ App Apple ID: `6797695631` · bundle `com.lee.lift2026`
 
 ---
 
-## Next TestFlight — trash tap actually removes (after build 24)
+## Next TestFlight — planned list owns Today; trash tap; launch crash
 
-Build 24: long-press freeze was fixed. Swipe still showed trash; tapping it did nothing.
+Build 24: long-press freeze was fixed. Swipe still showed trash; tapping it did nothing. Simulator could also crash on launch if leftover day names collided.
 
 ```
-What's new: Swipe-left trash on Edit training split and Edit [day] now removes the row. Build 24 showed the trash but the tap did nothing. Long-press reorder is unchanged.
-Please try: 1) Today → Edit [day] list. Swipe left on a lift → tap trash. It should come off and stay off after you leave. 2) Settings → Edit training split. Same for a day (then confirm Delete day). 3) Long-press the number and release without dragging — the row must not freeze. Then drag to reorder. 4) Screenshot anything that looks off.
+What's new: If you have planned workouts waiting, Today shows that list — not your training split. Edit training split / Edit [day] come back when the list is empty. Swipe-left trash on those editors should now remove the row (build 24 showed trash but the tap did nothing). App should open even with old simulator data.
+Please try: 1) With planned workouts: Today is a next-up list. No day cards, no Edit [day] list. History still has your old sessions. 2) With no planned list: Today is the usual split. Edit [day] list → swipe left → tap trash. The lift comes off and stays off. 3) Settings → Edit training split (only when no planned list). Same for a day, then confirm Delete day. 4) Long-press the number and release without dragging — the row must not freeze. 5) Screenshot anything that looks off.
 ```
 
-Edit a day: long-press the number to reorder; swipe left → Remove from that day. Edit training split: same for days (swipe → Delete day, then confirm).
+Planned list: Today is what’s next, not the rolling split. No planned list: Edit a day (long-press the number to reorder; swipe left → Remove). Edit training split: same for days (swipe → Delete day, then confirm).
 
 ---
 

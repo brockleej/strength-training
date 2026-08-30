@@ -59,6 +59,7 @@
 		C0ACF001D0C000000000000B /* CoachFormatTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0ACF001D0C000000000000A /* CoachFormatTests.swift */; };
 		D4E5F60718293A4B5C6D7E02 /* ProgramImportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4E5F60718293A4B5C6D7E01 /* ProgramImportTests.swift */; };
 		C4D4A0015A1DE70DE7E7E002 /* SwipeToDeleteLogicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4D4A0015A1DE70DE7E7E001 /* SwipeToDeleteLogicTests.swift */; };
+		C4D4A0015A1DE70DE7E7E004 /* DayTypeRegistryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4D4A0015A1DE70DE7E7E003 /* DayTypeRegistryTests.swift */; };
 		C0ACF001D0C000000000000D /* CoachInbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0ACF001D0C000000000000C /* CoachInbox.swift */; };
 		C0ACF001D0C000000000000E /* CoachInbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0ACF001D0C000000000000C /* CoachInbox.swift */; };
 		C0ACF001D0C000000000000F /* CoachSessionDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0ACF001D0C0000000000001 /* CoachSessionDocument.swift */; };
@@ -163,6 +164,7 @@
 		C0ACF001D0C000000000000A /* CoachFormatTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoachFormatTests.swift; sourceTree = "<group>"; };
 		D4E5F60718293A4B5C6D7E01 /* ProgramImportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgramImportTests.swift; sourceTree = "<group>"; };
 		C4D4A0015A1DE70DE7E7E001 /* SwipeToDeleteLogicTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwipeToDeleteLogicTests.swift; sourceTree = "<group>"; };
+		C4D4A0015A1DE70DE7E7E003 /* DayTypeRegistryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayTypeRegistryTests.swift; sourceTree = "<group>"; };
 		C0ACF001D0C000000000000C /* CoachInbox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoachInbox.swift; sourceTree = "<group>"; };
 		C0ACF001D0C0000000000010 /* CompareGridTable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompareGridTable.swift; sourceTree = "<group>"; };
 		C0ACF001D0C0000000000020 /* MonthlyOverload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthlyOverload.swift; sourceTree = "<group>"; };
@@ -370,6 +372,7 @@
 				C0ACF001D0C000000000000A /* CoachFormatTests.swift */,
 				D4E5F60718293A4B5C6D7E01 /* ProgramImportTests.swift */,
 				C4D4A0015A1DE70DE7E7E001 /* SwipeToDeleteLogicTests.swift */,
+				C4D4A0015A1DE70DE7E7E003 /* DayTypeRegistryTests.swift */,
 			);
 			path = "strength-training-tests";
 			sourceTree = "<group>";
@@ -754,6 +757,7 @@
 				C0ACF001D0C000000000000B /* CoachFormatTests.swift in Sources */,
 				D4E5F60718293A4B5C6D7E02 /* ProgramImportTests.swift in Sources */,
 				C4D4A0015A1DE70DE7E7E002 /* SwipeToDeleteLogicTests.swift in Sources */,
+				C4D4A0015A1DE70DE7E7E004 /* DayTypeRegistryTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
