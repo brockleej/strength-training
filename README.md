@@ -243,6 +243,14 @@ xcodebuild test -scheme ProgressionLab -destination 'platform=macOS'
 
 Request beta access via [Issues](https://github.com/brockleej/strength-training/issues).
 
+### What’s new — planned workouts
+
+What's new: You can add a planned training block from a file. It does not erase your old workouts.
+
+Please try: 1) Settings → Add planned workouts, pick the file. 2) Confirm Add workouts — old history should still be there. 3) Today should show the next planned day. 4) Start it — warmup and work sets should already be filled in. 5) Screenshot anything that looks off.
+
+Dates in the file stay as written (the sample starts Monday 2026-08-31). Do not use **Start this block today** unless you mean to move every day. Sample file: [docs/periodization/fixtures/sample-8-week-block.rocklog.program.json](docs/periodization/fixtures/sample-8-week-block.rocklog.program.json).
+
 ## Project layout
 
 ```
