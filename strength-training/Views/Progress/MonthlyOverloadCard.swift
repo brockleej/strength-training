@@ -42,8 +42,6 @@ struct MonthlyOverloadCard: View {
                 ExerciseDrillDownView(exercise: exercise, modelContext: modelContext)
             }
         }
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel(accessibilitySummary)
     }
 
     // MARK: - Header
@@ -62,6 +60,8 @@ struct MonthlyOverloadCard: View {
                     .foregroundStyle(Color.uplift.fgDim)
             }
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(accessibilitySummary)
     }
 
     private var emptyState: some View {
@@ -90,11 +90,11 @@ struct MonthlyOverloadCard: View {
             Text("Lift")
                 .frame(maxWidth: .infinity, alignment: .leading)
             Text(review.lastMonthLabel)
-                .frame(width: 64, alignment: .trailing)
+                .frame(width: 62, alignment: .trailing)
             Text(review.thisMonthLabel)
-                .frame(width: 64, alignment: .trailing)
+                .frame(width: 62, alignment: .trailing)
             Text("Δ")
-                .frame(width: 52, alignment: .trailing)
+                .frame(width: 58, alignment: .trailing)
         }
         .textCase(.uppercase)
         .font(.uplift.text(10, weight: .semibold))
@@ -130,8 +130,8 @@ struct MonthlyOverloadCard: View {
                     .minimumScaleFactor(0.8)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
-                setCell(row.lastMonth, missing: row.comparison == .new)
-                setCell(row.thisMonth, missing: row.comparison == .missing)
+                setCell(row.lastMonth)
+                setCell(row.thisMonth)
                 deltaCell(row)
             }
             .padding(.vertical, 6)
@@ -142,18 +142,18 @@ struct MonthlyOverloadCard: View {
         .accessibilityHint("Opens lift history")
     }
 
-    private func setCell(_ set: MonthlyOverload.WorkingSet?, missing: Bool) -> some View {
+    private func setCell(_ set: MonthlyOverload.WorkingSet?) -> some View {
         Text(set?.formatted ?? "—")
             .font(.uplift.mono(12, weight: .semibold))
-            .foregroundStyle(set == nil || missing ? Color.uplift.fgDim : Color.uplift.fg)
-            .frame(width: 64, alignment: .trailing)
+            .foregroundStyle(set == nil ? Color.uplift.fgDim : Color.uplift.fg)
+            .frame(width: 62, alignment: .trailing)
     }
 
     private func deltaCell(_ row: MonthlyOverload.Row) -> some View {
         Text(row.deltaLabel)
             .font(.uplift.mono(12, weight: .semibold))
             .foregroundStyle(deltaColor(row.comparison))
-            .frame(width: 52, alignment: .trailing)
+            .frame(width: 58, alignment: .trailing)
     }
 
     private func deltaColor(_ comparison: MonthlyOverload.Comparison) -> Color {
