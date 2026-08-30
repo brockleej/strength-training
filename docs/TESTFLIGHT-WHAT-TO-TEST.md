@@ -7,14 +7,14 @@ App Apple ID: `6797695631` · bundle `com.lee.lift2026`
 
 ---
 
-## Next TestFlight — split editor + use block as split (paste after Cloud/upload)
+## Next TestFlight — trash tap actually removes (after build 24)
+
+Build 24: long-press freeze was fixed. Swipe still showed trash; tapping it did nothing.
 
 ```
-What's new: You can swipe a lift off a day again, and long-press no longer freezes that row. After you add a planned block you can replace your training split with that block’s days and lifts. History stays.
-Please try: 1) Today → Edit [day] list, or Settings → Edit training split. Swipe left on a lift or day → tap the trash. It should come off and stay off after you leave. 2) Long-press the number and drag to reorder — the row should not freeze if you only press. 3) Settings → Add planned workouts, pick the file, Add workouts. 4) On “Use this as your training split?” try Use this split once and Keep my current split once (or restore after). History should still be there. Today’s days should match the block only if you chose Use this split. 5) Screenshot anything that looks off.
+What's new: Swipe-left trash on Edit training split and Edit [day] now removes the row. Build 24 showed the trash but the tap did nothing. Long-press reorder is unchanged.
+Please try: 1) Today → Edit [day] list. Swipe left on a lift → tap trash. It should come off and stay off after you leave. 2) Settings → Edit training split. Same for a day (then confirm Delete day). 3) Long-press the number and release without dragging — the row must not freeze. Then drag to reorder. 4) Screenshot anything that looks off.
 ```
-
-The file is a queue. Sample starts with Lower A / deadlift (Monday 31 Aug 2026). You do not need **Start this block today** — unused sessions wait until you train. Sample: `docs/periodization/fixtures/sample-8-week-block.rocklog.program.json`.
 
 Edit a day: long-press the number to reorder; swipe left → Remove from that day. Edit training split: same for days (swipe → Delete day, then confirm).
 
