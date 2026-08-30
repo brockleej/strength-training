@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct PlannedWorkoutsCard: View {
     let blockName: String
