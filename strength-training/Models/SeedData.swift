@@ -799,18 +799,15 @@ struct SeedData {
 
         let hasSeeded = UserDefaults.standard.bool(forKey: hasSeededExercisesKey)
         let count = (try? context.fetchCount(FetchDescriptor<Exercise>())) ?? 0
-        let hasRemotePlan = UserDefaults.standard.bool(forKey: hasConfiguredSplitKey)
-            || loadSplitSnapshot() != nil
-            || loadDayPlanSnapshot() != nil
 
         if !hasSeeded && count == 0 {
+            // ContentView waits on CloudKit when a remote split/plan exists, then
+            // calls here. allowEmptyCatalogSeed is the only empty-store skip —
+            // do not also bail on a KVS snapshot, or a reinstall never gets a
+            // catalog fallback. Starters stay off restored days (apply-preset only).
             guard allowEmptyCatalogSeed else { return }
-            // Library: full catalog, unassigned. Days: short starter templates only
-            // on a brand-new user. A reinstall with iCloud/KVS must not pin starters
-            // onto the restored PPL-PC days before CloudKit brings the real roster.
             insertCatalogExercises(context: context, existingNames: [], assignCatalogDays: false)
             try? context.save()
-            // Starters are a first-use / apply-preset choice — never pin them here.
             markCatalogSeeded()
             UserDefaults.standard.set(catalogVersion, forKey: catalogVersionKey)
             persistDayPlanSnapshot(context: context)
