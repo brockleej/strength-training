@@ -3,10 +3,10 @@
 **Parked:** 2026-08-30 (shipped PR 7 + Progress/score from this session)  
 **Project:** `~/strength-training-pr7` (branch `cursor/swipe-delete-tap-c4d4`) · dirty `~/strength-training` still leave it  
 **App:** RockLog · bundle `com.lee.lift2026` · Apple ID `6797695631`  
-**Marketing version:** 1.0 · **Testers:** **24** live; this push is the next Cloud job (**25+**). Add **Friends** after the archive is VALID.  
+**Marketing version:** 1.0 · **Testers now:** **25** (VALID, Friends).  
 **Pushing `main` starts Xcode Cloud.**
 
-> Resume: *“Continue from ~/strength-training-pr7 — load docs/SESSION.md. Shipped 2026-08-30. Watch Cloud for 25+, paste What to Test, add Friends. Listing 1.0 still Prepare for Submission.”*  
+> Resume: *“Continue from ~/strength-training-pr7 — load docs/SESSION.md. Testers: TF 25 Friends. Listing 1.0 still Prepare for Submission.”*  
 > HA parked: `~/Documents/Hobbies/Home Automation/docs/HA-SESSION.md`.
 
 ---
@@ -22,10 +22,9 @@
 
 ---
 
-## This TestFlight (after Cloud succeeds)
+## This TestFlight (25)
 
-Source of tester copy: `docs/TESTFLIGHT-WHAT-TO-TEST.md` — **Next TestFlight** block.  
-Paste onto the new build only after Cloud **succeeds**. Then add **Friends**.
+What to Test is on the build. Friends is attached.
 
 Shipped here:
 
@@ -105,11 +104,9 @@ Backup used for shots: `~/Documents/RockLog-backup-2026-08-26.json`. Body check-
 
 ## Next
 
-1. Watch Xcode Cloud. Next tester build is **25+**.
-2. On VALID: paste What to Test, add Friends.
-3. Confirm swipe trash and last-day copy on device.
-4. PR #8 (planned owns Today) when Lee wants that.
-5. Listing copy / privacy URL / attach a current TF to 1.0 when submitting.
+1. Confirm swipe trash and last-day copy on device (TF 25).
+2. PR #8 (planned owns Today) when Lee wants that — do not merge to `main` until then.
+3. Listing copy / privacy URL / attach a current TF to 1.0 when submitting.
 
 ---
 
