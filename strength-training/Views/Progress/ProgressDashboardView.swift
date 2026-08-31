@@ -14,17 +14,22 @@ struct ProgressDashboardView: View {
     var body: some View {
         NavigationStack {
             Group {
-                if let vm = viewModel {
+                if let vm = viewModel, vm.isReady {
                     ProgressDashboardContent(viewModel: vm)
                 } else {
                     ProgressView()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
             .navigationTitle("Progress")
+            .task {
+                let vm = viewModel ?? ProgressDashboardViewModel(modelContext: modelContext)
+                if viewModel == nil { viewModel = vm }
+                await vm.refresh()
+            }
             .onAppear {
-                if viewModel == nil {
-                    viewModel = ProgressDashboardViewModel(modelContext: modelContext)
-                }
+                guard let viewModel else { return }
+                Task { await viewModel.refresh() }
             }
         }
     }
@@ -35,7 +40,7 @@ private struct ProgressDashboardContent: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
+            LazyVStack(alignment: .leading, spacing: 0) {
                 rangePicker
                 strengthHeadline
                     .padding(.top, 18)
@@ -49,7 +54,7 @@ private struct ProgressDashboardContent: View {
                     .padding(.top, 8)
                 MonthlyOverloadCard(
                     review: viewModel.monthlyOverload,
-                    exercises: viewModel.allExercises(),
+                    exercises: viewModel.exercises,
                     modelContext: viewModel.modelContext
                 )
                 .padding(.top, 8)
@@ -65,6 +70,12 @@ private struct ProgressDashboardContent: View {
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 24)
+        }
+        .onChange(of: viewModel.selectedTimeRange) { _, _ in
+            Task { await viewModel.refresh() }
+        }
+        .onChange(of: viewModel.modeSplitPeriod) { _, _ in
+            Task { await viewModel.refresh() }
         }
         .background(Color.uplift.bgElev)
         .scrollIndicators(.hidden)
@@ -83,7 +94,7 @@ private struct ProgressDashboardContent: View {
         .padding(.top, 4)
     }
 
-    /// Overall strength: sum of best estimated 1RMs (clearer than “total volume”).
+    /// Overall strength: best estimated 1RM per muscle (variants don’t stack).
     private var strengthHeadline: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Strength score")
@@ -110,14 +121,14 @@ private struct ProgressDashboardContent: View {
                 .background(Capsule().fill(trendColor(trend).opacity(0.16)))
                 .accessibilityLabel("Change vs one month ago: \(Int(viewModel.strengthScoreDelta.rounded())) pounds")
             }
-            Text("Sum of your best estimated 1-rep max on each lift. Goes up when top sets get stronger.")
+            Text("Best estimated 1-rep max for each muscle. Sets tagged Side count both limbs, so a dumbbell curl can sit next to a barbell curl.")
                 .font(.uplift.text(12, weight: .medium))
                 .foregroundStyle(Color.uplift.fgDim)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(
-            "Strength score \(TodayStats.formatVolume(viewModel.strengthScore)) pounds estimated 1 rep max total, change \(Int(viewModel.strengthScoreDelta.rounded())) versus one month ago"
+            "Strength score \(TodayStats.formatVolume(viewModel.strengthScore)) pounds, strongest estimated 1 rep max per muscle, change \(Int(viewModel.strengthScoreDelta.rounded())) versus one month ago"
         )
     }
 

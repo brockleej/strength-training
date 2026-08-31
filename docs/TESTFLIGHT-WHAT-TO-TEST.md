@@ -7,16 +7,22 @@ App Apple ID: `6797695631` · bundle `com.lee.lift2026`
 
 ---
 
-## Next TestFlight — trash tap actually removes (after build 24)
+## Next TestFlight — after build 24 (swipe, last day, Progress)
 
 Build 24: long-press freeze was fixed. Swipe still showed trash; tapping it did nothing.
 
 ```
-What's new: Swipe-left trash on Edit training split and Edit [day] now removes the row. Build 24 showed the trash but the tap did nothing. Long-press reorder is unchanged.
-Please try: 1) Today → Edit [day] list. Swipe left on a lift → tap trash. It should come off and stay off after you leave. 2) Settings → Edit training split. Same for a day (then confirm Delete day). 3) Long-press the number and release without dragging — the row must not freeze. Then drag to reorder. 4) Screenshot anything that looks off.
+What's new: Swipe-left trash on Edit training split and Edit [day] now removes the row. You can’t delete the last day in your split — you’ll see why. If you imported planned workouts, Use planned workouts as my split sits under the last preset. Progress should open without a freeze. Strength score is your strongest estimated 1-rep max for each muscle (not a sum of every lift). Sets tagged Side count both limbs.
+
+Please try:
+1) Today → Edit [day] list. Swipe left on a lift → tap trash. It should stay gone after you leave.
+2) Settings → Edit training split. Swipe a spare day → tap trash → confirm. The last remaining day should stay and explain why.
+3) Long-press the number and release without dragging — the row must not freeze. Then drag to reorder.
+4) Open Progress. First open can spin briefly; it should not hang. Strength score should not jump just because you added a similar lift (barbell vs dumbbell bench share chest).
+5) Screenshot anything that looks off.
 ```
 
-Edit a day: long-press the number to reorder; swipe left → Remove from that day. Edit training split: same for days (swipe → Delete day, then confirm).
+Edit a day: long-press the number to reorder; swipe left → Remove from that day. Edit training split: same for days (swipe → Delete day, then confirm). Last remaining day cannot be deleted.
 
 ---
 

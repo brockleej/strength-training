@@ -796,9 +796,6 @@ struct SeedData {
 
         let hasSeeded = UserDefaults.standard.bool(forKey: hasSeededExercisesKey)
         let count = (try? context.fetchCount(FetchDescriptor<Exercise>())) ?? 0
-        let hasRemotePlan = UserDefaults.standard.bool(forKey: hasConfiguredSplitKey)
-            || loadSplitSnapshot() != nil
-            || loadDayPlanSnapshot() != nil
 
         if !hasSeeded && count == 0 {
             guard allowEmptyCatalogSeed else { return }

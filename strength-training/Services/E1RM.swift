@@ -8,7 +8,7 @@
 
 import Foundation
 
-enum E1RM {
+nonisolated enum E1RM {
     /// Epley: weight × (1 + reps/30).
     static func estimate(weightLbs: Double, reps: Int) -> Double {
         weightLbs * (1 + Double(reps) / 30)

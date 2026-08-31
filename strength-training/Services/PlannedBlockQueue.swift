@@ -10,16 +10,19 @@ import Foundation
 
 enum PlannedBlockQueue {
     /// Next-up line for Today. No “you missed Monday.”
-    static func nextUpLabel(dayName: String) -> String {
+    nonisolated static func nextUpLabel(dayName: String) -> String {
         "Next up: \(dayName)"
     }
 
-    static func cardSecondary(isNext: Bool, liftCount: Int) -> String {
+    nonisolated static func cardSecondary(isNext: Bool, liftCount: Int) -> String {
         let lifts = liftCount == 1 ? "1 lift" : "\(liftCount) lifts"
         return isNext ? "Next up · \(lifts)" : "Then · \(lifts)"
     }
 
-    /// Still waiting in the block: not trained, not started for real.
+    /// WorkoutSession / records are MainActor (SwiftData + default isolation).
+    /// Do not pass `isUnused` as a function reference into Array.filter — that
+    /// API is nonisolated and is this compile error.
+    @MainActor
     static func isUnused(_ session: WorkoutSession) -> Bool {
         guard !session.isCompleted else { return false }
         if hasAthleteLoggedSets(session) { return false }
@@ -27,24 +30,28 @@ enum PlannedBlockQueue {
         return session.trainingBlock != nil && session.followsSessionRoster
     }
 
+    @MainActor
     static func unusedSessions(in sessions: [WorkoutSession]) -> [WorkoutSession] {
-        sessions
-            .filter(isUnused)
-            .sorted(by: isBeforeInQueue)
+        // Don't call isolated helpers from Array.filter/sorted — those
+        // closures are nonisolated even when this function is @MainActor.
+        var ranked: [(session: WorkoutSession, order: Int, date: Date)] = []
+        for session in sessions {
+            guard isUnused(session) else { continue }
+            ranked.append((session, session.planOrder, session.date))
+        }
+        ranked.sort { lhs, rhs in
+            if lhs.order != rhs.order { return lhs.order < rhs.order }
+            return lhs.date < rhs.date
+        }
+        return ranked.map(\.session)
     }
 
+    @MainActor
     static func nextUnused(in sessions: [WorkoutSession]) -> WorkoutSession? {
         unusedSessions(in: sessions).first
     }
 
-    /// File order first (`planOrder`), then the session’s stored date.
-    static func isBeforeInQueue(_ lhs: WorkoutSession, _ rhs: WorkoutSession) -> Bool {
-        if lhs.planOrder != rhs.planOrder {
-            return lhs.planOrder < rhs.planOrder
-        }
-        return lhs.date < rhs.date
-    }
-
+    @MainActor
     static func hasAthleteLoggedSets(_ session: WorkoutSession) -> Bool {
         session.exerciseRecordsArray.contains { record in
             record.setsArray.contains { !$0.isTarget }

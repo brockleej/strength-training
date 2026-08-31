@@ -29,6 +29,11 @@ final class ProgramImportTests: XCTestCase {
         XCTAssertEqual(ProgramImportService.useThisSplitTitle, "Use this as your training split?")
         XCTAssertEqual(ProgramImportService.useThisSplitConfirmTitle, "Use this split")
         XCTAssertEqual(ProgramImportService.keepCurrentSplitTitle, "Keep my current split")
+        XCTAssertEqual(ListMutationCopy.keepLastDayTitle, "Keep at least one day")
+        XCTAssertTrue(ListMutationCopy.keepLastDayMessage.contains("one day"))
+        XCTAssertTrue(ListMutationCopy.keepLastDayWithBlockMessage.contains("use it as your split"))
+        XCTAssertFalse(ListMutationCopy.keepLastDayMessage.localizedCaseInsensitiveContains("JSON"))
+        XCTAssertFalse(ListMutationCopy.keepLastDayWithBlockMessage.localizedCaseInsensitiveContains("DayType"))
         XCTAssertEqual(
             ProgramImportService.replaceSplitMessage(),
             "This replaces your current days and the lifts on each day with this block. Your old workouts stay in History."
@@ -587,6 +592,49 @@ final class ProgramImportTests: XCTestCase {
         XCTAssertTrue(sessions.contains { $0.id == historyID && $0.isCompleted })
         XCTAssertEqual(sessions.filter { $0.id == historyID }.count, 1)
         XCTAssertGreaterThan(sessions.filter { $0.planStatus == .planned }.count, 0)
+    }
+
+    func test_allowsDeletingDay_keepsLastHome_allowsCatchAll() {
+        XCTAssertFalse(DayTypeRegistry.allowsDeletingDay(includesAllExercises: false, homeDayCount: 1))
+        XCTAssertTrue(DayTypeRegistry.allowsDeletingDay(includesAllExercises: false, homeDayCount: 2))
+        XCTAssertTrue(DayTypeRegistry.allowsDeletingDay(includesAllExercises: true, homeDayCount: 1))
+        XCTAssertTrue(DayTypeRegistry.allowsDeletingDay(includesAllExercises: true, homeDayCount: 0))
+    }
+
+    func test_delete_refusesLastHomeDay() throws {
+        let container = try inMemoryContainer()
+        let context = container.mainContext
+        insertSplit(names: ["Push"], context: context)
+        try context.save()
+        DayTypeRegistry.shared.reload(context: context)
+
+        let days = try context.fetch(FetchDescriptor<SplitDay>())
+        XCTAssertEqual(days.count, 1)
+        let id = days[0].id
+        XCTAssertFalse(DayTypeRegistry.shared.canDelete(id: id, from: days))
+
+        DayTypeRegistry.shared.delete(id: id, context: context)
+        let remaining = try context.fetch(FetchDescriptor<SplitDay>())
+        XCTAssertEqual(remaining.map(\.name), ["Push"])
+    }
+
+    func test_replaceSplit_fromImportedSessions_matchesFile() throws {
+        let container = try inMemoryContainer()
+        let context = container.mainContext
+        insertSplit(names: ["Arms"], context: context)
+        let start = Date(timeIntervalSince1970: 1_767_571_200)
+        let document = runningThreeDayDocument(start: start)
+        _ = try ProgramImportService.importDocument(document, context: context)
+
+        let planned = try context.fetch(FetchDescriptor<WorkoutSession>())
+            .filter { $0.planStatus == .planned }
+        XCTAssertFalse(planned.isEmpty)
+        ProgramImportService.replaceSplit(fromSessions: planned, context: context)
+
+        let days = try context.fetch(
+            FetchDescriptor<SplitDay>(sortBy: [SortDescriptor(\SplitDay.sortOrder)])
+        )
+        XCTAssertEqual(days.map(\.name), ["Lower", "Push", "Pull"])
     }
 
     // MARK: - Helpers

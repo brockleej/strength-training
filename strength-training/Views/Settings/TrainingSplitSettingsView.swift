@@ -20,10 +20,18 @@ struct TrainingSplitSettingsView: View {
     @State private var pendingPreset: SplitPreset?
     @State private var showPresetConfirm = false
     @State private var dayPendingDelete: SplitDay?
+    @State private var showKeepLastDay = false
+    @State private var showUseBlockAsSplit = false
     @State private var orderedIDs: [UUID] = []
     @State private var draggingID: UUID?
     @AppStorage(SplitSchedulePreferences.modeKey)
     private var scheduleModeRaw: String = SplitScheduleMode.rolling.rawValue
+
+    @Query(
+        filter: #Predicate<WorkoutSession> { $0.isCompleted == false },
+        sort: \WorkoutSession.date
+    )
+    private var incompleteSessions: [WorkoutSession]
 
     private var displayedDays: [SplitDay] {
         let byID = Dictionary(uniqueKeysWithValues: splitDays.map { ($0.id, $0) })
@@ -126,6 +134,46 @@ struct TrainingSplitSettingsView: View {
         } message: {
             Text("Removes this day from your split. Exercises keep their tags and can be reassigned in the library.")
         }
+        .confirmationDialog(
+            ListMutationCopy.keepLastDayTitle,
+            isPresented: $showKeepLastDay,
+            titleVisibility: .visible
+        ) {
+            if blockForSplitReplacement != nil {
+                Button(ProgramImportService.useThisSplitConfirmTitle) {
+                    applyBlockAsSplit()
+                }
+            }
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(
+                blockForSplitReplacement == nil
+                    ? ListMutationCopy.keepLastDayMessage
+                    : ListMutationCopy.keepLastDayWithBlockMessage
+            )
+        }
+        .confirmationDialog(
+            ProgramImportService.useThisSplitTitle,
+            isPresented: $showUseBlockAsSplit,
+            titleVisibility: .visible
+        ) {
+            Button(ProgramImportService.useThisSplitConfirmTitle) {
+                applyBlockAsSplit()
+            }
+            Button(ProgramImportService.keepCurrentSplitTitle, role: .cancel) {}
+        } message: {
+            Text(ProgramImportService.replaceSplitMessage())
+        }
+    }
+
+    private var blockForSplitReplacement: TrainingBlock? {
+        PlannedBlockQueue.nextUnused(in: incompleteSessions)?.trainingBlock
+    }
+
+    private func applyBlockAsSplit() {
+        guard let block = blockForSplitReplacement else { return }
+        ProgramImportService.replaceSplit(fromSessions: block.sessionsArray, context: modelContext)
+        syncOrderedIDs()
     }
 
     // MARK: - Sections
@@ -173,8 +221,28 @@ struct TrainingSplitSettingsView: View {
                     }
                     .buttonStyle(.plain)
                 }
+                if blockForSplitReplacement != nil {
+                    Button {
+                        showUseBlockAsSplit = true
+                    } label: {
+                        Text("Use planned workouts as my split")
+                            .font(.uplift.text(15, weight: .semibold))
+                            .foregroundStyle(Color.uplift.accent)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(14)
+                            .background {
+                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                    .fill(Color.uplift.surface1)
+                            }
+                    }
+                    .buttonStyle(.plain)
+                }
             }
-            sectionFooter("Applying a preset replaces your day list. You choose starter exercises or empty days. Existing lifts keep their tags.")
+            sectionFooter(
+                blockForSplitReplacement == nil
+                    ? "Applying a preset replaces your day list. You choose starter exercises or empty days. Existing lifts keep their tags."
+                    : "Applying a preset or using planned workouts replaces your day list. History stays."
+            )
         }
     }
 
@@ -260,7 +328,11 @@ struct TrainingSplitSettingsView: View {
         }
         .swipeToDelete(fullSwipeDeletes: false, isEnabled: draggingID == nil, onDelete: {
             // Soft reveal only; hard delete requires confirm (T2/T3).
-            dayPendingDelete = day
+            if DayTypeRegistry.shared.canDelete(id: day.id, from: splitDays) {
+                dayPendingDelete = day
+            } else {
+                showKeepLastDay = true
+            }
         }, onTap: {
             editingDay = day
         })

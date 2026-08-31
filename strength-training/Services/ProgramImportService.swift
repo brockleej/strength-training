@@ -116,12 +116,69 @@ enum ProgramImportService {
         return days
     }
 
+    /// Unique days in queue order from an already-imported block.
+    @MainActor
+    static func splitSchedule(fromSessions sessions: [WorkoutSession]) -> [ProgramSplitDayPlan] {
+        var ranked: [(session: WorkoutSession, order: Int, date: Date)] = []
+        for session in sessions {
+            ranked.append((session, session.planOrder, session.date))
+        }
+        ranked.sort { lhs, rhs in
+            if lhs.order != rhs.order { return lhs.order < rhs.order }
+            return lhs.date < rhs.date
+        }
+        let ordered = ranked.map(\.session)
+        var days: [ProgramSplitDayPlan] = []
+        var indexByKey: [String: Int] = [:]
+        for session in ordered {
+            let name = session.dayType.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !name.isEmpty, name.caseInsensitiveCompare("Unassigned") != .orderedSame else {
+                continue
+            }
+            let key = name.lowercased()
+            if indexByKey[key] == nil {
+                indexByKey[key] = days.count
+                days.append(ProgramSplitDayPlan(name: name, exercises: []))
+            }
+            guard let dayIndex = indexByKey[key] else { continue }
+            var seenIDs = Set(days[dayIndex].exercises.map(\.id))
+            var seenNames = Set(days[dayIndex].exercises.map { nameKey($0.name) })
+            let records = session.exerciseRecordsArray.sorted { $0.sortOrder < $1.sortOrder }
+            for record in records {
+                guard let exercise = record.exercise else { continue }
+                let trimmed = exercise.name.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !trimmed.isEmpty else { continue }
+                let keyName = nameKey(trimmed)
+                if seenIDs.contains(exercise.id) || seenNames.contains(keyName) { continue }
+                seenIDs.insert(exercise.id)
+                seenNames.insert(keyName)
+                days[dayIndex].exercises.append(
+                    ProgramSplitExercise(id: exercise.id, name: trimmed)
+                )
+            }
+        }
+        return days
+    }
+
     /// Replace the live split (days + which lifts sit on each day). History,
     /// the library, and planned sessions stay. Call after a successful import
     /// so exercise IDs/names already match the store.
     @MainActor
     static func replaceSplit(from document: ProgramDocument, context: ModelContext) {
-        let schedule = splitSchedule(from: document)
+        applySplitSchedule(splitSchedule(from: document), context: context)
+    }
+
+    /// Same as file import, from a block already on the phone.
+    @MainActor
+    static func replaceSplit(fromSessions sessions: [WorkoutSession], context: ModelContext) {
+        applySplitSchedule(splitSchedule(fromSessions: sessions), context: context)
+    }
+
+    @MainActor
+    private static func applySplitSchedule(
+        _ schedule: [ProgramSplitDayPlan],
+        context: ModelContext
+    ) {
         guard !schedule.isEmpty else { return }
 
         let exercises = (try? context.fetch(FetchDescriptor<Exercise>())) ?? []

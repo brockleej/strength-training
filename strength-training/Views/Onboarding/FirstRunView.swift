@@ -39,7 +39,7 @@ struct FirstRunView: View {
         case welcome
     }
 
-    init(onFinished: @escaping () -> Void, showsSplitSetup: Bool = false) {
+    init(showsSplitSetup: Bool = false, onFinished: @escaping () -> Void) {
         self.onFinished = onFinished
         self.showsSplitSetup = showsSplitSetup
         _setupStep = State(initialValue: showsSplitSetup ? .pickSplit : .welcome)
@@ -555,7 +555,7 @@ private struct FirstRunPage: Identifiable {
                 .init(
                     symbol: "chart.line.uptrend.xyaxis",
                     title: "Progress",
-                    detail: "Strength score is the sum of your best estimated 1-rep max on each lift. Below that: workout count, working sets, how often you trained, body log, PRs this month, sets by muscle, and a spreadsheet of recent sessions for each split day."
+                    detail: "Strength score is the strongest estimated 1-rep max for each muscle. Sets tagged Side count both limbs. Two bench variations still count as one chest number. Below that: workout count, working sets, how often you trained, body log, PRs this month, sets by muscle, and a spreadsheet of recent sessions for each split day."
                 ),
                 .init(
                     symbol: "list.bullet",

@@ -178,12 +178,26 @@ final class DayTypeRegistry {
         reload(context: context)
     }
 
+    /// Catch-all days can always go. The last real training day cannot —
+    /// Today needs a day to start.
+    static func allowsDeletingDay(includesAllExercises: Bool, homeDayCount: Int) -> Bool {
+        if includesAllExercises { return true }
+        return homeDayCount > 1
+    }
+
+    func canDelete(id: UUID, from rows: [SplitDay]) -> Bool {
+        guard let row = rows.first(where: { $0.id == id }) else { return false }
+        let homes = rows.filter { !$0.includesAllExercises }.count
+        return Self.allowsDeletingDay(
+            includesAllExercises: row.includesAllExercises,
+            homeDayCount: homes
+        )
+    }
+
     func delete(id: UUID, context: ModelContext) {
         let rows = (try? context.fetch(FetchDescriptor<SplitDay>())) ?? []
         guard let row = rows.first(where: { $0.id == id }) else { return }
-        // Keep at least one non-catch-all day so the app stays usable.
-        let homes = rows.filter { !$0.includesAllExercises }
-        if !row.includesAllExercises && homes.count <= 1 { return }
+        guard canDelete(id: id, from: rows) else { return }
         context.delete(row)
         try? context.save()
         SeedData.markSplitConfigured(context: context)

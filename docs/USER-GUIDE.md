@@ -206,7 +206,7 @@ Swipe a History row to delete a workout (you will be asked). That is permanent.
 Trends across finished sessions — not a live workout screen.
 
 - **Range** at the top (for example 1 month / 3 months).
-- **Strength score** — sum of best estimated 1RMs (Epley) across lifts. The badge is change vs a month ago. This is *strength*, not “total pounds moved.”
+- **Strength score** — strongest estimated 1RM (Epley) for each muscle, added together. Barbell and dumbbell bench share chest — only the stronger one counts. Sets tagged **Side** count both limbs so a one-arm curl can sit next to a barbell curl. The badge is change vs a month ago. This is *strength*, not “total pounds moved.” The first open of Progress can spin briefly; it should not freeze.
 - **Workouts** and **working sets** in the selected range.
 - **Workouts** chart — frequency over time.
 - **Body** — log weight, waist, neck, etc. Navy body-fat and FFMI if height + sex are saved.
@@ -231,7 +231,7 @@ Your library — not today’s session.
 
 Assigning a lift to Push (and maybe Legs) is what makes it show on Today and on that day’s workout list. A/B labels hide it on the other week unless you pick **All** mid-session.
 
-Day order and which days exist are **Settings → Edit training split**. The list of lifts *on* a day is Exercises, **Edit [Day] list** on Today, or **Reorder / edit day plan** on the workout overview.
+Day order and which days exist are **Settings → Edit training split**. You can swipe extra days off; the last day stays so Today still has something to start. If planned workouts are waiting, **Use planned workouts as my split** sits under the last preset (same as the prompt after you add a file). The list of lifts *on* a day is Exercises, **Edit [Day] list** on Today, or **Reorder / edit day plan** on the workout overview.
 
 ---
 
@@ -272,7 +272,7 @@ Use this for safekeeping or another device. Do not restore a `.rocklogcoach` fil
 A planned-workout file (`.rocklogprogram` or a JSON whose format is `rocklog.program`) adds upcoming days with the target sets already filled in. It does **not** replace your history. After you add the file, RockLog asks if you want to **use this as your training split** (days + lifts on each day). **Keep my current split** leaves Today’s days as they are.
 
 - **Settings → Add planned workouts**, or open the file from Files / a share sheet.
-- Confirm **Add workouts**. Then choose **Use this split** or **Keep my current split**. The file is a queue — missed gym days stay next up. **Start this block today** is optional (slides every date); you do not need it for rolling-on-train.
+- Confirm **Add workouts**. Then choose **Use this split** or **Keep my current split**. You can also do that later: **Settings → Edit training split → Use planned workouts as my split** (under presets). The file is a queue — missed gym days stay next up. **Start this block today** is optional (slides every date); you do not need it for rolling-on-train.
 - Today shows **Next up: Lower** (or whatever is first unused). Start that day to load those ramps and work sets — not every lift on the day plan. Two Lowers in one week can be different (deadlift first, Romanian later).
 - Starting a different day leaves the queue alone.
 - A missed calendar day is not saved as a finished workout. History uses the day you actually trained.
