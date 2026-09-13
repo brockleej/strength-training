@@ -108,6 +108,7 @@ struct WorkoutSummaryView: View {
         }
         .confirmationDialog("Send to RockCoach", isPresented: $showShareChoices, titleVisibility: .visible) {
             Button("This workout") { shareThisWorkout() }
+            Button("Last week") { shareLastWeek() }
             Button(sinceLastShareLabel) { shareSinceLastShare() }
             Button("Cancel", role: .cancel) {}
         }
@@ -219,6 +220,14 @@ struct WorkoutSummaryView: View {
     private func shareSinceLastShare() {
         do {
             CoachExportService.present(try CoachExportService.writeUnsharedPackage(from: completedSessions))
+        } catch {
+            shareError = error.localizedDescription
+        }
+    }
+
+    private func shareLastWeek() {
+        do {
+            CoachExportService.present(try CoachExportService.writeLastWeekPackage(from: completedSessions))
         } catch {
             shareError = error.localizedDescription
         }

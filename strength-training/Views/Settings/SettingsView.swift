@@ -529,7 +529,7 @@ struct SettingsView: View {
                 GymPassView()
             }
             .fullScreenCover(isPresented: $showWelcomeGuide) {
-                FirstRunView(showsSplitSetup: false, onFinished: { showWelcomeGuide = false })
+                FirstRunView(onFinished: { showWelcomeGuide = false }, showsSplitSetup: false)
             }
             .fileImporter(
                 isPresented: $isImporting,

@@ -15,12 +15,12 @@ enum SessionMath {
 
     static func volume(of session: WorkoutSession) -> Double {
         session.exerciseRecordsArray
-            .flatMap { $0.setsArray }
+            .flatMap(\.loggedSetsArray)
             .reduce(0) { $0 + $1.volumeContribution }
     }
 
     static func setCount(of session: WorkoutSession) -> Int {
-        session.exerciseRecordsArray.reduce(0) { $0 + $1.setsArray.count }
+        session.exerciseRecordsArray.reduce(0) { $0 + $1.loggedSetsArray.count }
     }
 
     /// Minutes string ("47") for UI. Nil when we have no stored or inferred length.
@@ -32,7 +32,7 @@ enum SessionMath {
         WorkoutDurationLogic.resolvedSeconds(
             stored: session.durationSeconds,
             sessionStart: session.date,
-            setDates: session.exerciseRecordsArray.flatMap { $0.setsArray.map(\.completedAt) }
+            setDates: session.exerciseRecordsArray.flatMap { $0.loggedSetsArray.map(\.completedAt) }
         )
     }
 
@@ -41,7 +41,7 @@ enum SessionMath {
         liveElapsed: TimeInterval,
         now: Date = .now
     ) {
-        let setDates = session.exerciseRecordsArray.flatMap { $0.setsArray.map(\.completedAt) }
+        let setDates = session.exerciseRecordsArray.flatMap { $0.loggedSetsArray.map(\.completedAt) }
         let seconds = WorkoutDurationLogic.secondsToStore(
             liveElapsed: liveElapsed,
             sessionStart: session.date,
@@ -62,7 +62,7 @@ enum SessionMath {
             guard let exercise = record.exercise, !counted.contains(exercise.id) else { continue }
             let sessionBest = session.exerciseRecordsArray
                 .filter { $0.exercise?.id == exercise.id }
-                .flatMap { $0.setsArray }
+                .flatMap(\.loggedSetsArray)
                 .filter { !$0.isWarmup }
                 .map(\.estimatedE1RM)
                 .max() ?? 0
@@ -70,7 +70,7 @@ enum SessionMath {
             let allTimeBest = allSessions
                 .flatMap { $0.exerciseRecordsArray }
                 .filter { $0.exercise?.id == exercise.id }
-                .flatMap { $0.setsArray }
+                .flatMap(\.loggedSetsArray)
                 .filter { !$0.isWarmup }
                 .map(\.estimatedE1RM)
                 .max() ?? 0
@@ -94,7 +94,7 @@ enum SessionMath {
         for session in sessions {
             for record in session.exerciseRecordsArray {
                 guard let exerciseID = record.exercise?.id else { continue }
-                for set in record.setsArray where !set.isWarmup {
+                for set in record.loggedSetsArray where !set.isWarmup {
                     let e1rm = set.estimatedE1RM
                     if e1rm > best[exerciseID, default: 0] {
                         best[exerciseID] = e1rm
@@ -113,7 +113,7 @@ enum SessionMath {
             guard let exercise = record.exercise, !counted.contains(exercise.id) else { continue }
             let sessionBest = session.exerciseRecordsArray
                 .filter { $0.exercise?.id == exercise.id }
-                .flatMap { $0.setsArray }
+                .flatMap(\.loggedSetsArray)
                 .filter { !$0.isWarmup }
                 .map(\.estimatedE1RM)
                 .max() ?? 0

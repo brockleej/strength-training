@@ -5,9 +5,8 @@
 
 import SwiftUI
 
-/// Logged-sets table for the Focus screen. Each row can show last session’s
-/// matching set (dim) beside this session’s set. Deltas sit as superscripts
-/// next to weight or reps on the this-session numbers.
+/// Logged-sets table for the Focus screen. Two columns (last / this) unless
+/// a planned workout has targets — then last / plan / actual.
 struct FocusSetsCard: View {
     struct PreviousSet: Equatable {
         let weight: Double
@@ -17,27 +16,32 @@ struct FocusSetsCard: View {
         var isAssisted: Bool = false
     }
 
-    let sets: [SetRecord]              // sorted ascending by setNumber
+    let sets: [SetRecord]              // logged work only, sorted by setNumber
     /// Prior session sets aligned by order (index 0 = set 1). Longer than
     /// `sets` when you haven’t matched last time’s volume yet.
     var previousSets: [PreviousSet] = []
     var previousDateLabel: String? = nil
+    /// Programmed targets. When non-empty, a PLAN column appears and Actual stays blank until logged.
+    var plannedSets: [PreviousSet] = []
     var selectedSetID: UUID? = nil
     var onSelect: (SetRecord) -> Void = { _ in }
     var onDelete: (SetRecord) -> Void = { _ in }
     /// Load a previous set into steppers (weight, reps, warmup, eachSide, assisted).
     var onSelectPrevious: ((PreviousSet) -> Void)? = nil
+    var onSelectPlanned: ((PreviousSet) -> Void)? = nil
 
     private var rowCount: Int {
-        max(sets.count, previousSets.count, sets.isEmpty && previousSets.isEmpty ? 0 : 1)
+        let n = max(sets.count, previousSets.count, plannedSets.count)
+        return n == 0 ? 0 : n
     }
 
-    private var showPreviousColumn: Bool { !previousSets.isEmpty }
+    private var showPlannedColumn: Bool { !plannedSets.isEmpty }
+    private var showPreviousColumn: Bool { !previousSets.isEmpty || showPlannedColumn }
 
     var body: some View {
         VStack(spacing: 0) {
             header
-            if sets.isEmpty && previousSets.isEmpty {
+            if sets.isEmpty && previousSets.isEmpty && plannedSets.isEmpty {
                 Text("No sets yet")
                     .font(.uplift.text(13, weight: .medium))
                     .foregroundStyle(Color.uplift.fgDim)
@@ -55,7 +59,8 @@ struct FocusSetsCard: View {
                 ForEach(0..<rowCount, id: \.self) { index in
                     let thisSet = index < sets.count ? sets[index] : nil
                     let prev = index < previousSets.count ? previousSets[index] : nil
-                    row(index: index, thisSet: thisSet, previous: prev)
+                    let planned = index < plannedSets.count ? plannedSets[index] : nil
+                    row(index: index, thisSet: thisSet, previous: prev, planned: planned)
                     if index < rowCount - 1 {
                         Rectangle()
                             .fill(Color.uplift.hairline)
@@ -76,7 +81,22 @@ struct FocusSetsCard: View {
         HStack(spacing: 10) {
             Text("SET")
                 .frame(width: 44, alignment: .leading)
-            if showPreviousColumn {
+            if showPlannedColumn {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("LAST")
+                    if let previousDateLabel {
+                        Text(previousDateLabel)
+                            .font(.uplift.text(9, weight: .medium))
+                            .foregroundStyle(Color.uplift.fgDim)
+                            .lineLimit(1)
+                    }
+                }
+                .frame(width: 70, alignment: .leading)
+                Text("PLAN")
+                    .frame(width: 70, alignment: .leading)
+                Text("ACTUAL")
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+            } else if showPreviousColumn {
                 VStack(alignment: .leading, spacing: 1) {
                     Text("LAST")
                     if let previousDateLabel {
@@ -105,15 +125,15 @@ struct FocusSetsCard: View {
     }
 
     @ViewBuilder
-    private func row(index: Int, thisSet: SetRecord?, previous: PreviousSet?) -> some View {
+    private func row(index: Int, thisSet: SetRecord?, previous: PreviousSet?, planned: PreviousSet?) -> some View {
         if showPreviousColumn {
-            comparisonRow(index: index, thisSet: thisSet, previous: previous)
+            comparisonRow(index: index, thisSet: thisSet, previous: previous, planned: planned)
         } else if let thisSet {
             simpleRow(thisSet)
         }
     }
 
-    private func comparisonRow(index: Int, thisSet: SetRecord?, previous: PreviousSet?) -> some View {
+    private func comparisonRow(index: Int, thisSet: SetRecord?, previous: PreviousSet?, planned: PreviousSet?) -> some View {
         let hasLoggedSet = thisSet != nil
         let isSelected = thisSet.map { selectedSetID == $0.id } ?? false
         return HStack(spacing: 10) {
@@ -140,36 +160,30 @@ struct FocusSetsCard: View {
                     .font(.uplift.mono(15, weight: .bold))
                     .foregroundStyle(Color.uplift.fg)
             }
-            .frame(width: 44, alignment: .leading)
+            .frame(width: showPlannedColumn ? 36 : 44, alignment: .leading)
 
-            // Last — compact, muted, tap to load
-            if let previous {
-                Button {
-                    onSelectPrevious?(previous)
-                } label: {
-                    HStack(spacing: 3) {
-                        lastPairLabel(previous)
-                        Image(systemName: "arrow.down.left")
-                            .font(.system(size: 8, weight: .semibold))
-                            .foregroundStyle(Color.uplift.fgFaint)
-                    }
-                    .frame(width: 104, alignment: .leading)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Load last set \(index + 1) into steppers")
-            } else {
-                Text("—")
-                    .font(.uplift.mono(14, weight: .medium))
-                    .foregroundStyle(Color.uplift.fgFaint)
-                    .frame(width: 104, alignment: .leading)
+            snapshotButton(
+                previous,
+                width: showPlannedColumn ? 70 : 104,
+                showLoadIcon: !showPlannedColumn,
+                accessibility: "Load last set \(index + 1) into steppers",
+                action: onSelectPrevious
+            )
+
+            if showPlannedColumn {
+                snapshotButton(
+                    planned,
+                    width: 70,
+                    showLoadIcon: false,
+                    accessibility: "Load planned set \(index + 1) into steppers",
+                    action: onSelectPlanned
+                )
             }
 
             Spacer(minLength: 4)
 
-            // This — prominent weight × reps with inline superscript deltas
             if let logged = thisSet {
-                thisPairLabel(thisSet: logged, previous: previous)
+                thisPairLabel(thisSet: logged, previous: previous ?? planned)
             } else {
                 Text("·")
                     .font(.uplift.mono(16, weight: .medium))
@@ -195,7 +209,40 @@ struct FocusSetsCard: View {
             }
         ))
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(comparisonA11y(index: index, thisSet: thisSet, previous: previous, isSelected: isSelected))
+        .accessibilityLabel(comparisonA11y(index: index, thisSet: thisSet, previous: previous, planned: planned, isSelected: isSelected))
+    }
+
+    @ViewBuilder
+    private func snapshotButton(
+        _ snapshot: PreviousSet?,
+        width: CGFloat,
+        showLoadIcon: Bool,
+        accessibility: String,
+        action: ((PreviousSet) -> Void)?
+    ) -> some View {
+        if let snapshot {
+            Button {
+                action?(snapshot)
+            } label: {
+                HStack(spacing: 3) {
+                    lastPairLabel(snapshot)
+                    if showLoadIcon {
+                        Image(systemName: "arrow.down.left")
+                            .font(.system(size: 8, weight: .semibold))
+                            .foregroundStyle(Color.uplift.fgFaint)
+                    }
+                }
+                .frame(width: width, alignment: .leading)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(accessibility)
+        } else {
+            Text("—")
+                .font(.uplift.mono(14, weight: .medium))
+                .foregroundStyle(Color.uplift.fgFaint)
+                .frame(width: width, alignment: .leading)
+        }
     }
 
     private func simpleRow(_ set: SetRecord) -> some View {
@@ -391,13 +438,16 @@ struct FocusSetsCard: View {
         return parts.joined(separator: ", ")
     }
 
-    private func comparisonA11y(index: Int, thisSet: SetRecord?, previous: PreviousSet?, isSelected: Bool) -> String {
+    private func comparisonA11y(index: Int, thisSet: SetRecord?, previous: PreviousSet?, planned: PreviousSet?, isSelected: Bool) -> String {
         var parts = ["Set \(index + 1)"]
         if let previous {
             parts.append("last \(StepperLogic.format(previous.weight)) by \(previous.reps)")
         }
+        if let planned {
+            parts.append("planned \(StepperLogic.format(planned.weight)) by \(planned.reps)")
+        }
         if let thisSet {
-            parts.append("this \(thisSet.weightDisplay) by \(thisSet.reps)")
+            parts.append("actual \(thisSet.weightDisplay) by \(thisSet.reps)")
             if isSelected { parts.append("editing") }
             if let previous, !thisSet.isWarmup, !previous.isWarmup {
                 let w = thisSet.weightLbs - previous.weight
@@ -410,7 +460,7 @@ struct FocusSetsCard: View {
                 }
             }
         } else {
-            parts.append("not logged yet")
+            parts.append("actual not logged yet")
         }
         return parts.joined(separator: ", ")
     }
@@ -429,6 +479,25 @@ private struct OptionalSwipe: ViewModifier {
             content
         }
     }
+}
+
+#Preview("FocusSetsCard planned three columns") {
+    FocusSetsCard(
+        sets: [],
+        previousSets: [
+            .init(weight: 225, reps: 5, isWarmup: false),
+            .init(weight: 225, reps: 5, isWarmup: false),
+        ],
+        previousDateLabel: "last wk",
+        plannedSets: [
+            .init(weight: 230, reps: 5, isWarmup: false),
+            .init(weight: 230, reps: 5, isWarmup: false),
+            .init(weight: 235, reps: 3, isWarmup: false),
+        ]
+    )
+    .padding(20)
+    .background(Color.uplift.bgElev)
+    .preferredColorScheme(.dark)
 }
 
 #Preview("FocusSetsCard comparison") {

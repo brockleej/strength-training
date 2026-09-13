@@ -16,6 +16,7 @@ struct SessionDetailView: View {
     @State private var loadedStats = false
     @State private var showReopenConfirm = false
     @State private var shareError: String?
+    @State private var showShareChoices = false
     @AppStorage(CoachAthletePreferences.enabledKey)
     private var coachFeaturesEnabled = false
 
@@ -25,7 +26,7 @@ struct SessionDetailView: View {
 
     private var sortedRecords: [ExerciseRecord] {
         session.exerciseRecordsArray
-            .filter { !$0.setsArray.isEmpty }
+            .filter { !$0.loggedSetsArray.isEmpty }
             .sorted { $0.sortOrder < $1.sortOrder }
     }
 
@@ -72,7 +73,7 @@ struct SessionDetailView: View {
                 HStack(spacing: 16) {
                     if coachFeaturesEnabled {
                         Button {
-                            shareWithCoach()
+                            showShareChoices = true
                         } label: {
                             Image(systemName: "paperplane")
                         }
@@ -87,6 +88,11 @@ struct SessionDetailView: View {
                     }
                 }
             }
+        }
+        .confirmationDialog("Send to RockCoach", isPresented: $showShareChoices, titleVisibility: .visible) {
+            Button("This workout") { shareWithCoach() }
+            Button("Last week") { shareLastWeek() }
+            Button("Cancel", role: .cancel) {}
         }
         .alert("Couldn’t send", isPresented: Binding(
             get: { shareError != nil },
@@ -126,6 +132,14 @@ struct SessionDetailView: View {
     private func shareWithCoach() {
         do {
             CoachExportService.present(try CoachExportService.writePackage(for: [session]))
+        } catch {
+            shareError = error.localizedDescription
+        }
+    }
+
+    private func shareLastWeek() {
+        do {
+            CoachExportService.present(try CoachExportService.writeLastWeekPackage(from: completedSessions))
         } catch {
             shareError = error.localizedDescription
         }
@@ -279,7 +293,7 @@ private struct LiftCard: View {
     let modelContext: ModelContext
 
     private var sortedSets: [SetRecord] {
-        record.setsArray.sorted { $0.setNumber < $1.setNumber }
+        record.loggedSetsArray.sorted { $0.setNumber < $1.setNumber }
     }
 
     var body: some View {
@@ -417,7 +431,7 @@ private struct LiftCard: View {
     }
 
     private var currentE1RM: Double {
-        record.setsArray
+        record.loggedSetsArray
             .filter { !$0.isWarmup }
             .map(\.estimatedE1RM)
             .max() ?? 0
@@ -436,7 +450,7 @@ private struct LiftCard: View {
 
     private var previousE1RM: Double? {
         guard let prev = previousRecord else { return nil }
-        return prev.setsArray
+        return prev.loggedSetsArray
             .filter { !$0.isWarmup }
             .map(\.estimatedE1RM)
             .max()
@@ -445,7 +459,7 @@ private struct LiftCard: View {
     private var allTimeE1RM: Double {
         let completedRecords = record.exercise?.recordsArray.filter { $0.session?.isCompleted == true } ?? []
         return completedRecords
-            .flatMap { $0.setsArray.filter { !$0.isWarmup } }
+            .flatMap { $0.loggedSetsArray.filter { !$0.isWarmup } }
             .map(\.estimatedE1RM)
             .max() ?? 0
     }

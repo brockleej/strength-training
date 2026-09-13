@@ -8,6 +8,7 @@ import Foundation
 enum CoachExportError: LocalizedError {
     case noWorkingSets
     case nothingNewSinceLastShare
+    case nothingLastWeek
 
     var errorDescription: String? {
         switch self {
@@ -15,6 +16,8 @@ enum CoachExportError: LocalizedError {
             return "This workout has no logged sets to send."
         case .nothingNewSinceLastShare:
             return "Nothing new to send. Send a workout from History if you want to send it again."
+        case .nothingLastWeek:
+            return "No completed workouts last week to send."
         }
     }
 }
@@ -34,7 +37,7 @@ enum CoachExportService {
     ) throws -> CoachSessionDocument {
         var exercises: [CoachExercisePayload] = []
         for record in session.exerciseRecordsArray.sorted(by: { $0.sortOrder < $1.sortOrder }) {
-            let sets = record.setsArray
+            let sets = record.loggedSetsArray
                 .sorted { $0.setNumber < $1.setNumber }
                 .map { set in
                     CoachSetPayload(
@@ -126,6 +129,16 @@ enum CoachExportService {
         let url = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
         try data.write(to: url, options: .atomic)
         return CoachSharePackage(url: url, sessionIDs: documents.map(\.session.id))
+    }
+
+    static func writeLastWeekPackage(
+        from completed: [WorkoutSession],
+        now: Date = .now
+    ) throws -> CoachSharePackage {
+        let week = SplitScheduleLogic.completedSessions(inPreviousWeekOf: now, from: completed)
+            .filter { SessionMath.setCount(of: $0) > 0 }
+        guard !week.isEmpty else { throw CoachExportError.nothingLastWeek }
+        return try writePackage(for: week)
     }
 
     static func present(_ package: CoachSharePackage) {

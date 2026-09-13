@@ -79,9 +79,9 @@ struct ContentView: View {
             get: { workoutViewModel != nil && !hasCompletedFirstRun },
             set: { if !$0 { hasCompletedFirstRun = true } }
         )) {
-            FirstRunView(showsSplitSetup: showFirstUseSplitSetup, onFinished: {
+            FirstRunView(onFinished: {
                 hasCompletedFirstRun = true
-            })
+            }, showsSplitSetup: showFirstUseSplitSetup)
         }
         .task {
             // Hydrate iCloud split prefs before first-run UI, so a reinstall

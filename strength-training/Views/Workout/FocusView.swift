@@ -32,8 +32,22 @@ struct FocusView: View {
 
     private var loggedSets: [SetRecord] {
         let _ = workoutVM.setMutationEpoch
-        return (workoutVM.currentRecord(for: exercise)?.setsArray ?? [])
+        return (workoutVM.currentRecord(for: exercise)?.loggedSetsArray ?? [])
             .sorted { $0.setNumber < $1.setNumber }
+    }
+
+    private var plannedSetsForCard: [FocusSetsCard.PreviousSet] {
+        let _ = workoutVM.setMutationEpoch
+        return (workoutVM.currentRecord(for: exercise)?.plannedSetsArray ?? [])
+            .map {
+                FocusSetsCard.PreviousSet(
+                    weight: $0.weightLbs,
+                    reps: $0.reps,
+                    isWarmup: $0.isWarmup,
+                    isEachSide: $0.isEachSide,
+                    isAssisted: $0.isAssisted
+                )
+            }
     }
 
     /// Prior completed session for this lift (excludes the active session so
@@ -48,7 +62,7 @@ struct FocusView: View {
     /// Last-session sets for inline comparison in FocusSetsCard.
     private var previousSetsForCard: [FocusSetsCard.PreviousSet] {
         guard let record = lastCompletedRecord else { return [] }
-        return record.setsArray
+        return record.loggedSetsArray
             .sorted { $0.setNumber < $1.setNumber }
             .map {
                 FocusSetsCard.PreviousSet(
@@ -79,7 +93,7 @@ struct FocusView: View {
                 PrevSessionsStripData.SessionSets(
                     id: record.id,
                     date: record.session?.date ?? .distantPast,
-                    sets: record.setsArray
+                    sets: record.loggedSetsArray
                         .sorted { $0.setNumber < $1.setNumber }
                         .map { .init(weight: $0.weightLbs, reps: $0.reps) }
                 )
@@ -225,8 +239,9 @@ struct FocusView: View {
     @ViewBuilder
     private var setsSection: some View {
         let prev = previousSetsForCard
+        let planned = plannedSetsForCard
         VStack(alignment: .leading, spacing: 6) {
-            Text(prev.isEmpty ? "This session" : "Sets · last vs this")
+            Text(setsHeading(hasLast: !prev.isEmpty, hasPlan: !planned.isEmpty))
                 .textCase(.uppercase)
                 .font(.uplift.text(11, weight: .semibold))
                 .tracking(0.4)
@@ -238,6 +253,7 @@ struct FocusView: View {
                     sets: loggedSets,
                     previousSets: prev,
                     previousDateLabel: previousDateLabel,
+                    plannedSets: planned,
                     selectedSetID: focusVM.editingSetID,
                     onSelect: { set in
                         focusVM.toggleEdit(set: set, prefillIfCancel: currentPrefill())
@@ -249,13 +265,10 @@ struct FocusView: View {
                         }
                     },
                     onSelectPrevious: { prev in
-                        focusVM.loadFromHistory(
-                            weight: prev.weight,
-                            reps: prev.reps,
-                            isWarmup: prev.isWarmup,
-                            isEachSide: prev.isEachSide,
-                            isAssisted: prev.isAssisted
-                        )
+                        loadSnapshot(prev)
+                    },
+                    onSelectPlanned: { planned in
+                        loadSnapshot(planned)
                     }
                 )
                 .padding(.horizontal, 20)
@@ -264,6 +277,7 @@ struct FocusView: View {
                     sets: loggedSets,
                     previousSets: prev,
                     previousDateLabel: previousDateLabel,
+                    plannedSets: planned,
                     onDelete: { set in
                         withAnimation(.easeInOut(duration: 0.2)) {
                             workoutVM.deleteSet(set, from: exercise)
@@ -687,6 +701,22 @@ struct FocusView: View {
 
     // MARK: - Actions
 
+    private func setsHeading(hasLast: Bool, hasPlan: Bool) -> String {
+        if hasPlan { return "Sets · last · plan · actual" }
+        if hasLast { return "Sets · last vs this" }
+        return "This session"
+    }
+
+    private func loadSnapshot(_ snapshot: FocusSetsCard.PreviousSet) {
+        focusVM?.loadFromHistory(
+            weight: snapshot.weight,
+            reps: snapshot.reps,
+            isWarmup: snapshot.isWarmup,
+            isEachSide: snapshot.isEachSide,
+            isAssisted: snapshot.isAssisted
+        )
+    }
+
     private func currentPrefill() -> FocusTargetLogic.Prefill {
         let sessionLast: FocusTargetLogic.SessionLastSet? = {
             guard let last = loggedSets.last else { return nil }
@@ -694,8 +724,19 @@ struct FocusView: View {
         }()
         // Next set # this session (1-based) → same slot from last completed session.
         let nextSetNumber = loggedSets.count + 1
-        let historicalSet = FocusTargetLogic.historicalSet(
-            fromPriorSets: lastCompletedRecord?.setsArray ?? [],
+        let plannedForNext: FocusTargetLogic.SessionLastSet? = {
+            guard nextSetNumber >= 1, nextSetNumber <= plannedSetsForCard.count else { return nil }
+            let p = plannedSetsForCard[nextSetNumber - 1]
+            return FocusTargetLogic.SessionLastSet(
+                weight: p.weight,
+                reps: p.reps,
+                isWarmup: p.isWarmup,
+                isEachSide: p.isEachSide,
+                isAssisted: p.isAssisted
+            )
+        }()
+        let historicalSet = plannedForNext ?? FocusTargetLogic.historicalSet(
+            fromPriorSets: lastCompletedRecord?.loggedSetsArray ?? [],
             nextSetNumber: nextSetNumber
         )
         let mode = SetPrefillPreferences.mode
@@ -703,7 +744,7 @@ struct FocusView: View {
         let preferAssist = historicalSet?.isAssisted == true
             || sessionLast?.isAssisted == true
             || (sessionLast == nil && historicalSet == nil && (
-                lastCompletedRecord?.setsArray.contains(where: { $0.isAssisted && !$0.isWarmup }) == true
+                lastCompletedRecord?.loggedSetsArray.contains(where: { $0.isAssisted && !$0.isWarmup }) == true
                 || ExerciseAssistPreferences.prefersAssist(for: exercise.id)
             ))
         return FocusTargetLogic.prefill(
@@ -723,7 +764,7 @@ struct FocusView: View {
     private func lastSessionBestSet() -> (weight: Double, reps: Int)? {
         guard let lastRecord = lastCompletedRecord else { return nil }
         // Use effective load so assisted progress (less assist) tracks correctly.
-        let sets = lastRecord.setsArray.map {
+        let sets = lastRecord.loggedSetsArray.map {
             (weight: $0.effectiveLoadLbs(), reps: $0.reps, isWarmup: $0.isWarmup)
         }
         return FocusTargetLogic.lastBest(from: sets)

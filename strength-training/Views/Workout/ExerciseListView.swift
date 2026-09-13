@@ -153,7 +153,7 @@ struct ExerciseListView: View {
     }
 
     private func hasSets(_ exercise: Exercise) -> Bool {
-        workoutVM.currentRecord(for: exercise)?.setsArray.isEmpty == false
+        workoutVM.currentRecord(for: exercise)?.loggedSetsArray.isEmpty == false
     }
 
     var body: some View {
@@ -630,7 +630,7 @@ struct ExerciseListView: View {
             mode: workoutVM.selectedMode,
             excludingSessionID: workoutVM.activeSession?.id
         )
-        let summary = lastRecord.map { Self.formatLastSessionSets($0.setsArray) }
+        let summary = lastRecord.map { Self.formatLastSessionSets($0.loggedSetsArray) }
         let suggestion = workoutVM.suggestion(for: exercise, mode: workoutVM.selectedMode)
         let recent = workoutVM.recentAverage(for: exercise, mode: workoutVM.selectedMode)
         var target = suggestion?.targetWeight ?? recent?.weight

@@ -497,12 +497,12 @@ final class WorkoutViewModel {
 
     /// Number of exercises in the suspended session that have at least one set.
     var suspendedInProgressExerciseCount: Int {
-        suspendedSession?.exerciseRecordsArray.filter { !$0.setsArray.isEmpty }.count ?? 0
+        suspendedSession?.exerciseRecordsArray.filter { !$0.loggedSetsArray.isEmpty }.count ?? 0
     }
 
     /// True when the suspended session has at least one set logged.
     var suspendedHasSets: Bool {
-        suspendedSession?.exerciseRecordsArray.contains { !$0.setsArray.isEmpty } ?? false
+        suspendedSession?.exerciseRecordsArray.contains { !$0.loggedSetsArray.isEmpty } ?? false
     }
 
     // MARK: - HealthKit Disposal
@@ -539,8 +539,8 @@ final class WorkoutViewModel {
             session.isCompleted = true
         }
         for record in session.exerciseRecordsArray {
-            for set in record.setsArray {
-                set.isTarget = false
+            for set in record.plannedSetsArray {
+                modelContext.delete(set)
             }
         }
         let capturedSession = session
@@ -611,7 +611,7 @@ final class WorkoutViewModel {
                 clearRevisiting()
                 return
             }
-            let hasSets = active.exerciseRecordsArray.contains { !$0.setsArray.isEmpty }
+            let hasSets = active.exerciseRecordsArray.contains { !$0.loggedSetsArray.isEmpty }
             if hasSets {
                 // Prefer suspending; if a suspended session already exists, complete it.
                 if let previous = suspendedSession, previous.id != active.id {
@@ -620,6 +620,13 @@ final class WorkoutViewModel {
                 suspendedSession = active
                 if healthKitService.isSessionActive {
                     healthKitService.pauseWorkout()
+                }
+            } else if active.trainingBlock != nil
+                || active.exerciseRecordsArray.contains(where: { !$0.plannedSetsArray.isEmpty })
+            {
+                active.planStatus = .planned
+                if healthKitService.isSessionActive {
+                    Task { _ = await healthKitService.endWorkout() }
                 }
             } else {
                 modelContext.delete(active)
@@ -741,7 +748,7 @@ final class WorkoutViewModel {
         for record in exercise.recordsArray
         where record.session?.isCompleted == true && record.session?.id != excludeID {
             let sessionDate = record.session?.date ?? .distantPast
-            for set in record.setsArray where !set.isWarmup {
+            for set in record.loggedSetsArray where !set.isWarmup {
                 let load = set.effectiveLoadLbs()
                 guard load > 0 else { continue }
                 let e1rm = E1RM.estimate(weightLbs: load, reps: set.reps)
@@ -809,7 +816,7 @@ final class WorkoutViewModel {
 
     /// True when this exercise already has at least one set in the active session.
     func hasLoggedSets(for exercise: Exercise) -> Bool {
-        currentRecord(for: exercise)?.setsArray.isEmpty == false
+        currentRecord(for: exercise)?.loggedSetsArray.isEmpty == false
     }
 
     /// Explicit “done with this lift” for the active mode — not inferred from set count.
@@ -880,7 +887,7 @@ final class WorkoutViewModel {
         let record = findOrCreateRecord(for: exercise)
         // Logging again means the lift is no longer marked done.
         record.isCompleted = false
-        let setNumber = record.setsArray.count + 1
+        let setNumber = record.loggedSetsArray.count + 1
         let set = SetRecord(
             setNumber: setNumber,
             weightLbs: weight,
@@ -948,7 +955,7 @@ final class WorkoutViewModel {
     /// After marking a lift done, offer finish when every visible lift is done.
     func offerFinishIfAllLiftsDone(in exercises: [Exercise]) {
         let doneCount = exercises.filter { isExerciseDone(for: $0) }.count
-        let hasAnySets = activeSession?.exerciseRecordsArray.contains { !$0.setsArray.isEmpty } ?? false
+        let hasAnySets = activeSession?.exerciseRecordsArray.contains { !$0.loggedSetsArray.isEmpty } ?? false
         if WorkoutCompletionLogic.shouldOfferFinish(
             liftCount: exercises.count,
             doneCount: doneCount,
@@ -988,11 +995,6 @@ final class WorkoutViewModel {
         session.track = rotationTrack
         session.isCompleted = false
         session.date = now
-        for record in session.exerciseRecordsArray {
-            for set in record.setsArray where set.isTarget {
-                set.completedAt = now
-            }
-        }
         suppressUnplannedDayLifts(on: session)
         try? modelContext.save()
         activeSession = session

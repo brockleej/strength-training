@@ -15,7 +15,7 @@ enum SetMutation {
         owner?.sets?.removeAll { $0.id == set.id }
         context.delete(set)
         guard let owner else { return }
-        let remaining = owner.setsArray.sorted { $0.setNumber < $1.setNumber }
+        let remaining = owner.loggedSetsArray.sorted { $0.setNumber < $1.setNumber }
         for (index, remainingSet) in remaining.enumerated() {
             remainingSet.setNumber = index + 1
         }

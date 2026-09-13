@@ -34,6 +34,26 @@ enum SplitScheduleLogic {
         calendar.dateInterval(of: .weekOfYear, for: date)
     }
 
+    /// Monday–Sunday week before the week that contains `date`.
+    static func previousWeekInterval(containing date: Date, calendar: Calendar = .current) -> DateInterval? {
+        let cal = mondayStartCalendar(calendar)
+        guard let thisWeek = weekInterval(containing: date, calendar: cal),
+              let start = cal.date(byAdding: .day, value: -7, to: thisWeek.start)
+        else { return nil }
+        return DateInterval(start: start, duration: thisWeek.duration)
+    }
+
+    static func completedSessions(
+        inPreviousWeekOf now: Date = .now,
+        from sessions: [WorkoutSession],
+        calendar: Calendar = .current
+    ) -> [WorkoutSession] {
+        guard let interval = previousWeekInterval(containing: now, calendar: calendar) else { return [] }
+        return sessions
+            .filter { $0.isCompleted && interval.contains($0.date) }
+            .sorted { $0.date < $1.date }
+    }
+
     // MARK: - Cycle days
 
     /// Ordered days that participate in the split cycle (excludes Full Body catch-alls).

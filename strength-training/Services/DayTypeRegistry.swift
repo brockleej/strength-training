@@ -65,7 +65,7 @@ final class DayTypeRegistry {
         let rows = (try? context.fetch(descriptor)) ?? []
         if rows.isEmpty {
             if let snapshot = SeedData.loadSplitSnapshot(), !snapshot.isEmpty {
-                definitions = uniquedDefinitions(
+                definitions = Self.uniquedDefinitions(
                     snapshot
                         .sorted { $0.sortOrder < $1.sortOrder }
                         .map {
@@ -81,12 +81,12 @@ final class DayTypeRegistry {
                 )
             } else {
                 let raw = UserDefaults.standard.string(forKey: SeedData.preferredSplitPresetKey) ?? ""
-                definitions = uniquedDefinitions(
+                definitions = Self.uniquedDefinitions(
                     (SplitPreset(rawValue: raw) ?? .broSplit).definitions
                 )
             }
         } else {
-            definitions = uniquedDefinitions(rows.map(\.definition))
+            definitions = Self.uniquedDefinitions(rows.map(\.definition))
         }
         reindex()
     }
@@ -268,7 +268,7 @@ final class DayTypeRegistry {
 
     private func reindex() {
         byName = Dictionary(
-            uniquedDefinitions(definitions).map { ($0.name, $0) },
+            Self.uniquedDefinitions(definitions).map { ($0.name, $0) },
             uniquingKeysWith: { first, _ in first }
         )
     }

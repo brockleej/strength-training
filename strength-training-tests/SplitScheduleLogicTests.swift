@@ -30,6 +30,20 @@ final class SplitScheduleLogicTests: XCTestCase {
         return .init(dayName: day.rawValue, date: date)
     }
 
+    func test_previousWeekInterval_isTheMondayWeekBefore() throws {
+        let thisTuesday = calendar.date(byAdding: .day, value: 8, to: monday)!
+        let previous = try XCTUnwrap(
+            SplitScheduleLogic.previousWeekInterval(containing: thisTuesday, calendar: calendar)
+        )
+        let thisWeek = try XCTUnwrap(
+            SplitScheduleLogic.weekInterval(containing: thisTuesday, calendar: calendar)
+        )
+        XCTAssertEqual(previous.end, thisWeek.start)
+        XCTAssertEqual(previous.duration, thisWeek.duration)
+        XCTAssertTrue(previous.contains(monday))
+        XCTAssertFalse(previous.contains(thisTuesday))
+    }
+
     // MARK: - Rolling
 
     func test_rolling_noHistory_picksFirst() {

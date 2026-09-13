@@ -155,6 +155,64 @@ final class WorkoutSessionLogicTests: XCTestCase {
     }
 
     @MainActor
+    func test_volumeAndSetCount_ignorePlannedTargets() throws {
+        let container = try inMemoryContainer()
+        let context = container.mainContext
+        let exercise = Exercise(name: "Squat", dayType: .legs, muscleGroup: "Legs", sortOrder: 0)
+        let session = WorkoutSession(dayType: .legs)
+        session.isCompleted = true
+        let record = ExerciseRecord(trainingMode: .highWeightLowReps, sortOrder: 0)
+        record.exercise = exercise
+        record.session = session
+        let planned = SetRecord(setNumber: 1, weightLbs: 315, reps: 5, isTarget: true)
+        let logged = SetRecord(setNumber: 1, weightLbs: 225, reps: 5)
+        planned.exerciseRecord = record
+        logged.exerciseRecord = record
+        record.sets = [planned, logged]
+        session.exerciseRecords = [record]
+        context.insert(exercise)
+        context.insert(session)
+        context.insert(record)
+        context.insert(planned)
+        context.insert(logged)
+        try context.save()
+
+        XCTAssertEqual(SessionMath.setCount(of: session), 1)
+        XCTAssertEqual(SessionMath.volume(of: session), 225 * 5)
+        XCTAssertEqual(record.loggedSetsArray.count, 1)
+        XCTAssertEqual(record.plannedSetsArray.count, 1)
+    }
+
+    @MainActor
+    func test_deleteLoggedSet_doesNotRenumberPlannedTargets() throws {
+        let container = try inMemoryContainer()
+        let context = container.mainContext
+        let exercise = Exercise(name: "Bench", dayType: .push, muscleGroup: "Chest", sortOrder: 0)
+        let session = WorkoutSession(dayType: .push)
+        let record = ExerciseRecord(trainingMode: .highWeightLowReps, sortOrder: 0)
+        record.exercise = exercise
+        record.session = session
+        let plan1 = SetRecord(setNumber: 1, weightLbs: 185, reps: 5, isTarget: true)
+        let plan2 = SetRecord(setNumber: 2, weightLbs: 205, reps: 5, isTarget: true)
+        let log1 = SetRecord(setNumber: 1, weightLbs: 185, reps: 5)
+        let log2 = SetRecord(setNumber: 2, weightLbs: 195, reps: 5)
+        for set in [plan1, plan2, log1, log2] { set.exerciseRecord = record }
+        record.sets = [plan1, plan2, log1, log2]
+        context.insert(exercise)
+        context.insert(session)
+        context.insert(record)
+        [plan1, plan2, log1, log2].forEach { context.insert($0) }
+        try context.save()
+
+        SetMutation.delete(log1, from: record, in: context)
+        try context.save()
+
+        XCTAssertEqual(record.plannedSetsArray.map(\.setNumber), [1, 2])
+        XCTAssertEqual(record.loggedSetsArray.map(\.setNumber), [1])
+        XCTAssertEqual(record.loggedSetsArray.first?.weightLbs, 195)
+    }
+
+    @MainActor
     func test_deleteOnlySet_leavesEmptyRecord() throws {
         let container = try inMemoryContainer()
         let context = container.mainContext
