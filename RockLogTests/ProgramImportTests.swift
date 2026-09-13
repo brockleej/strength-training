@@ -30,6 +30,7 @@ final class ProgramImportTests: XCTestCase {
         XCTAssertEqual(PlannedBlockQueue.whatsNextEyebrow, "What's next")
         XCTAssertTrue(
             PlannedBlockQueue.splitPausedWhileQueued.contains("planned workouts waiting")
+                && PlannedBlockQueue.splitPausedWhileQueued.contains("colors")
         )
         XCTAssertFalse(PlannedBlockQueue.splitPausedWhileQueued.localizedCaseInsensitiveContains("JSON"))
         XCTAssertFalse(PlannedBlockQueue.splitPausedWhileQueued.localizedCaseInsensitiveContains("schema"))

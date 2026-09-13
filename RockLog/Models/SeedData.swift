@@ -527,6 +527,20 @@ struct SeedData {
             }
         }
         if changed { try? context.save() }
+        migrateClashingDayColors(context: context)
+    }
+
+    /// Pull used the same blue as Lower/Legs. Only rewrite that stock clash.
+    static func migrateClashingDayColors(context: ModelContext) {
+        let lowerBlue = Int(0x3F9CFF)
+        let pullPurple = Int(0xB569FF)
+        let rows = (try? context.fetch(FetchDescriptor<SplitDay>())) ?? []
+        var changed = false
+        for row in rows where row.name == "Pull" && row.colorHex == lowerBlue {
+            row.colorHex = pullPurple
+            changed = true
+        }
+        if changed { try? context.save() }
     }
 
     // MARK: - Exercise catalog

@@ -97,51 +97,48 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             List {
-                if plannedQueueOwnsToday {
-                    Section {
+                Section {
+                    NavigationLink {
+                        TrainingSplitSettingsView()
+                    } label: {
+                        Label("Edit training split", systemImage: "calendar")
+                    }
+                    if plannedQueueOwnsToday {
                         Text(PlannedBlockQueue.splitPausedWhileQueued)
-                            .font(.uplift.text(14, weight: .medium))
+                            .font(.uplift.text(13, weight: .medium))
                             .foregroundStyle(Color.uplift.fgMuted)
                             .fixedSize(horizontal: false, vertical: true)
-                            .padding(.vertical, 4)
-                    } header: {
-                        sectionHeader("Training split")
                     }
-                    .listRowBackground(Color.uplift.surface1)
-                } else {
-                    Section {
-                        NavigationLink {
-                            TrainingSplitSettingsView()
-                        } label: {
-                            Label("Edit training split", systemImage: "calendar")
-                        }
-                    } header: {
-                        sectionHeader("Training split")
+                } header: {
+                    sectionHeader("Training split")
+                } footer: {
+                    if plannedQueueOwnsToday {
+                        sectionFooter("Today still shows the planned list. Edit day colors and icons here.")
                     }
-                    .listRowBackground(Color.uplift.surface1)
-
-                    Section {
-                        VStack(alignment: .leading, spacing: 10) {
-                            Text("Today’s day schedule")
-                                .font(.uplift.text(15, weight: .semibold))
-                                .foregroundStyle(Color.uplift.fg)
-                            UpliftSegmentedControl(
-                                segments: SplitScheduleMode.allCases.map {
-                                    UpliftSegment(id: $0.rawValue, label: $0.shortTitle)
-                                },
-                                selection: $splitScheduleModeRaw
-                            )
-                            Text((SplitScheduleMode(rawValue: splitScheduleModeRaw) ?? .rolling).detail)
-                                .font(.uplift.text(12, weight: .medium))
-                                .foregroundStyle(Color.uplift.fgDim)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                        .padding(.vertical, 4)
-                    } header: {
-                        sectionHeader("Rolling / Weekly")
-                    }
-                    .listRowBackground(Color.uplift.surface1)
                 }
+                .listRowBackground(Color.uplift.surface1)
+
+                Section {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Today’s day schedule")
+                            .font(.uplift.text(15, weight: .semibold))
+                            .foregroundStyle(Color.uplift.fg)
+                        UpliftSegmentedControl(
+                            segments: SplitScheduleMode.allCases.map {
+                                UpliftSegment(id: $0.rawValue, label: $0.shortTitle)
+                            },
+                            selection: $splitScheduleModeRaw
+                        )
+                        Text((SplitScheduleMode(rawValue: splitScheduleModeRaw) ?? .rolling).detail)
+                            .font(.uplift.text(12, weight: .medium))
+                            .foregroundStyle(Color.uplift.fgDim)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(.vertical, 4)
+                } header: {
+                    sectionHeader("Rolling / Weekly")
+                }
+                .listRowBackground(Color.uplift.surface1)
 
                 Section {
                     VStack(alignment: .leading, spacing: 10) {

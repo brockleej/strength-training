@@ -213,7 +213,7 @@ enum DayTypePalette {
             // Indoor rowing → horizontal/vertical pull pattern
             .init(name: "Pull", systemImage: "figure.indoor.rowing",
                   subtitle: "Back, Biceps, Rear Delts",
-                  colorHex: 0x3F9CFF, includesAllExercises: false, sortOrder: 1),
+                  colorHex: 0xB569FF, includesAllExercises: false, sortOrder: 1),
             // Functional strength (hinge) → deadlift / RDL / posterior
             .init(name: "Posterior Chain", systemImage: "figure.strengthtraining.functional",
                   subtitle: "Hamstrings, Glutes, Lower Back, Calves",

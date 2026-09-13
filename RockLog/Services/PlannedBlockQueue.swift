@@ -22,7 +22,7 @@ enum PlannedBlockQueue {
     /// Today / Settings copy while unused planned sessions are waiting.
     nonisolated static let whatsNextEyebrow = "What's next"
     nonisolated static let splitPausedWhileQueued =
-        "You have planned workouts waiting. Today shows that list instead of your training split. The split comes back when the list is empty."
+        "You have planned workouts waiting. Today shows that list instead of the split picker. You can still edit day colors and icons. The split picker comes back when the list is empty."
 
     /// Planned queue owns “what’s next.” The rolling split stays stored but is not the Today driver.
     nonisolated static func ownsToday(unusedCount: Int) -> Bool {
