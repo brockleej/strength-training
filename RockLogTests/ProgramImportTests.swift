@@ -470,6 +470,37 @@ final class ProgramImportTests: XCTestCase {
         XCTAssertEqual(SessionRosterLogic.names(in: try XCTUnwrap(vm.activeSession)), ["Conventional Deadlift"])
     }
 
+    func test_extraLoggedPush_retiresMatchingPlannedShell() throws {
+        let container = try inMemoryContainer()
+        let context = container.mainContext
+        let document = sampleDocument(firstSession: .now)
+        _ = try ProgramImportService.importDocument(document, context: context)
+
+        let extra = WorkoutSession(dayType: .push, date: .now, rotationTrack: .a)
+        extra.isCompleted = true
+        extra.planStatus = .none
+        let record = ExerciseRecord(trainingMode: .highWeightLowReps, sortOrder: 0)
+        record.session = extra
+        let logged = SetRecord(setNumber: 1, weightLbs: 155, reps: 5)
+        logged.exerciseRecord = record
+        record.sets = [logged]
+        extra.exerciseRecords = [record]
+        context.insert(extra)
+        context.insert(record)
+        context.insert(logged)
+        try context.save()
+
+        let all = try context.fetch(FetchDescriptor<WorkoutSession>())
+        let unused = PlannedBlockQueue.unusedSessions(in: all.filter { !$0.isCompleted })
+        let retire = PlannedBlockQueue.plannedShellsToRetire(
+            unused: unused,
+            completed: all.filter(\.isCompleted)
+        )
+        XCTAssertEqual(retire.map(\.day), [.push])
+        XCTAssertEqual(retire.count, 1)
+        XCTAssertTrue(retire[0].isPlanned)
+    }
+
     func test_legacySkippedSession_staysInQueue() throws {
         let container = try inMemoryContainer()
         let context = container.mainContext

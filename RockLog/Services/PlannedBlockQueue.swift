@@ -37,14 +37,12 @@ enum PlannedBlockQueue {
         sessions.contains(where: isUnused)
     }
 
-    /// Still waiting in the block: not trained, not started for real.
-    /// Check stored plan flags before walking sets (Settings was freezing on an 8-week queue).
+    /// Still waiting in the block: imported plan, not started.
+    /// Started sessions (`planStatus == none`) stay out of the queue even with no sets.
     @MainActor
     static func isUnused(_ session: WorkoutSession) -> Bool {
         guard !session.isCompleted else { return false }
-        if session.isPlanned || session.isSkippedPlan { return true }
-        if hasAthleteLoggedSets(session) { return false }
-        return session.trainingBlock != nil && session.followsSessionRoster
+        return session.isPlanned || session.isSkippedPlan
     }
 
     @MainActor
@@ -73,5 +71,28 @@ enum PlannedBlockQueue {
         session.exerciseRecordsArray.contains { record in
             record.setsArray.contains { !$0.isTarget }
         }
+    }
+
+    /// Planned shells (targets only) to drop when the athlete already logged that
+    /// day type on a session that was not the queued row — otherwise “next” sticks
+    /// on a Push they already trained as a duplicate.
+    @MainActor
+    static func plannedShellsToRetire(
+        unused: [WorkoutSession],
+        completed: [WorkoutSession]
+    ) -> [WorkoutSession] {
+        let shells = unused.filter { !hasAthleteLoggedSets($0) }
+        var extraByDay: [String: Int] = [:]
+        for session in completed where hasAthleteLoggedSets(session) && session.trainingBlock == nil {
+            extraByDay[session.day.rawValue, default: 0] += 1
+        }
+        var retire: [WorkoutSession] = []
+        for session in shells {
+            let day = session.day.rawValue
+            guard let remaining = extraByDay[day], remaining > 0 else { continue }
+            retire.append(session)
+            extraByDay[day] = remaining - 1
+        }
+        return retire
     }
 }

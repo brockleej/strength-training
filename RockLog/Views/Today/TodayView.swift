@@ -457,7 +457,11 @@ struct TodayView: View {
     }
 
     private var isResume: Bool {
-        workoutVM.suspendedSession?.day == todayVM.selectedDayType
+        guard let suspended = workoutVM.suspendedSession else { return false }
+        if usesPlannedQueue {
+            return suspended.id == nextUnusedPlanned?.id
+        }
+        return suspended.day == todayVM.selectedDayType
     }
 
     /// Occasional setup — keep quiet under Start so it doesn’t compete with training.
@@ -527,12 +531,18 @@ struct TodayView: View {
     }
 
     private func startTapped() {
-        if usesPlannedQueue, let next = nextUnusedPlanned, !isResume {
+        if usesPlannedQueue, let next = nextUnusedPlanned {
+            if isResume {
+                workoutVM.startPlannedSession(next, rotationTrack: todayVM.selectedRotationTrack)
+                return
+            }
             todayVM.selectDayType(
                 next.day,
                 suspended: workoutVM.suspendedSession,
                 suggestedTrack: { workoutVM.suggestedRotationTrack(for: $0) }
             )
+            startPlanned(next)
+            return
         }
         let target = todayVM.selectedDayType
         let track = todayVM.selectedRotationTrack
