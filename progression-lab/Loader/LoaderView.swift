@@ -43,7 +43,7 @@ struct LoaderView: View {
             Image(systemName: "doc.text")
                 .font(.system(size: 48))
                 .foregroundStyle(.secondary)
-            Text("Drop a strength-training backup JSON here")
+            Text("Drop a RockLog backup JSON here")
                 .font(.headline)
             Text("or")
                 .foregroundStyle(.secondary)

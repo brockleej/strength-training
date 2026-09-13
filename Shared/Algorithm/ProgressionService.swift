@@ -1,6 +1,6 @@
 //
 //  ProgressionService.swift
-//  strength-training
+//  RockLog
 //
 
 import Foundation
