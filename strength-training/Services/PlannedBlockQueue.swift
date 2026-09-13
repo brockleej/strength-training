@@ -34,15 +34,16 @@ enum PlannedBlockQueue {
     /// API is nonisolated and is the PR 7 compile error.
     @MainActor
     static func ownsToday(_ sessions: [WorkoutSession]) -> Bool {
-        ownsToday(unusedCount: unusedSessions(in: sessions).count)
+        sessions.contains(where: isUnused)
     }
 
     /// Still waiting in the block: not trained, not started for real.
+    /// Check stored plan flags before walking sets (Settings was freezing on an 8-week queue).
     @MainActor
     static func isUnused(_ session: WorkoutSession) -> Bool {
         guard !session.isCompleted else { return false }
-        if hasAthleteLoggedSets(session) { return false }
         if session.isPlanned || session.isSkippedPlan { return true }
+        if hasAthleteLoggedSets(session) { return false }
         return session.trainingBlock != nil && session.followsSessionRoster
     }
 

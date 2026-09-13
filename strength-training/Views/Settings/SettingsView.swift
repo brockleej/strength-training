@@ -82,14 +82,16 @@ struct SettingsView: View {
     @State private var showGymPass = false
     @State private var showWelcomeGuide = false
 
+    /// Cheap flag only — do not load every incomplete session or walk their sets.
     @Query(
-        filter: #Predicate<WorkoutSession> { $0.isCompleted == false },
-        sort: \WorkoutSession.date
+        filter: #Predicate<WorkoutSession> {
+            $0.isCompleted == false && ($0.planState == "planned" || $0.planState == "skipped")
+        }
     )
-    private var incompleteSessions: [WorkoutSession]
+    private var queuedPlannedSessions: [WorkoutSession]
 
     private var plannedQueueOwnsToday: Bool {
-        PlannedBlockQueue.ownsToday(incompleteSessions)
+        !queuedPlannedSessions.isEmpty
     }
 
     var body: some View {
@@ -648,7 +650,7 @@ struct SettingsView: View {
                                     .foregroundStyle(Color.uplift.ahGreen)
                                 Spacer()
                                 if let lastSync = cloudKitSyncService.lastSyncDate {
-                                    Text(lastSync, style: .relative)
+                                    Text("Synced \(lastSync.formatted(date: .omitted, time: .shortened))")
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
                                 }

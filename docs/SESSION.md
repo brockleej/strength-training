@@ -1,6 +1,6 @@
 # RockLog — session handoff
 
-**Parked:** 2026-09-13 (Lee using the phone build; come back after gym)  
+**Parked:** 2026-09-13 (Lee using the phone build). Settings freeze while opening Export is in progress — do not push.  
 **Project (only checkout):** `~/Projects/strength-training`  
 **App:** RockLog · bundle `com.lee.lift2026`  
 **Branch:** `cursor/planned-owns-today-9fdc` (PR #8) · local tip `2d99e99`  
