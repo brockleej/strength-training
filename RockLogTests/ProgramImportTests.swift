@@ -15,11 +15,11 @@ final class ProgramImportTests: XCTestCase {
     func test_confirmationCopy_isPlainLanguage() {
         XCTAssertEqual(
             ProgramImportService.confirmationMessage(weekCount: 8),
-            "Add 8 weeks of planned workouts? This does not replace your history. The next unused workout waits until you start it."
+            "Add 8 weeks of planned workouts? History stays. Add keeps leftover planned days. Replace unused plan swaps those leftover days for this file."
         )
         XCTAssertEqual(
             ProgramImportService.confirmationMessage(weekCount: 1),
-            "Add 1 week of planned workouts? This does not replace your history. The next unused workout waits until you start it."
+            "Add 1 week of planned workouts? History stays. Add keeps leftover planned days. Replace unused plan swaps those leftover days for this file."
         )
         XCTAssertEqual(PlannedBlockQueue.nextUpLabel(dayName: "Lower"), "Next up: Lower")
         XCTAssertEqual(PlannedBlockQueue.cardSecondary(isNext: true, liftCount: 6), "Next up · 6 lifts")
@@ -469,6 +469,40 @@ final class ProgramImportTests: XCTestCase {
         )
         vm.startSession(dayType: .lower, rotationTrack: .a, now: monday)
         XCTAssertEqual(SessionRosterLogic.names(in: try XCTUnwrap(vm.activeSession)), ["Conventional Deadlift"])
+    }
+
+    func test_replaceUnusedPlan_keepsCompletedAndReloadsLeftover() throws {
+        let container = try inMemoryContainer()
+        let context = container.mainContext
+        let document = rotatingLowerDocument(
+            dlDate: .now,
+            rdlDate: Calendar.current.date(byAdding: .day, value: 2, to: .now)!
+        )
+        _ = try ProgramImportService.importDocument(document, context: context)
+        let firstID = document.block.sessions[0].id
+        let secondID = document.block.sessions[1].id
+
+        let first = try XCTUnwrap(
+            try context.fetch(FetchDescriptor<WorkoutSession>()).first { $0.id == firstID }
+        )
+        first.isCompleted = true
+        first.planStatus = .none
+        try context.save()
+
+        var edited = document
+        edited.block.sessions[1].exercises[0].sets[1].weightLbs = 275
+        _ = try ProgramImportService.importDocument(
+            edited,
+            context: context,
+            replaceUnusedPlan: true
+        )
+
+        let all = try context.fetch(FetchDescriptor<WorkoutSession>())
+        XCTAssertTrue(all.contains { $0.id == firstID && $0.isCompleted })
+        let second = try XCTUnwrap(all.first { $0.id == secondID })
+        XCTAssertTrue(second.isPlanned)
+        let weights = second.exerciseRecordsArray.flatMap(\.plannedSetsArray).map(\.weightLbs)
+        XCTAssertEqual(weights, [135, 275])
     }
 
     func test_historicalPush_doesNotRemovePlannedPushFromQueue() throws {

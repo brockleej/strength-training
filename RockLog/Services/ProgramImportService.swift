@@ -49,12 +49,13 @@ enum ProgramImportService {
     static let useThisSplitTitle = "Use this as your training split?"
     static let useThisSplitConfirmTitle = "Use this split"
     static let keepCurrentSplitTitle = "Keep my current split"
+    static let replaceUnusedPlanTitle = "Replace unused plan"
 
     /// Human copy for the Files / share-sheet confirm. No jargon.
     static func confirmationMessage(weekCount: Int) -> String {
         let weeks = max(1, weekCount)
         let weekWord = weeks == 1 ? "week" : "weeks"
-        return "Add \(weeks) \(weekWord) of planned workouts? This does not replace your history. The next unused workout waits until you start it."
+        return "Add \(weeks) \(weekWord) of planned workouts? History stays. Add keeps leftover planned days. Replace unused plan swaps those leftover days for this file."
     }
 
     static func replaceSplitMessage() -> String {
@@ -191,13 +192,33 @@ enum ProgramImportService {
         }
     }
 
+    /// Delete planned sessions that have not been started. Finished workouts stay.
+    @MainActor
+    static func removeUnusedPlannedSessions(context: ModelContext) {
+        let all = (try? context.fetch(FetchDescriptor<WorkoutSession>())) ?? []
+        let unused = PlannedBlockQueue.unusedSessions(in: all)
+        for session in unused {
+            context.delete(session)
+        }
+        let blocks = (try? context.fetch(FetchDescriptor<TrainingBlock>())) ?? []
+        for block in blocks where block.sessionsArray.isEmpty {
+            context.delete(block)
+        }
+        try? context.save()
+    }
+
     /// Merge the file’s sessions. Dates stay as written unless `shiftingStartTo` is set.
+    /// `replaceUnusedPlan` drops leftover planned days first, then imports this file.
     @MainActor
     static func importDocument(
         _ document: ProgramDocument,
         context: ModelContext,
-        shiftingStartTo anchor: Date? = nil
+        shiftingStartTo anchor: Date? = nil,
+        replaceUnusedPlan: Bool = false
     ) throws -> ProgramImportResult {
+        if replaceUnusedPlan {
+            removeUnusedPlannedSessions(context: context)
+        }
         let sessions: [ProgramSessionPayload]
         if let anchor {
             sessions = anchoredSessions(in: document, to: anchor)

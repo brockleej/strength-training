@@ -175,6 +175,16 @@ struct ContentView: View {
                 }
                 pendingIncomingProgram = nil
             }
+            Button(ProgramImportService.replaceUnusedPlanTitle, role: .destructive) {
+                if let document = pendingIncomingProgram {
+                    importIncomingProgram(
+                        document,
+                        shiftStartToToday: false,
+                        replaceUnusedPlan: true
+                    )
+                }
+                pendingIncomingProgram = nil
+            }
             Button(ProgramImportService.startThisBlockTodayTitle) {
                 if let document = pendingIncomingProgram {
                     importIncomingProgram(document, shiftStartToToday: true)
@@ -231,12 +241,17 @@ struct ContentView: View {
         }
     }
 
-    private func importIncomingProgram(_ document: ProgramDocument, shiftStartToToday: Bool) {
+    private func importIncomingProgram(
+        _ document: ProgramDocument,
+        shiftStartToToday: Bool,
+        replaceUnusedPlan: Bool = false
+    ) {
         do {
             let result = try ProgramImportService.importDocument(
                 document,
                 context: modelContext,
-                shiftingStartTo: shiftStartToToday ? Calendar.current.startOfDay(for: .now) : nil
+                shiftingStartTo: shiftStartToToday ? Calendar.current.startOfDay(for: .now) : nil,
+                replaceUnusedPlan: replaceUnusedPlan
             )
             pendingReplaceSplitDocument = document
             pendingReplaceSplitSummary = result.summary
