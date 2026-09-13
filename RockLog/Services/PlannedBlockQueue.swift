@@ -72,27 +72,4 @@ enum PlannedBlockQueue {
             record.setsArray.contains { !$0.isTarget }
         }
     }
-
-    /// Planned shells (targets only) to drop when the athlete already logged that
-    /// day type on a session that was not the queued row — otherwise “next” sticks
-    /// on a Push they already trained as a duplicate.
-    @MainActor
-    static func plannedShellsToRetire(
-        unused: [WorkoutSession],
-        completed: [WorkoutSession]
-    ) -> [WorkoutSession] {
-        let shells = unused.filter { !hasAthleteLoggedSets($0) }
-        var extraByDay: [String: Int] = [:]
-        for session in completed where hasAthleteLoggedSets(session) && session.trainingBlock == nil {
-            extraByDay[session.day.rawValue, default: 0] += 1
-        }
-        var retire: [WorkoutSession] = []
-        for session in shells {
-            let day = session.day.rawValue
-            guard let remaining = extraByDay[day], remaining > 0 else { continue }
-            retire.append(session)
-            extraByDay[day] = remaining - 1
-        }
-        return retire
-    }
 }

@@ -243,7 +243,6 @@ final class WorkoutViewModel {
     /// Unused planned sessions stay in the queue — never auto-activated or skipped.
     func resolveSessionState() {
         autoCompleteStaleSession()
-        retireOrphanPlannedShells()
 
         let calendar = Calendar.current
         let startOfToday = calendar.startOfDay(for: .now)
@@ -306,19 +305,6 @@ final class WorkoutViewModel {
     /// Earliest unused planned row of this day type (file order). Avoids a duplicate live session.
     func earliestUnusedPlannedSession(dayType: DayType) -> WorkoutSession? {
         PlannedBlockQueue.unusedSessions(in: allIncompleteSessions()).first { $0.day == dayType }
-    }
-
-    /// Drop unused planned shells when that day was already logged off-queue.
-    func retireOrphanPlannedShells() {
-        let all = (try? modelContext.fetch(FetchDescriptor<WorkoutSession>())) ?? []
-        let unused = PlannedBlockQueue.unusedSessions(in: all.filter { !$0.isCompleted })
-        let completed = all.filter(\.isCompleted)
-        let retire = PlannedBlockQueue.plannedShellsToRetire(unused: unused, completed: completed)
-        guard !retire.isEmpty else { return }
-        for session in retire {
-            modelContext.delete(session)
-        }
-        try? modelContext.save()
     }
 
     /// Unused planned sessions, queue order (includes past calendar dates).
@@ -600,7 +586,6 @@ final class WorkoutViewModel {
                 modelContext.delete(set)
             }
         }
-        retireOrphanPlannedShells()
         let capturedSession = session
         pendingCoachShare = !wasRevisit && CoachAthletePreferences.shouldOfferAfterFinish
         clearRevisiting()

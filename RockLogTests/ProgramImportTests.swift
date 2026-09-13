@@ -470,7 +470,7 @@ final class ProgramImportTests: XCTestCase {
         XCTAssertEqual(SessionRosterLogic.names(in: try XCTUnwrap(vm.activeSession)), ["Conventional Deadlift"])
     }
 
-    func test_extraLoggedPush_retiresMatchingPlannedShell() throws {
+    func test_historicalPush_doesNotRemovePlannedPushFromQueue() throws {
         let container = try inMemoryContainer()
         let context = container.mainContext
         let document = sampleDocument(firstSession: .now)
@@ -490,15 +490,10 @@ final class ProgramImportTests: XCTestCase {
         context.insert(logged)
         try context.save()
 
-        let all = try context.fetch(FetchDescriptor<WorkoutSession>())
-        let unused = PlannedBlockQueue.unusedSessions(in: all.filter { !$0.isCompleted })
-        let retire = PlannedBlockQueue.plannedShellsToRetire(
-            unused: unused,
-            completed: all.filter(\.isCompleted)
+        let unused = PlannedBlockQueue.unusedSessions(
+            in: try context.fetch(FetchDescriptor<WorkoutSession>())
         )
-        XCTAssertEqual(retire.map(\.day), [.push])
-        XCTAssertEqual(retire.count, 1)
-        XCTAssertTrue(retire[0].isPlanned)
+        XCTAssertTrue(unused.contains { $0.day == .push && $0.isPlanned })
     }
 
     func test_legacySkippedSession_staysInQueue() throws {
