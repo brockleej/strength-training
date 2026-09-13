@@ -307,6 +307,26 @@ final class WorkoutViewModel {
         PlannedBlockQueue.unusedSessions(in: allIncompleteSessions()).first { $0.day == dayType }
     }
 
+    /// Drop one leftover planned day. History is untouched.
+    func deleteUnusedPlannedSession(_ session: WorkoutSession) {
+        guard PlannedBlockQueue.isUnused(session) else { return }
+        modelContext.delete(session)
+        pruneEmptyTrainingBlocks()
+        try? modelContext.save()
+    }
+
+    /// Drop every leftover planned day. Finished workouts stay.
+    func deleteAllUnusedPlannedSessions() {
+        ProgramImportService.removeUnusedPlannedSessions(context: modelContext)
+    }
+
+    private func pruneEmptyTrainingBlocks() {
+        let blocks = (try? modelContext.fetch(FetchDescriptor<TrainingBlock>())) ?? []
+        for block in blocks where block.sessionsArray.isEmpty {
+            modelContext.delete(block)
+        }
+    }
+
     /// Unused planned sessions, queue order (includes past calendar dates).
     func unusedPlannedSessions(limit: Int = 8) -> [WorkoutSession] {
         let unused = PlannedBlockQueue.unusedSessions(in: allIncompleteSessions())

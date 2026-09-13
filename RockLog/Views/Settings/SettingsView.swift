@@ -82,6 +82,7 @@ struct SettingsView: View {
     @State private var showGymPass = false
     @State private var showWelcomeGuide = false
     @State private var showCoachPicker = false
+    @State private var showClearPlannedConfirm = false
 
     /// Cheap flag only — do not load every incomplete session or walk their sets.
     @Query(
@@ -428,10 +429,17 @@ struct SettingsView: View {
                         Label("Add planned workouts", systemImage: "calendar.badge.plus")
                             .foregroundStyle(Color.uplift.accent)
                     }
+                    if plannedQueueOwnsToday {
+                        Button(role: .destructive) {
+                            showClearPlannedConfirm = true
+                        } label: {
+                            Label("Remove unused planned workouts", systemImage: "trash")
+                        }
+                    }
                 } header: {
                     sectionHeader("Planned workouts")
                 } footer: {
-                    sectionFooter("Adds a queue of workouts from a file. Missed days stay next up. After you add them you can use the block as your training split. History stays.")
+                    sectionFooter("Adds a queue of workouts from a file. Missed days stay next up. Swipe a day on Today to delete just that one. Remove unused planned workouts clears the leftover queue. History stays.")
                 }
                 .listRowBackground(Color.uplift.surface1)
 
@@ -542,6 +550,18 @@ struct SettingsView: View {
                 NavigationStack {
                     CoachWorkoutPickerView()
                 }
+            }
+            .confirmationDialog(
+                "Remove unused planned workouts?",
+                isPresented: $showClearPlannedConfirm,
+                titleVisibility: .visible
+            ) {
+                Button("Remove leftover plan", role: .destructive) {
+                    ProgramImportService.removeUnusedPlannedSessions(context: modelContext)
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Deletes planned workouts you haven’t started. Finished workouts stay in History.")
             }
             .fileImporter(
                 isPresented: $isImporting,

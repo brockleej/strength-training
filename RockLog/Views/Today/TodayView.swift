@@ -22,6 +22,7 @@ struct TodayView: View {
     @State private var yesterdayPRCount = 0
     @State private var previewPlannedID: UUID?
     @State private var confirmingPlannedID: UUID?
+    @State private var pendingDeletePlannedID: UUID?
 
     @Query(
         filter: #Predicate<WorkoutSession> { $0.isCompleted == true },
@@ -83,9 +84,11 @@ struct TodayView: View {
             }
             .navigationDestination(item: $previewPlannedID) { id in
                 if let session = unusedPlannedSessions.first(where: { $0.id == id }) {
-                    PlannedWorkoutPreviewView(session: session) {
-                        startPlanned(session)
-                    }
+                    PlannedWorkoutPreviewView(
+                        session: session,
+                        onStart: { startPlanned(session) },
+                        onDelete: { pendingDeletePlannedID = session.id }
+                    )
                 }
             }
             .sheet(isPresented: $showDayPlanEditor) {
@@ -247,6 +250,30 @@ struct TodayView: View {
             }
         } message: {
             Text(incompleteWeekMessage)
+        }
+        .confirmationDialog(
+            "Delete this planned workout?",
+            isPresented: Binding(
+                get: { pendingDeletePlannedID != nil },
+                set: { if !$0 { pendingDeletePlannedID = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button("Delete planned workout", role: .destructive) {
+                if let id = pendingDeletePlannedID,
+                   let session = unusedPlannedSessions.first(where: { $0.id == id }) {
+                    workoutVM.deleteUnusedPlannedSession(session)
+                    if previewPlannedID == id {
+                        previewPlannedID = nil
+                    }
+                }
+                pendingDeletePlannedID = nil
+            }
+            Button("Cancel", role: .cancel) {
+                pendingDeletePlannedID = nil
+            }
+        } message: {
+            Text("Removes this day from the leftover plan. History is unchanged.")
         }
     }
 
@@ -582,7 +609,8 @@ struct TodayView: View {
             PlannedWorkoutsCard(
                 blockName: upcomingBlockName,
                 rows: queued,
-                onSelect: { previewPlannedID = $0 }
+                onSelect: { previewPlannedID = $0 },
+                onDelete: { pendingDeletePlannedID = $0 }
             )
         }
     }

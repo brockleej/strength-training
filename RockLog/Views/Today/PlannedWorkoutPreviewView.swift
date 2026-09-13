@@ -12,6 +12,7 @@ import SwiftData
 struct PlannedWorkoutPreviewView: View {
     let session: WorkoutSession
     var onStart: () -> Void
+    var onDelete: (() -> Void)?
 
     @Environment(\.dismiss) private var dismiss
 
@@ -65,6 +66,16 @@ struct PlannedWorkoutPreviewView: View {
         .scrollIndicators(.hidden)
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if onDelete != nil {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Delete", role: .destructive) {
+                        onDelete?()
+                    }
+                    .accessibilityLabel("Delete this planned workout")
+                }
+            }
+        }
         .safeAreaInset(edge: .bottom) {
             Button(action: onStart) {
                 HStack(spacing: 8) {

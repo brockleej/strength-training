@@ -12,6 +12,7 @@ struct PlannedWorkoutsCard: View {
     let blockName: String
     let rows: [Row]
     var onSelect: ((UUID) -> Void)?
+    var onDelete: ((UUID) -> Void)?
 
     struct Row: Identifiable {
         let id: UUID
@@ -28,14 +29,14 @@ struct PlannedWorkoutsCard: View {
                     .foregroundStyle(Color.uplift.fgMuted)
             }
             ForEach(rows) { row in
-                Button {
-                    onSelect?(row.id)
-                } label: {
-                    rowContent(row)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(rowAccessibility(row))
-                .accessibilityHint("Shows the lifts in this workout")
+                rowContent(row)
+                    .swipeToDelete(fullSwipeDeletes: false, onDelete: {
+                        onDelete?(row.id)
+                    }, onTap: {
+                        onSelect?(row.id)
+                    })
+                    .accessibilityLabel(rowAccessibility(row))
+                    .accessibilityHint("Shows the lifts in this workout")
             }
         }
         .padding(16)
