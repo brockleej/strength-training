@@ -20,6 +20,8 @@ struct TodayView: View {
     @State private var showGymPass = false
     @State private var showDayPlanEditor = false
     @State private var yesterdayPRCount = 0
+    @State private var previewPlannedID: UUID?
+    @State private var confirmingPlannedID: UUID?
 
     @Query(
         filter: #Predicate<WorkoutSession> { $0.isCompleted == true },
@@ -54,6 +56,10 @@ struct TodayView: View {
     }
 
     var body: some View {
+        replaceConfirmations(on: sessionLifecycle(on: todayNavigation))
+    }
+
+    private var todayNavigation: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
@@ -75,10 +81,21 @@ struct TodayView: View {
             .navigationDestination(item: $workoutVM.summaryDetailSession) { session in
                 SessionDetailView(session: session, workoutVM: workoutVM)
             }
+            .navigationDestination(item: $previewPlannedID) { id in
+                if let session = unusedPlannedSessions.first(where: { $0.id == id }) {
+                    PlannedWorkoutPreviewView(session: session) {
+                        startPlanned(session)
+                    }
+                }
+            }
             .sheet(isPresented: $showDayPlanEditor) {
                 DayPlanEditorView(dayType: todayVM.selectedDayType)
             }
         }
+    }
+
+    private func sessionLifecycle<V: View>(on content: V) -> some View {
+        content
         .onAppear { resyncDaySelection() }
         .onChange(of: completedSessions.count) { _, _ in resyncDaySelection() }
         .onChange(of: unusedPlannedSessions.count) { _, _ in resyncDaySelection() }
@@ -141,6 +158,10 @@ struct TodayView: View {
                 workoutVM.handleHealthKitPromptDismissed()
             }
         }
+    }
+
+    private func replaceConfirmations<V: View>(on content: V) -> some View {
+        content
         .confirmationDialog(
             "Replace Current Workout?",
             isPresented: Binding(
@@ -165,6 +186,33 @@ struct TodayView: View {
             }
             Button("Cancel", role: .cancel) {
                 confirmingDayType = nil
+            }
+        } message: {
+            let count = workoutVM.suspendedInProgressExerciseCount
+            let dayName = workoutVM.suspendedSession?.day.rawValue ?? "current"
+            Text("Your \(dayName) Day workout has \(count) exercise\(count == 1 ? "" : "s") in progress. Starting a new workout will discard it.")
+        }
+        .confirmationDialog(
+            "Replace Current Workout?",
+            isPresented: Binding(
+                get: { confirmingPlannedID != nil },
+                set: { if !$0 { confirmingPlannedID = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            if let id = confirmingPlannedID,
+               let session = unusedPlannedSessions.first(where: { $0.id == id }) {
+                Button("Start \(session.day.rawValue)", role: .destructive) {
+                    workoutVM.abandonSuspendedAndStart(
+                        planned: session,
+                        rotationTrack: todayVM.selectedRotationTrack
+                    )
+                    confirmingPlannedID = nil
+                    previewPlannedID = nil
+                }
+            }
+            Button("Cancel", role: .cancel) {
+                confirmingPlannedID = nil
             }
         } message: {
             let count = workoutVM.suspendedInProgressExerciseCount
@@ -524,7 +572,7 @@ struct TodayView: View {
             PlannedWorkoutsCard(
                 blockName: upcomingBlockName,
                 rows: queued,
-                onStartNext: startNextUnusedIfSelected
+                onSelect: { previewPlannedID = $0 }
             )
         }
     }
@@ -547,14 +595,20 @@ struct TodayView: View {
             }
     }
 
-    private func startNextUnusedIfSelected() {
-        guard let next = nextUnusedPlanned else { return }
+    private func startPlanned(_ session: WorkoutSession) {
         todayVM.selectDayType(
-            next.day,
+            session.day,
             suspended: workoutVM.suspendedSession,
             suggestedTrack: { workoutVM.suggestedRotationTrack(for: $0) }
         )
-        startTapped()
+        if let suspended = workoutVM.suspendedSession,
+           suspended.id != session.id,
+           workoutVM.suspendedHasSets {
+            confirmingPlannedID = session.id
+            return
+        }
+        workoutVM.startPlannedSession(session, rotationTrack: todayVM.selectedRotationTrack)
+        previewPlannedID = nil
     }
 
     @ViewBuilder

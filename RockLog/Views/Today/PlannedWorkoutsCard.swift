@@ -11,7 +11,7 @@ import SwiftData
 struct PlannedWorkoutsCard: View {
     let blockName: String
     let rows: [Row]
-    var onStartNext: (() -> Void)?
+    var onSelect: ((UUID) -> Void)?
 
     struct Row: Identifiable {
         let id: UUID
@@ -28,13 +28,14 @@ struct PlannedWorkoutsCard: View {
                     .foregroundStyle(Color.uplift.fgMuted)
             }
             ForEach(rows) { row in
-                rowContent(row)
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        if row.isNext {
-                            onStartNext?()
-                        }
-                    }
+                Button {
+                    onSelect?(row.id)
+                } label: {
+                    rowContent(row)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(rowAccessibility(row))
+                .accessibilityHint("Shows the lifts in this workout")
             }
         }
         .padding(16)
@@ -42,13 +43,6 @@ struct PlannedWorkoutsCard: View {
         .background {
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .fill(Color.uplift.surface1)
-        }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(accessibilityText)
-        .accessibilityAddTraits(onStartNext == nil ? [] : .isButton)
-        .accessibilityHint(onStartNext == nil ? "" : "Starts the next unused workout")
-        .accessibilityAction {
-            onStartNext?()
         }
     }
 
@@ -75,16 +69,16 @@ struct PlannedWorkoutsCard: View {
                     .foregroundStyle(Color.uplift.fgMuted)
             }
             Spacer(minLength: 8)
+            Image(systemName: "chevron.right")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(Color.uplift.fgFaint)
         }
+        .contentShape(Rectangle())
     }
 
-    private var accessibilityText: String {
-        let names = rows.map { row in
-            row.isNext
-                ? PlannedBlockQueue.nextUpLabel(dayName: row.dayType.rawValue)
-                : row.dayType.rawValue
-        }
-        return "Unused planned workouts: \(names.joined(separator: ", "))"
+    private func rowAccessibility(_ row: Row) -> String {
+        let next = row.isNext ? ", next up" : ""
+        return "\(row.dayType.rawValue)\(next), \(row.liftCount) lifts"
     }
 }
 

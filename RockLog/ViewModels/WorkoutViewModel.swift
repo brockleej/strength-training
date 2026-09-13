@@ -333,6 +333,40 @@ final class WorkoutViewModel {
         activateOrCreateSession(dayType: dayType, rotationTrack: track, now: now)
     }
 
+    /// Start a specific queued planned session (not only the next unused).
+    func startPlannedSession(_ session: WorkoutSession, rotationTrack: RotationTrack? = nil, now: Date = .now) {
+        if let suspended = suspendedSession, suspended.id == session.id {
+            activeSession = suspended
+            if let rotationTrack {
+                suspended.track = rotationTrack
+                try? modelContext.save()
+            }
+            suspendedSession = nil
+            if !isProtectedHistorySession(suspended) {
+                healthKitService.resumeWorkout()
+            }
+            return
+        }
+        if let suspended = suspendedSession {
+            releaseParkedSession(suspended, discardLiveWork: false)
+            suspendedSession = nil
+        }
+        clearRevisiting()
+        let track = rotationTrack ?? suggestedRotationTrack(for: session.day)
+        activatePlannedSession(session, rotationTrack: track, now: now)
+    }
+
+    func abandonSuspendedAndStart(planned session: WorkoutSession, rotationTrack: RotationTrack) {
+        if let suspended = suspendedSession {
+            releaseParkedSession(suspended, discardLiveWork: true)
+            suspendedSession = nil
+        }
+        clearRevisiting()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
+            self?.activatePlannedSession(session, rotationTrack: rotationTrack, now: .now)
+        }
+    }
+
     /// Alternate A↔B from the last completed session of this day type (any day).
     func suggestedRotationTrack(for dayType: DayType) -> RotationTrack {
         let descriptor = FetchDescriptor<WorkoutSession>(

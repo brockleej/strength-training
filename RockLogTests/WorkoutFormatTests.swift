@@ -29,4 +29,10 @@ final class WorkoutFormatTests: XCTestCase {
     func test_elapsed_negative_clampsToZero() {
         XCTAssertEqual(WorkoutFormat.elapsed(-5), "0:00")
     }
+
+    func test_setRecipe_formatsWeightTimesReps() {
+        let work = SetRecord(setNumber: 1, weightLbs: 225, reps: 5)
+        let warmup = SetRecord(setNumber: 2, weightLbs: 135, reps: 5, isWarmup: true)
+        XCTAssertEqual(WorkoutFormat.setRecipe([warmup, work]), "225×5 · 135×5w")
+    }
 }

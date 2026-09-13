@@ -19,4 +19,19 @@ enum WorkoutFormat {
             ? String(format: "%d:%02d:%02d", h, m, s)
             : String(format: "%d:%02d", m, s)
     }
+
+    /// "135×5 · 225×4 · −50×8w" — plan or last-session recipe.
+    static func setRecipe(_ sets: [SetRecord]) -> String {
+        let ordered = sets.sorted { $0.setNumber < $1.setNumber }
+        guard !ordered.isEmpty else { return "" }
+        return ordered.map { set in
+            let w = set.isAssisted
+                ? "−\(StepperLogic.format(set.weightLbs))"
+                : StepperLogic.format(set.weightLbs)
+            var piece = "\(w)×\(set.reps)"
+            if set.isEachSide { piece += "ea" }
+            return set.isWarmup ? "\(piece)w" : piece
+        }
+        .joined(separator: " · ")
+    }
 }
