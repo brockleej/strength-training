@@ -429,6 +429,10 @@ struct SettingsView: View {
                         Label("Add planned workouts", systemImage: "calendar.badge.plus")
                             .foregroundStyle(Color.uplift.accent)
                     }
+                    Button(action: sharePlannedWorkoutInstructions) {
+                        Label("Instructions for AI", systemImage: "doc.text")
+                            .foregroundStyle(Color.uplift.accent)
+                    }
                     if plannedQueueOwnsToday {
                         Button(role: .destructive) {
                             showClearPlannedConfirm = true
@@ -439,7 +443,7 @@ struct SettingsView: View {
                 } header: {
                     sectionHeader("Planned workouts")
                 } footer: {
-                    sectionFooter("Adds a queue of workouts from a file. Missed days stay next up. Swipe a day on Today to delete just that one. Remove unused planned workouts clears the leftover queue. History stays.")
+                    sectionFooter("Instructions for AI is a file you can give Grok, ChatGPT, or another assistant so it writes a compatible plan. Add planned workouts imports that file. Swipe a day on Today to delete just that one. History stays.")
                 }
                 .listRowBackground(Color.uplift.surface1)
 
@@ -853,6 +857,15 @@ struct SettingsView: View {
     }
 
     // MARK: - Actions
+
+    private func sharePlannedWorkoutInstructions() {
+        do {
+            ShareSheetPresenter.presentFile(try ProgramAuthoringGuide.writeFile())
+        } catch {
+            errorMessage = error.localizedDescription
+            showError = true
+        }
+    }
 
     private func exportBackup() {
         do {

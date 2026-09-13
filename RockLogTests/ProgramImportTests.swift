@@ -12,6 +12,17 @@ import SwiftData
 @MainActor
 final class ProgramImportTests: XCTestCase {
 
+    func test_authoringGuide_coversRequiredFields() {
+        let text = ProgramAuthoringGuide.markdown
+        XCTAssertTrue(text.contains("rocklog.program"))
+        XCTAssertTrue(text.contains("schemaVersion"))
+        XCTAssertTrue(text.contains("dayType"))
+        XCTAssertTrue(text.contains("weightLbs"))
+        XCTAssertTrue(text.contains("isWarmup"))
+        XCTAssertFalse(text.localizedCaseInsensitiveContains("periodization"))
+        XCTAssertEqual(ProgramAuthoringGuide.fileName, "RockLog-planned-workout-instructions.md")
+    }
+
     func test_confirmationCopy_isPlainLanguage() {
         XCTAssertEqual(
             ProgramImportService.confirmationMessage(weekCount: 8),
