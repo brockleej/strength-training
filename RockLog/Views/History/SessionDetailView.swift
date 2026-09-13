@@ -17,6 +17,7 @@ struct SessionDetailView: View {
     @State private var showReopenConfirm = false
     @State private var shareError: String?
     @State private var showShareChoices = false
+    @State private var showCoachPicker = false
     @AppStorage(CoachAthletePreferences.enabledKey)
     private var coachFeaturesEnabled = false
 
@@ -92,7 +93,13 @@ struct SessionDetailView: View {
         .confirmationDialog("Send to RockCoach", isPresented: $showShareChoices, titleVisibility: .visible) {
             Button("This workout") { shareWithCoach() }
             Button("Last week") { shareLastWeek() }
+            Button("Choose workouts…") { showCoachPicker = true }
             Button("Cancel", role: .cancel) {}
+        }
+        .sheet(isPresented: $showCoachPicker) {
+            NavigationStack {
+                CoachWorkoutPickerView(initiallySelected: [session.id])
+            }
         }
         .alert("Couldn’t send", isPresented: Binding(
             get: { shareError != nil },

@@ -81,6 +81,7 @@ struct SettingsView: View {
 
     @State private var showGymPass = false
     @State private var showWelcomeGuide = false
+    @State private var showCoachPicker = false
 
     /// Cheap flag only — do not load every incomplete session or walk their sets.
     @Query(
@@ -401,13 +402,20 @@ struct SettingsView: View {
                             Label("Send unsent workouts", systemImage: "clock.arrow.circlepath")
                                 .foregroundStyle(Color.uplift.accent)
                         }
+
+                        Button {
+                            showCoachPicker = true
+                        } label: {
+                            Label("Choose workouts to send", systemImage: "checklist")
+                                .foregroundStyle(Color.uplift.accent)
+                        }
                     }
                 } header: {
                     sectionHeader("RockCoach")
                 } footer: {
                     sectionFooter(
                         coachFeaturesEnabled
-                            ? "These files are for RockCoach — not a backup. Name appears on the file, not your Apple ID. One workout is a session file; two or more unsent go as one batch. Your coach imports it in RockCoach. Use Backup below to save or move your log."
+                            ? "These files are for RockCoach — not a backup. Name appears on the file, not your Apple ID. Choose specific workouts, send last week, or send everything unsent. Your coach imports it in RockCoach. Use Backup below to save or move your log."
                             : "Off by default. Turn on only if you send workouts to a coach in RockCoach."
                     )
                 }
@@ -529,6 +537,11 @@ struct SettingsView: View {
             }
             .fullScreenCover(isPresented: $showWelcomeGuide) {
                 FirstRunView(onFinished: { showWelcomeGuide = false }, showsSplitSetup: false)
+            }
+            .sheet(isPresented: $showCoachPicker) {
+                NavigationStack {
+                    CoachWorkoutPickerView()
+                }
             }
             .fileImporter(
                 isPresented: $isImporting,

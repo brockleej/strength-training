@@ -15,6 +15,9 @@ struct HistoryListView: View {
     private var sessions: [WorkoutSession]
 
     @State private var viewModel: HistoryViewModel?
+    @State private var showCoachPicker = false
+    @AppStorage(CoachAthletePreferences.enabledKey)
+    private var coachFeaturesEnabled = false
 
     var body: some View {
         NavigationStack {
@@ -26,8 +29,25 @@ struct HistoryListView: View {
                 }
             }
             .navigationTitle("History")
+            .toolbar {
+                if coachFeaturesEnabled {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button {
+                            showCoachPicker = true
+                        } label: {
+                            Image(systemName: "paperplane")
+                        }
+                        .accessibilityLabel("Choose workouts to send")
+                    }
+                }
+            }
             .navigationDestination(for: WorkoutSession.self) { session in
                 SessionDetailView(session: session, workoutVM: workoutVM)
+            }
+            .sheet(isPresented: $showCoachPicker) {
+                NavigationStack {
+                    CoachWorkoutPickerView()
+                }
             }
         }
         .onAppear {
