@@ -20,6 +20,7 @@ struct TrainingSplitSettingsView: View {
     @State private var pendingPreset: SplitPreset?
     @State private var showPresetConfirm = false
     @State private var dayPendingDelete: SplitDay?
+    @State private var showKeepLastDay = false
     @State private var orderedIDs: [UUID] = []
     @State private var draggingID: UUID?
     @AppStorage(SplitSchedulePreferences.modeKey)
@@ -125,6 +126,15 @@ struct TrainingSplitSettingsView: View {
             }
         } message: {
             Text("Removes this day from your split. Exercises keep their tags and can be reassigned in the library.")
+        }
+        .confirmationDialog(
+            ListMutationCopy.keepLastDayTitle,
+            isPresented: $showKeepLastDay,
+            titleVisibility: .visible
+        ) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(ListMutationCopy.keepLastDayMessage)
         }
     }
 
@@ -260,7 +270,11 @@ struct TrainingSplitSettingsView: View {
         }
         .swipeToDelete(fullSwipeDeletes: false, isEnabled: draggingID == nil, onDelete: {
             // Soft reveal only; hard delete requires confirm (T2/T3).
-            dayPendingDelete = day
+            if DayTypeRegistry.shared.canDelete(id: day.id, from: splitDays) {
+                dayPendingDelete = day
+            } else {
+                showKeepLastDay = true
+            }
         }, onTap: {
             editingDay = day
         })

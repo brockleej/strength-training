@@ -23,6 +23,34 @@ final class E1RMDetectionTests: XCTestCase {
         XCTAssertEqual(E1RM.estimate(weightLbs: 0, reps: 10), 0, accuracy: 0.001)
     }
 
+    // MARK: - StrengthScore (best e1RM per muscle)
+
+    func test_twoChestLifts_countOnce_atTheStrongerE1RM() {
+        var best: [String: Double] = [:]
+        StrengthScore.absorb(e1rm: 225, muscle: "Chest", into: &best)
+        StrengthScore.absorb(e1rm: 80, muscle: "Chest", into: &best)
+        XCTAssertEqual(StrengthScore.total(best), 225)
+    }
+
+    func test_chestAndBack_bothCount() {
+        var best: [String: Double] = [:]
+        StrengthScore.absorb(e1rm: 225, muscle: "Chest", into: &best)
+        StrengthScore.absorb(e1rm: 315, muscle: "Back", into: &best)
+        XCTAssertEqual(StrengthScore.total(best), 540)
+    }
+
+    func test_sideTag_doublesLoad_untaggedDoesNot() {
+        let barCurl = StrengthScore.comparableE1RM(weightLbs: 100, reps: 8, isEachSide: false)
+        let dbCurl = StrengthScore.comparableE1RM(weightLbs: 50, reps: 8, isEachSide: true)
+        XCTAssertEqual(barCurl, dbCurl, accuracy: 0.001)
+        XCTAssertEqual(barCurl, E1RM.estimate(weightLbs: 100, reps: 8), accuracy: 0.001)
+    }
+
+    func test_untaggedDumbbell_doesNotGuessFromName() {
+        let raw = StrengthScore.comparableE1RM(weightLbs: 100, reps: 5, isEachSide: false)
+        XCTAssertEqual(raw, E1RM.estimate(weightLbs: 100, reps: 5), accuracy: 0.001)
+    }
+
     // MARK: - PRDetection.celebration
 
     private var priorBest: PRDetection.PriorBest {

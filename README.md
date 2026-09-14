@@ -243,13 +243,13 @@ xcodebuild test -scheme ProgressionLab -destination 'platform=macOS'
 
 Request beta access via [Issues](https://github.com/brockleej/strength-training/issues).
 
-### What’s new — planned workouts
+### What’s new — planned workouts and split import
 
-What's new: You can add a planned training block from a file. It does not erase your old workouts.
+See [docs/TESTFLIGHT-WHAT-TO-TEST.md](docs/TESTFLIGHT-WHAT-TO-TEST.md) for the tester copy (plain language).
 
-Please try: 1) Settings → Add planned workouts, pick the file. 2) Confirm Add workouts — old history should still be there. 3) Today should say **Next up: Lower** (first unused), even if you missed a calendar day. 4) Start it — warmup and work sets should already be filled in. 5) Screenshot anything that looks off.
+Planned workouts are a next-up list on Today (file order, not a calendar). Tap a later day to preview, then Start. A planned lift shows last time / the plan / this session. **Settings → Import training split** replaces days and lifts only; History stays. **Settings → Instructions for AI** shares one file covering both formats.
 
-The file is a queue, not a calendar that burns missed days. Sample starts with Lower A / deadlift. **Start this block today** is optional. Sample file: [docs/periodization/fixtures/sample-8-week-block.rocklog.program.json](docs/periodization/fixtures/sample-8-week-block.rocklog.program.json).
+Sample program file: [docs/periodization/fixtures/sample-8-week-block.rocklog.program.json](docs/periodization/fixtures/sample-8-week-block.rocklog.program.json).
 
 ## Project layout
 

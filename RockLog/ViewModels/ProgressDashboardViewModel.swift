@@ -87,22 +87,24 @@ final class ProgressDashboardViewModel {
     }
 
     private func computeStrengthScore(from sessions: [WorkoutSession]) -> Double {
-        var bestE1RMPerExercise: [UUID: Double] = [:]
+        var bestByMuscle: [String: Double] = [:]
 
         for session in sessions {
             for record in session.exerciseRecordsArray {
-                guard let exerciseID = record.exercise?.id else { continue }
-                let workingSets = record.setsArray.filter { !$0.isWarmup }
+                let muscle = record.exercise?.primaryMuscleGroup ?? ""
+                let workingSets = record.setsArray.filter { !$0.isWarmup && !$0.isTarget }
                 for set in workingSets {
-                    let e1rm = set.estimatedE1RM
-                    if e1rm > (bestE1RMPerExercise[exerciseID] ?? 0) {
-                        bestE1RMPerExercise[exerciseID] = e1rm
-                    }
+                    let e1rm = StrengthScore.comparableE1RM(
+                        weightLbs: set.effectiveLoadLbs(),
+                        reps: set.reps,
+                        isEachSide: set.isEachSide
+                    )
+                    StrengthScore.absorb(e1rm: e1rm, muscle: muscle, into: &bestByMuscle)
                 }
             }
         }
 
-        return bestE1RMPerExercise.values.reduce(0, +)
+        return StrengthScore.total(bestByMuscle)
     }
 
     // MARK: - Activity (workouts & sets — not tonnage)

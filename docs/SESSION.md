@@ -1,13 +1,12 @@
 # RockLog — session handoff
 
-**Parked:** 2026-09-13. Split import + combined AI instructions. **Do not push** until Lee asks after a phone Xcode build.
+**Shipping:** 2026-09-13 night. Merge `cursor/planned-owns-today-9fdc` to `main` for Xcode Cloud → TestFlight. Tester copy is in `docs/TESTFLIGHT-WHAT-TO-TEST.md` (plain language). Set App Store Connect What to Test after the new build is VALID. Do not push a follow-up docs commit to `main` (that would start another Cloud job).
 
 **Project (only checkout):** `~/Projects/RockLog`  
 **App:** RockLog · bundle `com.lee.lift2026` (unchanged — same TestFlight app)  
-**Branch:** `cursor/planned-owns-today-9fdc` (PR #8)  
-**HEAD:** `ed8bd08` Share one AI instructions file for program and split.
+**Branch:** `cursor/planned-owns-today-9fdc` → `main`
 
-> Resume: *“Continue from ~/Projects/RockLog — load docs/SESSION.md. Open RockLog.xcodeproj, scheme RockLog. Test split import and Instructions for AI on the phone. Do not push until asked.”*  
+> Resume: *“Continue from ~/Projects/RockLog — load docs/SESSION.md. Confirm TestFlight What to Test is on the new build.”*  
 > HA parked: `~/Documents/Hobbies/Home Automation/docs/HA-SESSION.md`.
 
 ---

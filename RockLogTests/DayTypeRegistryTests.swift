@@ -86,6 +86,12 @@ final class DayTypeRegistryTests: XCTestCase {
         XCTAssertEqual(stored.filter { $0.name.lowercased() == "lower" }.count, 1)
     }
 
+    func test_allowsDeletingDay_keepsLastHomeDay() {
+        XCTAssertFalse(DayTypeRegistry.allowsDeletingDay(includesAllExercises: false, homeDayCount: 1))
+        XCTAssertTrue(DayTypeRegistry.allowsDeletingDay(includesAllExercises: false, homeDayCount: 2))
+        XCTAssertTrue(DayTypeRegistry.allowsDeletingDay(includesAllExercises: true, homeDayCount: 1))
+    }
+
     private func inMemoryContainer() throws -> ModelContainer {
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         return try ModelContainer(

@@ -31,6 +31,9 @@ enum ListMutationCopy {
     static let deleteFromLibrary = "Delete from library"
     static let deleteWorkout = "Delete workout"
     static let deleteDay = "Delete day"
+    static let keepLastDayTitle = "Keep at least one day"
+    static let keepLastDayMessage =
+        "A split needs one day so Today can start a workout. You can delete extra days."
     static let addExercise = "Add exercise"
     static let addDay = "Add day"
     /// In-session exercise list.

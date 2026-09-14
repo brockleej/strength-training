@@ -43,8 +43,9 @@ This is the Workout tab with no session running.
 - **Gym pass** (barcode) — fullscreen membership card at check-in. Set the number in Settings.
 
 **Planned workouts** (when a training block is waiting)
-- Today shows the next unused workouts as a simple list. The rolling split and **Edit [day] list** are hidden until that list is empty.
-- **Start** begins the first unused workout. History is unchanged.
+- Today shows the next unused workouts as a simple list. Tap a later day to preview its lifts, then **Start** on that screen. The Home **Start** button still begins the next unused workout.
+- The rolling split cards stay hidden until that list is empty. **Settings → Edit training split** is still available (colors and icons).
+- History is unchanged.
 
 **What are you training?** (when there is no planned list)
 - One card per day in your split. Tap to select.
