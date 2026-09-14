@@ -3,7 +3,7 @@
 //  RockLog
 //
 //  Plain instructions an AI (or a person) can follow to write a
-//  rocklog.program file. Planned-workout structure only.
+//  rocklog.program or rocklog.split file. Same JSON; format is the switch.
 //
 
 import Foundation
@@ -12,18 +12,21 @@ enum ProgramAuthoringGuide {
     static let fileName = "RockLog-planned-workout-instructions.md"
 
     static let markdown = """
-    # RockLog planned-workout file
+    # RockLog import files
 
-    Paste this whole note into Grok, ChatGPT, Claude, or another assistant. Ask it to write a training block as a **rocklog.program** JSON file. Import that file in RockLog: Settings → Add planned workouts.
+    Paste this whole note into Grok, ChatGPT, Claude, or another assistant. Same JSON for both files. The only required change is `"format"`:
 
-    This format is **planned workouts only**. Do not invent extra keys. Do not write a backup. Do not write a coach-export file.
+    - `rocklog.program` — planned workouts (an ordered queue). Import: Settings → Add planned workouts.
+    - `rocklog.split` — days and lifts only. Import: Settings → Import training split.
+
+    Do not invent extra keys. Do not write a backup. Do not write a coach-export file.
 
     ## What the file is
 
     - JSON object.
-    - `"format"` must be exactly `rocklog.program`.
+    - `"format"` is `rocklog.program` (planned workouts) or `rocklog.split` (days and lifts).
     - `"schemaVersion"` must be `1`.
-    - `block.sessions` is an **ordered queue**. First session is next up. Missed calendar days are not skipped.
+    - For `rocklog.program`, `block.sessions` is an **ordered queue**. First session is next up. Missed calendar days are not skipped.
     - Same `dayType` may appear more than once (e.g. two Lowers in one week with different lifts).
     - Each `id` must be a unique UUID string.
     - Weights are pounds (`weightLbs`).
@@ -138,88 +141,25 @@ enum ProgramAuthoringGuide {
     }
     ```
 
-    ## Prompt you can add
+    ## Prompt you can add (planned workouts)
 
     Write a complete rocklog.program JSON file for my training. Follow the rules in this note exactly. Output only valid JSON (no markdown fences unless I ask). Use new UUIDs. Put sessions in the order I should train them.
 
     Then describe the days, lifts, sets, and any constraints (equipment, days per week, injuries).
 
-    ## Training split file
+    ## Training split (same JSON, one change)
 
-    Days and lifts only — no planned queue — is a separate prompt. Use Settings → Instructions for split.
-    """
+    For **days and lifts only** (no planned queue), use the same structure and set:
 
-    static let splitFileName = "RockLog-training-split-instructions.md"
+    `"format": "rocklog.split"`
 
-    static let splitMarkdown = """
-    # RockLog training split file
-
-    Paste this whole note into Grok, ChatGPT, Claude, or another assistant. Ask it to write your training days as a **rocklog.split** JSON file. Import that file in RockLog: Settings → Import training split.
-
-    Same JSON as a planned-workout file. **One change:** `"format"` must be exactly `rocklog.split`.
-
-    This file is **days and lifts only**. It does not create a planned queue. RockLog will ask whether to keep leftover planned workouts. Do not invent extra keys. Do not write a backup. Do not write a coach-export file.
-
-    ## What the file is
-
-    - JSON object.
-    - `"format"` must be exactly `rocklog.split`.
-    - `"schemaVersion"` must be `1`.
     - Unique `dayType` values in file order become the split.
-    - Lifts under a day become that day’s list. If the same `dayType` appears again, extra lifts are added to that day — it is still one day.
-    - Each `id` must be a unique UUID string.
-    - `date` can be any placeholder (`YYYY-MM-DD` is fine).
-    - `sets` may be `[]`. You can include sets; a split import ignores them.
-    - Save as `.json` or `.rocklogprogram`.
+    - Lifts under a day become that day’s list. If the same `dayType` appears again, extra lifts are added — it is still one day.
+    - `date` can be any placeholder.
+    - `sets` may be `[]`. A split import ignores sets.
+    - Import: Settings → Import training split. RockLog will ask whether to keep leftover planned workouts. History stays.
 
-    ## Required shape
-
-    ```json
-    {
-      "format": "rocklog.split",
-      "schemaVersion": 1,
-      "exportedAt": "2026-09-13T00:00:00Z",
-      "block": {
-        "id": "11111111-1111-4111-8111-111111111111",
-        "name": "PPL Split",
-        "notes": "Optional.",
-        "startDate": "2026-09-15",
-        "sessions": []
-      }
-    }
-    ```
-
-    `exportedAt` is ISO-8601 date-time. `startDate` and each session `date` may be `YYYY-MM-DD` or a full ISO-8601 date-time.
-
-    ## Session (one per day, in split order)
-
-    Required: `id`, `date`, `dayType`, `exercises`.
-
-    | Field | Rules |
-    | --- | --- |
-    | `id` | New UUID per session |
-    | `date` | Placeholder only |
-    | `dayType` | Display name: `Lower`, `Push`, `Pull`, `Legs`, `Upper`, `Arms`, or any custom day name |
-    | `rotationTrack` | Optional. `"A"`, `"B"`, or omit |
-    | `notes` | Optional |
-    | `exercises` | Ordered list of lifts for that day |
-
-    ## Exercise
-
-    Required: `id`, `name`, `sets`.
-
-    | Field | Rules |
-    | --- | --- |
-    | `id` | New UUID per exercise row. Reuse the same UUID if the lift already exists in RockLog |
-    | `name` | Exact lift name (e.g. `Barbell Bench Press`) |
-    | `muscleGroup` | Optional. Comma-separated is fine |
-    | `trainingMode` | Optional. `"Strength"` or `"Endurance"` |
-    | `notes` | Optional |
-    | `sets` | May be `[]` |
-
-    Extra JSON keys are not allowed.
-
-    ## Tiny example
+    Tiny example:
 
     ```json
     {
@@ -241,25 +181,6 @@ enum ProgramAuthoringGuide {
                 "name": "Barbell Bench Press",
                 "muscleGroup": "Chest, Triceps, Shoulders",
                 "sets": []
-              },
-              {
-                "id": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
-                "name": "Overhead Press",
-                "muscleGroup": "Shoulders, Triceps",
-                "sets": []
-              }
-            ]
-          },
-          {
-            "id": "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
-            "date": "2026-09-16",
-            "dayType": "Pull",
-            "exercises": [
-              {
-                "id": "ffffffff-ffff-4fff-8fff-ffffffffffff",
-                "name": "Barbell Bent-Over Row",
-                "muscleGroup": "Back",
-                "sets": []
               }
             ]
           }
@@ -268,7 +189,7 @@ enum ProgramAuthoringGuide {
     }
     ```
 
-    ## Prompt you can add
+    ## Prompt you can add (training split)
 
     Write a complete rocklog.split JSON file for my training split. Follow the rules in this note exactly. Output only valid JSON (no markdown fences unless I ask). Use new UUIDs. One session object per training day, in the order I train them. List the lifts for each day. Sets may be empty arrays.
 
@@ -276,16 +197,8 @@ enum ProgramAuthoringGuide {
     """
 
     static func writeFile() throws -> URL {
-        try write(markdown, named: fileName)
-    }
-
-    static func writeSplitFile() throws -> URL {
-        try write(splitMarkdown, named: splitFileName)
-    }
-
-    private static func write(_ text: String, named name: String) throws -> URL {
-        let url = FileManager.default.temporaryDirectory.appendingPathComponent(name)
-        try Data(text.utf8).write(to: url, options: .atomic)
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent(fileName)
+        try Data(markdown.utf8).write(to: url, options: .atomic)
         return url
     }
 }

@@ -20,11 +20,9 @@ final class ProgramImportTests: XCTestCase {
         XCTAssertTrue(text.contains("weightLbs"))
         XCTAssertTrue(text.contains("isWarmup"))
         XCTAssertFalse(text.localizedCaseInsensitiveContains("periodization"))
+        XCTAssertTrue(text.contains("rocklog.split"))
+        XCTAssertTrue(text.contains("\"sets\": []"))
         XCTAssertEqual(ProgramAuthoringGuide.fileName, "RockLog-planned-workout-instructions.md")
-        XCTAssertEqual(ProgramAuthoringGuide.splitFileName, "RockLog-training-split-instructions.md")
-        XCTAssertTrue(ProgramAuthoringGuide.splitMarkdown.contains("rocklog.split"))
-        XCTAssertTrue(ProgramAuthoringGuide.splitMarkdown.contains("\"sets\": []"))
-        XCTAssertFalse(ProgramAuthoringGuide.splitMarkdown.localizedCaseInsensitiveContains("periodization"))
     }
 
     func test_importSplit_replacesDaysWithoutCreatingPlannedQueue() throws {

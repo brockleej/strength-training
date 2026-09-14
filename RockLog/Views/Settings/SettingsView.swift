@@ -442,10 +442,6 @@ struct SettingsView: View {
                         Label("Instructions for AI", systemImage: "doc.text")
                             .foregroundStyle(Color.uplift.accent)
                     }
-                    Button(action: shareSplitInstructions) {
-                        Label("Instructions for split", systemImage: "doc.text")
-                            .foregroundStyle(Color.uplift.accent)
-                    }
                     if plannedQueueOwnsToday {
                         Button(role: .destructive) {
                             showClearPlannedConfirm = true
@@ -456,7 +452,7 @@ struct SettingsView: View {
                 } header: {
                     sectionHeader("Planned workouts")
                 } footer: {
-                    sectionFooter("Instructions for AI writes planned workouts. Instructions for split writes days and lifts only. Import training split replaces days and lifts, then asks about leftover planned workouts. History stays.")
+                    sectionFooter("Instructions for AI covers planned workouts and a training split. Import training split replaces days and lifts, then asks about leftover planned workouts. History stays.")
                 }
                 .listRowBackground(Color.uplift.surface1)
 
@@ -904,15 +900,6 @@ struct SettingsView: View {
     private func sharePlannedWorkoutInstructions() {
         do {
             ShareSheetPresenter.presentFile(try ProgramAuthoringGuide.writeFile())
-        } catch {
-            errorMessage = error.localizedDescription
-            showError = true
-        }
-    }
-
-    private func shareSplitInstructions() {
-        do {
-            ShareSheetPresenter.presentFile(try ProgramAuthoringGuide.writeSplitFile())
         } catch {
             errorMessage = error.localizedDescription
             showError = true
