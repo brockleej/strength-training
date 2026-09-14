@@ -17,7 +17,7 @@
                BlueprintIdentifier = "E18CFB5E2F4A312400991D60"
                BuildableName = "RockLog.app"
                BlueprintName = "RockLog"
-               ReferencedContainer = "container:strength-training.xcodeproj">
+               ReferencedContainer = "container:RockLog.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -37,7 +37,7 @@
                BlueprintIdentifier = "CF2665086E70C7E1BDE1852D"
                BuildableName = "RockLogTests.xctest"
                BlueprintName = "RockLogTests"
-               ReferencedContainer = "container:strength-training.xcodeproj">
+               ReferencedContainer = "container:RockLog.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -59,7 +59,7 @@
             BlueprintIdentifier = "E18CFB5E2F4A312400991D60"
             BuildableName = "RockLog.app"
             BlueprintName = "RockLog"
-            ReferencedContainer = "container:strength-training.xcodeproj">
+            ReferencedContainer = "container:RockLog.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -76,7 +76,7 @@
             BlueprintIdentifier = "E18CFB5E2F4A312400991D60"
             BuildableName = "RockLog.app"
             BlueprintName = "RockLog"
-            ReferencedContainer = "container:strength-training.xcodeproj">
+            ReferencedContainer = "container:RockLog.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>
