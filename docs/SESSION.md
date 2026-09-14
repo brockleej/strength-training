@@ -1,129 +1,72 @@
 # RockLog — session handoff
 
-**Parked:** 2026-08-30 (shipped PR 7 + Progress/score from this session)  
-**Project:** `~/strength-training-pr7` (branch `cursor/swipe-delete-tap-c4d4`) · dirty `~/strength-training` still leave it  
-**App:** RockLog · bundle `com.lee.lift2026` · Apple ID `6797695631`  
-**Marketing version:** 1.0 · **Testers:** **24** live; this push is the next Cloud job (**25+**). Add **Friends** after the archive is VALID.  
-**Pushing `main` starts Xcode Cloud.**
+**Shipping:** 2026-09-13 night. Merge `cursor/planned-owns-today-9fdc` to `main` for Xcode Cloud → TestFlight. Tester copy is in `docs/TESTFLIGHT-WHAT-TO-TEST.md` (plain language). Set App Store Connect What to Test after the new build is VALID. Do not push a follow-up docs commit to `main` (that would start another Cloud job).
 
-> Resume: *“Continue from ~/strength-training-pr7 — load docs/SESSION.md. Shipped 2026-08-30. Watch Cloud for 25+, paste What to Test, add Friends. Listing 1.0 still Prepare for Submission.”*  
+**Project (only checkout):** `~/Projects/RockLog`  
+**App:** RockLog · bundle `com.lee.lift2026` (unchanged — same TestFlight app)  
+**Branch:** `cursor/planned-owns-today-9fdc` → `main`
+
+> Resume: *“Continue from ~/Projects/RockLog — load docs/SESSION.md. Confirm TestFlight What to Test is on the new build.”*  
 > HA parked: `~/Documents/Hobbies/Home Automation/docs/HA-SESSION.md`.
 
 ---
 
-## Git
+## One folder
 
-| Place | State |
-|------|--------|
-| `origin/main` | This ship (PR 7 + Progress snapshot + strength-score slots + Side-tag load). |
-| `~/strength-training` | Stale local `main`. **Do not checkout, stash, or discard.** |
-| `~/strength-training-pr8` | PR **#8** `cursor/planned-owns-today-9fdc` — planned queue owns Today. **Not in this ship.** |
-| PR **#7** | Swipe trash + last-day keep + use planned as split + Progress/score. |
+`~/Projects/RockLog`  
+(`~/RockLog` and `~/strength-training` both symlink here.)
 
----
+Open: `~/Projects/RockLog/RockLog.xcodeproj` · scheme **RockLog**
 
-## This TestFlight (after Cloud succeeds)
-
-Source of tester copy: `docs/TESTFLIGHT-WHAT-TO-TEST.md` — **Next TestFlight** block.  
-Paste onto the new build only after Cloud **succeeds**. Then add **Friends**.
-
-Shipped here:
-
-- Swipe-left trash on Edit [day] and Edit training split actually removes the row (build 24 showed trash; tap did nothing).
-- Last remaining split day cannot be deleted — **Keep at least one day**. If planned workouts are waiting, **Use planned workouts as my split** under the last preset.
-- Progress tab snapshots once (first open can spin; should not freeze).
-- Strength score = strongest estimated 1RM **per muscle**. Side-tagged sets count both limbs. Dumbbell vs barbell bench share chest.
-
-Not in this ship (still PR #8):
-
-- Planned queue owns Today (hide split cards while unused planned sessions wait).
+GitHub remote is still `brockleej/strength-training` until that repo is renamed.
 
 ---
 
-## What to Test
+## This session (2026-09-13)
 
-See **Next TestFlight** in `docs/TESTFLIGHT-WHAT-TO-TEST.md`. Testers are non-technical.
+Local commits (not pushed):
 
-After Cloud succeeds:
+- `b578c52` Import a training split from the same program JSON.
+- `e37280a` Ask whether to keep leftover planned days after a split import.
+- `ed8bd08` Share one AI instructions file for program and split.
 
-```
-~/Documents/Hobbies/RockLog/scripts/asc-set-what-to-test.sh <build>
-```
+**Split import**
 
-Add Friends to that build (Lee asked for this push).
+- Same JSON as a program file. One change: `"format": "rocklog.split"`.
+- Settings → Import training split (same file picker as planned workouts; format picks the path). Sharing the file into the app also works.
+- Replaces days and lifts only. Does not create a planned queue. History stays.
+- If leftover planned workouts are waiting, a second alert asks **Keep remaining planned workouts?** Keep them / Remove leftover plan.
+- First-run restore of a split file: finish setup, then Settings → Import training split.
 
----
+**Instructions for AI**
 
-## Publish process
+- One button, one file: `RockLog-planned-workout-instructions.md`.
+- Covers `rocklog.program` (queue) and `rocklog.split` (days + lifts; `sets` may be `[]`).
+- Two pasteable prompts at the bottom.
 
-1. Repo, README, TestFlight, What to Test.
-2. Merge `main` only when Lee wants a build.
-3. Watch Xcode Cloud. Success includes pasting What to Test.
-4. Friends: Lee asked to add them on this push.
-5. Testers are non-technical.
-6. 6pm daily check: ask Friends if Groups(0); auto-fill blank What to Test only after a successful Cloud build.
+**Still true from earlier today**
 
-## App Store Connect 1.0
-
-*Prepare for Submission*. **Not ready to submit.**
-
-| Item | Status |
-|------|--------|
-| iPhone 6.9" screenshots (6) | COMPLETE on listing |
-| App previews | Empty — optional |
-| Age 4+, name, subtitle | Done |
-| Description, keywords, support URL, privacy URL | **Missing** |
-| Category, copyright, App Review contact | **Missing** |
-| Build attached to the listing | Still **11** — attach a current TF when you mean 1.0 |
-| iPad 13" screenshots | None (app is iPhone+iPad) |
-
-RockCoach stays GitHub/local only. Cloud must stay on the RockLog scheme. `ci_pre_xcodebuild.sh` fails if Cloud is pointed at RockCoach; pins RockLog to `max(17, CI_BUILD_NUMBER)`.
-
-ASC API (local, not in git): `~/Documents/Hobbies/RockLog/secrets/` + `source …/scripts/asc-env.sh`.
+- Planned queue owns Today while unused sessions wait. File order, not calendar.
+- Focus: LAST / THIS unless a planned workout is loaded, then LAST / PLAN / ACTUAL.
+- Today: tap a future queued workout to preview lifts; Start on that screen. Home Start is next unused.
+- Send to RockCoach: last week + picker of specific workouts.
+- Settings always shows Edit training split. Pull default color is purple (`0xB569FF`).
+- Delete leftover planned days: swipe on Today, Delete on preview, or Settings → Remove unused planned workouts.
+- Re-import a plan: Add keeps leftovers; Replace unused plan swaps them. History stays.
+- Do not auto-delete planned Push/Pull from old History.
 
 ---
 
-## Decisions (keep)
+## Phone test (before push)
 
-| Topic | Decision |
-|---|---|
-| One RockLog vs share-only SKU | **One app.** |
-| Share vs backup | **Stay separate.** Coach file ≠ restore. |
-| Coach UI | Hidden behind **Use RockCoach** (default off). |
-| RockCoach TestFlight | **No.** |
-| Tonnage in coach | **No.** |
-| Duration | Set span, not Start→Finish wall. |
-| Note keyboard | Cancel/Save on the lift screen. |
-| Doc-only `main` pushes | **Avoid.** |
-| Programmed block + split | **Block owns Today** is PR #8, not this ship. This ship: keep last split day; optional **Use planned workouts as my split**. |
-| Strength score | Best e1RM per primary muscle. Side tag doubles load. |
-| Personal logs / backup JSON | **Never commit.** |
+Rebuild from Xcode on the device (`RockLog.xcodeproj`, scheme **RockLog**).
 
-Backup used for shots: `~/Documents/RockLog-backup-2026-08-26.json`. Body check-in is **sim only**. Phone unchanged.
+- Import a `rocklog.split` file; days/lifts update; no new planned queue.
+- If a plan is waiting, confirm Keep vs Remove leftover plan.
+- Settings → Instructions for AI shares one file covering both formats.
+
+If Push/Pull are still missing from an old queue, re-add the same plan file (Add, or Replace unused plan).
 
 ---
 
-## Next
-
-1. Watch Xcode Cloud. Next tester build is **25+**.
-2. On VALID: paste What to Test, add Friends.
-3. Confirm swipe trash and last-day copy on device.
-4. PR #8 (planned owns Today) when Lee wants that.
-5. Listing copy / privacy URL / attach a current TF to 1.0 when submitting.
-
----
-
-## Project map
-
-| Path | Role |
-|------|------|
-| `strength-training/` | RockLog |
-| `strength-training-tests/` | Unit tests |
-| `Shared/Algorithm/` | Pure progression algorithm |
-| `Shared/CoachFormat/` | session/batch codec + compare grid |
-| `RockCoach/` | Companion (local) |
-| `RockCoachShare/` | Share extension |
-| `progression-lab/` | macOS algo lab (local only) |
-| `AGENTS.md` | Architecture + build |
-
-**CloudKit:** `iCloud.com.lee.lift2026`
+**Do not push until Lee asks after phone use.**

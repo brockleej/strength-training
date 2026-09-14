@@ -7,22 +7,27 @@ App Apple ID: `6797695631` · bundle `com.lee.lift2026`
 
 ---
 
-## Next TestFlight — after build 24 (swipe, last day, Progress)
+## Next TestFlight — after 25 (planned list, split import, AI instructions)
 
-Build 24: long-press freeze was fixed. Swipe still showed trash; tapping it did nothing.
+Build 25 is live. This drop is for gym testers — no files or coding needed unless you want to try import.
 
 ```
-What's new: Swipe-left trash on Edit training split and Edit [day] now removes the row. You can’t delete the last day in your split — you’ll see why. If you imported planned workouts, Use planned workouts as my split sits under the last preset. Progress should open without a freeze. Strength score is your strongest estimated 1-rep max for each muscle (not a sum of every lift). Sets tagged Side count both limbs.
+What's new: Planned workouts are a next-up list on Today. Tap a later day to see the lifts before you start. When you log a planned lift you'll see last time, the plan, and what you actually did. You can import a new training split without erasing History, share one Instructions for AI file, pick which workouts to send a coach, and delete leftover planned days. Settings should stay smooth.
 
-Please try:
-1) Today → Edit [day] list. Swipe left on a lift → tap trash. It should stay gone after you leave.
-2) Settings → Edit training split. Swipe a spare day → tap trash → confirm. The last remaining day should stay and explain why.
-3) Long-press the number and release without dragging — the row must not freeze. Then drag to reorder.
-4) Open Progress. First open can spin briefly; it should not hang. Strength score should not jump just because you added a similar lift (barbell vs dumbbell bench share chest).
-5) Screenshot anything that looks off.
+Please try (plain gym use):
+1) Open Today. If planned workouts are waiting, you should see a next-up list — not the usual day cards. History still has your old sessions.
+2) Tap a later workout in that list. You should see the lifts. Start on that screen begins that day. The Home Start button still starts the next unused one.
+3) Start a planned workout. On a lift you should see three columns: last time, the plan, and this session (blank until you log a set).
+4) Open Settings. It should not freeze. Edit training split is always there — you can still change a day's color or icon while a plan is waiting.
+5) Optional — leftover plan: swipe a planned day on Today to delete it, or Settings → Remove unused planned workouts. Finished workouts stay in History.
+6) Optional — Settings → Add planned workouts. Add keeps leftover planned days. Replace unused plan swaps them for the new file. History stays.
+7) Optional — Settings → Import training split. Days and lifts update. It should not add a new planned list. If a plan is still waiting, choose Keep remaining planned workouts or Remove leftover plan.
+8) Optional — Settings → Instructions for AI. You'll get one file you can send to ChatGPT / Grok / etc. You do not need to read it unless you want someone to write a plan or split for you.
+9) Optional — Settings → RockCoach → Choose workouts to send (only if you use a coach).
+10) Screenshot anything that looks off.
 ```
 
-Edit a day: long-press the number to reorder; swipe left → Remove from that day. Edit training split: same for days (swipe → Delete day, then confirm). Last remaining day cannot be deleted.
+Today with a plan: next-up list, tap to preview, Home Start is next unused. Focus: last / plan / actual. Settings: Edit training split always; Import training split; Instructions for AI.
 
 ---
 

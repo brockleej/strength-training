@@ -1,0 +1,265 @@
+//
+//  ExerciseDrillDownView.swift
+//  RockLog
+//
+
+import SwiftUI
+import SwiftData
+
+struct ExerciseDrillDownView: View {
+    let exercise: Exercise
+    let modelContext: ModelContext
+
+    @State private var viewModel: ExerciseDrillDownViewModel?
+
+    var body: some View {
+        Group {
+            if let vm = viewModel {
+                DrillDownContent(viewModel: vm)
+            } else {
+                ProgressView()
+            }
+        }
+        .navigationTitle("")
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            if viewModel == nil {
+                viewModel = ExerciseDrillDownViewModel(modelContext: modelContext, exercise: exercise)
+            }
+        }
+    }
+}
+
+private struct DrillDownContent: View {
+    @Bindable var viewModel: ExerciseDrillDownViewModel
+
+    private var exercise: Exercise { viewModel.exercise }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                heroCard
+                personalBestCard
+                    .padding(.top, 8)
+                rangePicker
+                    .padding(.top, 14)
+                progressChartCard
+                    .padding(.top, 12)
+                SectionHeader("Recent sessions")
+                recentSessionRows
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 24)
+        }
+        .background(Color.uplift.bgElev)
+        .scrollIndicators(.hidden)
+    }
+
+    // MARK: - Hero
+
+    private var heroCard: some View {
+        HStack(spacing: 16) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(exercise.day.upliftWash)
+                Image(systemName: exercise.day.systemImage)
+                    .font(.system(size: 40, weight: .medium))
+                    .foregroundStyle(exercise.day.upliftInk)
+            }
+            .frame(width: 80, height: 80)
+            .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(exercise.isUnassigned
+                     ? "Unassigned"
+                     : exercise.dayTypeNames.joined(separator: " · "))
+                    .textCase(.uppercase)
+                    .font(.uplift.text(11, weight: .semibold))
+                    .tracking(0.4)
+                    .foregroundStyle(exercise.day.upliftInk)
+                Text(exercise.name)
+                    .font(.uplift.display(22, weight: .bold))
+                    .kerning(-0.5)
+                    .foregroundStyle(Color.uplift.fg)
+                HStack(spacing: 6) {
+                    if !exercise.muscleGroupsDisplay.isEmpty {
+                        Text(exercise.muscleGroupsDisplay)
+                            .font(.uplift.text(11, weight: .semibold))
+                            .foregroundStyle(exercise.day.upliftInk)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(Capsule().fill(exercise.day.upliftWash))
+                    }
+                    Text("\(viewModel.totalSessions) session\(viewModel.totalSessions == 1 ? "" : "s")\(lastTrainedSuffix)")
+                        .font(.uplift.text(11, weight: .medium))
+                        .foregroundStyle(Color.uplift.fgMuted)
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background {
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(Color.uplift.surface1)
+        }
+        .padding(.top, 8)
+    }
+
+    private var lastTrainedSuffix: String {
+        guard let last = viewModel.lastSessionDate else { return "" }
+        return " · \(PrevSessionsStripData.relativeLabel(for: last).lowercased())"
+    }
+
+    // MARK: - Personal best
+
+    @ViewBuilder
+    private var personalBestCard: some View {
+        if let best = viewModel.personalBestSet {
+            HStack(spacing: 14) {
+                ZStack {
+                    Circle().fill(Color.uplift.pr.opacity(0.16))
+                    Image(systemName: "trophy.fill")
+                        .font(.system(size: 20))
+                        .foregroundStyle(Color.uplift.pr)
+                }
+                .frame(width: 40, height: 40)
+                .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Personal best")
+                        .textCase(.uppercase)
+                        .font(.uplift.text(11, weight: .semibold))
+                        .tracking(0.3)
+                        .foregroundStyle(Color.uplift.fgMuted)
+                    HStack(alignment: .firstTextBaseline, spacing: 6) {
+                        PairText.pair(weight: best.weight, reps: best.reps, font: .uplift.display(22, weight: .semibold))
+                        Text(PrevSessionsStripData.relativeLabel(for: best.date).lowercased())
+                            .font(.uplift.text(12, weight: .medium))
+                            .foregroundStyle(Color.uplift.fgDim)
+                    }
+                }
+                Spacer()
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("1RM est.")
+                        .textCase(.uppercase)
+                        .font(.uplift.text(11, weight: .semibold))
+                        .tracking(0.3)
+                        .foregroundStyle(Color.uplift.fgMuted)
+                    Num("\(Int((viewModel.allTimeE1RM ?? 0).rounded()))", size: 18, weight: .semibold)
+                }
+            }
+            .padding(16)
+            .background {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(Color.uplift.surface1)
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Personal best \(StepperLogic.format(best.weight)) pounds for \(best.reps) reps, estimated 1 rep max \(Int((viewModel.allTimeE1RM ?? 0).rounded())) pounds")
+        }
+    }
+
+    private var rangePicker: some View {
+        UpliftSegmentedControl(
+            segments: ProgressTimeRange.allCases.map {
+                UpliftSegment(id: $0.rawValue, label: $0.rawValue)
+            },
+            selection: Binding(
+                get: { viewModel.selectedTimeRange.rawValue },
+                set: { viewModel.selectedTimeRange = ProgressTimeRange(rawValue: $0) ?? .threeMonths }
+            )
+        )
+    }
+
+    // MARK: - Progress line (default e1RM)
+
+    private var progressChartCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Progress over time")
+                    .font(.uplift.text(15, weight: .semibold))
+                    .foregroundStyle(Color.uplift.fg)
+                Text(viewModel.chartMetric.caption)
+                    .font(.uplift.text(12, weight: .medium))
+                    .foregroundStyle(Color.uplift.fgDim)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            UpliftSegmentedControl(
+                segments: ExerciseDrillDownViewModel.ChartMetric.allCases.map {
+                    UpliftSegment(id: $0.rawValue, label: $0.rawValue)
+                },
+                selection: Binding(
+                    get: { viewModel.chartMetric.rawValue },
+                    set: {
+                        viewModel.chartMetric =
+                            ExerciseDrillDownViewModel.ChartMetric(rawValue: $0) ?? .e1RM
+                    }
+                )
+            )
+
+            E1RMTrendChart(
+                data: viewModel.primaryTrendData,
+                valueLabel: viewModel.chartMetric.chartValueLabel,
+                emptyMessage: "No working sets in this range yet"
+            )
+
+            if viewModel.primaryTrendData.contains(where: \.isPR) {
+                HStack(spacing: 6) {
+                    Circle()
+                        .fill(Color.uplift.pr)
+                        .frame(width: 8, height: 8)
+                    Text("PR = first time that best beat your previous all-time high")
+                        .font(.uplift.text(11, weight: .medium))
+                        .foregroundStyle(Color.uplift.fgMuted)
+                }
+            }
+        }
+        .padding(16)
+        .background {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Color.uplift.surface1)
+        }
+    }
+
+    // MARK: - Recent sessions
+
+    private var recentSessionRows: some View {
+        VStack(spacing: 6) {
+            if viewModel.recentSessions.isEmpty {
+                Text("No sessions in this range")
+                    .font(.uplift.text(13, weight: .medium))
+                    .foregroundStyle(Color.uplift.fgDim)
+                    .padding(.vertical, 8)
+            }
+            ForEach(viewModel.recentSessions, id: \.id) { session in
+                HStack(spacing: 10) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(spacing: 5) {
+                            Text(PrevSessionsStripData.relativeLabel(for: session.date))
+                                .font(.uplift.text(14, weight: .semibold))
+                                .foregroundStyle(Color.uplift.fg)
+                            if session.isPR {
+                                Image(systemName: "trophy.fill")
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(Color.uplift.pr)
+                                    .accessibilityLabel("Personal record")
+                            }
+                        }
+                        Text("\(session.sets) set\(session.sets == 1 ? "" : "s")")
+                            .font(.uplift.text(12, weight: .medium))
+                            .foregroundStyle(Color.uplift.fgMuted)
+                    }
+                    Spacer()
+                    PairText.pair(weight: session.topWeight, reps: session.topReps, font: .uplift.mono(15, weight: .semibold))
+                }
+                .padding(13)
+                .background {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(Color.uplift.surface1)
+                }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("\(PrevSessionsStripData.relativeLabel(for: session.date)), \(session.sets) sets, top set \(StepperLogic.format(session.topWeight)) pounds for \(session.topReps) reps\(session.isPR ? ", personal record" : "")")
+            }
+        }
+    }
+}

@@ -1,0 +1,301 @@
+//
+//  DayTypeRegistry.swift
+//  RockLog
+//
+//  In-memory catalog of the user's active split. Reloaded from SplitDay
+//  rows on launch and whenever Settings edits the split.
+//
+
+import Foundation
+import SwiftData
+import SwiftUI
+
+@MainActor
+@Observable
+final class DayTypeRegistry {
+    static let shared = DayTypeRegistry()
+
+    /// Active split definitions, sorted by sortOrder then name.
+    private(set) var definitions: [DayTypeDefinition] = SplitPreset.broSplit.definitions
+
+    private var byName: [String: DayTypeDefinition] = [:]
+
+    private init() {
+        reindex()
+    }
+
+    // MARK: - Queries
+
+    var activeDays: [DayType] {
+        definitions.map(\.asDayType)
+    }
+
+    var exerciseHomeDays: [DayType] {
+        definitions.filter { !$0.includesAllExercises }.map(\.asDayType)
+    }
+
+    var defaultSelection: DayType {
+        exerciseHomeDays.first ?? activeDays.first ?? .arms
+    }
+
+    func definition(for name: String) -> DayTypeDefinition {
+        byName[name] ?? DayTypePalette.fallback(for: name)
+    }
+
+    func resolve(_ name: String) -> DayType {
+        DayType(rawValue: name)
+    }
+
+    func contains(_ name: String) -> Bool {
+        byName[name] != nil
+    }
+
+    // MARK: - Load / seed
+
+    /// Load SplitDay rows (or seed the bro-split default) and refresh the catalog.
+    func reload(context: ModelContext) {
+        SeedData.seedSplitDaysIfNeeded(context: context)
+        SeedData.migrateDayTypeIcons(context: context)
+        // Persist-dedupe before mapping. Leftover sim / CloudKit rows with the
+        // same name used to crash reindex via uniqueKeysWithValues.
+        SeedData.deduplicateSplitDays(context: context, reloadCatalog: false)
+        let descriptor = FetchDescriptor<SplitDay>(
+            sortBy: [SortDescriptor(\SplitDay.sortOrder), SortDescriptor(\SplitDay.name)]
+        )
+        let rows = (try? context.fetch(descriptor)) ?? []
+        if rows.isEmpty {
+            if let snapshot = SeedData.loadSplitSnapshot(), !snapshot.isEmpty {
+                definitions = Self.uniquedDefinitions(
+                    snapshot
+                        .sorted { $0.sortOrder < $1.sortOrder }
+                        .map {
+                            DayTypeDefinition(
+                                name: $0.name,
+                                systemImage: $0.systemImage,
+                                subtitle: $0.subtitle,
+                                colorHex: UInt32(truncatingIfNeeded: $0.colorHex),
+                                includesAllExercises: $0.includesAllExercises,
+                                sortOrder: $0.sortOrder
+                            )
+                        }
+                )
+            } else {
+                let raw = UserDefaults.standard.string(forKey: SeedData.preferredSplitPresetKey) ?? ""
+                definitions = Self.uniquedDefinitions(
+                    (SplitPreset(rawValue: raw) ?? .broSplit).definitions
+                )
+            }
+        } else {
+            definitions = Self.uniquedDefinitions(rows.map(\.definition))
+        }
+        reindex()
+    }
+
+    /// Replace all SplitDay rows with a preset and reload.
+    /// - Parameter includeStarters: When true, pin 3–5 common lifts on empty days.
+    ///   When false, days stay empty for a custom roster.
+    func applyPreset(
+        _ preset: SplitPreset,
+        context: ModelContext,
+        includeStarters: Bool = false
+    ) {
+        let existing = (try? context.fetch(FetchDescriptor<SplitDay>())) ?? []
+        existing.forEach { context.delete($0) }
+        // Sequential sortOrder = list order on Today (user can drag to change).
+        for (index, def) in preset.definitions.enumerated() {
+            let day = SplitDay(definition: def)
+            day.sortOrder = index
+            context.insert(day)
+        }
+        try? context.save()
+        SeedData.markSplitConfigured(preset: preset, context: context)
+        if includeStarters {
+            SeedData.applyStarterDayPlans(context: context, onlyIfDayEmpty: true)
+        }
+        SeedData.markDayPlansTrusted()
+        reload(context: context)
+    }
+
+    /// Ensure every day-type name seen in exercises/sessions has a SplitDay
+    /// (used after backup restore so historical names keep styling).
+    func ensureDaysExist(names: Set<String>, context: ModelContext) {
+        guard !names.isEmpty else { return }
+        let existing = Set(((try? context.fetch(FetchDescriptor<SplitDay>())) ?? []).map(\.name))
+        var nextOrder = (((try? context.fetch(FetchDescriptor<SplitDay>())) ?? []).map(\.sortOrder).max() ?? -1) + 1
+        var inserted = false
+        for name in names.sorted() where !existing.contains(name) {
+            let def = DayTypePalette.fallback(for: name)
+            let day = SplitDay(
+                name: def.name,
+                systemImage: def.systemImage,
+                subtitle: def.subtitle,
+                colorHex: def.colorHex,
+                includesAllExercises: def.includesAllExercises,
+                sortOrder: nextOrder
+            )
+            context.insert(day)
+            nextOrder += 1
+            inserted = true
+        }
+        if inserted {
+            try? context.save()
+            reload(context: context)
+        }
+    }
+
+    /// Insert or update a single custom day, then reload.
+    func upsert(
+        id: UUID?,
+        name: String,
+        systemImage: String,
+        subtitle: String,
+        colorHex: UInt32,
+        includesAllExercises: Bool,
+        context: ModelContext
+    ) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+
+        if let id,
+           let existing = ((try? context.fetch(FetchDescriptor<SplitDay>())) ?? []).first(where: { $0.id == id }) {
+            let oldName = existing.name
+            existing.name = trimmed
+            existing.systemImage = systemImage
+            existing.subtitle = subtitle
+            existing.colorHex = Int(colorHex)
+            existing.includesAllExercises = includesAllExercises
+            if oldName != trimmed {
+                renameDayType(from: oldName, to: trimmed, context: context)
+            }
+        } else {
+            let order = ((((try? context.fetch(FetchDescriptor<SplitDay>())) ?? []).map(\.sortOrder).max()) ?? -1) + 1
+            context.insert(
+                SplitDay(
+                    name: trimmed,
+                    systemImage: systemImage,
+                    subtitle: subtitle,
+                    colorHex: colorHex,
+                    includesAllExercises: includesAllExercises,
+                    sortOrder: order
+                )
+            )
+        }
+        try? context.save()
+        SeedData.markSplitConfigured(context: context)
+        reload(context: context)
+    }
+
+    static func allowsDeletingDay(includesAllExercises: Bool, homeDayCount: Int) -> Bool {
+        if includesAllExercises { return true }
+        return homeDayCount > 1
+    }
+
+    func canDelete(id: UUID, from rows: [SplitDay]) -> Bool {
+        guard let row = rows.first(where: { $0.id == id }) else { return false }
+        let homes = rows.filter { !$0.includesAllExercises }.count
+        return Self.allowsDeletingDay(
+            includesAllExercises: row.includesAllExercises,
+            homeDayCount: homes
+        )
+    }
+
+    func delete(id: UUID, context: ModelContext) {
+        let rows = (try? context.fetch(FetchDescriptor<SplitDay>())) ?? []
+        guard let row = rows.first(where: { $0.id == id }) else { return }
+        guard canDelete(id: id, from: rows) else { return }
+        context.delete(row)
+        try? context.save()
+        SeedData.markSplitConfigured(context: context)
+        reload(context: context)
+    }
+
+    func move(from source: IndexSet, to destination: Int, context: ModelContext) {
+        var rows = ((try? context.fetch(
+            FetchDescriptor<SplitDay>(sortBy: [
+                SortDescriptor(\SplitDay.sortOrder),
+                SortDescriptor(\SplitDay.name),
+            ])
+        )) ?? [])
+        rows.move(fromOffsets: source, toOffset: destination)
+        for (index, row) in rows.enumerated() {
+            row.sortOrder = index
+        }
+        try? context.save()
+        SeedData.markSplitConfigured(context: context)
+        reload(context: context)
+    }
+
+    /// Replace the live day list (names + weekly order). Does not touch history.
+    func replaceDays(names: [String], context: ModelContext) {
+        let trimmed = names
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty && $0.caseInsensitiveCompare("Unassigned") != .orderedSame }
+        guard !trimmed.isEmpty else { return }
+
+        let existing = (try? context.fetch(FetchDescriptor<SplitDay>())) ?? []
+        existing.forEach { context.delete($0) }
+        for (index, name) in trimmed.enumerated() {
+            let def = DayTypePalette.fallback(for: name)
+            context.insert(
+                SplitDay(
+                    name: name,
+                    systemImage: def.systemImage,
+                    subtitle: def.subtitle,
+                    colorHex: def.colorHex,
+                    includesAllExercises: false,
+                    sortOrder: index
+                )
+            )
+        }
+        try? context.save()
+        SeedData.markSplitConfigured(context: context)
+        reload(context: context)
+    }
+
+    /// Persist order from a long-press-drag list (same pattern as day-plan exercises).
+    func applyOrder(ids: [UUID], context: ModelContext) {
+        let rows = (try? context.fetch(FetchDescriptor<SplitDay>())) ?? []
+        let byID = Dictionary(rows.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        for (index, id) in ids.enumerated() {
+            byID[id]?.sortOrder = index
+        }
+        try? context.save()
+        SeedData.markSplitConfigured(context: context)
+        reload(context: context)
+    }
+
+    // MARK: - Private
+
+    /// First name wins (case-insensitive). Duplicate keys must never fatal.
+    static func uniquedDefinitions(_ definitions: [DayTypeDefinition]) -> [DayTypeDefinition] {
+        var seen = Set<String>()
+        var result: [DayTypeDefinition] = []
+        for definition in definitions {
+            let key = definition.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            guard !key.isEmpty, seen.insert(key).inserted else { continue }
+            result.append(definition)
+        }
+        return result
+    }
+
+    private func reindex() {
+        byName = Dictionary(
+            Self.uniquedDefinitions(definitions).map { ($0.name, $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
+    }
+
+    private func renameDayType(from old: String, to new: String, context: ModelContext) {
+        let exercises = (try? context.fetch(FetchDescriptor<Exercise>())) ?? []
+        for exercise in exercises {
+            let names = exercise.dayTypeNames.map { $0 == old ? new : $0 }
+            if names != exercise.dayTypeNames {
+                exercise.setDayTypes(names.map { DayType(rawValue: $0) })
+            }
+        }
+        let sessions = (try? context.fetch(FetchDescriptor<WorkoutSession>())) ?? []
+        for session in sessions where session.dayType == old {
+            session.dayType = new
+        }
+    }
+}

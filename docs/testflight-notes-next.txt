@@ -1,0 +1,13 @@
+What's new: Planned workouts are a next-up list on Today. Tap a later day to see the lifts before you start. When you log a planned lift you'll see last time, the plan, and what you actually did. You can import a new training split without erasing History, share one Instructions for AI file, pick which workouts to send a coach, and delete leftover planned days. Settings should stay smooth.
+
+Please try (plain gym use):
+1) Open Today. If planned workouts are waiting, you should see a next-up list — not the usual day cards. History still has your old sessions.
+2) Tap a later workout in that list. You should see the lifts. Start on that screen begins that day. The Home Start button still starts the next unused one.
+3) Start a planned workout. On a lift you should see three columns: last time, the plan, and this session (blank until you log a set).
+4) Open Settings. It should not freeze. Edit training split is always there — you can still change a day's color or icon while a plan is waiting.
+5) Optional — leftover plan: swipe a planned day on Today to delete it, or Settings → Remove unused planned workouts. Finished workouts stay in History.
+6) Optional — Settings → Add planned workouts. Add keeps leftover planned days. Replace unused plan swaps them for the new file. History stays.
+7) Optional — Settings → Import training split. Days and lifts update. It should not add a new planned list. If a plan is still waiting, choose Keep remaining planned workouts or Remove leftover plan.
+8) Optional — Settings → Instructions for AI. You'll get one file you can send to ChatGPT / Grok / etc. You do not need to read it unless you want someone to write a plan or split for you.
+9) Optional — Settings → RockCoach → Choose workouts to send (only if you use a coach).
+10) Screenshot anything that looks off.

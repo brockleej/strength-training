@@ -19,10 +19,10 @@ RockLog is a native iOS strength-training app built with SwiftUI and SwiftData. 
 
 ```bash
 # Build for simulator
-xcodebuild -scheme strength-training -destination 'platform=iOS Simulator,name=iPhone 17'
+xcodebuild -scheme RockLog -destination 'platform=iOS Simulator,name=iPhone 17'
 
 # Open in Xcode
-open strength-training.xcodeproj
+open RockLog.xcodeproj
 
 # RockCoach companion (Path 1 — in this GitHub repo, not TestFlight)
 xcodebuild -scheme RockCoach -destination 'platform=iOS Simulator,name=iPhone 17' build
@@ -32,10 +32,10 @@ xcodebuild -scheme RockCoach -destination 'platform=iOS Simulator,name=iPhone 17
 
 ```bash
 # Run all iOS tests
-xcodebuild test -scheme strength-training -destination 'platform=iOS Simulator,name=iPhone 17'
+xcodebuild test -scheme RockLog -destination 'platform=iOS Simulator,name=iPhone 17'
 
 # Run a specific test class
-xcodebuild test -scheme strength-training -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:strength-training-tests/<TestClassName>
+xcodebuild test -scheme RockLog -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:RockLogTests/<TestClassName>
 ```
 
 No lint commands are configured.
@@ -84,7 +84,7 @@ Utilities/     -> PreviewSampleData (preview helpers only)
 - **SwiftData relationships:** Always define cascade delete rules on parent-side relationships.
 - **CloudKit sync:** SwiftData uses `cloudKitDatabase: .automatic` with the `iCloud.com.lee.lift2026` container. `CloudKitSyncService` monitors account status and sync events in Settings.
 - **HealthKit:** `HealthKitWorkoutService` handles authorization, starting/stopping Apple Fitness workouts, and saving workout metadata. Always check authorization status before performing HealthKit operations.
-- **Adding a new SwiftData `@Model`:** the model must be registered in the `Schema([...])` array in `strength_trainingApp.swift` and also added to `PreviewSampleData`. Forgetting either causes runtime crashes — the schema in the app entry point is the source of truth for what CloudKit syncs.
+- **Adding a new SwiftData `@Model`:** the model must be registered in the `Schema([...])` array in `RockLogApp.swift` and also added to `PreviewSampleData`. Forgetting either causes runtime crashes — the schema in the app entry point is the source of truth for what CloudKit syncs.
 
 ## SwiftUI Conventions
 
@@ -125,7 +125,7 @@ Use `PreviewSampleData` (in `Utilities/`) for all SwiftUI previews that require 
 
 ## App Icon
 
-The icon source is `strength-training/strength_training.icon/` (Apple Icon Composer bundle). Xcode 16+ compiles `.icon` bundles directly — there is no PNG export step and no `AppIcon.appiconset`. The build setting `ASSETCATALOG_COMPILER_APPICON_NAME` is set to `strength_training` to match the bundle's stem name. To edit the icon, open the `.icon` bundle in Icon Composer and save; the next build picks it up automatically.
+The icon source is `RockLog/RockLog.icon/` (Apple Icon Composer bundle). Xcode compiles `.icon` bundles directly. To edit the icon, open the `.icon` bundle in Icon Composer and save; the next build picks it up automatically.
 
 ## Git Conventions
 

@@ -12,7 +12,7 @@ if [ "${CI_XCODE_SCHEME:-}" = "RockCoach" ]; then
 fi
 
 ROOT="${CI_PRIMARY_REPOSITORY_PATH:-$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)}"
-PBX="$ROOT/strength-training.xcodeproj/project.pbxproj"
+PBX="$ROOT/RockLog.xcodeproj/project.pbxproj"
 MIN=17
 CLOUD="${CI_BUILD_NUMBER:-0}"
 

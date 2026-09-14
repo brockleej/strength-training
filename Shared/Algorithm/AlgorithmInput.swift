@@ -1,6 +1,6 @@
 //
 //  AlgorithmInput.swift
-//  strength-training
+//  RockLog
 //
 //  Created by Daniel Kuhlwein on 2026-05-03.
 //

@@ -1,5 +1,26 @@
 # RockLog release notes
 
+## 1.0 (next after 25) — 2026-09-13
+
+TestFlight after **25**. RockCoach stays local (not on TestFlight).
+
+### What’s new
+
+- **Planned list owns Today** while unused sessions wait (file order, not calendar). Tap a later queued workout to preview lifts; Home Start is still the next unused day.
+- **Focus:** LAST / THIS normally; LAST / PLAN / ACTUAL when a planned workout is loaded.
+- **Split import:** Settings → Import training split. Same JSON family with `"format": "rocklog.split"`. Days and lifts only; asks whether to keep leftover planned workouts. History stays.
+- **Instructions for AI:** one Settings share file covering program and split.
+- **Leftover plan:** swipe on Today, delete on preview, or Settings → Remove unused planned workouts. Re-import can Add or Replace unused plan.
+- **RockCoach:** send last week, or pick specific workouts.
+- **Settings** stays usable during a planned block; Edit training split remains. Pull default color is purple.
+- Last-day keep and per-muscle strength score from build 25 are still in this drop.
+
+### What to Test
+
+See `docs/TESTFLIGHT-WHAT-TO-TEST.md` (next after 25). Paste into App Store Connect after the Cloud build is VALID.
+
+---
+
 ## 1.0 (17) — 2026-08-26
 
 TestFlight / App Store listing screenshots. Testers jump **14 → 17** (15 queued internally; 16 internal only).

@@ -193,7 +193,7 @@ graph LR
 **App Store name:** RockLog · **Home screen:** RockLog · **Bundle ID:** `com.lee.lift2026` (unchanged)  
 **Suggested subtitle:** Strength training gym log  
 **Sync (this fork):** `cloudKitDatabase: .automatic`, container `iCloud.com.lee.lift2026`  
-**Icon (this fork):** Icon Composer bundle `strength_training.icon`
+**Icon (this fork):** Icon Composer bundle `RockLog.icon`
 
 ## Getting started
 
@@ -208,9 +208,9 @@ graph LR
 git clone https://github.com/brockleej/strength-training.git
 cd strength-training
 
-open strength-training.xcodeproj
+open RockLog.xcodeproj
 # or
-xcodebuild -scheme strength-training -destination 'platform=iOS Simulator,name=iPhone 17'
+xcodebuild -scheme RockLog -destination 'platform=iOS Simulator,name=iPhone 17'
 ```
 
 Set your **signing team** on the app target → Signing & Capabilities, then Run.
@@ -218,7 +218,7 @@ Set your **signing team** on the app target → Signing & Capabilities, then Run
 ### Tests
 
 ```bash
-xcodebuild test -scheme strength-training -destination 'platform=iOS Simulator,name=iPhone 17'
+xcodebuild test -scheme RockLog -destination 'platform=iOS Simulator,name=iPhone 17'
 ```
 
 ### ProgressionLab (macOS, local only)
@@ -243,18 +243,18 @@ xcodebuild test -scheme ProgressionLab -destination 'platform=macOS'
 
 Request beta access via [Issues](https://github.com/brockleej/strength-training/issues).
 
-### What’s new — planned workouts
+### What’s new — planned workouts and split import
 
-What's new: You can add a planned training block from a file. It does not erase your old workouts.
+See [docs/TESTFLIGHT-WHAT-TO-TEST.md](docs/TESTFLIGHT-WHAT-TO-TEST.md) for the tester copy (plain language).
 
-Please try: 1) Settings → Add planned workouts, pick the file. 2) Confirm Add workouts — old history should still be there. 3) Today should say **Next up: Lower** (first unused), even if you missed a calendar day. 4) Start it — warmup and work sets should already be filled in. 5) Screenshot anything that looks off.
+Planned workouts are a next-up list on Today (file order, not a calendar). Tap a later day to preview, then Start. A planned lift shows last time / the plan / this session. **Settings → Import training split** replaces days and lifts only; History stays. **Settings → Instructions for AI** shares one file covering both formats.
 
-The file is a queue, not a calendar that burns missed days. Sample starts with Lower A / deadlift. **Start this block today** is optional. Sample file: [docs/periodization/fixtures/sample-8-week-block.rocklog.program.json](docs/periodization/fixtures/sample-8-week-block.rocklog.program.json).
+Sample program file: [docs/periodization/fixtures/sample-8-week-block.rocklog.program.json](docs/periodization/fixtures/sample-8-week-block.rocklog.program.json).
 
 ## Project layout
 
 ```
-strength-training/
+RockLog/
 ├── Models/           # Core graph (original) + SplitDay, BodyMetricEntry (RockLog)
 ├── ViewModels/       # Feature VMs (original pattern; new VMs for body metrics, etc.)
 ├── Views/
@@ -262,11 +262,12 @@ strength-training/
 │   └── DesignSystem/ # Token/component system (original direction, RockLog polish)
 ├── Services/         # Progression, HK, backup (original) + rest, body, gym pass (RockLog)
 ├── Utilities/
-├── strength_training.icon/   # RockLog
+├── RockLog.icon/     # App icon
 └── LaunchScreen.storyboard
+RockLog.xcodeproj
+RockLogTests/
 Shared/Algorithm/     # Progression pure core — previous distro
 progression-lab/      # macOS tool — previous distro
-strength-training-tests/
 ```
 
 Agent notes: [AGENTS.md](AGENTS.md).
