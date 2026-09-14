@@ -20,8 +20,11 @@ final class ProgramImportTests: XCTestCase {
         XCTAssertTrue(text.contains("weightLbs"))
         XCTAssertTrue(text.contains("isWarmup"))
         XCTAssertFalse(text.localizedCaseInsensitiveContains("periodization"))
-        XCTAssertTrue(text.contains("rocklog.split"))
         XCTAssertEqual(ProgramAuthoringGuide.fileName, "RockLog-planned-workout-instructions.md")
+        XCTAssertEqual(ProgramAuthoringGuide.splitFileName, "RockLog-training-split-instructions.md")
+        XCTAssertTrue(ProgramAuthoringGuide.splitMarkdown.contains("rocklog.split"))
+        XCTAssertTrue(ProgramAuthoringGuide.splitMarkdown.contains("\"sets\": []"))
+        XCTAssertFalse(ProgramAuthoringGuide.splitMarkdown.localizedCaseInsensitiveContains("periodization"))
     }
 
     func test_importSplit_replacesDaysWithoutCreatingPlannedQueue() throws {
@@ -47,6 +50,31 @@ final class ProgramImportTests: XCTestCase {
             .filter { $0.name == "Barbell Bench Press" }
         XCTAssertEqual(benches.count, 1)
         XCTAssertTrue(benches[0].belongs(to: .push))
+    }
+
+    func test_importSplit_keepLeavesQueue_removeClearsUnused() throws {
+        let container = try inMemoryContainer()
+        let context = container.mainContext
+        let program = sampleDocument(firstSession: .now)
+        _ = try ProgramImportService.importDocument(program, context: context)
+        XCTAssertTrue(ProgramImportService.hasUnusedPlannedSessions(context: context))
+
+        var split = runningThreeDayDocument(start: Date(timeIntervalSince1970: 1_767_571_200))
+        split.format = ProgramFormat.splitFormatName
+        split.block.sessions = Array(split.block.sessions.prefix(3))
+        try ProgramImportService.importSplit(split, context: context)
+        XCTAssertEqual(DayTypeRegistry.shared.activeDays.map(\.rawValue), ["Lower", "Push", "Pull"])
+        XCTAssertTrue(ProgramImportService.hasUnusedPlannedSessions(context: context))
+        let leftoverID = program.block.sessions[0].id
+        XCTAssertTrue(
+            try context.fetch(FetchDescriptor<WorkoutSession>()).contains { $0.id == leftoverID && $0.isPlanned }
+        )
+
+        try ProgramImportService.importSplit(split, context: context, removeUnusedPlan: true)
+        XCTAssertFalse(ProgramImportService.hasUnusedPlannedSessions(context: context))
+        XCTAssertFalse(
+            try context.fetch(FetchDescriptor<WorkoutSession>()).contains { $0.id == leftoverID }
+        )
     }
 
     func test_confirmationCopy_isPlainLanguage() {
@@ -93,9 +121,25 @@ final class ProgramImportTests: XCTestCase {
         )
         XCTAssertEqual(
             ProgramImportService.importSplitMessage(),
-            "This replaces your current days and the lifts on each day. History and leftover planned workouts stay."
+            "This replaces your current days and the lifts on each day. History stays."
+        )
+        XCTAssertEqual(ProgramImportService.keepPlannedAfterSplitTitle, "Keep remaining planned workouts?")
+        XCTAssertEqual(ProgramImportService.keepPlannedAfterSplitConfirmTitle, "Keep them")
+        XCTAssertEqual(ProgramImportService.removePlannedAfterSplitTitle, "Remove leftover plan")
+        XCTAssertEqual(
+            ProgramImportService.keepPlannedAfterSplitMessage(),
+            "This split does not add new planned workouts. Keep the ones still waiting, or delete them. Finished workouts stay in History."
+        )
+        XCTAssertEqual(
+            ProgramImportService.importSplitResultMessage(removedUnusedPlan: false),
+            "Training split updated. History is unchanged."
+        )
+        XCTAssertEqual(
+            ProgramImportService.importSplitResultMessage(removedUnusedPlan: true),
+            "Training split updated. Leftover planned workouts were removed. History is unchanged."
         )
         XCTAssertFalse(ProgramImportService.importSplitMessage().localizedCaseInsensitiveContains("JSON"))
+        XCTAssertFalse(ProgramImportService.keepPlannedAfterSplitMessage().localizedCaseInsensitiveContains("JSON"))
         XCTAssertFalse(ProgramImportService.replaceSplitMessage().localizedCaseInsensitiveContains("backup"))
         XCTAssertFalse(ProgramImportService.replaceSplitMessage().localizedCaseInsensitiveContains("JSON"))
         XCTAssertFalse(ProgramImportService.confirmationMessage(weekCount: 8).localizedCaseInsensitiveContains("schema"))

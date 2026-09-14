@@ -53,9 +53,28 @@ enum ProgramImportService {
     static let importSplitTitle = "Import training split?"
     static let importSplitConfirmTitle = "Use this split"
     static let importSplitCancelTitle = "Don't import"
+    static let keepPlannedAfterSplitTitle = "Keep remaining planned workouts?"
+    static let keepPlannedAfterSplitConfirmTitle = "Keep them"
+    static let removePlannedAfterSplitTitle = "Remove leftover plan"
 
     static func importSplitMessage() -> String {
-        "This replaces your current days and the lifts on each day. History and leftover planned workouts stay."
+        "This replaces your current days and the lifts on each day. History stays."
+    }
+
+    static func keepPlannedAfterSplitMessage() -> String {
+        "This split does not add new planned workouts. Keep the ones still waiting, or delete them. Finished workouts stay in History."
+    }
+
+    static func importSplitResultMessage(removedUnusedPlan: Bool) -> String {
+        removedUnusedPlan
+            ? "Training split updated. Leftover planned workouts were removed. History is unchanged."
+            : "Training split updated. History is unchanged."
+    }
+
+    @MainActor
+    static func hasUnusedPlannedSessions(context: ModelContext) -> Bool {
+        let all = (try? context.fetch(FetchDescriptor<WorkoutSession>())) ?? []
+        return !PlannedBlockQueue.unusedSessions(in: all).isEmpty
     }
 
     /// Human copy for the Files / share-sheet confirm. No jargon.
@@ -125,9 +144,14 @@ enum ProgramImportService {
     }
 
     /// Apply a `rocklog.split` file: ensure lifts exist, then replace the split.
-    /// Does not create planned sessions.
+    /// Does not create planned sessions. `removeUnusedPlan` drops leftover
+    /// planned days after the split is applied. History stays.
     @MainActor
-    static func importSplit(_ document: ProgramDocument, context: ModelContext) throws {
+    static func importSplit(
+        _ document: ProgramDocument,
+        context: ModelContext,
+        removeUnusedPlan: Bool = false
+    ) throws {
         guard document.format == ProgramFormat.splitFormatName else {
             throw ProgramDocument.ProgramFormatError.wrongFormat(document.format)
         }
@@ -157,6 +181,9 @@ enum ProgramImportService {
         }
         try context.save()
         replaceSplit(from: document, context: context)
+        if removeUnusedPlan {
+            removeUnusedPlannedSessions(context: context)
+        }
     }
 
     /// Replace the live split (days + which lifts sit on each day). History,

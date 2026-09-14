@@ -39,6 +39,7 @@ struct SettingsView: View {
     @State private var showReplaceSplitConfirm = false
     @State private var pendingSplitDocument: ProgramDocument?
     @State private var showImportSplitConfirm = false
+    @State private var showKeepPlannedAfterSplitConfirm = false
     @State private var showError = false
     @State private var errorMessage = ""
     @State private var showSuccess = false
@@ -441,6 +442,10 @@ struct SettingsView: View {
                         Label("Instructions for AI", systemImage: "doc.text")
                             .foregroundStyle(Color.uplift.accent)
                     }
+                    Button(action: shareSplitInstructions) {
+                        Label("Instructions for split", systemImage: "doc.text")
+                            .foregroundStyle(Color.uplift.accent)
+                    }
                     if plannedQueueOwnsToday {
                         Button(role: .destructive) {
                             showClearPlannedConfirm = true
@@ -451,7 +456,7 @@ struct SettingsView: View {
                 } header: {
                     sectionHeader("Planned workouts")
                 } footer: {
-                    sectionFooter("Instructions for AI covers both planned workouts (`rocklog.program`) and a training split (`rocklog.split`). Import training split replaces days and lifts only. History stays.")
+                    sectionFooter("Instructions for AI writes planned workouts. Instructions for split writes days and lifts only. Import training split replaces days and lifts, then asks about leftover planned workouts. History stays.")
                 }
                 .listRowBackground(Color.uplift.surface1)
 
@@ -645,6 +650,20 @@ struct SettingsView: View {
                 }
             } message: {
                 Text(ProgramImportService.importSplitMessage())
+            }
+            .alert(
+                ProgramImportService.keepPlannedAfterSplitTitle,
+                isPresented: $showKeepPlannedAfterSplitConfirm
+            ) {
+                Button(ProgramImportService.keepPlannedAfterSplitConfirmTitle) {
+                    finishSplitImport(removedUnusedPlan: false)
+                }
+                Button(ProgramImportService.removePlannedAfterSplitTitle, role: .destructive) {
+                    ProgramImportService.removeUnusedPlannedSessions(context: modelContext)
+                    finishSplitImport(removedUnusedPlan: true)
+                }
+            } message: {
+                Text(ProgramImportService.keepPlannedAfterSplitMessage())
             }
             .alert(
                 pendingRestorePrompt.title,
@@ -891,6 +910,15 @@ struct SettingsView: View {
         }
     }
 
+    private func shareSplitInstructions() {
+        do {
+            ShareSheetPresenter.presentFile(try ProgramAuthoringGuide.writeSplitFile())
+        } catch {
+            errorMessage = error.localizedDescription
+            showError = true
+        }
+    }
+
     private func exportBackup() {
         do {
             let data = try BackupService.export(context: modelContext)
@@ -981,12 +1009,24 @@ struct SettingsView: View {
     private func performSplitImport(_ document: ProgramDocument) {
         do {
             try ProgramImportService.importSplit(document, context: modelContext)
-            successMessage = "Training split updated. History is unchanged."
-            showSuccess = true
+            if ProgramImportService.hasUnusedPlannedSessions(context: modelContext) {
+                Task { @MainActor in
+                    showKeepPlannedAfterSplitConfirm = true
+                }
+            } else {
+                finishSplitImport(removedUnusedPlan: false)
+            }
         } catch {
             errorMessage = error.localizedDescription
             showError = true
         }
+    }
+
+    private func finishSplitImport(removedUnusedPlan: Bool) {
+        successMessage = ProgramImportService.importSplitResultMessage(
+            removedUnusedPlan: removedUnusedPlan
+        )
+        showSuccess = true
     }
 
     private func performProgramImport(

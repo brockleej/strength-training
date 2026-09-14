@@ -33,6 +33,7 @@ struct ContentView: View {
     @State private var showReplaceSplitConfirm = false
     @State private var pendingIncomingSplit: ProgramDocument?
     @State private var showIncomingSplitConfirm = false
+    @State private var showIncomingKeepPlannedConfirm = false
     @State private var incomingFileMessage = ""
     @State private var showIncomingFileMessage = false
 
@@ -221,18 +222,26 @@ struct ContentView: View {
             }
             Button(ProgramImportService.importSplitConfirmTitle) {
                 if let document = pendingIncomingSplit {
-                    do {
-                        try ProgramImportService.importSplit(document, context: modelContext)
-                        incomingFileMessage = "Training split updated. History is unchanged."
-                    } catch {
-                        incomingFileMessage = error.localizedDescription
-                    }
-                    showIncomingFileMessage = true
+                    importIncomingSplit(document)
                 }
                 pendingIncomingSplit = nil
             }
         } message: {
             Text(ProgramImportService.importSplitMessage())
+        }
+        .alert(
+            ProgramImportService.keepPlannedAfterSplitTitle,
+            isPresented: $showIncomingKeepPlannedConfirm
+        ) {
+            Button(ProgramImportService.keepPlannedAfterSplitConfirmTitle) {
+                finishIncomingSplitImport(removedUnusedPlan: false)
+            }
+            Button(ProgramImportService.removePlannedAfterSplitTitle, role: .destructive) {
+                ProgramImportService.removeUnusedPlannedSessions(context: modelContext)
+                finishIncomingSplitImport(removedUnusedPlan: true)
+            }
+        } message: {
+            Text(ProgramImportService.keepPlannedAfterSplitMessage())
         }
         .alert("RockLog", isPresented: $showIncomingFileMessage) {
             Button("OK", role: .cancel) {}
@@ -264,6 +273,31 @@ struct ContentView: View {
             }
         } catch {
             incomingFileMessage = error.localizedDescription
+            showIncomingFileMessage = true
+        }
+    }
+
+    private func importIncomingSplit(_ document: ProgramDocument) {
+        do {
+            try ProgramImportService.importSplit(document, context: modelContext)
+            if ProgramImportService.hasUnusedPlannedSessions(context: modelContext) {
+                Task { @MainActor in
+                    showIncomingKeepPlannedConfirm = true
+                }
+            } else {
+                finishIncomingSplitImport(removedUnusedPlan: false)
+            }
+        } catch {
+            incomingFileMessage = error.localizedDescription
+            showIncomingFileMessage = true
+        }
+    }
+
+    private func finishIncomingSplitImport(removedUnusedPlan: Bool) {
+        incomingFileMessage = ProgramImportService.importSplitResultMessage(
+            removedUnusedPlan: removedUnusedPlan
+        )
+        Task { @MainActor in
             showIncomingFileMessage = true
         }
     }
