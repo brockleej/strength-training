@@ -50,6 +50,13 @@ enum ProgramImportService {
     static let useThisSplitConfirmTitle = "Use this split"
     static let keepCurrentSplitTitle = "Keep my current split"
     static let replaceUnusedPlanTitle = "Replace unused plan"
+    static let importSplitTitle = "Import training split?"
+    static let importSplitConfirmTitle = "Use this split"
+    static let importSplitCancelTitle = "Don't import"
+
+    static func importSplitMessage() -> String {
+        "This replaces your current days and the lifts on each day. History and leftover planned workouts stay."
+    }
 
     /// Human copy for the Files / share-sheet confirm. No jargon.
     static func confirmationMessage(weekCount: Int) -> String {
@@ -115,6 +122,41 @@ enum ProgramImportService {
             }
         }
         return days
+    }
+
+    /// Apply a `rocklog.split` file: ensure lifts exist, then replace the split.
+    /// Does not create planned sessions.
+    @MainActor
+    static func importSplit(_ document: ProgramDocument, context: ModelContext) throws {
+        guard document.format == ProgramFormat.splitFormatName else {
+            throw ProgramDocument.ProgramFormatError.wrongFormat(document.format)
+        }
+        guard !document.block.sessions.isEmpty else {
+            throw ProgramDocument.ProgramFormatError.emptyBlock
+        }
+
+        let exercises = (try? context.fetch(FetchDescriptor<Exercise>())) ?? []
+        var byID: [UUID: Exercise] = [:]
+        var byName: [String: Exercise] = [:]
+        for exercise in exercises {
+            byID[exercise.id] = exercise
+            let key = nameKey(exercise.name)
+            if byName[key] == nil {
+                byName[key] = exercise
+            }
+        }
+        for session in document.block.sessions {
+            for payload in session.exercises {
+                _ = resolveExercise(
+                    payload: payload,
+                    byID: &byID,
+                    byName: &byName,
+                    context: context
+                )
+            }
+        }
+        try context.save()
+        replaceSplit(from: document, context: context)
     }
 
     /// Replace the live split (days + which lifts sit on each day). History,

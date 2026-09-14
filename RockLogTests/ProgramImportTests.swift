@@ -20,7 +20,33 @@ final class ProgramImportTests: XCTestCase {
         XCTAssertTrue(text.contains("weightLbs"))
         XCTAssertTrue(text.contains("isWarmup"))
         XCTAssertFalse(text.localizedCaseInsensitiveContains("periodization"))
+        XCTAssertTrue(text.contains("rocklog.split"))
         XCTAssertEqual(ProgramAuthoringGuide.fileName, "RockLog-planned-workout-instructions.md")
+    }
+
+    func test_importSplit_replacesDaysWithoutCreatingPlannedQueue() throws {
+        let container = try inMemoryContainer()
+        let context = container.mainContext
+        DayTypeRegistry.shared.replaceDays(names: ["Arms"], context: context)
+        var document = sampleDocument(firstSession: .now)
+        document.format = ProgramFormat.splitFormatName
+        let data = try ProgramCodec.encode(document)
+        guard case .split = try IncomingRockLogFile.parse(data) else {
+            return XCTFail("expected split")
+        }
+        try ProgramImportService.importSplit(document, context: context)
+        XCTAssertEqual(DayTypeRegistry.shared.activeDays.map(\.rawValue), ["Push"])
+        let unused = PlannedBlockQueue.unusedSessions(
+            in: try context.fetch(FetchDescriptor<WorkoutSession>())
+        )
+        XCTAssertTrue(unused.isEmpty)
+        XCTAssertTrue(
+            try context.fetch(FetchDescriptor<TrainingBlock>()).isEmpty
+        )
+        let benches = try context.fetch(FetchDescriptor<Exercise>())
+            .filter { $0.name == "Barbell Bench Press" }
+        XCTAssertEqual(benches.count, 1)
+        XCTAssertTrue(benches[0].belongs(to: .push))
     }
 
     func test_confirmationCopy_isPlainLanguage() {
@@ -65,6 +91,11 @@ final class ProgramImportTests: XCTestCase {
             ProgramImportService.replaceSplitMessage(),
             "This replaces your current days and the lifts on each day with this block. Your old workouts stay in History."
         )
+        XCTAssertEqual(
+            ProgramImportService.importSplitMessage(),
+            "This replaces your current days and the lifts on each day. History and leftover planned workouts stay."
+        )
+        XCTAssertFalse(ProgramImportService.importSplitMessage().localizedCaseInsensitiveContains("JSON"))
         XCTAssertFalse(ProgramImportService.replaceSplitMessage().localizedCaseInsensitiveContains("backup"))
         XCTAssertFalse(ProgramImportService.replaceSplitMessage().localizedCaseInsensitiveContains("JSON"))
         XCTAssertFalse(ProgramImportService.confirmationMessage(weekCount: 8).localizedCaseInsensitiveContains("schema"))
@@ -155,7 +186,17 @@ final class ProgramImportTests: XCTestCase {
         let program = try ProgramCodec.encode(sampleDocument(firstSession: .now))
         switch try IncomingRockLogFile.parse(program) {
         case .program: break
+        case .split: XCTFail("program file must not parse as a split")
         case .backup: XCTFail("program file must not parse as a backup")
+        }
+
+        var splitDoc = sampleDocument(firstSession: .now)
+        splitDoc.format = ProgramFormat.splitFormatName
+        let split = try ProgramCodec.encode(splitDoc)
+        switch try IncomingRockLogFile.parse(split) {
+        case .split: break
+        case .program: XCTFail("split file must not parse as a program")
+        case .backup: XCTFail("split file must not parse as a backup")
         }
 
         let coach = Data(#"{"format":"rocklog.coach.session","schemaVersion":1}"#.utf8)

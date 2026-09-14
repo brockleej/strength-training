@@ -31,6 +31,8 @@ struct ContentView: View {
     @State private var pendingReplaceSplitDocument: ProgramDocument?
     @State private var pendingReplaceSplitSummary: ProgramImportSummary?
     @State private var showReplaceSplitConfirm = false
+    @State private var pendingIncomingSplit: ProgramDocument?
+    @State private var showIncomingSplitConfirm = false
     @State private var incomingFileMessage = ""
     @State private var showIncomingFileMessage = false
 
@@ -210,6 +212,28 @@ struct ContentView: View {
         } message: {
             Text(ProgramImportService.replaceSplitMessage())
         }
+        .alert(
+            ProgramImportService.importSplitTitle,
+            isPresented: $showIncomingSplitConfirm
+        ) {
+            Button(ProgramImportService.importSplitCancelTitle, role: .cancel) {
+                pendingIncomingSplit = nil
+            }
+            Button(ProgramImportService.importSplitConfirmTitle) {
+                if let document = pendingIncomingSplit {
+                    do {
+                        try ProgramImportService.importSplit(document, context: modelContext)
+                        incomingFileMessage = "Training split updated. History is unchanged."
+                    } catch {
+                        incomingFileMessage = error.localizedDescription
+                    }
+                    showIncomingFileMessage = true
+                }
+                pendingIncomingSplit = nil
+            }
+        } message: {
+            Text(ProgramImportService.importSplitMessage())
+        }
         .alert("RockLog", isPresented: $showIncomingFileMessage) {
             Button("OK", role: .cancel) {}
         } message: {
@@ -231,6 +255,9 @@ struct ContentView: View {
                 pendingIncomingProgram = document
                 incomingProgramPrompt = ProgramImportService.summarize(document).confirmationPrompt
                 showIncomingProgramConfirm = true
+            case .split(let document):
+                pendingIncomingSplit = document
+                showIncomingSplitConfirm = true
             case .backup:
                 incomingFileMessage = "This looks like a backup. Open Settings → Restore from backup to replace data on this phone."
                 showIncomingFileMessage = true

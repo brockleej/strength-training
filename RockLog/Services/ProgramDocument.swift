@@ -10,6 +10,7 @@ import Foundation
 
 nonisolated enum ProgramFormat {
     static let formatName = "rocklog.program"
+    static let splitFormatName = "rocklog.split"
     static let schemaVersion = 1
     static let utTypeIdentifier = "com.lee.rocklog.program"
     static let pathExtension = "rocklogprogram"
@@ -120,7 +121,9 @@ nonisolated enum ProgramCodec {
     static func decode(_ data: Data) throws -> ProgramDocument {
         let data = stripBOM(data)
         let doc = try decoder.decode(ProgramDocument.self, from: data)
-        guard doc.format == ProgramFormat.formatName else {
+        guard doc.format == ProgramFormat.formatName
+            || doc.format == ProgramFormat.splitFormatName
+        else {
             throw ProgramDocument.ProgramFormatError.wrongFormat(doc.format)
         }
         guard doc.schemaVersion == ProgramFormat.schemaVersion else {

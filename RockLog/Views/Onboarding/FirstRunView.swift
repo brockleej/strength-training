@@ -204,6 +204,9 @@ struct FirstRunView: View {
                 case .program:
                     restoreErrorMessage = "This file adds planned workouts. Finish setup first, then use Settings → Add planned workouts. It will not replace your history."
                     showRestoreError = true
+                case .split:
+                    restoreErrorMessage = "This file sets your training split. Finish setup first, then use Settings → Import training split."
+                    showRestoreError = true
                 case .backup(let backupData):
                     let backup = try BackupService.decode(backupData)
                     let current = BackupService.summarizeStore(context: modelContext)

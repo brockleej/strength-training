@@ -143,6 +143,14 @@ enum ProgramAuthoringGuide {
     Write a complete rocklog.program JSON file for my training. Follow the rules in this note exactly. Output only valid JSON (no markdown fences unless I ask). Use new UUIDs. Put sessions in the order I should train them.
 
     Then describe the days, lifts, sets, and any constraints (equipment, days per week, injuries).
+
+    ## Training split file (same JSON, one change)
+
+    To import **days and lifts only** (no planned queue), use the same structure and set:
+
+    `"format": "rocklog.split"`
+
+    RockLog uses unique `dayType` values in file order as the split. Lifts under each day become that day’s list (first time a day appears, then extra lifts on later sessions of that day are added). `date` can be any placeholder. `sets` may be `[]`. History and leftover planned workouts are not replaced.
     """
 
     static func writeFile() throws -> URL {

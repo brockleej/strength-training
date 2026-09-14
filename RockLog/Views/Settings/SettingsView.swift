@@ -37,6 +37,8 @@ struct SettingsView: View {
     @State private var pendingReplaceSplitDocument: ProgramDocument?
     @State private var pendingReplaceSplitSummary: ProgramImportSummary?
     @State private var showReplaceSplitConfirm = false
+    @State private var pendingSplitDocument: ProgramDocument?
+    @State private var showImportSplitConfirm = false
     @State private var showError = false
     @State private var errorMessage = ""
     @State private var showSuccess = false
@@ -429,6 +431,12 @@ struct SettingsView: View {
                         Label("Add planned workouts", systemImage: "calendar.badge.plus")
                             .foregroundStyle(Color.uplift.accent)
                     }
+                    Button {
+                        isImporting = true
+                    } label: {
+                        Label("Import training split", systemImage: "rectangle.split.3x1")
+                            .foregroundStyle(Color.uplift.accent)
+                    }
                     Button(action: sharePlannedWorkoutInstructions) {
                         Label("Instructions for AI", systemImage: "doc.text")
                             .foregroundStyle(Color.uplift.accent)
@@ -443,7 +451,7 @@ struct SettingsView: View {
                 } header: {
                     sectionHeader("Planned workouts")
                 } footer: {
-                    sectionFooter("Instructions for AI is a file you can give Grok, ChatGPT, or another assistant so it writes a compatible plan. Add planned workouts imports that file. Swipe a day on Today to delete just that one. History stays.")
+                    sectionFooter("Instructions for AI covers both planned workouts (`rocklog.program`) and a training split (`rocklog.split`). Import training split replaces days and lifts only. History stays.")
                 }
                 .listRowBackground(Color.uplift.surface1)
 
@@ -621,6 +629,22 @@ struct SettingsView: View {
                 }
             } message: {
                 Text(ProgramImportService.replaceSplitMessage())
+            }
+            .alert(
+                ProgramImportService.importSplitTitle,
+                isPresented: $showImportSplitConfirm
+            ) {
+                Button(ProgramImportService.importSplitCancelTitle, role: .cancel) {
+                    pendingSplitDocument = nil
+                }
+                Button(ProgramImportService.importSplitConfirmTitle) {
+                    if let document = pendingSplitDocument {
+                        performSplitImport(document)
+                    }
+                    pendingSplitDocument = nil
+                }
+            } message: {
+                Text(ProgramImportService.importSplitMessage())
             }
             .alert(
                 pendingRestorePrompt.title,
@@ -933,6 +957,9 @@ struct SettingsView: View {
                     pendingProgram = document
                     pendingProgramPrompt = ProgramImportService.summarize(document).confirmationPrompt
                     showProgramConfirmation = true
+                case .split(let document):
+                    pendingSplitDocument = document
+                    showImportSplitConfirm = true
                 case .backup(let backupData):
                     let backup = try BackupService.decode(backupData)
                     let current = BackupService.summarizeStore(context: modelContext)
@@ -946,6 +973,17 @@ struct SettingsView: View {
                 showError = true
             }
         case .failure(let error):
+            errorMessage = error.localizedDescription
+            showError = true
+        }
+    }
+
+    private func performSplitImport(_ document: ProgramDocument) {
+        do {
+            try ProgramImportService.importSplit(document, context: modelContext)
+            successMessage = "Training split updated. History is unchanged."
+            showSuccess = true
+        } catch {
             errorMessage = error.localizedDescription
             showError = true
         }
