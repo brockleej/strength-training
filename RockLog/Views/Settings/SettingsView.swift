@@ -100,8 +100,189 @@ struct SettingsView: View {
     }
 
     var body: some View {
+        settingsStack
+            .alert(
+                pendingProgramPrompt.title,
+                isPresented: $showProgramConfirmation
+            ) {
+                Button(pendingProgramPrompt.cancelTitle) {
+                    pendingProgram = nil
+                }
+                Button(pendingProgramPrompt.confirmTitle) {
+                    if let document = pendingProgram {
+                        performProgramImport(document, shiftStartToToday: false)
+                    }
+                    pendingProgram = nil
+                }
+                Button(ProgramImportService.replaceUnusedPlanTitle, role: .destructive) {
+                    if let document = pendingProgram {
+                        performProgramImport(
+                            document,
+                            shiftStartToToday: false,
+                            replaceUnusedPlan: true
+                        )
+                    }
+                    pendingProgram = nil
+                }
+                Button(ProgramImportService.startThisBlockTodayTitle) {
+                    if let document = pendingProgram {
+                        performProgramImport(document, shiftStartToToday: true)
+                    }
+                    pendingProgram = nil
+                }
+            } message: {
+                Text(pendingProgramPrompt.message)
+            }
+            .alert(
+                ProgramImportService.useThisSplitTitle,
+                isPresented: $showReplaceSplitConfirm
+            ) {
+                Button(ProgramImportService.keepCurrentSplitTitle, role: .cancel) {
+                    finishProgramImport(replacedSplit: false)
+                }
+                Button(ProgramImportService.useThisSplitConfirmTitle) {
+                    if let document = pendingReplaceSplitDocument {
+                        ProgramImportService.replaceSplit(from: document, context: modelContext)
+                    }
+                    finishProgramImport(replacedSplit: true)
+                }
+            } message: {
+                Text(ProgramImportService.replaceSplitMessage())
+            }
+            .alert(
+                ProgramImportService.importSplitTitle,
+                isPresented: $showImportSplitConfirm
+            ) {
+                Button(ProgramImportService.importSplitCancelTitle, role: .cancel) {
+                    pendingSplitDocument = nil
+                }
+                Button(ProgramImportService.importSplitConfirmTitle) {
+                    if let document = pendingSplitDocument {
+                        performSplitImport(document)
+                    }
+                    pendingSplitDocument = nil
+                }
+            } message: {
+                Text(ProgramImportService.importSplitMessage())
+            }
+            .alert(
+                ProgramImportService.keepPlannedAfterSplitTitle,
+                isPresented: $showKeepPlannedAfterSplitConfirm
+            ) {
+                Button(ProgramImportService.keepPlannedAfterSplitConfirmTitle) {
+                    finishSplitImport(removedUnusedPlan: false)
+                }
+                Button(ProgramImportService.removePlannedAfterSplitTitle, role: .destructive) {
+                    ProgramImportService.removeUnusedPlannedSessions(context: modelContext)
+                    finishSplitImport(removedUnusedPlan: true)
+                }
+            } message: {
+                Text(ProgramImportService.keepPlannedAfterSplitMessage())
+            }
+            .alert(
+                pendingRestorePrompt.title,
+                isPresented: $showRestoreConfirmation
+            ) {
+                Button(pendingRestorePrompt.cancelTitle) {
+                    pendingRestoreData = nil
+                }
+                Button(pendingRestorePrompt.confirmTitle, role: .destructive) {
+                    if let data = pendingRestoreData {
+                        performRestore(data: data)
+                    }
+                    pendingRestoreData = nil
+                }
+            } message: {
+                Text(pendingRestorePrompt.message)
+            }
+            .alert("Error", isPresented: $showError) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(errorMessage)
+            }
+            .alert("Success", isPresented: $showSuccess) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(successMessage)
+            }
+            .alert("Body profile saved", isPresented: $showBodyProfileSaved) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("Weight, height, and sex are saved on this device and synced with iCloud when available.")
+            }
+    }
+
+    private var settingsStack: some View {
         NavigationStack {
             List {
+                upperSettings
+                middleSettings
+                lowerSettings
+                appleHealthSection
+                iCloudSyncSection
+            }
+            .scrollContentBackground(.hidden)
+            .background(Color.uplift.bgElev)
+            // Number pads have no Return key — swipe/scroll must dismiss so tabs are reachable.
+            .scrollDismissesKeyboard(.interactively)
+            .refreshable {
+                guard CloudKitSyncService.isEnabled else { return }
+                await cloudKitSyncService.nudgeSync(modelContext: modelContext)
+            }
+            .onChange(of: scenePhase) { _, phase in
+                if phase == .active {
+                    healthKitService.checkAuthorization()
+                }
+            }
+            .navigationTitle("Settings")
+            .toolbar {
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") {
+                        dismissKeyboard()
+                    }
+                    .fontWeight(.semibold)
+                }
+            }
+            .fullScreenCover(isPresented: $showGymPass) {
+                GymPassView()
+            }
+            .fullScreenCover(isPresented: $showWelcomeGuide) {
+                FirstRunView(showsSplitSetup: false) {
+                    showWelcomeGuide = false
+                }
+            }
+            .sheet(isPresented: $showCoachPicker) {
+                NavigationStack {
+                    CoachWorkoutPickerView()
+                }
+            }
+            .confirmationDialog(
+                "Remove unused planned workouts?",
+                isPresented: $showClearPlannedConfirm,
+                titleVisibility: .visible
+            ) {
+                Button("Remove leftover plan", role: .destructive) {
+                    ProgramImportService.removeUnusedPlannedSessions(context: modelContext)
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Deletes planned workouts you haven’t started. Finished workouts stay in History.")
+            }
+            .fileImporter(
+                isPresented: $isImporting,
+                allowedContentTypes: [.json, .rockLogProgram],
+                allowsMultipleSelection: false
+            ) { result in
+                handleImportResult(result)
+            }
+        }
+    }
+
+    // MARK: - iCloud Sync Section
+
+    @ViewBuilder
+    private var upperSettings: some View {
                 Section {
                     NavigationLink {
                         TrainingSplitSettingsView()
@@ -243,6 +424,10 @@ struct SettingsView: View {
                 }
                 .listRowBackground(Color.uplift.surface1)
 
+    }
+
+    @ViewBuilder
+    private var middleSettings: some View {
                 Section {
                     HStack {
                         Label("Weight", systemImage: "scalemass.fill")
@@ -425,6 +610,10 @@ struct SettingsView: View {
                 }
                 .listRowBackground(Color.uplift.surface1)
 
+    }
+
+    @ViewBuilder
+    private var lowerSettings: some View {
                 Section {
                     Button {
                         isImporting = true
@@ -489,213 +678,49 @@ struct SettingsView: View {
                 }
                 .listRowBackground(Color.uplift.surface1)
 
-                Section {
-                    if healthKitService.isAvailable {
-                        switch healthKitService.authorizationStatus {
-                        case .none:
-                            Button {
-                                Task {
-                                    await healthKitService.requestAuthorization()
-                                }
-                            } label: {
-                                Label("Connect Apple Health", systemImage: "heart.fill")
-                            }
-                        case true?:
-                            Button(action: openHealthSettings) {
-                                Label("Apple Health Connected", systemImage: "checkmark.circle.fill")
-                                    .foregroundStyle(Color.uplift.ahGreen)
-                            }
-                        case false?:
-                            Button(action: openHealthSettings) {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Label("Allow in Health settings", systemImage: "exclamationmark.triangle")
-                                        .foregroundStyle(Color.uplift.customBadge)
-                                    Text("Opens Settings so you can turn on RockLog under Health.")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
-                            }
-                        }
-                    } else {
-                        Label("Apple Health Not Available", systemImage: "heart.slash")
-                            .foregroundStyle(.secondary)
-                    }
-                } header: {
-                    sectionHeader("Apple Health")
-                } footer: {
-                    sectionFooter("Saves finished workouts for Activity rings and fitness history. After the first ask, iOS only lets you change Health access in Settings.")
-                }
-                .listRowBackground(Color.uplift.surface1)
-                .onAppear { healthKitService.checkAuthorization() }
-
-                iCloudSyncSection
-            }
-            .scrollContentBackground(.hidden)
-            .background(Color.uplift.bgElev)
-            // Number pads have no Return key — swipe/scroll must dismiss so tabs are reachable.
-            .scrollDismissesKeyboard(.interactively)
-            .refreshable {
-                guard CloudKitSyncService.isEnabled else { return }
-                await cloudKitSyncService.nudgeSync(modelContext: modelContext)
-            }
-            .onChange(of: scenePhase) { _, phase in
-                if phase == .active {
-                    healthKitService.checkAuthorization()
-                }
-            }
-            .navigationTitle("Settings")
-            .toolbar {
-                ToolbarItemGroup(placement: .keyboard) {
-                    Spacer()
-                    Button("Done") {
-                        dismissKeyboard()
-                    }
-                    .fontWeight(.semibold)
-                }
-            }
-            .fullScreenCover(isPresented: $showGymPass) {
-                GymPassView()
-            }
-            .fullScreenCover(isPresented: $showWelcomeGuide) {
-                FirstRunView(onFinished: { showWelcomeGuide = false }, showsSplitSetup: false)
-            }
-            .sheet(isPresented: $showCoachPicker) {
-                NavigationStack {
-                    CoachWorkoutPickerView()
-                }
-            }
-            .confirmationDialog(
-                "Remove unused planned workouts?",
-                isPresented: $showClearPlannedConfirm,
-                titleVisibility: .visible
-            ) {
-                Button("Remove leftover plan", role: .destructive) {
-                    ProgramImportService.removeUnusedPlannedSessions(context: modelContext)
-                }
-                Button("Cancel", role: .cancel) {}
-            } message: {
-                Text("Deletes planned workouts you haven’t started. Finished workouts stay in History.")
-            }
-            .fileImporter(
-                isPresented: $isImporting,
-                allowedContentTypes: [.json, .rockLogProgram],
-                allowsMultipleSelection: false
-            ) { result in
-                handleImportResult(result)
-            }
-            .alert(
-                pendingProgramPrompt.title,
-                isPresented: $showProgramConfirmation
-            ) {
-                Button(pendingProgramPrompt.cancelTitle) {
-                    pendingProgram = nil
-                }
-                Button(pendingProgramPrompt.confirmTitle) {
-                    if let document = pendingProgram {
-                        performProgramImport(document, shiftStartToToday: false)
-                    }
-                    pendingProgram = nil
-                }
-                Button(ProgramImportService.replaceUnusedPlanTitle, role: .destructive) {
-                    if let document = pendingProgram {
-                        performProgramImport(
-                            document,
-                            shiftStartToToday: false,
-                            replaceUnusedPlan: true
-                        )
-                    }
-                    pendingProgram = nil
-                }
-                Button(ProgramImportService.startThisBlockTodayTitle) {
-                    if let document = pendingProgram {
-                        performProgramImport(document, shiftStartToToday: true)
-                    }
-                    pendingProgram = nil
-                }
-            } message: {
-                Text(pendingProgramPrompt.message)
-            }
-            .alert(
-                ProgramImportService.useThisSplitTitle,
-                isPresented: $showReplaceSplitConfirm
-            ) {
-                Button(ProgramImportService.keepCurrentSplitTitle, role: .cancel) {
-                    finishProgramImport(replacedSplit: false)
-                }
-                Button(ProgramImportService.useThisSplitConfirmTitle) {
-                    if let document = pendingReplaceSplitDocument {
-                        ProgramImportService.replaceSplit(from: document, context: modelContext)
-                    }
-                    finishProgramImport(replacedSplit: true)
-                }
-            } message: {
-                Text(ProgramImportService.replaceSplitMessage())
-            }
-            .alert(
-                ProgramImportService.importSplitTitle,
-                isPresented: $showImportSplitConfirm
-            ) {
-                Button(ProgramImportService.importSplitCancelTitle, role: .cancel) {
-                    pendingSplitDocument = nil
-                }
-                Button(ProgramImportService.importSplitConfirmTitle) {
-                    if let document = pendingSplitDocument {
-                        performSplitImport(document)
-                    }
-                    pendingSplitDocument = nil
-                }
-            } message: {
-                Text(ProgramImportService.importSplitMessage())
-            }
-            .alert(
-                ProgramImportService.keepPlannedAfterSplitTitle,
-                isPresented: $showKeepPlannedAfterSplitConfirm
-            ) {
-                Button(ProgramImportService.keepPlannedAfterSplitConfirmTitle) {
-                    finishSplitImport(removedUnusedPlan: false)
-                }
-                Button(ProgramImportService.removePlannedAfterSplitTitle, role: .destructive) {
-                    ProgramImportService.removeUnusedPlannedSessions(context: modelContext)
-                    finishSplitImport(removedUnusedPlan: true)
-                }
-            } message: {
-                Text(ProgramImportService.keepPlannedAfterSplitMessage())
-            }
-            .alert(
-                pendingRestorePrompt.title,
-                isPresented: $showRestoreConfirmation
-            ) {
-                Button(pendingRestorePrompt.cancelTitle) {
-                    pendingRestoreData = nil
-                }
-                Button(pendingRestorePrompt.confirmTitle, role: .destructive) {
-                    if let data = pendingRestoreData {
-                        performRestore(data: data)
-                    }
-                    pendingRestoreData = nil
-                }
-            } message: {
-                Text(pendingRestorePrompt.message)
-            }
-            .alert("Error", isPresented: $showError) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text(errorMessage)
-            }
-            .alert("Success", isPresented: $showSuccess) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text(successMessage)
-            }
-            .alert("Body profile saved", isPresented: $showBodyProfileSaved) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text("Weight, height, and sex are saved on this device and synced with iCloud when available.")
-            }
-        }
     }
 
-    // MARK: - iCloud Sync Section
+    @ViewBuilder
+    private var appleHealthSection: some View {
+        Section {
+            if healthKitService.isAvailable {
+                switch healthKitService.authorizationStatus {
+                case .none:
+                    Button {
+                        Task {
+                            await healthKitService.requestAuthorization()
+                        }
+                    } label: {
+                        Label("Connect Apple Health", systemImage: "heart.fill")
+                    }
+                case true?:
+                    Button(action: openHealthSettings) {
+                        Label("Apple Health Connected", systemImage: "checkmark.circle.fill")
+                            .foregroundStyle(Color.uplift.ahGreen)
+                    }
+                case false?:
+                    Button(action: openHealthSettings) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Label("Allow in Health settings", systemImage: "exclamationmark.triangle")
+                                .foregroundStyle(Color.uplift.customBadge)
+                            Text("Opens Settings so you can turn on RockLog under Health.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            } else {
+                Label("Apple Health Not Available", systemImage: "heart.slash")
+                    .foregroundStyle(.secondary)
+            }
+        } header: {
+            sectionHeader("Apple Health")
+        } footer: {
+            sectionFooter("Saves finished workouts for Activity rings and fitness history. After the first ask, iOS only lets you change Health access in Settings.")
+        }
+        .listRowBackground(Color.uplift.surface1)
+        .onAppear { healthKitService.checkAuthorization() }
+    }
 
     @ViewBuilder
     private var iCloudSyncSection: some View {

@@ -38,53 +38,103 @@ struct ContentView: View {
     @State private var showIncomingFileMessage = false
 
     var body: some View {
-        Group {
-            if storeReplaceInProgress {
-                RockLogLaunchPlaceholder(showsProgress: true)
-            } else if let vm = workoutViewModel {
-                // Classic TabView (iOS 17+). The iOS 18 `Tab { }` API is not used so we keep
-                // the minimum deployment at 17.0 for broader TestFlight reach.
-                TabView(selection: $selectedTab) {
-                    WorkoutTabView(viewModel: vm)
-                        .tabItem { Label("Workout", systemImage: "dumbbell") }
-                        .tag("workout")
-                    tab("history") {
-                        HistoryListView(workoutVM: vm)
-                    }
-                    .tabItem { Label("History", systemImage: "clock") }
-                    .tag("history")
-                    tab("progress") {
-                        ProgressDashboardView()
-                    }
-                    .tabItem { Label("Progress", systemImage: "chart.line.uptrend.xyaxis") }
-                    .tag("progress")
-                    tab("exercises") {
-                        ExerciseLibraryView()
-                    }
-                    .tabItem { Label("Exercises", systemImage: "list.bullet") }
-                    .tag("exercises")
-                    tab("settings") {
-                        SettingsView(healthKitService: healthKitService, cloudKitSyncService: cloudKitSyncService)
-                    }
-                    .tabItem { Label("Settings", systemImage: "gear") }
-                    .tag("settings")
+        chrome
+            .alert(
+                incomingProgramPrompt.title,
+                isPresented: $showIncomingProgramConfirm
+            ) {
+                Button(incomingProgramPrompt.cancelTitle) {
+                    pendingIncomingProgram = nil
                 }
-                .onChange(of: selectedTab) { _, tab in
-                    awakenedTabs.insert(tab)
+                Button(incomingProgramPrompt.confirmTitle) {
+                    if let document = pendingIncomingProgram {
+                        importIncomingProgram(document, shiftStartToToday: false)
+                    }
+                    pendingIncomingProgram = nil
                 }
-            } else {
-                RockLogLaunchPlaceholder(showsProgress: false)
+                Button(ProgramImportService.replaceUnusedPlanTitle, role: .destructive) {
+                    if let document = pendingIncomingProgram {
+                        importIncomingProgram(
+                            document,
+                            shiftStartToToday: false,
+                            replaceUnusedPlan: true
+                        )
+                    }
+                    pendingIncomingProgram = nil
+                }
+                Button(ProgramImportService.startThisBlockTodayTitle) {
+                    if let document = pendingIncomingProgram {
+                        importIncomingProgram(document, shiftStartToToday: true)
+                    }
+                    pendingIncomingProgram = nil
+                }
+            } message: {
+                Text(incomingProgramPrompt.message)
             }
-        }
+            .alert(
+                ProgramImportService.useThisSplitTitle,
+                isPresented: $showReplaceSplitConfirm
+            ) {
+                Button(ProgramImportService.keepCurrentSplitTitle, role: .cancel) {
+                    finishIncomingProgramImport(replacedSplit: false)
+                }
+                Button(ProgramImportService.useThisSplitConfirmTitle) {
+                    if let document = pendingReplaceSplitDocument {
+                        ProgramImportService.replaceSplit(from: document, context: modelContext)
+                    }
+                    finishIncomingProgramImport(replacedSplit: true)
+                }
+            } message: {
+                Text(ProgramImportService.replaceSplitMessage())
+            }
+            .alert(
+                ProgramImportService.importSplitTitle,
+                isPresented: $showIncomingSplitConfirm
+            ) {
+                Button(ProgramImportService.importSplitCancelTitle, role: .cancel) {
+                    pendingIncomingSplit = nil
+                }
+                Button(ProgramImportService.importSplitConfirmTitle) {
+                    if let document = pendingIncomingSplit {
+                        importIncomingSplit(document)
+                    }
+                    pendingIncomingSplit = nil
+                }
+            } message: {
+                Text(ProgramImportService.importSplitMessage())
+            }
+            .alert(
+                ProgramImportService.keepPlannedAfterSplitTitle,
+                isPresented: $showIncomingKeepPlannedConfirm
+            ) {
+                Button(ProgramImportService.keepPlannedAfterSplitConfirmTitle) {
+                    finishIncomingSplitImport(removedUnusedPlan: false)
+                }
+                Button(ProgramImportService.removePlannedAfterSplitTitle, role: .destructive) {
+                    ProgramImportService.removeUnusedPlannedSessions(context: modelContext)
+                    finishIncomingSplitImport(removedUnusedPlan: true)
+                }
+            } message: {
+                Text(ProgramImportService.keepPlannedAfterSplitMessage())
+            }
+            .alert("RockLog", isPresented: $showIncomingFileMessage) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(incomingFileMessage)
+            }
+    }
+
+    private var chrome: some View {
+        rootContent
         .tint(Color.uplift.accent)
         .preferredColorScheme(.dark)
         .fullScreenCover(isPresented: Binding(
             get: { workoutViewModel != nil && !hasCompletedFirstRun },
             set: { if !$0 { hasCompletedFirstRun = true } }
         )) {
-            FirstRunView(onFinished: {
+            FirstRunView(showsSplitSetup: showFirstUseSplitSetup) {
                 hasCompletedFirstRun = true
-            }, showsSplitSetup: showFirstUseSplitSetup)
+            }
         }
         .task {
             // Hydrate iCloud split prefs before first-run UI, so a reinstall
@@ -165,91 +215,52 @@ struct ContentView: View {
         .onOpenURL { url in
             handleIncomingURL(url)
         }
-        .alert(
-            incomingProgramPrompt.title,
-            isPresented: $showIncomingProgramConfirm
-        ) {
-            Button(incomingProgramPrompt.cancelTitle) {
-                pendingIncomingProgram = nil
-            }
-            Button(incomingProgramPrompt.confirmTitle) {
-                if let document = pendingIncomingProgram {
-                    importIncomingProgram(document, shiftStartToToday: false)
-                }
-                pendingIncomingProgram = nil
-            }
-            Button(ProgramImportService.replaceUnusedPlanTitle, role: .destructive) {
-                if let document = pendingIncomingProgram {
-                    importIncomingProgram(
-                        document,
-                        shiftStartToToday: false,
-                        replaceUnusedPlan: true
-                    )
-                }
-                pendingIncomingProgram = nil
-            }
-            Button(ProgramImportService.startThisBlockTodayTitle) {
-                if let document = pendingIncomingProgram {
-                    importIncomingProgram(document, shiftStartToToday: true)
-                }
-                pendingIncomingProgram = nil
-            }
-        } message: {
-            Text(incomingProgramPrompt.message)
-        }
-        .alert(
-            ProgramImportService.useThisSplitTitle,
-            isPresented: $showReplaceSplitConfirm
-        ) {
-            Button(ProgramImportService.keepCurrentSplitTitle, role: .cancel) {
-                finishIncomingProgramImport(replacedSplit: false)
-            }
-            Button(ProgramImportService.useThisSplitConfirmTitle) {
-                if let document = pendingReplaceSplitDocument {
-                    ProgramImportService.replaceSplit(from: document, context: modelContext)
-                }
-                finishIncomingProgramImport(replacedSplit: true)
-            }
-        } message: {
-            Text(ProgramImportService.replaceSplitMessage())
-        }
-        .alert(
-            ProgramImportService.importSplitTitle,
-            isPresented: $showIncomingSplitConfirm
-        ) {
-            Button(ProgramImportService.importSplitCancelTitle, role: .cancel) {
-                pendingIncomingSplit = nil
-            }
-            Button(ProgramImportService.importSplitConfirmTitle) {
-                if let document = pendingIncomingSplit {
-                    importIncomingSplit(document)
-                }
-                pendingIncomingSplit = nil
-            }
-        } message: {
-            Text(ProgramImportService.importSplitMessage())
-        }
-        .alert(
-            ProgramImportService.keepPlannedAfterSplitTitle,
-            isPresented: $showIncomingKeepPlannedConfirm
-        ) {
-            Button(ProgramImportService.keepPlannedAfterSplitConfirmTitle) {
-                finishIncomingSplitImport(removedUnusedPlan: false)
-            }
-            Button(ProgramImportService.removePlannedAfterSplitTitle, role: .destructive) {
-                ProgramImportService.removeUnusedPlannedSessions(context: modelContext)
-                finishIncomingSplitImport(removedUnusedPlan: true)
-            }
-        } message: {
-            Text(ProgramImportService.keepPlannedAfterSplitMessage())
-        }
-        .alert("RockLog", isPresented: $showIncomingFileMessage) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text(incomingFileMessage)
-        }
         // Don't auto-prompt HealthKit on cold launch — that dialog can stall the
         // first frame. Settings (and starting a workout) request access instead.
+    }
+
+    @ViewBuilder
+    private var rootContent: some View {
+        if storeReplaceInProgress {
+            RockLogLaunchPlaceholder(showsProgress: true)
+        } else if let vm = workoutViewModel {
+            appTabs(viewModel: vm)
+        } else {
+            RockLogLaunchPlaceholder(showsProgress: false)
+        }
+    }
+
+    /// Classic TabView (iOS 17+). The iOS 18 `Tab { }` API is not used so we keep
+    /// the minimum deployment at 17.0 for broader TestFlight reach.
+    private func appTabs(viewModel vm: WorkoutViewModel) -> some View {
+        TabView(selection: $selectedTab) {
+            WorkoutTabView(viewModel: vm)
+                .tabItem { Label("Workout", systemImage: "dumbbell") }
+                .tag("workout")
+            tab("history") {
+                HistoryListView(workoutVM: vm)
+            }
+            .tabItem { Label("History", systemImage: "clock") }
+            .tag("history")
+            tab("progress") {
+                ProgressDashboardView()
+            }
+            .tabItem { Label("Progress", systemImage: "chart.line.uptrend.xyaxis") }
+            .tag("progress")
+            tab("exercises") {
+                ExerciseLibraryView()
+            }
+            .tabItem { Label("Exercises", systemImage: "list.bullet") }
+            .tag("exercises")
+            tab("settings") {
+                SettingsView(healthKitService: healthKitService, cloudKitSyncService: cloudKitSyncService)
+            }
+            .tabItem { Label("Settings", systemImage: "gear") }
+            .tag("settings")
+        }
+        .onChange(of: selectedTab) { _, tab in
+            awakenedTabs.insert(tab)
+        }
     }
 
     private func handleIncomingURL(_ url: URL) {
