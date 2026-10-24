@@ -120,11 +120,17 @@ final class WorkoutViewModel {
 
     /// Toggle auto-start for this lift. Does not change how long the countdown is.
     func toggleRestTimer(for exercise: Exercise) {
+        setRestTimerEnabled(!isRestTimerEnabled(for: exercise), for: exercise)
+    }
+
+    /// The switch is its own control. The countdown, −15, +15, and Skip do not call this.
+    func setRestTimerEnabled(_ enabled: Bool, for exercise: Exercise) {
         _ = RestPreferenceMigration.copyIfNeeded(exercise)
-        exercise.autoRestEnabled.toggle()
+        guard exercise.autoRestEnabled != enabled else { return }
+        exercise.autoRestEnabled = enabled
         try? modelContext.save()
         restTimerPreferenceEpoch &+= 1
-        if !exercise.autoRestEnabled {
+        if !enabled {
             skipRest()
         }
     }

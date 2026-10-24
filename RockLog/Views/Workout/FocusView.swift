@@ -604,8 +604,8 @@ struct FocusView: View {
         )
     }
 
-    /// Countdown is session-wide; auto-start on/off is per exercise (supersets).
-    /// Controls live in one card: Start when idle; −30 / +30 / Skip while running.
+    /// The countdown and the on/off switch are separate. Tapping the time,
+    /// −15, +15, or Skip does not turn rest off for this lift.
     private func restTimerCard() -> some View {
         @Bindable var wvm = workoutVM
         // Read epoch so toggles refresh the card.
@@ -616,55 +616,55 @@ struct FocusView: View {
         let showCountdown = wvm.isResting
 
         return HStack(spacing: 10) {
-            // Tap icon + labels: toggle auto-rest after sets for this lift only.
-            Button {
-                wvm.toggleRestTimer(for: exercise)
-            } label: {
-                HStack(spacing: 10) {
-                    Image(systemName: timerOn
-                          ? (showCountdown ? "timer" : "timer.circle.fill")
-                          : "timer.circle")
-                        .font(.system(size: 22, weight: .semibold))
-                        .foregroundStyle(
-                            showCountdown
-                                ? Color.uplift.accent
-                                : (timerOn ? Color.uplift.fg : Color.uplift.fgDim)
-                        )
-                        .frame(width: 28)
+            Image(systemName: timerOn
+                  ? (showCountdown ? "timer" : "timer.circle.fill")
+                  : "timer.circle")
+                .font(.system(size: 22, weight: .semibold))
+                .foregroundStyle(
+                    showCountdown
+                        ? Color.uplift.accent
+                        : (timerOn ? Color.uplift.fg : Color.uplift.fgDim)
+                )
+                .frame(width: 28)
+                .accessibilityHidden(true)
 
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(timerOn ? "Rest · this lift" : "Rest off · this lift")
-                            .font(.uplift.text(11, weight: .semibold))
-                            .tracking(0.3)
-                            .textCase(.uppercase)
-                            .foregroundStyle(Color.uplift.fgMuted)
-                            .lineLimit(1)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(timerOn ? "Rest · this lift" : "Rest off · this lift")
+                    .font(.uplift.text(11, weight: .semibold))
+                    .tracking(0.3)
+                    .textCase(.uppercase)
+                    .foregroundStyle(Color.uplift.fgMuted)
+                    .lineLimit(1)
 
-                        if showCountdown {
-                            TimelineView(.periodic(from: .now, by: 1)) { context in
-                                Text(timeString(from: max(0, wvm.restEndDate?.timeIntervalSince(context.date) ?? 0)))
-                                    .font(.uplift.mono(26, weight: .bold))
-                                    .monospacedDigit()
-                                    .foregroundStyle(Color.uplift.fg)
-                                    .contentTransition(.numericText())
-                            }
-                        } else if timerOn {
-                            Text(timeString(from: Double(wvm.restSeconds(for: exercise))))
-                                .font(.uplift.mono(26, weight: .bold))
-                                .monospacedDigit()
-                                .foregroundStyle(Color.uplift.fgMuted)
-                        } else {
-                            Text("Manual only")
-                                .font(.uplift.text(15, weight: .semibold))
-                                .foregroundStyle(Color.uplift.fgDim)
-                        }
+                if showCountdown {
+                    TimelineView(.periodic(from: .now, by: 1)) { context in
+                        Text(timeString(from: max(0, wvm.restEndDate?.timeIntervalSince(context.date) ?? 0)))
+                            .font(.uplift.mono(26, weight: .bold))
+                            .monospacedDigit()
+                            .foregroundStyle(Color.uplift.fg)
+                            .contentTransition(.numericText())
                     }
+                    .accessibilityLabel(restAccessibilityLabel(timerOn: timerOn))
+                } else if timerOn {
+                    Text(timeString(from: Double(wvm.restSeconds(for: exercise))))
+                        .font(.uplift.mono(26, weight: .bold))
+                        .monospacedDigit()
+                        .foregroundStyle(Color.uplift.fgMuted)
+                        .accessibilityLabel("Rest \(timeString(from: Double(wvm.restSeconds(for: exercise))))")
+                } else {
+                    Text("Manual only")
+                        .font(.uplift.text(15, weight: .semibold))
+                        .foregroundStyle(Color.uplift.fgDim)
                 }
-                .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel(restAccessibilityLabel(timerOn: timerOn))
-            .accessibilityHint("Toggles auto-rest after sets for this exercise only")
+
+            Toggle("Rest for this lift", isOn: Binding(
+                get: { timerOn },
+                set: { wvm.setRestTimerEnabled($0, for: exercise) }
+            ))
+            .labelsHidden()
+            .tint(Color.uplift.accent)
+            .accessibilityIdentifier(AccessibilityID.restToggle)
 
             Spacer(minLength: 4)
 
