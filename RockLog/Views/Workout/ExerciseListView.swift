@@ -666,6 +666,12 @@ struct ExerciseListView: View {
                 Label("Reorder today's list", systemImage: "arrow.up.arrow.down")
             }
             .accessibilityIdentifier(AccessibilityID.workoutReorder)
+            Button {
+                showDayPlanEditor = true
+            } label: {
+                Label("Edit day plan", systemImage: "list.bullet")
+            }
+            .accessibilityIdentifier(AccessibilityID.workoutEditDayPlan)
             Menu("Gym") {
                 ForEach(gyms) { gym in
                     Button(gym.name) { GymLibrary.select(gym) }
