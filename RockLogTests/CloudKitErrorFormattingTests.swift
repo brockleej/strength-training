@@ -7,6 +7,7 @@ import CloudKit
 import XCTest
 @testable import RockLog
 
+@MainActor
 final class CloudKitErrorFormattingTests: XCTestCase {
     func test_partialFailure_code2_isHumanReadable() {
         let err = NSError(domain: CKError.errorDomain, code: CKError.Code.partialFailure.rawValue)

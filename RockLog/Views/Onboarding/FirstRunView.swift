@@ -29,6 +29,7 @@ struct FirstRunView: View {
     )
     @State private var showRestoreConfirmation = false
     @State private var restoreErrorMessage = ""
+    @State private var restoreAlertTitle = "Couldn’t restore"
     @State private var showRestoreError = false
 
     private let pages = FirstRunPage.all
@@ -79,7 +80,7 @@ struct FirstRunView: View {
         } message: {
             Text(pendingRestorePrompt.message)
         }
-        .alert("Couldn’t restore", isPresented: $showRestoreError) {
+        .alert(restoreAlertTitle, isPresented: $showRestoreError) {
             Button("OK", role: .cancel) {}
         } message: {
             Text(restoreErrorMessage)
@@ -193,6 +194,7 @@ struct FirstRunView: View {
         case .success(let urls):
             guard let url = urls.first else { return }
             guard url.startAccessingSecurityScopedResource() else {
+                restoreAlertTitle = "Couldn’t restore"
                 restoreErrorMessage = "Could not access the selected file."
                 showRestoreError = true
                 return
@@ -202,9 +204,11 @@ struct FirstRunView: View {
                 let data = try Data(contentsOf: url)
                 switch try IncomingRockLogFile.parse(data) {
                 case .program:
+                    restoreAlertTitle = "Couldn’t restore"
                     restoreErrorMessage = "This file adds planned workouts. Finish setup first, then use Settings → Add planned workouts. It will not replace your history."
                     showRestoreError = true
                 case .split:
+                    restoreAlertTitle = "Couldn’t restore"
                     restoreErrorMessage = "This file sets your training split. Finish setup first, then use Settings → Import training split."
                     showRestoreError = true
                 case .backup(let backupData):
@@ -216,10 +220,12 @@ struct FirstRunView: View {
                     showRestoreConfirmation = true
                 }
             } catch {
+                restoreAlertTitle = "Couldn’t restore"
                 restoreErrorMessage = error.localizedDescription
                 showRestoreError = true
             }
         case .failure(let error):
+            restoreAlertTitle = "Couldn’t restore"
             restoreErrorMessage = error.localizedDescription
             showRestoreError = true
         }
@@ -230,9 +236,15 @@ struct FirstRunView: View {
         pendingRestoreData = nil
         Task { @MainActor in
             do {
-                try await BackupService.restoreAfterTearingDownUI(from: data, context: modelContext)
+                let report = try await BackupService.restoreAfterTearingDownUI(from: data, context: modelContext)
                 withAnimation(.easeInOut(duration: 0.25)) { setupStep = .welcome }
+                if report.droppedExerciseRecords > 0 {
+                    restoreAlertTitle = "Restored with warnings"
+                    restoreErrorMessage = report.userFacingSummary
+                    showRestoreError = true
+                }
             } catch {
+                restoreAlertTitle = "Couldn’t restore"
                 restoreErrorMessage = error.localizedDescription
                 showRestoreError = true
             }

@@ -6,6 +6,7 @@
 import XCTest
 @testable import RockLog
 
+@MainActor
 final class SplitScheduleLogicTests: XCTestCase {
 
     private let push = DayType("Push")
