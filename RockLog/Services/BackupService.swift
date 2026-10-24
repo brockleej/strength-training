@@ -224,28 +224,71 @@ struct BackupService {
         try restore(from: data, context: context)
     }
 
+    /// Replace the store with `data`.
+    ///
+    /// Deletes, inserts, split days, and day plans are one unsaved transaction.
+    /// `context.save()` runs once at the end. A thrown save (or the test
+    /// `persisting` hook) rolls the context back, so a failure leaves the
+    /// previous rows in place. UserDefaults mirrors are written only after
+    /// that save commits.
+    ///
+    /// - Parameter persisting: Replaces `context.save()` for tests that need
+    ///   the write to fail. Production passes nil.
     @MainActor
-    static func restore(from data: Data, context: ModelContext) throws {
+    static func restore(
+        from data: Data,
+        context: ModelContext,
+        persisting: ((ModelContext) throws -> Void)? = nil
+    ) throws {
         let backup = try decode(data)
+        let previousAutosave = context.autosaveEnabled
+        context.autosaveEnabled = false
+        defer { context.autosaveEnabled = previousAutosave }
 
-        // context.delete(model:) is a SQL-level batch delete that bypasses the
-        // object graph — cascade rules and inverse nullification never fire.
-        // Fetching and deleting each instance individually lets SwiftData
-        // process relationships correctly before saving.
-        let sets = (try? context.fetch(FetchDescriptor<SetRecord>())) ?? []
-        sets.forEach { context.delete($0) }
-        let records = (try? context.fetch(FetchDescriptor<ExerciseRecord>())) ?? []
-        records.forEach { context.delete($0) }
-        let sessions = (try? context.fetch(FetchDescriptor<WorkoutSession>())) ?? []
-        sessions.forEach { context.delete($0) }
-        let exercises = (try? context.fetch(FetchDescriptor<Exercise>())) ?? []
-        exercises.forEach { context.delete($0) }
-        let splitDays = (try? context.fetch(FetchDescriptor<SplitDay>())) ?? []
-        splitDays.forEach { context.delete($0) }
-        let blocks = (try? context.fetch(FetchDescriptor<TrainingBlock>())) ?? []
-        blocks.forEach { context.delete($0) }
+        do {
+            try writeBackup(backup, into: context)
+            if let persisting {
+                try persisting(context)
+            } else {
+                try context.save()
+            }
+        } catch {
+            context.rollback()
+            throw error
+        }
 
-        // Re-insert exercises, building an ID → Exercise map for linking records
+        commitRestorePreferences(from: backup, context: context)
+        // Reload on this call — a detached Task outlives test containers
+        // and the CloudKit store tear-down, then fetchCount traps (SIGTRAP).
+        DayTypeRegistry.shared.reload(context: context)
+        NotificationCenter.default.post(name: .rockLogStoreReplaced, object: nil)
+    }
+
+    /// Mutate `context` to match `backup` without saving.
+    /// Fetch-and-delete each instance so SwiftData runs relationship
+    /// nullification. `context.delete(model:)` would skip that and leave
+    /// inverses pointing at deleted rows.
+    @MainActor
+    private static func writeBackup(_ backup: AppBackup, into context: ModelContext) throws {
+        for set in try context.fetch(FetchDescriptor<SetRecord>()) {
+            context.delete(set)
+        }
+        for record in try context.fetch(FetchDescriptor<ExerciseRecord>()) {
+            context.delete(record)
+        }
+        for session in try context.fetch(FetchDescriptor<WorkoutSession>()) {
+            context.delete(session)
+        }
+        for exercise in try context.fetch(FetchDescriptor<Exercise>()) {
+            context.delete(exercise)
+        }
+        for day in try context.fetch(FetchDescriptor<SplitDay>()) {
+            context.delete(day)
+        }
+        for block in try context.fetch(FetchDescriptor<TrainingBlock>()) {
+            context.delete(block)
+        }
+
         var exerciseMap: [UUID: Exercise] = [:]
         for eb in backup.exercises {
             let dayType = DayType(rawValue: eb.dayType)
@@ -265,7 +308,6 @@ struct BackupService {
             exerciseMap[eb.id] = exercise
         }
 
-        // Re-insert sessions → exercise records → sets
         for sb in backup.sessions {
             let dayType = DayType(rawValue: sb.dayType)
             let session = WorkoutSession(
@@ -318,36 +360,39 @@ struct BackupService {
             }
         }
 
-        try context.save()
+        // Renames, split days, and day-plan membership stay unsaved so they
+        // commit with the rows above or roll back with them.
+        SeedData.migrateExerciseNames(context: context, saves: false)
+        restoreSplitDays(from: backup, context: context, saves: false)
+        SeedData.restoreDayPlans(from: backup, context: context, saves: false)
+    }
 
-        // Old backups may still contain pre-rename exercise names —
-        // re-apply the idempotent migration so restored data is corrected immediately.
-        SeedData.migrateExerciseNames(context: context)
-
-        restoreSplitDays(from: backup, context: context)
-        SeedData.restoreDayPlans(from: backup, context: context)
+    /// UserDefaults / iCloud KVS mirrors. Called only after the store save commits.
+    @MainActor
+    private static func commitRestorePreferences(from backup: AppBackup, context: ModelContext) {
+        if let plans = backup.dayPlans, !plans.isEmpty {
+            SeedData.storeDayPlanSnapshot(plans)
+        } else {
+            SeedData.persistDayPlanSnapshot(context: context)
+        }
         SeedData.markCatalogSeeded()
         SeedData.markDayPlansTrusted()
         SeedData.markSplitConfigured(context: context)
-        // Reload on this call — a detached Task outlives test containers
-        // and the CloudKit store tear-down, then fetchCount traps (SIGTRAP).
-        DayTypeRegistry.shared.reload(context: context)
-        NotificationCenter.default.post(name: .rockLogStoreReplaced, object: nil)
     }
 
     /// Prefer the stored split. Older backups only have session/exercise names —
     /// rebuild from session days (not catalog home days, which add unused Arms / Full Body).
-    private static func restoreSplitDays(from backup: AppBackup, context: ModelContext) {
+    private static func restoreSplitDays(from backup: AppBackup, context: ModelContext, saves: Bool) {
         if let stored = backup.splitDays, !stored.isEmpty {
-            _ = SeedData.applySplitSnapshot(stored, context: context)
+            _ = SeedData.applySplitSnapshot(stored, context: context, saves: saves)
             return
         }
         let inferred = inferSplit(from: backup)
         guard !inferred.isEmpty else {
-            SeedData.seedSplitDaysIfNeeded(context: context)
+            SeedData.seedSplitDaysIfNeeded(context: context, saves: saves)
             return
         }
-        _ = SeedData.applySplitSnapshot(inferred, context: context)
+        _ = SeedData.applySplitSnapshot(inferred, context: context, saves: saves)
     }
 
     static func inferSplit(from backup: AppBackup) -> [SplitDayBackup] {

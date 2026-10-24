@@ -757,6 +757,7 @@ final class SplitPersistenceTests: XCTestCase {
             SetRecord.self,
             SplitDay.self,
             BodyMetricEntry.self,
+            TrainingBlock.self,
             configurations: config
         )
     }
