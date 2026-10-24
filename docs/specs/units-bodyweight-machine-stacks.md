@@ -13,6 +13,7 @@ Audience: Lee, before anyone builds it. Tester-facing copy waits until a build e
 | **e** | Groups of two to four exercises. Logging a set moves to the next one in the group and comes back around. Rest follows the exercise just finished, and each lift has its own default rest. |
 | **Focus** | A starting-weight choice (last time, or the suggestion). A planned weight always wins. Previous moves the way Next already does. Done stays where it is. |
 | **Rest alert** | One pocket-strength buzz at zero, an optional tap at 10 seconds, a chime that dips an audiobook without stopping it, and the countdown on the Lock Screen and Dynamic Island. |
+| **Carry** | Editing one set’s weight updates only the later unlogged working sets that were planned at that same weight. Ramps stay on their plan, then snap to the lift’s stack step. |
 
 Lee’s notes for **d** and **e**, in his words: he is on the individual exercises most of the time and wants to rearrange them from inside the workout. He sometimes cycles two to four exercises before moving on. Rest depends on the exercise he just did: some leave him breathing hard, some need a short break.
 
@@ -26,7 +27,7 @@ A different number, Settings → Body profile → weight, is what assisted lifts
 
 Assist is the only bodyweight mode. There is no “body weight plus added load” mode (weighted pull-up, dip with a chain).
 
-There is no per-machine stack. The stepper does not know that a machine only moves in 10 lb jumps.
+There is no per-machine stack. The stepper does not know that a machine only moves in 10, 15, or 20 lb jumps. Fixing set 1 from 145 to 140 leaves set 2 on 145 when set 2 was planned at 145, because nothing copies a correction onto the later sets that shared that plan weight. History can still reopen a finished workout (Edit, then Save Changes). That path stays as it is.
 
 During a workout, **Reorder / edit day plan** opens the day-plan editor and writes the library order (`Exercise` day sort). The next session on that day follows it. The session itself does not keep a private order, except a planned workout: those sessions set `followsSessionRoster` and list lifts by `ExerciseRecord.sortOrder`. The lift screen (Focus) has next / previous. It has no drag handle. Lee spends his time on that screen. How that screen fills the stepper, and how Previous differs from Next, is under [Focus screen](#focus-screen).
 
@@ -155,8 +156,10 @@ Each exercise can save a stack profile. Empty means “use the normal stepper an
 
 A profile is either:
 
-- a fixed step, such as 10 lb from the first plate up to a top pin, or
+- a fixed step, or
 - an explicit list of pin weights.
+
+The step control offers **10 lb**, **15 lb**, **20 lb**, and **Custom**. Custom is any step he types. A step learned from his corrections uses this same control and is described under [Same-weight carry and the stack step](#same-weight-carry-and-the-stack-step).
 
 Plus add-on plates (the magnets): a small list such as 2.5 and 5. An available weight is a pin, or a pin plus one add-on. Stacking several magnets is an open question; the first version allows one add-on at a time.
 
@@ -196,7 +199,7 @@ Warm-up targets round onto the stack the same way. They do not change the workin
 
 ### Data and migration
 
-The profile is stored on the exercise: step or pin list, add-ons, unit of the pins, policy. All optional. No profile means today’s behaviour. `RockLogSchemaV2`, same lightweight stage as part **b**. Backup includes the profile. Old backups restore with no profile.
+The profile is stored on the exercise: step or pin list, add-ons, unit of the pins, policy, and whether the step was learned or typed. All optional. No profile means today’s behaviour. `RockLogSchemaV2`, same lightweight stage as part **b**. Backup includes the profile. Old backups restore with no profile. Learning also stores the weight a set was offered, on that set, when he logged something else. That field is optional and empty on older sets.
 
 Part **a**’s 5 lb / 2.5 kg snap is the fallback only when the lift has no profile.
 
@@ -337,13 +340,13 @@ A new Settings choice, next to Next set default: **Starting weight**.
 | **Last time** (default) | The same set number from the last completed session. If last time had fewer sets, the best working set from that session. |
 | **Suggested** | The progression suggestion for the mode selected on this lift (strength or endurance), including the 5 lb snap already on `main`. |
 
-A custom plan wins over both. When this workout is a planned session and this set number has a prescribed weight, the steppers open on that prescribed weight and those prescribed reps. The Starting weight setting does not apply. Next set default does not apply to that set either: after set 1, set 2 still opens on the plan when the plan has a set 2.
+A custom plan wins over both. When this workout is a planned session and this set number has a prescribed weight, the steppers open on that prescribed weight and those prescribed reps, then on the stack snap when this lift has a step. The Starting weight setting does not apply. Next set default does not apply to that set either: after set 1 is logged at the plan weight, set 2 still opens on the plan when the plan has a set 2. An edit to that weight follows same-weight carry.
 
 When the plan has no target for this set number, the rules above take over. Sets after the first, with no plan target, still follow Next set default.
 
 Under the steppers, one line shows last time and the suggestion together, for example `Last time 225×5 · Suggested 230×5`. The line is text. It does not write the steppers, and logging saves the stepper numbers. Editing the steppers leaves the line as it was. A missing side is left off the line (no last time yet, or no suggestion yet). The PLAN column on a planned lift stays the place that shows the prescribed sets. The line does not repeat the plan.
 
-When a stack profile exists (part **c**), the suggestion in that line is the stack-legal weight and the adjusted reps. The plan number on the steppers stays the prescribed weight. Stepping off that number with − / + then follows the stack. Opening the lift does not replace the plan number with the stack-rounded suggestion.
+When this lift has a stack step (part **c**, typed or learned), every weight the steppers would offer snaps onto that step before he sees it. A planned 165×5 on a 10 lb stack opens at 160×6. The PLAN column still shows 165×5. The line under the steppers shows the stack-legal suggestion. − / + then move by the stack step. Same-weight carry, in the next section, can replace that snapped weight on the later sets that shared the edited set’s plan weight. His own edit is kept as he set it.
 
 The choice is stored on this phone the same way Next set default is (UserDefaults). It is not a SwiftData field and it is not in the backup. Default is Last time, so a phone that has never chosen stays on today’s first-set behavior for an unplanned lift.
 
@@ -365,12 +368,12 @@ Done and Resume stay on the bottom row. Resume still un-marks the lift and stays
 - Setting Last time, no plan. Last session set 1 was 225×5. Suggestion is 230×5. Steppers open on 225×5. The line reads last time 225×5 and suggested 230×5. Logging without an edit saves 225×5.
 - Setting Suggested, same history. Steppers open on 230×5. The line is unchanged. Logging without an edit saves 230×5.
 - A planned set prescribes 185×8. Both settings open the steppers on 185×8. The line still shows 225×5 and 230×5. Logging without an edit saves 185×8.
-- The plan’s set 2 is 205×5. Next set default is Last set. After set 1 is logged, the steppers show 205×5.
+- The plan’s set 2 is 205×5. Next set default is Last set. After set 1 is logged at 205, the steppers show 205×5. Logging the plan weight does not carry.
 - The plan has no set 3. After set 2, Next set default fills set 3.
 - Changing the stepper does not change the line.
 - No last session: the Last time choice uses the suggestion when there is one, and otherwise the same empty default as today. The line omits last time.
 - No suggestion: the line omits the suggested side. Last time still fills the steppers when that choice is on and there is no plan weight.
-- A stack profile’s suggestion on the line can differ from a prescribed plan weight on the steppers.
+- A 10 lb stack and a planned 165×5. The steppers open on 160×6. The PLAN column still shows 165×5. The line shows the stack-legal suggestion.
 
 **Previous**
 
@@ -382,6 +385,121 @@ Done and Resume stay on the bottom row. Resume still un-marks the lift and stays
 - One lift. Next and Previous are both hidden.
 - Done stays on the bottom row, right of Log set. After Done, that button reads Resume. Resume clears Done and stays on this lift.
 - The Previous control remains the top chevron. Next remains the top capsule.
+
+## Same-weight carry and the stack step
+
+Lee’s words: he does not usually fix a workout after he has finished. He finds the error the next time he does the workout, usually a 5 lb gap, as when the app says 145 and the machine only does 140. He fixes the first set and forgets the second. Mostly, if he changes the weight on one set and the next set was supposed to be the same, he does not want to change it again. If the plan ramps, some machines move in 10 lb, 15 lb, or 20 lb jumps.
+
+### Same-weight carry
+
+This runs while the workout is in progress, on the lift he is logging.
+
+When he edits a working set’s weight, look at the plan weight that set had before the edit. Each later working set that is still unlogged, and whose plan weight is that same number, takes the new weight. A later set with a different plan weight keeps its plan. Warm-ups stay on their own numbers, including a warm-up that happened to say 145. Editing a warm-up does not move working sets. Sets he has already logged stay logged. Reps on a carried set stay the reps that set already had. Only the weight moves.
+
+“Plan weight” means the prescribed weight when this set has one. When it does not, it means the weight that set was going to open on (last time, the suggestion, or a carry already applied). Same means the same stored pounds.
+
+The program file and the day plan keep the original numbers. Next week starts from those again. This session’s unlogged rows are what change.
+
+Example. Plan 145×5, 145×5, 165×5. He edits set 1 to 140. Set 2 was also planned at 145, so it becomes 140×5. Set 3 was planned at 165, so it stays 165×5 until a stack step snaps it, below. Undo puts set 2 back to 145×5. Set 1 stays 140.
+
+A ramp he is following does not flatten. Plan 135, 155, 175, and he edits set 1 to 130. Sets 2 and 3 stay 155 and 175, because neither was planned at 135.
+
+Logging the weight the set already offered is not an edit. Changing reps only is not an edit. No carry in either case.
+
+### Show it, and one undo
+
+The set list shows the weight each unlogged set will open on. Every row this edit changed is marked until he logs that set or undoes. One line names them, for example “Set 2 set to 140,” with **Undo**. One tap. No dialog. Undo restores those unlogged sets to the weights they had before this edit, including a snap this edit caused. It does not change the set he edited. A second edit replaces that Undo, so only the latest edit can be undone. Leaving the lift keeps the new weights. The Undo line does not have to still be there when he comes back.
+
+### Every offer snaps to the stack step
+
+Once this lift has a step, every suggested weight and every plan weight he did not just overwrite snaps onto that step. The rule is part **c**: nearest pin, a halfway tie rounds down, then reps move so the Epley estimate stays as close as it can. The weight he typed, and the copies same-weight carry just made, stay as he set them.
+
+The same example with a step:
+
+| Step | After he edits set 1 from 145 to 140 |
+| --- | --- |
+| None yet | 140×5, 140×5, 165×5 |
+| 10 lb | 140×5, 140×5, 160×6 |
+| 15 lb | 140×5, 140×5, 165×5 |
+| 20 lb | 140×5, 140×5, 160×6 |
+
+165 on a 10 lb step sits halfway between 160 and 170, and the tie rounds down. 165 × (1 + 5/30) = 192.5. At 160 lb the nearest rep count is 6 (160×6 estimates 192). 165 is already on a 15 lb step. On a 20 lb step, 160 is closer than 180.
+
+The PLAN column still shows 145 / 145 / 165. The rows he will log show the snapped or carried numbers. Those rows are marked the same way as a carry.
+
+With no step, the only snap is today’s nearest 5 lb.
+
+### Learning the step from corrections
+
+He should not have to set up a stack for the 145-versus-140 case. The phone learns the step from working sets he actually changed.
+
+A session qualifies when he logs at least one working set at a weight other than the weight that set offered. Warm-ups do not qualify a session. Several sets in one session are one session, not several votes. The weights that count are the corrected working weights, so an unedited ramp at 165 does not spoil a correction to 140.
+
+For that session, try 20, 15, and 10 lb. A step fits when every corrected weight is a whole number of steps (within half a pound). The session’s step is the largest of those three that fits. 140 fits 20 and 10, so the session’s step is 20. 140 and 150 together fit 10 only. 150 and 165 fit 15. 145, 185, and 225 fit none of them.
+
+When none of the three fit, the custom candidate is the greatest common divisor of the corrected weights, and only if that divisor is greater than 5 lb. 25, 50, and 75 give 25. A divisor of 5 lb is the snap the app already uses, so a barbell does not grow a stack.
+
+The learned step is written when the last three qualifying sessions all have the same step. One session, or two, write nothing. A later session with a different step does not change a step already learned. Replacing 20 lb with 10 lb takes three new sessions whose step is 10. Sessions where he logs the offer are skipped. They do not count, and they do not wipe the three.
+
+Old workouts cannot teach this. The offer was not stored. From this build on, a working set he logs at a different weight stores the weight it was offered. That field is how the three sessions are read back.
+
+The learned step is the part **c** profile: a fixed step, pounds, nearest, tie down, marked learned. Future suggestions and plan weights snap with the table above. History is not rewritten. Progression still computes the ideal target first. The step rounds it.
+
+On the exercise, next to the 10 / 15 / 20 / Custom control, a learned step says it was learned and names the three sessions in one line. **Clear** removes it and remembers the time, so those same three sessions do not write it back. Sets logged after Clear can teach a new step. Typing 10, 15, 20, or a custom step marks the profile as his. Learning does not replace a step he typed. **Learn stack from corrections** sits on that exercise, default on. Off means new corrections are only for this session’s carry. The switch is optional on the exercise. Empty means on.
+
+### Finished workouts stay as they are
+
+Finding the bad 145 the next time he does the lift is the path this section is for. Editing a workout after Finish is low priority. History keeps Edit, the confirm (“Edit this workout?”), and Save Changes. Reopening a finished session does not run same-weight carry, does not snap the old sets onto a step, and does not add a learning sample. That screen is not in the build order.
+
+### App, data, coach
+
+**RockLog** owns the carry, the marked rows, Undo, the step chips, and learning. Carry is this session only. It adds no SwiftData field. The program file is untouched.
+
+**Progression** still returns the ideal target. It does not know about the step. RockLog snaps after that, with the shared helper from part **c**.
+
+**RockCoach** does not learn a step. Once the coach file includes the profile, the coach can show the same snapped pair. Until then, the phone is the place the step lives.
+
+The offered weight on a corrected set, the learned-or-typed flag, and the Clear time are optional fields in the same `RockLogSchemaV2` as part **c**. Empty on old data. Backup round-trips them. An old file restores with no step and no offers.
+
+### Tests
+
+**Carry**
+
+- Plan 145×5, 145×5, 165×5. Edit set 1 to 140, no stack step. Unlogged set 2 becomes 140×5. Set 3 stays 165×5. Set 1 stays 140×5. The program file still says 145 / 145 / 165.
+- Undo restores set 2 to 145×5 and leaves set 1 at 140.
+- The same plan with a 10 lb step. Set 2 becomes 140×5. Set 3 becomes 160×6. The PLAN column still shows 165×5. Undo restores set 2 to 145×5 and set 3 to 165×5.
+- A 15 lb step leaves set 3 at 165×5. A 20 lb step makes set 3 160×6.
+- Plan 135, 155, 175. Edit set 1 to 130. Sets 2 and 3 stay 155 and 175.
+- A warm-up planned at 145 stays 145 when working set 1 moves from 145 to 140. Editing that warm-up’s weight does not move the working sets.
+- Set 2 is already logged at 145. Editing set 1 to 140 does not change set 2. A later unlogged set that was also planned at 145 does change.
+- Editing set 2 of 145 / 145 / 165 to 140 does not change set 3.
+- Both later sets planned at 145 become 140. Their reps stay what each set had.
+- The changed rows are marked, and the line offers one Undo. A second edit replaces that Undo.
+- Another lift in the session is unchanged.
+- No plan. Set 1 and set 2 were both going to open at 145. Edit set 1 to 140. Set 2 opens at 140. If set 2 was going to open at 165, it stays 165.
+- Logging the offered weight does not carry. Changing reps only does not carry.
+
+**Learning**
+
+- One session, or two, of 145 corrected to 140 writes no step.
+- Three sessions whose corrected weights are 140, then 160, then 180 learn a 20 lb step.
+- Three sessions of 140, 150, and 160 learn 10 lb.
+- Three sessions of 150, 165, and 180 learn 15 lb.
+- After a 20 lb step is learned, one session that corrects to 150 leaves the step at 20. Three such sessions move it to 10.
+- Logged working weights 145, 185, and 225 learn nothing.
+- Three sessions of 25, 50, and 75 learn a custom step of 25.
+- A warm-up edited off its offer does not qualify the session.
+- A session that corrects 145 to 140 and leaves a ramp at 165 counts {140} only. Three of those learn 20 lb.
+- With a learned 10 lb step, a suggestion of 145 opens at 140, and a suggestion of 165×5 opens at 160×6.
+- Clear removes the step. The next suggestion uses the 5 lb snap. The same three old sessions do not write the step again.
+- A step he typed as 15 stays 15 when the logs would learn 10. Clear is the learned-step action. His typed step stays until he changes it.
+- Learn stack from corrections off: a third qualifying session does not write a step.
+- A set logged with no stored offer, including every set from before this field existed, does not qualify.
+- Three corrected sets inside one session are still one session.
+
+**Finished workouts**
+
+- History → Edit still asks “Edit this workout?” and Save Changes still saves. Reopening does not carry, does not snap, and does not store an offered weight.
 
 ## Rest alert
 
@@ -465,7 +583,7 @@ Not this build. A later watch glance can take a “rest done” event and play a
 
 `RockLogSchemaV1` shipped in source at `eb497bd` and is frozen. Parts **b**, **c**, and **e** add optional fields with defaults in **one** `RockLogSchemaV2` and one lightweight stage. Shipping the screens in a later order is fine. Adding a further stored field after V2 is V3, so the fields we already know about belong in V2 even if the screen comes later.
 
-Part **a** is key-value. Part **d** uses V1 fields. Focus starting weight is key-value, same as Next set default. Previous is a behavior change on the lift screen.
+Part **a** is key-value. Part **d** uses V1 fields. Focus starting weight is key-value, same as Next set default. Previous is a behavior change on the lift screen. Same-weight carry is this session only and adds no field. Learning’s offered weight, learned-or-typed flag, and Clear time belong in V2 with the stack profile.
 
 CloudKit will accept this only as a lightweight additive change. There is no custom migration stage.
 
@@ -475,18 +593,19 @@ CloudKit will accept this only as a lightweight additive change. There is no cus
 
 1. **Starting weight (Focus).** Settings choice, plan weight always wins, comparison line under the steppers. No migration.
 2. **Previous mirrors Next (Focus).** Done and Resume stay on the bottom row. Back stays at the top. No migration.
-3. **Reorder (d).** No migration. It is the gap he feels on the lift screen. The day-plan editor stays for editing the library.
-4. **Per-lift rest and ±15 (the rest half of e).** Small, and it matches “the last exercise decides the break.” Circuits can follow in the next slice.
-5. **Rest alert.** Pocket buzz, 10-second tap, ducked chime, Live Activity. Uses the timer from today, so it can sit beside per-lift rest and does not wait on circuits. The per-lift length, once it exists, is the duration this alert counts.
-6. **Groups and auto-advance (the rest of e).**
-7. **Body-weight lookup and added-load mode (b).** No new measurement model. Date-based assist math is the part that stops old assisted e1RMs from moving when he updates the scale.
-8. **Pounds / kilograms and plate math (a).**
-9. **Stack profiles and rep compensation (c).** Needs the unit work so a kilogram stack and a pound stack stay distinct, and needs the shared Epley helper.
-10. **Rest learning.** After real timer samples exist. Suggest only.
+3. **Same-weight carry.** No migration. Editing 145 on the first of two matching sets fills the second. Ramps stay. It can ship before a stack step exists.
+4. **Reorder (d).** No migration. It is the gap he feels on the lift screen. The day-plan editor stays for editing the library.
+5. **Per-lift rest and ±15 (the rest half of e).** Small, and it matches “the last exercise decides the break.” Circuits can follow in the next slice.
+6. **Rest alert.** Pocket buzz, 10-second tap, ducked chime, Live Activity. Uses the timer from today, so it can sit beside per-lift rest and does not wait on circuits. The per-lift length, once it exists, is the duration this alert counts.
+7. **Groups and auto-advance (the rest of e).**
+8. **Body-weight lookup and added-load mode (b).** No new measurement model. Date-based assist math is the part that stops old assisted e1RMs from moving when he updates the scale.
+9. **Pounds / kilograms and plate math (a).**
+10. **Stack steps and learning (c).** 10, 15, 20 lb, and custom. Suggestions snap, and three matching corrections write the step. Needs the unit work so a kilogram stack and a pound stack stay distinct, and needs the shared Epley helper. Sits with the stack profile, after carry.
+11. **Rest learning.** After real timer samples exist. Suggest only.
 
 The month-boundary fix is already on `main` (`a877aad`, pull request #10) and is **not on TestFlight yet**. It does not block this list.
 
-One V2 migration can land with the per-lift rest step, containing the optional fields for rest, groups, bodyweight load, and stacks, so later steps do not each mint a schema version. The two Focus items and the rest alert do not add SwiftData fields. The rest alert does add a widget extension for the Live Activity.
+One V2 migration can land with the per-lift rest step, containing the optional fields for rest, groups, bodyweight load, and stacks, so later steps do not each mint a schema version. The two Focus items, same-weight carry, and the rest alert do not add SwiftData fields. The rest alert does add a widget extension for the Live Activity. Learning’s extra fields ride in the one V2 with the stack profile. Editing a finished workout is unchanged and is not a build step.
 
 ## Tests
 
@@ -545,6 +664,8 @@ One V2 migration can land with the per-lift rest step, containing the optional f
 - V1 store opens on V2. Old sessions have no group. Backup round-trips a group and a per-lift rest. A file that omits them does not clear rests already on the phone.
 - Coach file with a group id shows the pairing. A v1 file without it still imports, each lift on its own.
 
+**Same-weight carry and the stack step.** Cases are under [Same-weight carry and the stack step](#same-weight-carry-and-the-stack-step).
+
 **Rest alert.** Cases are under [Rest alert](#rest-alert). No SwiftData change.
 
 ## Open questions for Lee
@@ -566,3 +687,4 @@ One V2 migration can land with the per-lift rest step, containing the optional f
 15. Rest learning only suggests, and only after you turn it on. It never edits the default alone. Confirm.
 16. A group is not written into the program file until you tap save. The phone can do groups before the program format knows about them. Agree?
 17. The last-5-seconds tick tones go away, so an audiobook dips once at zero instead of five times. The 10-second cue is a haptic only, and its switch starts off. Confirm.
+18. A learned stack step is the largest of 10, 15, and 20 lb that fits the corrected weights, and it is written after three sessions agree. A custom step is the greatest common divisor when it is above 5 lb. Change either rule?
