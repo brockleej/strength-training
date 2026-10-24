@@ -611,6 +611,10 @@ struct BackupService {
             if let autoRest = eb.autoRestEnabled {
                 exercise.autoRestEnabled = autoRest
                 exercise.autoRestCopied = true
+            } else {
+                // Same unsaved transaction as the rest of the restore. A failed
+                // save rolls this back. A second call does not copy again.
+                RestPreferenceMigration.copyIfNeeded(exercise)
             }
             exercise.loadModeRaw = eb.loadModeRaw ?? ""
             exercise.suggestWarmupRamp = eb.suggestWarmupRamp ?? false

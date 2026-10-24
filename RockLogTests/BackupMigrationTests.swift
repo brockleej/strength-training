@@ -87,6 +87,47 @@ final class BackupMigrationTests: XCTestCase {
         XCTAssertEqual(round.updatedAt, stamp)
     }
 
+    func test_restCopy_isSafeToRunTwice_andRollsBackWithTheSave() throws {
+        let exercise = Exercise(name: "Curl", dayType: .push, muscleGroup: "Biceps", isCustom: true)
+        let key = RestPreferenceMigration.legacyKey(for: exercise.id)
+        UserDefaults.standard.set(false, forKey: key)
+        defer { UserDefaults.standard.removeObject(forKey: key) }
+        XCTAssertTrue(RestPreferenceMigration.copyIfNeeded(exercise))
+        XCTAssertFalse(exercise.autoRestEnabled)
+        exercise.autoRestEnabled = true
+        XCTAssertFalse(RestPreferenceMigration.copyIfNeeded(exercise))
+        XCTAssertTrue(exercise.autoRestEnabled)
+
+        let container = try store()
+        let context = container.mainContext
+        let keeper = Exercise(name: "Keep Me", dayType: .push, muscleGroup: "Chest", isCustom: true)
+        context.insert(keeper)
+        try context.save()
+        let incomingID = UUID(uuidString: "99999999-9999-4999-8999-999999999999")!
+        UserDefaults.standard.set(false, forKey: RestPreferenceMigration.legacyKey(for: incomingID))
+        defer { UserDefaults.standard.removeObject(forKey: RestPreferenceMigration.legacyKey(for: incomingID)) }
+        let payload = Data("""
+        {"version":1,"exportedAt":"2026-01-01T00:00:00Z","exercises":[
+        {"id":"\(incomingID.uuidString)","name":"Incoming","dayType":"Push","muscleGroup":"Chest","sortOrder":0,"isCustom":true,"notes":""}
+        ],"sessions":[],"splitDays":[]}
+        """.utf8)
+
+        struct InjectedSaveFailure: Error {}
+        XCTAssertThrowsError(
+            try BackupService.restore(from: payload, context: context) { _ in throw InjectedSaveFailure() }
+        )
+        let afterFailure = try context.fetch(FetchDescriptor<Exercise>())
+        XCTAssertEqual(afterFailure.map(\.name), ["Keep Me"])
+
+        try BackupService.restore(from: payload, context: context)
+        let incoming = try XCTUnwrap(try context.fetch(FetchDescriptor<Exercise>()).first { $0.id == incomingID })
+        XCTAssertFalse(incoming.autoRestEnabled)
+        XCTAssertTrue(incoming.autoRestCopied)
+        incoming.autoRestEnabled = true
+        XCTAssertFalse(RestPreferenceMigration.copyIfNeeded(incoming))
+        XCTAssertTrue(incoming.autoRestEnabled)
+    }
+
     func test_exportRestoreExport_matchesApartFromExportedAt() throws {
         let container = try store()
         let context = container.mainContext
