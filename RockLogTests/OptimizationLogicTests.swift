@@ -318,11 +318,25 @@ final class OptimizationLogicTests: XCTestCase {
         tick.callConnected = true
         let zero = RestAlertPolicy.onTick(&state, tick: tick)
         XCTAssertTrue(zero.strongHaptic)
+        XCTAssertTrue(zero.cancelBackup)
         XCTAssertFalse(zero.playChirp)
         XCTAssertFalse(zero.duck)
         XCTAssertFalse(RestAlertPolicy.onTick(&state, tick: tick).strongHaptic)
         XCTAssertFalse(RestAlertPolicy.chirpInterruptsSpokenAudio)
+        XCTAssertFalse(RestAlertPolicy.usesAudioKeepAlive)
         XCTAssertFalse(RestAlertPolicy.keepAliveDucks)
+        let armed = RestAlertPolicy.onStart(state, tick: tick)
+        XCTAssertEqual(armed.scheduleBackupAt, state.endDate)
+        var awayState = RestAlertState.started(now: Date(timeIntervalSince1970: 0), duration: 30)
+        var awayTick = tick
+        awayTick.appIsActive = false
+        awayTick.callConnected = false
+        awayTick.soundEnabled = true
+        awayTick.now = awayState.endDate
+        let away = RestAlertPolicy.onTick(&awayState, tick: awayTick)
+        XCTAssertFalse(away.cancelBackup)
+        XCTAssertFalse(away.playChirp)
+        XCTAssertTrue(away.strongHaptic)
         XCTAssertTrue(RestAlertPolicy.categoryIsPlayback)
         XCTAssertFalse(RestAlertPolicy.endAlertIsTimeSensitive)
         let skipped = RestAlertPolicy.onSkip(&state)

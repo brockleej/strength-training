@@ -14,6 +14,8 @@ nonisolated struct RestAlertState: Equatable, Sendable {
     var tenTapArmed: Bool
     var tenTapFired: Bool
     var chirpStarted: Bool
+    /// Remaining seconds at the previous tick. A 10-second tap fires once per downward crossing.
+    var previousRemaining: TimeInterval
 
     static func started(now: Date, duration: TimeInterval) -> RestAlertState {
         RestAlertState(
@@ -21,7 +23,8 @@ nonisolated struct RestAlertState: Equatable, Sendable {
             zeroFired: false,
             tenTapArmed: duration > 10,
             tenTapFired: false,
-            chirpStarted: false
+            chirpStarted: false,
+            previousRemaining: duration
         )
     }
 }
@@ -45,6 +48,8 @@ nonisolated enum RestAlertPolicy {
     static let chirpMixes = true
     static let chirpDucks = true
     static let chirpInterruptsSpokenAudio = false
+    /// No silent audio loop. A keep-alive is an App Review risk, and the end notification covers the background.
+    static let usesAudioKeepAlive = false
     static let keepAliveDucks = false
     static let categoryIsPlayback = true
     static let endAlertIsTimeSensitive = false
@@ -62,32 +67,35 @@ nonisolated enum RestAlertPolicy {
     static func onStart(_ state: RestAlertState, tick: Tick) -> RestAlertEffects {
         var effects = RestAlertEffects()
         effects.updateActivityEnd = state.endDate
-        effects.scheduleBackupAt = tick.notificationPermissionDenied ? nil : state.endDate
+        effects.scheduleBackupAt = state.endDate
         return effects
     }
 
     static func onTick(_ state: inout RestAlertState, tick: Tick) -> RestAlertEffects {
         var effects = RestAlertEffects()
         let remaining = state.endDate.timeIntervalSince(tick.now)
+        if tick.tapAtTenEnabled, state.previousRemaining > 10, remaining <= 10, remaining > 0 {
+            state.tenTapFired = true
+            effects.lightTap = true
+        }
+        state.previousRemaining = remaining
 
         if remaining <= 0 {
             guard !state.zeroFired else { return effects }
             state.zeroFired = true
             effects.strongHaptic = true
             effects.endActivity = true
-            effects.cancelBackup = true
             effects.activityEnded = true
-            if tick.soundEnabled && !tick.callConnected {
-                effects.playChirp = true
-                effects.duck = true
-                state.chirpStarted = true
+            // The app is on screen and plays the alert, so the backup notification must not also fire.
+            if tick.appIsActive {
+                effects.cancelBackup = true
+                if tick.soundEnabled && !tick.callConnected {
+                    effects.playChirp = true
+                    effects.duck = true
+                    state.chirpStarted = true
+                }
             }
             return effects
-        }
-
-        if tick.tapAtTenEnabled, state.tenTapArmed, !state.tenTapFired, remaining <= 10 {
-            state.tenTapFired = true
-            effects.lightTap = true
         }
         return effects
     }
@@ -96,7 +104,9 @@ nonisolated enum RestAlertPolicy {
     static func onNudge(_ state: inout RestAlertState, seconds: TimeInterval, now: Date) -> RestAlertEffects {
         state.endDate = state.endDate.addingTimeInterval(seconds)
         state.zeroFired = false
-        if state.endDate.timeIntervalSince(now) > 10 {
+        let remaining = state.endDate.timeIntervalSince(now)
+        state.previousRemaining = remaining
+        if remaining > 10 {
             state.tenTapFired = false
             state.tenTapArmed = true
         }

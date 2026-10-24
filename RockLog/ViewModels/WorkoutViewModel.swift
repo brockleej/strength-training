@@ -173,7 +173,6 @@ final class WorkoutViewModel {
         let state = RestAlertState.started(now: now, duration: max(1, seconds))
         restAlert = state
         RestTimerSoundService.prepareIfNeeded()
-        RestTimerSoundService.startBackgroundKeepAlive()
         restEndDate = state.endDate
         targetRestSeconds = max(1, seconds)
         RestAlertRuntime.apply(RestAlertPolicy.onStart(state, tick: RestAlertRuntime.tickContext(now: now)), exerciseName: restExerciseName)
@@ -202,14 +201,9 @@ final class WorkoutViewModel {
         restDispatchTimer?.cancel()
         restDispatchTimer = nil
 
-        guard restEndDate != nil else {
-            RestTimerSoundService.stopBackgroundKeepAlive()
-            return
-        }
+        guard restEndDate != nil else { return }
 
-        // Keep the process eligible to run while the screen is locked.
         RestTimerSoundService.prepareIfNeeded()
-        RestTimerSoundService.startBackgroundKeepAlive()
 
         let timer = DispatchSource.makeTimerSource(queue: DispatchQueue.global(qos: .userInitiated))
         timer.schedule(deadline: .now(), repeating: .milliseconds(150), leeway: .milliseconds(50))

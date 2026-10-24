@@ -60,6 +60,7 @@ enum RestActivityController {
         let state = RestActivityAttributes.ContentState(rangeStart: .now, endDate: end)
         if let current = Activity<RestActivityAttributes>.activities.first {
             if current.content.state.endDate == end, current.attributes.exerciseName == name { return }
+            // staleDate is the rest end. Past that, the system may mark the activity stale.
             Task { await current.update(ActivityContent(state: state, staleDate: end)) }
             return
         }
