@@ -31,23 +31,9 @@ enum RestTimerSoundService {
         _ = sharedPlayer()
     }
 
-    /// `remainingWholeSeconds` is 5…1 when each second band is first entered.
+    /// The last five seconds used to chirp. They do not. One chirp at zero is the sound.
     static func playCountdownTick(remainingWholeSeconds: Int) {
-        guard RestTimerPreferences.isSoundEnabled else { return }
-        guard remainingWholeSeconds >= 1, remainingWholeSeconds <= tickWindow else { return }
-        configureSessionIfNeeded()
-
-        // Rising pitch as you approach zero.
-        let pitches: [Double] = [740, 830, 932, 1047, 1175] // for 5…1
-        let index = max(0, min(tickWindow - 1, tickWindow - remainingWholeSeconds))
-        playTone(frequency: pitches[index], duration: 0.07, volume: 0.45)
-
-        // Haptics only work while the device is unlocked / app is interactive.
-        let style: UIImpactFeedbackGenerator.FeedbackStyle =
-            remainingWholeSeconds <= 2 ? .medium : .light
-        let gen = UIImpactFeedbackGenerator(style: style)
-        gen.prepare()
-        gen.impactOccurred(intensity: remainingWholeSeconds <= 2 ? 0.9 : 0.55)
+        _ = remainingWholeSeconds
     }
 
     /// One chirp at zero. The caller decides whether a call or the sound switch forbids it.
