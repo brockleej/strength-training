@@ -265,7 +265,9 @@ extension WorkoutViewModel {
             next.learnedSessionIDs = learned.sessionIDs
             next.rangeMin = learned.step
             next.rangeMax = max(learned.step * 40, 200)
+            // The profile is the only row this writes. History and plan files stay put.
             profile.definition = next
+            profile.updatedAt = Date()
         }
         try? modelContext.save()
     }

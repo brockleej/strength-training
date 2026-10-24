@@ -132,10 +132,44 @@ final class OptimizationLogicTests: XCTestCase {
             exerciseID: lift,
             gymID: away,
             homeGymID: home,
-            profiles: [(gymID: home, exerciseID: lift, stack: homeStack)]
+            profiles: [StackCandidate(id: UUID(), gymID: home, exerciseID: lift, updatedAt: nil, stack: homeStack)]
         )
         XCTAssertEqual(resolved?.step, 15)
         XCTAssertNil(GymStackLookup.resolve(exerciseID: lift, gymID: away, homeGymID: nil, profiles: []))
+    }
+
+    func test_typedStepBeatsANewerLearnedStep_andLearningDoesNotRewriteSamples() {
+        var typed = StackDefinition.empty
+        typed.step = 5
+        typed.origin = .typed
+        var learned = StackDefinition.empty
+        learned.step = 20
+        learned.origin = .learned
+        let gym = UUID()
+        let lift = UUID()
+        let older = Date(timeIntervalSince1970: 10)
+        let newer = Date(timeIntervalSince1970: 20)
+        let rows = [
+            StackCandidate(id: UUID(uuidString: "00000000-0000-0000-0000-000000000001")!, gymID: gym, exerciseID: lift, updatedAt: older, stack: typed),
+            StackCandidate(id: UUID(uuidString: "00000000-0000-0000-0000-000000000002")!, gymID: gym, exerciseID: lift, updatedAt: newer, stack: learned),
+        ]
+        XCTAssertEqual(StackConflict.winner(rows)?.stack.origin, .typed)
+        var firstLearned = learned
+        firstLearned.step = 10
+        let tie = [
+            StackCandidate(id: UUID(uuidString: "00000000-0000-0000-0000-00000000000A")!, gymID: gym, exerciseID: lift, updatedAt: newer, stack: firstLearned),
+            StackCandidate(id: UUID(uuidString: "00000000-0000-0000-0000-00000000000B")!, gymID: gym, exerciseID: lift, updatedAt: newer, stack: learned),
+        ]
+        XCTAssertEqual(StackConflict.winner(tie)?.id.uuidString, "00000000-0000-0000-0000-00000000000B")
+        var samples = [
+            StackSessionSample(id: UUID(), date: older, correctedPounds: [140, 160]),
+            StackSessionSample(id: UUID(), date: newer, correctedPounds: [140, 160]),
+            StackSessionSample(id: UUID(), date: Date(timeIntervalSince1970: 30), correctedPounds: [140, 160]),
+        ]
+        let before = samples.map(\.correctedPounds)
+        _ = StackLearning.learnedStep(sessions: samples, clearedAt: nil, currentStep: nil, origin: nil, learningEnabled: true)
+        XCTAssertEqual(samples.map(\.correctedPounds), before)
+        XCTAssertNil(StackLearning.learnedStep(sessions: samples, clearedAt: nil, currentStep: nil, origin: .typed, learningEnabled: true))
     }
 
     func test_sameWeightCarry_andUndo_andStackSnap() {

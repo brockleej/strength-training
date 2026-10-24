@@ -82,6 +82,7 @@ final class MachineStackProfile {
             next.rangeMax = max(step * 40, 200)
         }
         definition = next
+        updatedAt = Date()
     }
 
     func clearLearned(at date: Date = .now) {
@@ -93,14 +94,21 @@ final class MachineStackProfile {
         next.learnedSessionIDs = []
         next.clearedAt = date
         definition = next
+        updatedAt = date
     }
 
     private static func numbers(_ raw: String) -> [Double] {
         raw.split(separator: ",").compactMap { Double($0.trimmingCharacters(in: .whitespaces)) }
     }
 
+    /// Pin numbers stay in `pinUnitRaw`. Full precision, not a display rounding.
     private static func joined(_ values: [Double]) -> String {
-        values.map { MassMath.formatDisplay($0) }.joined(separator: ",")
+        values.map { value in
+            let negative = value < 0
+            let scaled = (abs(value) * 100_000_000).rounded() / 100_000_000
+            let text = String(scaled)
+            return negative ? "-" + text : text
+        }.joined(separator: ",")
     }
 }
 
@@ -112,7 +120,12 @@ enum StackProfileStore {
         let descriptor = FetchDescriptor<MachineStackProfile>(
             predicate: #Predicate { $0.gymID == gym && $0.exerciseID == exercise }
         )
-        return try? context.fetch(descriptor).first
+        let rows = (try? context.fetch(descriptor)) ?? []
+        let candidates = rows.map {
+            StackCandidate(id: $0.id, gymID: $0.gymID, exerciseID: $0.exerciseID, updatedAt: $0.updatedAt, stack: $0.definition)
+        }
+        guard let winner = StackConflict.winner(candidates) else { return nil }
+        return rows.first { $0.id == winner.id }
     }
 
     @MainActor
@@ -133,7 +146,7 @@ enum StackProfileStore {
         let home = gyms.first(where: \.isHome)?.id
         let active = GymLibrary.activeID(in: context)
         let profiles = ((try? context.fetch(FetchDescriptor<MachineStackProfile>())) ?? []).map {
-            (gymID: $0.gymID, exerciseID: $0.exerciseID, stack: $0.definition)
+            StackCandidate(id: $0.id, gymID: $0.gymID, exerciseID: $0.exerciseID, updatedAt: $0.updatedAt, stack: $0.definition)
         }
         return GymStackLookup.resolve(
             exerciseID: exerciseID,

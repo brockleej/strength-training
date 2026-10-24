@@ -263,21 +263,59 @@ nonisolated enum StackLearning {
 
 // MARK: - Gym fallback
 
+nonisolated struct StackCandidate: Equatable, Sendable {
+    var id: UUID
+    var gymID: UUID
+    var exerciseID: UUID
+    var updatedAt: Date?
+    var stack: StackDefinition
+}
+
+nonisolated enum StackConflict {
+    /// A typed step beats a learned one, even when the learned row is newer.
+    /// Two rows of the same kind: the later `updatedAt` wins. A tie keeps the
+    /// greater id so both phones choose the same row. The other row stays.
+    static func winner(_ rows: [StackCandidate]) -> StackCandidate? {
+        rows.reduce(nil as StackCandidate?) { best, row in
+            guard let best else { return row }
+            return prefer(row, over: best) ? row : best
+        }
+    }
+
+    static func prefer(_ row: StackCandidate, over other: StackCandidate) -> Bool {
+        let rank = originRank(row.stack.origin)
+        let otherRank = originRank(other.stack.origin)
+        if rank != otherRank { return rank > otherRank }
+        let time = row.updatedAt ?? .distantPast
+        let otherTime = other.updatedAt ?? .distantPast
+        if time != otherTime { return time > otherTime }
+        return row.id.uuidString > other.id.uuidString
+    }
+
+    private static func originRank(_ origin: StackOrigin?) -> Int {
+        switch origin {
+        case .typed: 2
+        case .learned: 1
+        case nil: 0
+        }
+    }
+}
+
 nonisolated enum GymStackLookup {
     /// Current gym, then Home, then no profile (the caller uses the 5 lb snap).
+    /// Several rows for one gym and lift collapse through `StackConflict`.
     static func resolve(
         exerciseID: UUID,
         gymID: UUID,
         homeGymID: UUID?,
-        profiles: [(gymID: UUID, exerciseID: UUID, stack: StackDefinition)]
+        profiles: [StackCandidate]
     ) -> StackDefinition? {
-        if let match = profiles.first(where: { $0.gymID == gymID && $0.exerciseID == exerciseID && $0.stack.isActive }) {
-            return match.stack
+        func chosen(_ gym: UUID) -> StackDefinition? {
+            let rows = profiles.filter { $0.gymID == gym && $0.exerciseID == exerciseID && $0.stack.isActive }
+            return StackConflict.winner(rows)?.stack
         }
-        if let homeGymID, homeGymID != gymID,
-           let home = profiles.first(where: { $0.gymID == homeGymID && $0.exerciseID == exerciseID && $0.stack.isActive }) {
-            return home.stack
-        }
+        if let current = chosen(gymID) { return current }
+        if let homeGymID, homeGymID != gymID, let home = chosen(homeGymID) { return home }
         return nil
     }
 }
