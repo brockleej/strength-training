@@ -18,6 +18,8 @@ let previewContainer: ModelContainer = {
         SplitDay.self,
         BodyMetricEntry.self,
         TrainingBlock.self,
+        Gym.self,
+        MachineStackProfile.self,
         configurations: config
     )
     SeedData.seedIfNeeded(context: container.mainContext)

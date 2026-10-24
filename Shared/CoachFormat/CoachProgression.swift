@@ -27,8 +27,8 @@ nonisolated enum CoachProgression {
         exercise.sets
             .filter { !$0.resolvedWarmup }
             .max { lhs, rhs in
-                if lhs.weightLbs != rhs.weightLbs {
-                    return lhs.weightLbs < rhs.weightLbs
+                if lhs.effectiveLoadLbs != rhs.effectiveLoadLbs {
+                    return lhs.effectiveLoadLbs < rhs.effectiveLoadLbs
                 }
                 return lhs.reps < rhs.reps
             }
@@ -37,8 +37,8 @@ nonisolated enum CoachProgression {
     nonisolated static func direction(from previous: CoachSetPayload?, to current: CoachSetPayload?) -> Direction {
         guard let current else { return previous == nil ? .new : .down }
         guard let previous else { return .new }
-        if current.weightLbs > previous.weightLbs { return .up }
-        if current.weightLbs < previous.weightLbs { return .down }
+        if current.effectiveLoadLbs > previous.effectiveLoadLbs { return .up }
+        if current.effectiveLoadLbs < previous.effectiveLoadLbs { return .down }
         if current.reps > previous.reps { return .up }
         if current.reps < previous.reps { return .down }
         return .same

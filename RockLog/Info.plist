@@ -5,6 +5,8 @@
 	<!-- Standard HTTPS / CloudKit / HealthKit only — no custom crypto. -->
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
 	<key>UIBackgroundModes</key>
 	<array>
 		<!-- Rest timer tones after screen lock (see RestTimerSoundService keep-alive). -->

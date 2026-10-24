@@ -62,6 +62,16 @@ struct SettingsView: View {
 
     @AppStorage(SetPrefillPreferences.modeKey)
     private var setPrefillModeRaw: String = SetPrefillPreferences.defaultMode.rawValue
+    @AppStorage(StartingWeightPreferences.key)
+    private var startingWeightRaw: String = StartingWeightChoice.lastTime.rawValue
+    @AppStorage(MassUnitPreferences.key)
+    private var massUnitRaw: String = MassUnit.pounds.rawValue
+    @AppStorage(RestAlertPreferences.tapAtTenKey)
+    private var tapAtTen: Bool = false
+    @AppStorage(RestAlertPreferences.learningKey)
+    private var restLearningEnabled: Bool = false
+    @Query(sort: \Gym.sortOrder) private var gyms: [Gym]
+    @State private var newGymName = ""
 
     @AppStorage(CoachAthletePreferences.enabledKey)
     private var coachFeaturesEnabled: Bool = false
@@ -276,6 +286,12 @@ struct SettingsView: View {
             ) { result in
                 handleImportResult(result)
             }
+            #if DEBUG
+            .task {
+                guard let data = UITestLaunch.consumePendingBackup() else { return }
+                stageRestoreConfirmation(from: data)
+            }
+            #endif
         }
     }
 
@@ -289,6 +305,7 @@ struct SettingsView: View {
                     } label: {
                         Label("Edit training split", systemImage: "calendar")
                     }
+                    .accessibilityIdentifier(AccessibilityID.settingsEditSplit)
                     if plannedQueueOwnsToday {
                         Text(PlannedBlockQueue.splitPausedWhileQueued)
                             .font(.uplift.text(13, weight: .medium))
@@ -349,6 +366,73 @@ struct SettingsView: View {
                 .listRowBackground(Color.uplift.surface1)
 
                 Section {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Starting weight")
+                            .font(.uplift.text(15, weight: .semibold))
+                            .foregroundStyle(Color.uplift.fg)
+                        UpliftSegmentedControl(
+                            segments: StartingWeightChoice.allCases.map {
+                                UpliftSegment(id: $0.rawValue, label: $0.title)
+                            },
+                            selection: $startingWeightRaw
+                        )
+                        Text("A prescribed plan weight still wins. This choice is for sets with no plan.")
+                            .font(.uplift.text(12, weight: .medium))
+                            .foregroundStyle(Color.uplift.fgDim)
+                    }
+                    .padding(.vertical, 4)
+                    .accessibilityIdentifier(AccessibilityID.settingsStartingWeight)
+                } header: {
+                    sectionHeader("Starting weight")
+                }
+                .listRowBackground(Color.uplift.surface1)
+
+                Section {
+                    UpliftSegmentedControl(
+                        segments: MassUnit.allCases.map { UpliftSegment(id: $0.rawValue, label: $0.title) },
+                        selection: $massUnitRaw
+                    )
+                    .accessibilityIdentifier(AccessibilityID.settingsMassUnit)
+                    .onChange(of: massUnitRaw) { _, raw in
+                        if let unit = MassUnit(rawValue: raw) { MassUnitPreferences.unit = unit }
+                    }
+                } header: {
+                    sectionHeader("Weight unit")
+                } footer: {
+                    sectionFooter("Pounds stay stored. Kilograms change what you see, the plate math, and the progression snap.")
+                }
+                .listRowBackground(Color.uplift.surface1)
+
+                Section {
+                    if gyms.isEmpty {
+                        Text("Home")
+                            .foregroundStyle(Color.uplift.fgMuted)
+                    }
+                    ForEach(gyms) { gym in
+                        Button(gym.isHome ? "\(gym.name) · default" : gym.name) {
+                            GymLibrary.select(gym)
+                        }
+                        .foregroundStyle(Color.uplift.fg)
+                    }
+                    TextField("New gym", text: $newGymName)
+                        .onSubmit {
+                            let trimmed = newGymName.trimmingCharacters(in: .whitespaces)
+                            guard !trimmed.isEmpty else { return }
+                            let gym = Gym(name: trimmed, sortOrder: gyms.count)
+                            modelContext.insert(gym)
+                            try? modelContext.save()
+                            GymLibrary.select(gym)
+                            newGymName = ""
+                        }
+                } header: {
+                    sectionHeader("Gym")
+                } footer: {
+                    sectionFooter("Home is the default. A lift uses this gym's stack, then Home, then 5 lb.")
+                }
+                .accessibilityIdentifier(AccessibilityID.settingsGym)
+                .listRowBackground(Color.uplift.surface1)
+
+                Section {
                     UpliftSegmentedControl(
                         segments: ProgressionAggressiveness.allCases.map { mode in
                             UpliftSegment(id: mode.rawValue, label: mode.rawValue)
@@ -371,10 +455,21 @@ struct SettingsView: View {
                     .tint(Color.uplift.accent)
 
                     if restTimerEnabled {
-                        Toggle(isOn: $restTimerSoundEnabled) {
-                            Label("Countdown sounds", systemImage: "speaker.wave.2.fill")
-                        }
-                        .tint(Color.uplift.accent)
+                    Toggle(isOn: $restTimerSoundEnabled) {
+                        Label("Countdown sounds", systemImage: "speaker.wave.2.fill")
+                    }
+                    .tint(Color.uplift.accent)
+
+                    Toggle(isOn: $tapAtTen) {
+                        Label("Tap at 10 seconds", systemImage: "hand.tap")
+                    }
+                    .tint(Color.uplift.accent)
+                    .accessibilityIdentifier(AccessibilityID.settingsTapAtTen)
+
+                    Toggle(isOn: $restLearningEnabled) {
+                        Label("Learn rest from what you take", systemImage: "brain")
+                    }
+                    .tint(Color.uplift.accent)
 
                         VStack(alignment: .leading, spacing: 10) {
                             HStack {
@@ -621,12 +716,14 @@ struct SettingsView: View {
                         Label("Add planned workouts", systemImage: "calendar.badge.plus")
                             .foregroundStyle(Color.uplift.accent)
                     }
+                    .accessibilityIdentifier(AccessibilityID.settingsAddPlanned)
                     Button {
                         isImporting = true
                     } label: {
                         Label("Import training split", systemImage: "rectangle.split.3x1")
                             .foregroundStyle(Color.uplift.accent)
                     }
+                    .accessibilityIdentifier(AccessibilityID.settingsImportSplit)
                     Button(action: sharePlannedWorkoutInstructions) {
                         Label("Instructions for AI", systemImage: "doc.text")
                             .foregroundStyle(Color.uplift.accent)
@@ -650,6 +747,7 @@ struct SettingsView: View {
                         Label("Export backup", systemImage: "square.and.arrow.up")
                             .foregroundStyle(Color.uplift.accent)
                     }
+                    .accessibilityIdentifier(AccessibilityID.settingsExport)
 
                     Button {
                         isImporting = true
@@ -657,6 +755,7 @@ struct SettingsView: View {
                         Label("Restore from backup", systemImage: "square.and.arrow.down")
                             .foregroundStyle(Color.uplift.customBadge)
                     }
+                    .accessibilityIdentifier(AccessibilityID.settingsRestore)
                 } header: {
                     sectionHeader("Backup")
                 } footer: {
@@ -825,6 +924,9 @@ struct SettingsView: View {
         }
         .listRowBackground(Color.uplift.surface1)
         .task {
+            #if DEBUG
+            if UITestLaunch.isEnabled { return }
+            #endif
             guard CloudKitSyncService.isEnabled else { return }
             await cloudKitSyncService.checkAccountStatus()
         }
@@ -1001,18 +1103,27 @@ struct SettingsView: View {
                     pendingSplitDocument = document
                     showImportSplitConfirm = true
                 case .backup(let backupData):
-                    let backup = try BackupService.decode(backupData)
-                    let current = BackupService.summarizeStore(context: modelContext)
-                    let incoming = BackupService.summarize(backup: backup)
-                    pendingRestoreData = backupData
-                    pendingRestorePrompt = BackupService.restorePrompt(current: current, incoming: incoming)
-                    showRestoreConfirmation = true
+                    stageRestoreConfirmation(from: backupData)
                 }
             } catch {
                 errorMessage = error.localizedDescription
                 showError = true
             }
         case .failure(let error):
+            errorMessage = error.localizedDescription
+            showError = true
+        }
+    }
+
+    private func stageRestoreConfirmation(from backupData: Data) {
+        do {
+            let backup = try BackupService.decode(backupData)
+            let current = BackupService.summarizeStore(context: modelContext)
+            let incoming = BackupService.summarize(backup: backup)
+            pendingRestoreData = backupData
+            pendingRestorePrompt = BackupService.restorePrompt(current: current, incoming: incoming)
+            showRestoreConfirmation = true
+        } catch {
             errorMessage = error.localizedDescription
             showError = true
         }

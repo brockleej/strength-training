@@ -32,11 +32,38 @@ nonisolated enum RockLogSchemaV1: VersionedSchema {
     }
 }
 
-nonisolated enum RockLogMigrationPlan: SchemaMigrationPlan {
-    nonisolated static var schemas: [any VersionedSchema.Type] {
-        [RockLogSchemaV1.self]
+/// Additive stage. New fields have defaults. New models are Gym and
+/// MachineStackProfile. Nothing in V1 is removed or renamed.
+///
+/// Rollback: do not ship a build that opens this version if you need the
+/// previous build to open the same store. SwiftData will not step a V2
+/// store back to V1. A phone that already migrated can restore a backup
+/// JSON onto a V1 build only after the V2 rows are gone (delete and
+/// reinstall, then restore). See docs/specs/schema-v2-rollback.md.
+nonisolated enum RockLogSchemaV2: VersionedSchema {
+    nonisolated static var versionIdentifier: Schema.Version {
+        Schema.Version(2, 0, 0)
     }
 
-    /// Empty until the next schema version.
-    nonisolated static var stages: [MigrationStage] { [] }
+    nonisolated static var models: [any PersistentModel.Type] {
+        RockLogSchemaV1.models + [
+            Gym.self,
+            MachineStackProfile.self,
+        ]
+    }
+}
+
+nonisolated enum RockLogMigrationPlan: SchemaMigrationPlan {
+    nonisolated static var schemas: [any VersionedSchema.Type] {
+        [RockLogSchemaV1.self, RockLogSchemaV2.self]
+    }
+
+    nonisolated static var stages: [MigrationStage] {
+        [
+            .lightweight(
+                fromVersion: RockLogSchemaV1.versionIdentifier,
+                toVersion: RockLogSchemaV2.versionIdentifier
+            ),
+        ]
+    }
 }

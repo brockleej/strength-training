@@ -280,6 +280,7 @@ struct TrainingSplitSettingsView: View {
         })
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(weekPosition). \(day.name)")
+        .accessibilityIdentifier(AccessibilityID.splitDay(day.name))
         .accessibilityHint("Long press the number and drag to reorder, swipe left to delete, double tap to edit")
     }
 

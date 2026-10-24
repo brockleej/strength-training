@@ -20,6 +20,8 @@ struct FocusView: View {
     var onPrevious: (() -> Void)? = nil
     /// Mark this lift done and jump to the next unfinished (nil = mark only).
     var onMarkDoneAndAdvance: (() -> Void)? = nil
+    /// Circuit auto-advance. Previous and Next stay on the session-list rule.
+    var onJumpTo: ((UUID) -> Void)? = nil
 
     @Environment(\.dismiss) private var dismiss
     @State private var focusVM: FocusViewModel?
@@ -143,6 +145,7 @@ struct FocusView: View {
                 .buttonStyle(.plain)
                 .frame(minHeight: 44)
                 .contentShape(Rectangle())
+                .accessibilityIdentifier(AccessibilityID.focusBack)
                 .accessibilityLabel("Back to workout")
                 .accessibilityHint("Return to the workout exercise list to finish or change lifts")
 
@@ -160,6 +163,10 @@ struct FocusView: View {
             if !isNoteEditing, let focusVM {
                 VStack(spacing: 12) {
                     stepperFooter(focusVM)
+                    comparisonLine(focusVM)
+                    loadAndStackRow
+                    carryUndoLine
+                    warmupRampRow(focusVM)
                     actionBar(focusVM)
                 }
                 .padding(.top, 8)
@@ -185,7 +192,8 @@ struct FocusView: View {
             }
         }
         .onChange(of: workoutVM.selectedMode) {
-            focusVM?.apply(prefill: currentPrefill())
+            let opening = currentPrefill()
+            focusVM?.apply(prefill: opening.0, openingLine: opening.1)
         }
         .onChange(of: exercise.id) { _, _ in
             focusVM = makeFocusVM()
@@ -256,11 +264,11 @@ struct FocusView: View {
                     plannedSets: planned,
                     selectedSetID: focusVM.editingSetID,
                     onSelect: { set in
-                        focusVM.toggleEdit(set: set, prefillIfCancel: currentPrefill())
+                        focusVM.toggleEdit(set: set, prefillIfCancel: currentPrefill().0)
                     },
                     onDelete: { set in
                         withAnimation(.easeInOut(duration: 0.2)) {
-                            focusVM.clearEditIfMatching(set, restore: currentPrefill())
+                            focusVM.clearEditIfMatching(set, restore: currentPrefill().0)
                             workoutVM.deleteSet(set, from: exercise)
                         }
                     },
@@ -317,6 +325,7 @@ struct FocusView: View {
                                     .background(Circle().fill(Color.uplift.surface1))
                             }
                             .buttonStyle(.plain)
+                            .accessibilityIdentifier(AccessibilityID.focusPrevious)
                             .accessibilityLabel("Previous exercise")
                         }
                         if hasNext {
@@ -335,6 +344,7 @@ struct FocusView: View {
                                 .background(Capsule().fill(Color.uplift.accent))
                             }
                             .buttonStyle(.plain)
+                            .accessibilityIdentifier(AccessibilityID.focusNext)
                             .accessibilityLabel("Next unfinished exercise")
                         }
                     }
@@ -357,6 +367,12 @@ struct FocusView: View {
 
     private var overflowMenu: some View {
         Menu {
+            Button {
+                workoutVM.presentSessionReorder = true
+            } label: {
+                Label("Reorder today's list", systemImage: "arrow.up.arrow.down")
+            }
+            .accessibilityIdentifier(AccessibilityID.workoutReorder)
             Button {
                 showEditExercise = true
             } label: {
@@ -397,7 +413,10 @@ struct FocusView: View {
 
     private func makeFocusVM() -> FocusViewModel {
         // Prefill already sets isAssisted when assistance is preferred; no second flip.
-        return FocusViewModel(prefill: currentPrefill())
+        let opening = currentPrefill()
+        let model = FocusViewModel(prefill: opening.0)
+        model.openingLineText = opening.1
+        return model
     }
 
     private func stepperFooter(_ focusVM: FocusViewModel) -> some View {
@@ -405,7 +424,7 @@ struct FocusView: View {
         return HStack(spacing: 10) {
             UpliftStepper(
                 label: vm.isAssisted ? "Assist" : "Weight",
-                unit: "lb",
+                unit: MassUnitPreferences.unit.rawValue,
                 value: $vm.weight, step: focusVM.weightStep, range: 0...1000,
                 targetDelta: vm.isAssisted ? nil : focusVM.weightDelta,
                 onUserEdit: { focusVM.userEdited() },
@@ -434,6 +453,28 @@ struct FocusView: View {
             )
         }
         .padding(.horizontal, 12)
+    }
+
+    private func comparisonLine(_ focusVM: FocusViewModel) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            if !focusVM.openingLineText.isEmpty {
+                Text(focusVM.openingLineText)
+                    .font(.uplift.text(12, weight: .medium))
+                    .foregroundStyle(Color.uplift.fgMuted)
+                    .accessibilityIdentifier(AccessibilityID.focusComparison)
+            }
+            if !focusVM.isAssisted {
+                let unit = MassUnitPreferences.unit
+                let shown = MassMath.display(fromPounds: focusVM.weight, unit: unit)
+                Text(MassMath.plates(forTotal: shown, unit: unit).text)
+                    .font(.uplift.mono(11, weight: .medium))
+                    .foregroundStyle(Color.uplift.fgDim)
+                    .accessibilityIdentifier(AccessibilityID.focusPlates)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 16)
+        .padding(.top, 6)
     }
 
     private func actionBar(_ focusVM: FocusViewModel) -> some View {
@@ -470,6 +511,7 @@ struct FocusView: View {
                         }
                     }
                     .buttonStyle(.plain)
+                    .accessibilityIdentifier(AccessibilityID.focusWarmup)
                     .accessibilityLabel(vm.isWarmup ? "Warm-up on" : "Warm-up off")
                     .accessibilityAddTraits(vm.isWarmup ? [.isSelected] : [])
 
@@ -491,13 +533,18 @@ struct FocusView: View {
                         .foregroundStyle(Color.uplift.onAccent)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityIdentifier(
+                        focusVM.isEditingSet ? AccessibilityID.focusUpdateSet : AccessibilityID.focusLogSet
+                    )
 
                     doneWithLiftButton
                 }
 
                 if focusVM.isEditingSet {
                     Button {
-                        focusVM.cancelEdit(restore: currentPrefill())
+                        let opening = currentPrefill()
+                        focusVM.openingLineText = opening.1
+                        focusVM.cancelEdit(restore: opening.0)
                     } label: {
                         Text("Cancel edit")
                             .font(.uplift.text(13, weight: .semibold))
@@ -506,6 +553,7 @@ struct FocusView: View {
                             .padding(.vertical, 6)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityIdentifier(AccessibilityID.focusCancelEdit)
                 }
             }
             .padding(.horizontal, 16)
@@ -547,6 +595,7 @@ struct FocusView: View {
             }
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier(AccessibilityID.focusDone)
         .accessibilityLabel(done ? "Resume this lift" : "Done with this lift")
         .accessibilityHint(
             done
@@ -600,7 +649,7 @@ struct FocusView: View {
                                     .contentTransition(.numericText())
                             }
                         } else if timerOn {
-                            Text(timeString(from: wvm.targetRestSeconds))
+                            Text(timeString(from: Double(wvm.restSeconds(for: exercise))))
                                 .font(.uplift.mono(26, weight: .bold))
                                 .monospacedDigit()
                                 .foregroundStyle(Color.uplift.fgMuted)
@@ -620,23 +669,26 @@ struct FocusView: View {
             Spacer(minLength: 4)
 
             if showCountdown {
-                restControlChip("−30") {
-                    wvm.addRestTime(-30)
+                restControlChip("−15") {
+                    wvm.addRestTime(-15)
                 }
-                .accessibilityLabel("Subtract 30 seconds")
+                .accessibilityIdentifier(AccessibilityID.restMinus)
+                .accessibilityLabel("Subtract 15 seconds")
 
-                restControlChip("+30") {
-                    wvm.addRestTime(30)
+                restControlChip("+15") {
+                    wvm.addRestTime(15)
                 }
-                .accessibilityLabel("Add 30 seconds")
+                .accessibilityIdentifier(AccessibilityID.restPlus)
+                .accessibilityLabel("Add 15 seconds")
 
                 restControlChip("Skip", muted: true) {
                     wvm.skipRest()
                 }
+                .accessibilityIdentifier(AccessibilityID.restSkip)
                 .accessibilityLabel("Skip rest")
             } else {
                 Button {
-                    wvm.startRest()
+                    wvm.startRest(exercise: exercise)
                 } label: {
                     Text("Start")
                         .font(.uplift.text(14, weight: .semibold))
@@ -647,7 +699,7 @@ struct FocusView: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Start rest timer")
-                .accessibilityHint("Starts a \(timeString(from: wvm.targetRestSeconds)) rest countdown")
+                .accessibilityHint("Starts a \(timeString(from: Double(wvm.restSeconds(for: exercise)))) rest countdown")
             }
         }
         .padding(.horizontal, 14)
@@ -687,7 +739,7 @@ struct FocusView: View {
             return "Resting, \(timeString(from: workoutVM.remainingRestSeconds)) remaining. Auto-rest for this lift is \(timerOn ? "on" : "off")."
         }
         if timerOn {
-            return "Auto-rest on for this lift, \(timeString(from: workoutVM.targetRestSeconds)). Tap to turn off auto-rest."
+            return "Auto-rest on for this lift, \(timeString(from: Double(workoutVM.restSeconds(for: exercise)))). Tap to turn off auto-rest."
         }
         return "Auto-rest off for this lift. Tap to turn on, or use Start for a manual rest."
     }
@@ -717,12 +769,11 @@ struct FocusView: View {
         )
     }
 
-    private func currentPrefill() -> FocusTargetLogic.Prefill {
+    private func currentPrefill() -> (FocusTargetLogic.Prefill, String) {
         let sessionLast: FocusTargetLogic.SessionLastSet? = {
             guard let last = loggedSets.last else { return nil }
             return FocusTargetLogic.sessionSet(from: last)
         }()
-        // Next set # this session (1-based) → same slot from last completed session.
         let nextSetNumber = loggedSets.count + 1
         let plannedForNext: FocusTargetLogic.SessionLastSet? = {
             guard nextSetNumber >= 1, nextSetNumber <= plannedSetsForCard.count else { return nil }
@@ -735,28 +786,68 @@ struct FocusView: View {
                 isAssisted: p.isAssisted
             )
         }()
-        let historicalSet = plannedForNext ?? FocusTargetLogic.historicalSet(
+        let historicalOnly = FocusTargetLogic.historicalSet(
             fromPriorSets: lastCompletedRecord?.loggedSetsArray ?? [],
             nextSetNumber: nextSetNumber
         )
         let mode = SetPrefillPreferences.mode
-        // Assist preference: history/session flags, else lift preference.
-        let preferAssist = historicalSet?.isAssisted == true
+        let preferAssist = plannedForNext?.isAssisted == true
+            || historicalOnly?.isAssisted == true
             || sessionLast?.isAssisted == true
-            || (sessionLast == nil && historicalSet == nil && (
+            || (sessionLast == nil && historicalOnly == nil && (
                 lastCompletedRecord?.loggedSetsArray.contains(where: { $0.isAssisted && !$0.isWarmup }) == true
                 || ExerciseAssistPreferences.prefersAssist(for: exercise.id)
+                || exercise.loadMode == .assist
             ))
-        return FocusTargetLogic.prefill(
+        let body = workoutVM.bodyWeightPoundsForLogging()
+        let legacy = FocusTargetLogic.prefill(
             suggestion: workoutVM.suggestion(for: exercise, mode: workoutVM.selectedMode),
             recent: workoutVM.recentAverage(for: exercise, mode: workoutVM.selectedMode),
             lastBest: lastSessionBestSet(),
-            sessionLast: sessionLast,
-            historicalSet: historicalSet,
+            sessionLast: nil,
+            historicalSet: nil,
             prefillMode: mode,
             preferAssistance: preferAssist,
-            bodyWeightLbs: BodyWeightPreferences.pounds
+            bodyWeightLbs: body
         )
+        let stack = workoutVM.stackDefinition(for: exercise)
+        let asEntered: (Double) -> Double = { effective in
+            guard preferAssist else { return effective }
+            return LoadMath.entered(fromEffective: effective, mode: .assist, bodyWeight: body)
+        }
+        let suggestionPair = workoutVM.suggestion(for: exercise, mode: workoutVM.selectedMode).map {
+            WeightReps(weight: asEntered($0.targetWeight), reps: $0.targetReps)
+        }
+        let resolved = StartingWeight.resolve(StartingWeight.Input(
+            setNumber: nextSetNumber,
+            loggedCount: loggedSets.count,
+            plan: plannedForNext.map { WeightReps(weight: $0.weight, reps: $0.reps, isWarmup: $0.isWarmup) },
+            lastTimeSameSet: historicalOnly.map { WeightReps(weight: $0.weight, reps: $0.reps) },
+            lastTimeBest: lastSessionBestSet().map { WeightReps(weight: asEntered($0.weight), reps: $0.reps) },
+            suggestion: suggestionPair,
+            sessionLast: sessionLast.map { WeightReps(weight: $0.weight, reps: $0.reps) },
+            repeatLastSet: mode == .repeatLast,
+            starting: StartingWeightPreferences.choice,
+            stack: stack
+        ))
+        var weight = resolved.weight
+        var reps = resolved.reps
+        if let carried = workoutVM.carriedOpening(for: exercise, setNumber: nextSetNumber) {
+            weight = carried.displayWeight
+            reps = carried.reps
+        }
+        let unit = MassUnitPreferences.unit
+        let displayWeight = MassMath.display(fromPounds: weight, unit: unit)
+        let prefill = FocusTargetLogic.Prefill(
+            weight: displayWeight,
+            reps: reps,
+            weightDelta: plannedForNext == nil ? legacy.weightDelta : nil,
+            repsDelta: plannedForNext == nil ? legacy.repsDelta : nil,
+            isWarmup: WarmupPolicy.nextTag(planSaysWarmup: resolved.isWarmup),
+            isEachSide: plannedForNext?.isEachSide ?? sessionLast?.isEachSide ?? false,
+            isAssisted: preferAssist || exercise.loadMode == .assist
+        )
+        return (prefill, resolved.line.text(unit: unit))
     }
 
     /// Best working set of the most recent completed session — dress baseline
@@ -810,17 +901,23 @@ struct FocusView: View {
     }
 
     private func commitSet(_ focusVM: FocusViewModel) {
-        // Snap to half-pound grid so 0.5 steps stay clean.
-        let weight = (focusVM.weight * 2).rounded() / 2
+        let unit = MassUnitPreferences.unit
+        let weight = MassMath.storedPounds(fromEntered: focusVM.weight, unit: unit)
+        let offered = MassMath.storedPounds(fromEntered: focusVM.offeredWeight, unit: unit)
         let reps = max(1, Int(focusVM.reps.rounded()))
         let isWarmup = focusVM.isWarmup
         let isEachSide = focusVM.isEachSide
-        let isAssisted = focusVM.isAssisted
-        focusVM.weight = weight
+        let isAssisted = focusVM.isAssisted || exercise.loadMode == .assist
+        focusVM.weight = MassMath.display(fromPounds: weight, unit: unit)
         ExerciseAssistPreferences.setPrefersAssist(isAssisted, for: exercise.id)
+        let loggedTheOffer = abs(weight - offered) <= 0.25
+        let setNumber = (focusVM.editingSetID.flatMap { id in loggedSets.first { $0.id == id }?.setNumber })
+            ?? (loggedSets.count + 1)
 
         if let editingID = focusVM.editingSetID,
            let set = loggedSets.first(where: { $0.id == editingID }) {
+            let previousWeight = set.weightLbs
+            let repsOnly = abs(previousWeight - weight) <= 0.25 && set.reps != reps
             workoutVM.updateSet(
                 set,
                 weight: weight,
@@ -828,6 +925,14 @@ struct FocusView: View {
                 isWarmup: isWarmup,
                 isEachSide: isEachSide,
                 isAssisted: isAssisted
+            )
+            workoutVM.applyCarry(
+                exercise: exercise,
+                setNumber: set.setNumber,
+                newWeight: weight,
+                isWarmup: isWarmup,
+                loggedTheOffer: abs(previousWeight - weight) <= 0.25,
+                repsOnly: repsOnly
             )
             focusVM.clearSelectionAfterSave()
             return
@@ -839,11 +944,110 @@ struct FocusView: View {
             reps: reps,
             isWarmup: isWarmup,
             isEachSide: isEachSide,
-            isAssisted: isAssisted
+            isAssisted: isAssisted,
+            offeredWeight: offered,
+            loadMode: exercise.loadMode == .bar && isAssisted ? .assist : exercise.loadMode
         )
-        // Seed steppers for the *next* set (repeat last vs match last session).
-        focusVM.apply(prefill: currentPrefill())
+        workoutVM.applyCarry(
+            exercise: exercise,
+            setNumber: setNumber,
+            newWeight: weight,
+            isWarmup: isWarmup,
+            loggedTheOffer: loggedTheOffer,
+            repsOnly: false
+        )
+        workoutVM.markCarryRowLogged(exercise: exercise, setNumber: setNumber)
+        let opening = currentPrefill()
+        focusVM.apply(prefill: opening.0, openingLine: opening.1)
         workoutVM.startRestAfterSet(for: exercise)
+        if let nextID = workoutVM.circuitNext(after: exercise, wasWarmup: isWarmup) {
+            onJumpTo?(nextID)
+        }
+    }
+
+    private var loadAndStackRow: some View {
+        HStack(spacing: 8) {
+            Menu {
+                ForEach(LoadMode.allCases, id: \.self) { mode in
+                    Button(mode.title) {
+                        exercise.loadMode = mode
+                        try? workoutVM.modelContext.save()
+                    }
+                }
+            } label: {
+                Text(exercise.loadMode.title)
+                    .font(.uplift.text(12, weight: .semibold))
+                    .foregroundStyle(Color.uplift.fg)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Capsule().fill(Color.uplift.surface1))
+            }
+            .accessibilityIdentifier(AccessibilityID.focusLoadMode)
+
+            Menu {
+                Button("5") { workoutVM.applyTypedStack(exercise: exercise, step: 5, pins: []) }
+                Button("10") { workoutVM.applyTypedStack(exercise: exercise, step: 10, pins: []) }
+                Button("15") { workoutVM.applyTypedStack(exercise: exercise, step: 15, pins: []) }
+                Button("20") { workoutVM.applyTypedStack(exercise: exercise, step: 20, pins: []) }
+                Button("Clear learned") { workoutVM.clearLearnedStack(exercise: exercise) }
+            } label: {
+                Text("Stack")
+                    .font(.uplift.text(12, weight: .semibold))
+                    .foregroundStyle(Color.uplift.fgMuted)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Capsule().fill(Color.uplift.surface1))
+            }
+            .accessibilityIdentifier(AccessibilityID.stackOverride)
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 16)
+    }
+
+    private var carryUndoLine: some View {
+        Group {
+            if let line = workoutVM.carryLine(for: exercise) {
+                HStack(spacing: 8) {
+                    Text(line)
+                        .font(.uplift.text(12, weight: .medium))
+                        .foregroundStyle(Color.uplift.fg)
+                    Spacer(minLength: 0)
+                    Button("Undo") { workoutVM.undoCarry(for: exercise) }
+                        .font(.uplift.text(13, weight: .semibold))
+                        .foregroundStyle(Color.uplift.accent)
+                        .accessibilityIdentifier(AccessibilityID.focusCarryUndo)
+                }
+                .padding(.horizontal, 16)
+            }
+        }
+    }
+
+    private func warmupRampRow(_ focusVM: FocusViewModel) -> some View {
+        Group {
+            if exercise.suggestWarmupRamp, loggedSets.isEmpty {
+                let working = MassMath.storedPounds(fromEntered: focusVM.offeredWeight, unit: MassUnitPreferences.unit)
+                let ramp = WarmupPolicy.ramp(workingWeight: working, stackStep: workoutVM.stackDefinition(for: exercise)?.step)
+                if !ramp.isEmpty {
+                    HStack(spacing: 8) {
+                        ForEach(Array(ramp.enumerated()), id: \.offset) { _, step in
+                            Button {
+                                focusVM.loadFromHistory(weight: MassMath.display(fromPounds: step.weight, unit: MassUnitPreferences.unit), reps: step.reps, isWarmup: true)
+                            } label: {
+                                Text("\(MassMath.format(step.weight, unit: MassUnitPreferences.unit))×\(step.reps)")
+                                    .font(.uplift.mono(11, weight: .semibold))
+                                    .foregroundStyle(Color.uplift.customBadge)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 6)
+                                    .background(Capsule().fill(Color.uplift.customBadge.opacity(0.16)))
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityIdentifier(AccessibilityID.focusWarmupRamp)
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                }
+            }
+        }
     }
 }
 

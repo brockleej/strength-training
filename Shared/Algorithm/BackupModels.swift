@@ -23,6 +23,10 @@ struct AppBackup: Codable {
     /// Home measurements (weight, girths). Same nil-vs-empty rule as `trainingBlocks`:
     /// nil preserves rows already on the phone; an array replaces them.
     let bodyMetrics: [BodyMetricBackup]?
+    /// Gyms. Nil preserves the phone's gyms (older files). An array replaces them.
+    let gyms: [GymBackup]?
+    /// Stack profiles keyed by gym and lift. Same nil-vs-empty rule.
+    let stackProfiles: [StackProfileBackup]?
 
     init(
         version: Int,
@@ -32,7 +36,9 @@ struct AppBackup: Codable {
         splitDays: [SplitDayBackup]? = nil,
         dayPlans: [DayPlanBackup]? = nil,
         trainingBlocks: [TrainingBlockBackup]? = nil,
-        bodyMetrics: [BodyMetricBackup]? = nil
+        bodyMetrics: [BodyMetricBackup]? = nil,
+        gyms: [GymBackup]? = nil,
+        stackProfiles: [StackProfileBackup]? = nil
     ) {
         self.version = version
         self.exportedAt = exportedAt
@@ -42,7 +48,34 @@ struct AppBackup: Codable {
         self.dayPlans = dayPlans
         self.trainingBlocks = trainingBlocks
         self.bodyMetrics = bodyMetrics
+        self.gyms = gyms
+        self.stackProfiles = stackProfiles
     }
+}
+
+struct GymBackup: Codable, Equatable {
+    var id: UUID
+    var name: String
+    var isHome: Bool
+    var createdAt: Date
+    var sortOrder: Int
+}
+
+struct StackProfileBackup: Codable, Equatable {
+    var id: UUID
+    var gymID: UUID
+    var exerciseID: UUID
+    var stepPounds: Double
+    var pinsRaw: String
+    var pinUnitRaw: String
+    var addOnsRaw: String
+    var policyRaw: String
+    var originRaw: String
+    var learnedSessionIDsRaw: String
+    var clearedAt: Date?
+    var learningEnabled: Bool
+    var rangeMin: Double
+    var rangeMax: Double
 }
 
 /// One body-measurement row. `kindRaw` is `BodyMetricKind.rawValue`.
@@ -128,6 +161,12 @@ struct ExerciseBackup: Codable {
     let extraDayTypes: String?
     /// Per-day list order (`Push:0,Legs:3`) — optional for older backups.
     let daySortOrdersRaw: String?
+    /// 0 or missing means the seed / Settings rest still applies.
+    let defaultRestSeconds: Int?
+    /// Missing means the lift follows the global rest switch.
+    let autoRestEnabled: Bool?
+    /// "bar", "assist", "added", or missing.
+    let loadModeRaw: String?
 
     init(
         id: UUID,
@@ -139,7 +178,10 @@ struct ExerciseBackup: Codable {
         notes: String,
         rotationTrack: String? = nil,
         extraDayTypes: String? = nil,
-        daySortOrdersRaw: String? = nil
+        daySortOrdersRaw: String? = nil,
+        defaultRestSeconds: Int? = nil,
+        autoRestEnabled: Bool? = nil,
+        loadModeRaw: String? = nil
     ) {
         self.id = id
         self.name = name
@@ -151,6 +193,9 @@ struct ExerciseBackup: Codable {
         self.rotationTrack = rotationTrack
         self.extraDayTypes = extraDayTypes
         self.daySortOrdersRaw = daySortOrdersRaw
+        self.defaultRestSeconds = defaultRestSeconds
+        self.autoRestEnabled = autoRestEnabled
+        self.loadModeRaw = loadModeRaw
     }
 }
 
@@ -207,6 +252,32 @@ struct ExerciseRecordBackup: Codable {
     let isCompleted: Bool
     let notes: String
     let sets: [SetRecordBackup]
+    /// Circuit id. Missing means the lift is not in a group.
+    let groupID: UUID?
+    /// 1...4, or missing.
+    let groupPosition: Int?
+
+    init(
+        id: UUID,
+        exerciseID: UUID?,
+        trainingMode: String,
+        sortOrder: Int,
+        isCompleted: Bool,
+        notes: String,
+        sets: [SetRecordBackup],
+        groupID: UUID? = nil,
+        groupPosition: Int? = nil
+    ) {
+        self.id = id
+        self.exerciseID = exerciseID
+        self.trainingMode = trainingMode
+        self.sortOrder = sortOrder
+        self.isCompleted = isCompleted
+        self.notes = notes
+        self.sets = sets
+        self.groupID = groupID
+        self.groupPosition = groupPosition
+    }
 }
 
 struct SetRecordBackup: Codable {
@@ -221,6 +292,11 @@ struct SetRecordBackup: Codable {
     let completedAt: Date
     /// Optional for older backups that predate plan targets.
     let isTarget: Bool?
+    let offeredWeightLbs: Double?
+    let loadModeRaw: String?
+    let bodyWeightUsedLbs: Double?
+    let plannedRestSeconds: Int?
+    let actualRestSeconds: Int?
 
     init(
         id: UUID,
@@ -231,7 +307,12 @@ struct SetRecordBackup: Codable {
         isEachSide: Bool = false,
         isAssisted: Bool = false,
         completedAt: Date,
-        isTarget: Bool = false
+        isTarget: Bool = false,
+        offeredWeightLbs: Double? = nil,
+        loadModeRaw: String? = nil,
+        bodyWeightUsedLbs: Double? = nil,
+        plannedRestSeconds: Int? = nil,
+        actualRestSeconds: Int? = nil
     ) {
         self.id = id
         self.setNumber = setNumber
@@ -242,6 +323,11 @@ struct SetRecordBackup: Codable {
         self.isAssisted = isAssisted
         self.completedAt = completedAt
         self.isTarget = isTarget
+        self.offeredWeightLbs = offeredWeightLbs
+        self.loadModeRaw = loadModeRaw
+        self.bodyWeightUsedLbs = bodyWeightUsedLbs
+        self.plannedRestSeconds = plannedRestSeconds
+        self.actualRestSeconds = actualRestSeconds
     }
 
     var resolvedEachSide: Bool { isEachSide ?? false }

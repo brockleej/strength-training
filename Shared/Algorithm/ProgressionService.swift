@@ -33,7 +33,8 @@ struct ProgressionService {
     static func suggestion(
         records: [ExerciseRecordSnapshot],
         mode: TrainingMode,
-        params: ProgressionParameters
+        params: ProgressionParameters,
+        snap: (Double) -> Double = snap5
     ) -> ProgressionSuggestion? {
         let filtered = records.filter { $0.trainingMode == mode }
 
@@ -44,7 +45,7 @@ struct ProgressionService {
         guard filtered.count >= 2 else {
             guard let first = filtered.first, let best = bestSet(in: first) else { return nil }
             return ProgressionSuggestion(
-                targetWeight: snap5(best.weightLbs),
+                targetWeight: snap(best.weightLbs),
                 targetReps: best.reps,
                 basis: .notEnoughData
             )
@@ -80,13 +81,13 @@ struct ProgressionService {
 
         if isConsistent {
             return ProgressionSuggestion(
-                targetWeight: snap5(avg.weight + params.weightIncrement),
+                targetWeight: snap(avg.weight + params.weightIncrement),
                 targetReps: avg.reps,
                 basis: .consistent
             )
         } else {
             return ProgressionSuggestion(
-                targetWeight: snap5(avg.weight),
+                targetWeight: snap(avg.weight),
                 targetReps: avg.reps + params.repIncrement,
                 basis: .improving
             )

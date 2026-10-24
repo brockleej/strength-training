@@ -91,6 +91,8 @@ nonisolated struct CoachSessionPayload: Codable, Hashable, Identifiable, Sendabl
     var notes: String?
     var effortRating: Int?
     var exercises: [CoachExercisePayload]
+    /// Gym the athlete trained in. Missing on files from before the gym selector.
+    var gymID: UUID? = nil
 }
 
 nonisolated struct CoachExercisePayload: Codable, Hashable, Identifiable, Sendable {
@@ -100,6 +102,11 @@ nonisolated struct CoachExercisePayload: Codable, Hashable, Identifiable, Sendab
     var trainingMode: String?
     var notes: String?
     var sets: [CoachSetPayload]
+    var groupID: UUID? = nil
+    var groupPosition: Int? = nil
+    var restSeconds: Int? = nil
+    /// Learned or typed stack step, in pounds, when the phone sent one.
+    var stackStepPounds: Double? = nil
 }
 
 nonisolated struct CoachSetPayload: Codable, Hashable, Sendable {
@@ -110,8 +117,28 @@ nonisolated struct CoachSetPayload: Codable, Hashable, Sendable {
     var isEachSide: Bool?
     var isAssisted: Bool?
     var completedAt: Date?
+    /// "bar", "assist", or "added". Missing means bar, or assist when `isAssisted` is true.
+    var loadMode: String? = nil
+    /// Body weight used that day, in pounds. Required for a fair assist / added comparison.
+    var bodyWeightLbs: Double? = nil
 
     var resolvedWarmup: Bool { isWarmup ?? false }
+
+    /// Effective load. Less assistance is a heavier load. Missing body weight contributes nothing for assist and added.
+    var effectiveLoadLbs: Double {
+        let mode = loadMode ?? (resolvedAssisted ? "assist" : "bar")
+        let body = bodyWeightLbs ?? 0
+        switch mode {
+        case "assist":
+            guard body > 0 else { return 0 }
+            return max(0, body - weightLbs)
+        case "added":
+            guard body > 0 else { return 0 }
+            return max(0, body + weightLbs)
+        default:
+            return max(0, weightLbs)
+        }
+    }
     var resolvedEachSide: Bool { isEachSide ?? false }
     var resolvedAssisted: Bool { isAssisted ?? false }
 }
@@ -172,7 +199,7 @@ nonisolated enum CoachSessionCodec {
     }
 
     static func decodeFile(_ data: Data) throws -> CoachFile {
-        let data = stripBOM(data)
+        let data = try legacyBytes(stripBOM(data))
         let peek = try decoder.decode(FormatPeek.self, from: data)
         switch peek.format {
         case CoachFormat.formatName:
@@ -212,6 +239,30 @@ nonisolated enum CoachSessionCodec {
 
     private static func sanitized(_ name: String) -> String {
         name.replacingOccurrences(of: " ", with: "-")
+    }
+
+    /// Interchange coach files unwrap to the legacy document. Older files pass through.
+    static func legacyBytes(_ data: Data) throws -> Data {
+        guard InterchangeCodec.isInterchange(data) else { return data }
+        let kind = try InterchangeCodec.kind(of: data)
+        guard kind == .coachSession || kind == .coachBatch else {
+            throw CoachSessionDocument.CoachFormatError.wrongFormat(kind.rawValue)
+        }
+        return try InterchangeCodec.downgradeToLegacy(data)
+    }
+
+    static func interchangeData(for document: CoachSessionDocument) throws -> Data {
+        try interchangeEnvelope(encode(document), kind: .coachSession, exportedAt: document.exportedAt)
+    }
+
+    static func interchangeData(for document: CoachBatchDocument) throws -> Data {
+        try interchangeEnvelope(encode(document), kind: .coachBatch, exportedAt: document.exportedAt)
+    }
+
+    private static func interchangeEnvelope(_ payload: Data, kind: InterchangeKind, exportedAt: Date) throws -> Data {
+        let object = try InterchangeCodec.parseObject(payload)
+        let stamp = ISO8601DateFormatter().string(from: exportedAt)
+        return try InterchangeCodec.encode(InterchangeCodec.wrap(kind: kind, payload: object, exportedAt: stamp))
     }
 
     private static func stripBOM(_ data: Data) -> Data {

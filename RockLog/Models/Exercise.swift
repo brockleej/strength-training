@@ -26,6 +26,16 @@ final class Exercise {
     var rotationTrack: String = ""
     /// Per-day list order: "Push:0,Legs:3". Falls back to `sortOrder` when missing.
     var daySortOrdersRaw: String = ""
+    /// 0 means he has not chosen a rest. The seed or the Settings duration applies.
+    var defaultRestSeconds: Int = 0
+    /// Separate from the countdown length. Off means logging does not start a timer.
+    var autoRestEnabled: Bool = true
+    /// True after the old per-lift UserDefaults flag has been copied onto this row.
+    var autoRestCopied: Bool = false
+    /// "" keeps the legacy reading (assist when a set says so, otherwise bar).
+    var loadModeRaw: String = ""
+    /// When on, the lift screen can offer a warm-up ramp. Logging it is still his tap.
+    var suggestWarmupRamp: Bool = false
 
     @Relationship(deleteRule: .cascade, inverse: \ExerciseRecord.exercise)
     var records: [ExerciseRecord]?
@@ -50,6 +60,16 @@ final class Exercise {
     /// UI label: `"Chest · Triceps · Shoulders"`.
     var muscleGroupsDisplay: String {
         muscleGroupNames.joined(separator: " · ")
+    }
+
+    var loadMode: LoadMode {
+        get { LoadMode(stored: loadModeRaw, isAssisted: false) }
+        set { loadModeRaw = newValue.rawValue }
+    }
+
+    func resolvedRestSeconds(settingsFallback: Int) -> Int {
+        if defaultRestSeconds > 0 { return defaultRestSeconds }
+        return RestSeed.seconds(name: name, muscles: muscleGroup, settingsFallback: settingsFallback)
     }
 
     func trainsMuscle(_ name: String) -> Bool {

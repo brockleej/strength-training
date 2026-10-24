@@ -5,6 +5,16 @@
 
 import Foundation
 
+/// The gym id rides on the coach file when the store already has a gym.
+/// A container that predates the gym model exports without one.
+@MainActor
+func coachGymID(in context: ModelContext?) -> UUID? {
+    guard let context, let gyms = try? context.fetch(FetchDescriptor<Gym>()), !gyms.isEmpty else {
+        return nil
+    }
+    return GymLibrary.activeID(in: context)
+}
+
 enum CoachExportError: LocalizedError {
     case noWorkingSets
     case nothingNewSinceLastShare
@@ -47,7 +57,9 @@ enum CoachExportService {
                         isWarmup: set.isWarmup,
                         isEachSide: set.isEachSide,
                         isAssisted: set.isAssisted,
-                        completedAt: set.completedAt
+                        completedAt: set.completedAt,
+                        loadMode: set.loadModeRaw.isEmpty ? (set.isAssisted ? "assist" : nil) : set.loadModeRaw,
+                        bodyWeightLbs: set.bodyWeightUsedLbs > 0 ? set.bodyWeightUsedLbs : nil
                     )
                 }
             guard !sets.isEmpty else { continue }
@@ -62,7 +74,11 @@ enum CoachExportService {
                     muscleGroup: (muscle?.isEmpty == false) ? muscle : nil,
                     trainingMode: record.trainingMode.rawValue,
                     notes: notes.isEmpty ? nil : notes,
-                    sets: sets
+                    sets: sets,
+                    groupID: record.groupID,
+                    groupPosition: record.groupPosition > 0 ? record.groupPosition : nil,
+                    restSeconds: record.exercise?.defaultRestSeconds ?? 0 > 0 ? record.exercise?.defaultRestSeconds : nil,
+                    stackStepPounds: nil
                 )
             )
         }
@@ -83,7 +99,8 @@ enum CoachExportService {
                 rotationTrack: track.isEmpty ? nil : track,
                 notes: notes.isEmpty ? nil : notes,
                 effortRating: session.effortRating,
-                exercises: exercises
+                exercises: exercises,
+                gymID: coachGymID(in: session.modelContext)
             )
         )
     }
@@ -112,7 +129,7 @@ enum CoachExportService {
         let data: Data
         let filename: String
         if documents.count == 1 {
-            data = try CoachSessionCodec.encode(first)
+            data = try CoachSessionCodec.interchangeData(for: first)
             filename = CoachSessionCodec.suggestedFilename(for: first)
         } else {
             let batch = CoachBatchDocument(
@@ -122,7 +139,7 @@ enum CoachExportService {
                 athlete: athlete,
                 sessions: documents.map(\.session)
             )
-            data = try CoachSessionCodec.encode(batch)
+            data = try CoachSessionCodec.interchangeData(for: batch)
             filename = CoachSessionCodec.suggestedFilename(for: batch)
         }
 

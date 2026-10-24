@@ -379,6 +379,7 @@ struct TodayView: View {
                 }
             }
             .buttonStyle(.plain)
+            .accessibilityIdentifier(AccessibilityID.todayGymPass)
             .accessibilityLabel("Show gym membership barcode")
         }
         .padding(.top, 12)
@@ -425,6 +426,7 @@ struct TodayView: View {
                         suggestedTrack: { workoutVM.suggestedRotationTrack(for: $0) }
                     )
                 }
+                .accessibilityIdentifier(AccessibilityID.todayDay(dayType.rawValue))
             }
         }
     }
@@ -505,6 +507,7 @@ struct TodayView: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier(AccessibilityID.todayEditDay)
         .accessibilityLabel("Edit \(todayVM.selectedDayType.rawValue) exercise list")
         .accessibilityHint("Edit this day's exercise list without starting a workout")
     }
@@ -526,6 +529,7 @@ struct TodayView: View {
             .foregroundStyle(Color.uplift.onAccent)
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier(AccessibilityID.todayStart)
     }
 
     private var unusedPlannedSessions: [WorkoutSession] {
@@ -600,6 +604,7 @@ struct TodayView: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier(AccessibilityID.todayCancel)
     }
 
     @ViewBuilder

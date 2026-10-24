@@ -169,6 +169,11 @@ struct UpliftStepper: View {
             .frame(width: 44, height: 44)
             .background { Circle().fill(isTarget ? Color.uplift.accentSoft : Color.uplift.surface2) }
             .contentShape(Circle())
+            .accessibilityIdentifier(
+                symbol == "plus"
+                    ? AccessibilityID.stepperIncrease(label)
+                    : AccessibilityID.stepperDecrease(label)
+            )
             .accessibilityLabel(symbol == "plus" ? "Increase \(label)" : "Decrease \(label)")
             .accessibilityValue(StepperLogic.format(value))
             .accessibilityAddTraits(.isButton)

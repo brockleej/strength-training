@@ -80,7 +80,10 @@ struct BackupService {
                 notes: e.notes,
                 rotationTrack: e.rotationTrack,
                 extraDayTypes: e.extraDayTypes,
-                daySortOrdersRaw: e.daySortOrdersRaw
+                daySortOrdersRaw: e.daySortOrdersRaw,
+                defaultRestSeconds: e.defaultRestSeconds,
+                autoRestEnabled: e.autoRestEnabled,
+                loadModeRaw: e.loadModeRaw.isEmpty ? nil : e.loadModeRaw
             )
         }
 
@@ -113,9 +116,16 @@ struct BackupService {
                                         isEachSide: s.isEachSide,
                                         isAssisted: s.isAssisted,
                                         completedAt: s.completedAt,
-                                        isTarget: s.isTarget
+                                        isTarget: s.isTarget,
+                                        offeredWeightLbs: s.offeredWeightLbs,
+                                        loadModeRaw: s.loadModeRaw.isEmpty ? nil : s.loadModeRaw,
+                                        bodyWeightUsedLbs: s.bodyWeightUsedLbs > 0 ? s.bodyWeightUsedLbs : nil,
+                                        plannedRestSeconds: s.plannedRestSeconds > 0 ? s.plannedRestSeconds : nil,
+                                        actualRestSeconds: s.actualRestSeconds > 0 ? s.actualRestSeconds : nil
                                     )
-                                }
+                                },
+                            groupID: r.groupID,
+                            groupPosition: r.groupPosition > 0 ? r.groupPosition : nil
                         )
                     },
                 rotationTrack: s.rotationTrack,
@@ -173,6 +183,39 @@ struct BackupService {
             return lhs.id.uuidString < rhs.id.uuidString
         }
 
+        let gymBackups: [GymBackup]? = context.container.schema.entities.contains { $0.name == "Gym" }
+            ? ((try? context.fetch(FetchDescriptor<Gym>())) ?? []).map { gym in
+            GymBackup(
+                id: gym.id,
+                name: gym.name,
+                isHome: gym.isHome,
+                createdAt: gym.createdAt,
+                sortOrder: gym.sortOrder
+            )
+        }.sorted { $0.sortOrder < $1.sortOrder }
+            : nil
+
+        let profileBackups: [StackProfileBackup]? = context.container.schema.entities.contains { $0.name == "MachineStackProfile" }
+            ? ((try? context.fetch(FetchDescriptor<MachineStackProfile>())) ?? []).map { profile in
+            StackProfileBackup(
+                id: profile.id,
+                gymID: profile.gymID,
+                exerciseID: profile.exerciseID,
+                stepPounds: profile.stepPounds,
+                pinsRaw: profile.pinsRaw,
+                pinUnitRaw: profile.pinUnitRaw,
+                addOnsRaw: profile.addOnsRaw,
+                policyRaw: profile.policyRaw,
+                originRaw: profile.originRaw,
+                learnedSessionIDsRaw: profile.learnedSessionIDsRaw,
+                clearedAt: profile.clearedAt,
+                learningEnabled: profile.learningEnabled,
+                rangeMin: profile.rangeMin,
+                rangeMax: profile.rangeMax
+            )
+        }.sorted { $0.id.uuidString < $1.id.uuidString }
+            : nil
+
         let backup = AppBackup(
             version: currentVersion,
             exportedAt: .now,
@@ -181,26 +224,46 @@ struct BackupService {
             splitDays: splitBackups,
             dayPlans: SeedData.captureDayPlans(from: exercises, splitDays: splitDays),
             trainingBlocks: blockBackups,
-            bodyMetrics: metricBackups
+            bodyMetrics: metricBackups,
+            gyms: gymBackups,
+            stackProfiles: profileBackups
         )
 
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         encoder.dateEncodingStrategy = .iso8601
-        return try encoder.encode(backup)
+        let payload = try encoder.encode(backup)
+        let object = try InterchangeCodec.parseObject(payload)
+        let stamp = ISO8601DateFormatter().string(from: backup.exportedAt)
+        let envelope = InterchangeCodec.wrap(kind: .backup, payload: object, exportedAt: stamp)
+        return try InterchangeCodec.encode(envelope)
     }
 
     // MARK: - Preview / confirm
 
     static func decode(_ data: Data) throws -> AppBackup {
+        let legacy = try legacyBackupData(data)
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
-        let backup = try decoder.decode(AppBackup.self, from: data)
+        let backup = try decoder.decode(AppBackup.self, from: legacy)
         guard backup.version >= minimumVersion, backup.version <= currentVersion else {
             throw BackupError.unsupportedVersion(backup.version)
         }
         try validate(backup)
         return backup
+    }
+
+    /// Interchange files unwrap to the backup payload. Older backups pass through.
+    static func legacyBackupData(_ data: Data) throws -> Data {
+        guard InterchangeCodec.isInterchange(data) else { return data }
+        guard try InterchangeCodec.kind(of: data) == .backup else {
+            throw BackupError.invalidBackup("This interchange file is not a backup.")
+        }
+        let issues = InterchangeCodec.validate(try InterchangeCodec.toLatest(data))
+        if let weight = issues.first(where: { $0.path.contains("weight") || $0.path.contains("Weight") }) {
+            throw BackupError.invalidBackup(weight.message + " Restore was cancelled and nothing was changed.")
+        }
+        return try InterchangeCodec.downgradeToLegacy(data)
     }
 
     /// Reject values that would corrupt the store. Unknown training modes are
@@ -461,6 +524,12 @@ struct BackupService {
             exercise.notes = eb.notes
             exercise.extraDayTypes = eb.extraDayTypes ?? ""
             exercise.daySortOrdersRaw = eb.daySortOrdersRaw ?? ""
+            exercise.defaultRestSeconds = eb.defaultRestSeconds ?? 0
+            if let autoRest = eb.autoRestEnabled {
+                exercise.autoRestEnabled = autoRest
+                exercise.autoRestCopied = true
+            }
+            exercise.loadModeRaw = eb.loadModeRaw ?? ""
             context.insert(exercise)
             exerciseMap[eb.id] = exercise
         }
@@ -500,6 +569,8 @@ struct BackupService {
                 record.id = rb.id
                 record.isCompleted = rb.isCompleted
                 record.notes = rb.notes
+                record.groupID = rb.groupID
+                record.groupPosition = rb.groupPosition ?? 0
                 record.session = session
                 if let exerciseID = rb.exerciseID {
                     record.exercise = exerciseMap[exerciseID]
@@ -520,6 +591,11 @@ struct BackupService {
                     )
                     set.id = setb.id
                     set.completedAt = setb.completedAt
+                    set.offeredWeightLbs = setb.offeredWeightLbs
+                    set.loadModeRaw = setb.loadModeRaw ?? ""
+                    set.bodyWeightUsedLbs = setb.bodyWeightUsedLbs ?? 0
+                    set.plannedRestSeconds = setb.plannedRestSeconds ?? 0
+                    set.actualRestSeconds = setb.actualRestSeconds ?? 0
                     set.exerciseRecord = record
                     if record.sets == nil { record.sets = [] }
                     record.sets?.append(set)
@@ -556,6 +632,44 @@ struct BackupService {
                 context.delete(entry)
             }
         }
+        if backup.gyms != nil, context.container.schema.entities.contains(where: { $0.name == "Gym" }) {
+            for gym in try context.fetch(FetchDescriptor<Gym>()) {
+                context.delete(gym)
+            }
+        }
+        if context.container.schema.entities.contains(where: { $0.name == "Gym" }) {
+            for snapshot in backup.gyms ?? [] {
+                let gym = Gym(name: snapshot.name, isHome: snapshot.isHome, sortOrder: snapshot.sortOrder)
+                gym.id = snapshot.id
+                gym.createdAt = snapshot.createdAt
+                context.insert(gym)
+            }
+        }
+
+        if backup.stackProfiles != nil, context.container.schema.entities.contains(where: { $0.name == "MachineStackProfile" }) {
+            for profile in try context.fetch(FetchDescriptor<MachineStackProfile>()) {
+                context.delete(profile)
+            }
+        }
+        if context.container.schema.entities.contains(where: { $0.name == "MachineStackProfile" }) {
+        for snapshot in backup.stackProfiles ?? [] {
+            let profile = MachineStackProfile(gymID: snapshot.gymID, exerciseID: snapshot.exerciseID)
+            profile.id = snapshot.id
+            profile.stepPounds = snapshot.stepPounds
+            profile.pinsRaw = snapshot.pinsRaw
+            profile.pinUnitRaw = snapshot.pinUnitRaw
+            profile.addOnsRaw = snapshot.addOnsRaw
+            profile.policyRaw = snapshot.policyRaw
+            profile.originRaw = snapshot.originRaw
+            profile.learnedSessionIDsRaw = snapshot.learnedSessionIDsRaw
+            profile.clearedAt = snapshot.clearedAt
+            profile.learningEnabled = snapshot.learningEnabled
+            profile.rangeMin = snapshot.rangeMin
+            profile.rangeMax = snapshot.rangeMax
+            context.insert(profile)
+        }
+        }
+
         for snapshot in backup.bodyMetrics ?? [] {
             let kind = BodyMetricKind(rawValue: snapshot.kindRaw) ?? .weight
             let entry = BodyMetricEntry(

@@ -36,6 +36,17 @@ enum HapticService {
 
     // MARK: - Custom Pattern (Workout Completed)
 
+    /// Pocket-strength buzz at the end of a rest. Same three taps as a finished workout.
+    static func restFinished() {
+        workoutCompleted()
+    }
+
+    static func restWarningTap() {
+        let generator = UIImpactFeedbackGenerator(style: .light)
+        generator.prepare()
+        generator.impactOccurred(intensity: 0.6)
+    }
+
     static func workoutCompleted() {
         guard CHHapticEngine.capabilitiesForHardware().supportsHaptics else {
             fallbackWorkoutCompleted()

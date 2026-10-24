@@ -225,6 +225,7 @@ struct DayPlanEditorView: View {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .fill(draggingID == exercise.id ? Color.uplift.surface2 : Color.uplift.surface1)
         }
+        .accessibilityIdentifier(AccessibilityID.dayPlanExercise(exercise.name))
         .swipeToDelete(fullSwipeDeletes: false, isEnabled: draggingID == nil, onDelete: {
             removeExercise(exercise)
         }, onTap: {

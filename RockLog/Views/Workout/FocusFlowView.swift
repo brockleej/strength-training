@@ -22,7 +22,7 @@ struct FocusFlowView: View {
     }
 
     private var hasPrevious: Bool {
-        index > 0
+        previousIndex() != nil
     }
 
     /// True when there is another lift not marked done, or a later list position.
@@ -42,7 +42,8 @@ struct FocusFlowView: View {
                     hasPrevious: hasPrevious,
                     onNext: goNext,
                     onPrevious: goPrevious,
-                    onMarkDoneAndAdvance: markDoneAndAdvance
+                    onMarkDoneAndAdvance: markDoneAndAdvance,
+                    onJumpTo: jumpTo
                 )
                 .id(exercises[index].id)
             } else {
@@ -62,27 +63,12 @@ struct FocusFlowView: View {
         workoutVM.isExerciseDone(for: exercise)
     }
 
-    /// Prefer the next unfinished lift (wrapping). If every other lift is done,
-    /// fall back to the next list index so you can still advance to review.
     private func nextIndex() -> Int? {
-        let n = exercises.count
-        guard n > 0 else { return nil }
+        FocusNavigation.nextIndex(count: exercises.count, index: index) { isFinished(exercises[$0]) }
+    }
 
-        // 1) Next not-done after current, wrapping past the end.
-        if n > 1 {
-            for step in 1..<n {
-                let i = (index + step) % n
-                if !isFinished(exercises[i]) {
-                    return i
-                }
-            }
-        }
-
-        // 2) All others done (or only one lift): sequential next if any.
-        if index + 1 < n {
-            return index + 1
-        }
-        return nil
+    private func previousIndex() -> Int? {
+        FocusNavigation.previousIndex(count: exercises.count, index: index) { isFinished(exercises[$0]) }
     }
 
     private func goNext() {
@@ -91,8 +77,13 @@ struct FocusFlowView: View {
     }
 
     private func goPrevious() {
-        guard hasPrevious else { return }
-        index -= 1
+        guard let i = previousIndex() else { return }
+        index = i
+    }
+
+    private func jumpTo(_ exerciseID: UUID) {
+        guard let i = exercises.firstIndex(where: { $0.id == exerciseID }) else { return }
+        index = i
     }
 
     private func markDoneAndAdvance() {

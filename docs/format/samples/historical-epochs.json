@@ -1,0 +1,15 @@
+[
+  {"epoch": "19940d0", "note": "First backup. version, exercises, sessions. Synthetic.", "document": {"version": 1, "exportedAt": "2026-01-01T00:00:00Z", "labNote": "synthetic", "exercises": [], "sessions": []}},
+  {"epoch": "3dc37b3", "note": "Optional rotation and extra days.", "document": {"version": 1, "labNote": "synthetic", "exercises": [], "sessions": [], "rotationTrack": ""}},
+  {"epoch": "ba3c02f", "note": "Sets gained optional each-side and assisted flags.", "document": {"version": 1, "labNote": "synthetic", "exercises": [], "sessions": [], "isEachSide": false, "isAssisted": false}},
+  {"epoch": "c0bc533", "note": "Split days, plus coach session and coach batch at schemaVersion 1.", "document": {"version": 1, "labNote": "synthetic", "exercises": [], "sessions": [], "splitDays": []}},
+  {"epoch": "4602b83", "note": "Day plans and duration.", "document": {"version": 1, "labNote": "synthetic", "exercises": [], "sessions": [], "dayPlans": [], "durationSeconds": 1800}},
+  {"epoch": "de2d45f", "note": "rocklog.program", "document": {"format": "rocklog.program", "version": 1, "labNote": "synthetic", "blocks": []}},
+  {"epoch": "3be66a4", "note": "Session roster.", "document": {"version": 1, "labNote": "synthetic", "exercises": [], "sessions": [], "followsSessionRoster": true, "planState": "planned"}},
+  {"epoch": "17fbd92", "note": "Plan queue order.", "document": {"version": 1, "labNote": "synthetic", "exercises": [], "sessions": [], "planOrder": 1, "planState": "planned"}},
+  {"epoch": "fa9d140", "note": "Training blocks in the backup.", "document": {"version": 1, "labNote": "synthetic", "exercises": [], "sessions": [], "trainingBlocks": []}},
+  {"epoch": "d649053", "note": "Body metrics in the backup.", "document": {"version": 1, "labNote": "synthetic", "exercises": [], "sessions": [], "bodyMetrics": []}},
+  {"epoch": "b578c52", "note": "rocklog.split", "document": {"format": "rocklog.split", "version": 1, "labNote": "synthetic", "days": []}},
+  {"epoch": "c0bc533-coach-session", "document": {"format": "rocklog.coach.session", "schemaVersion": 1, "labNote": "synthetic", "id": "22222222-2222-4222-8222-222222222222", "exercises": []}},
+  {"epoch": "c0bc533-coach-batch", "document": {"format": "rocklog.coach.batch", "schemaVersion": 1, "labNote": "synthetic", "sessions": []}}
+]

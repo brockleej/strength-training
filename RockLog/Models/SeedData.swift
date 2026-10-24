@@ -166,15 +166,29 @@ struct SeedData {
 
     static func markSplitConfigured(preset: SplitPreset? = nil, context: ModelContext? = nil) {
         UserDefaults.standard.set(true, forKey: hasConfiguredSplitKey)
-        let kvs = NSUbiquitousKeyValueStore.default
-        kvs.set(true, forKey: hasConfiguredSplitKey)
+        if mirrorsSplitToICloud {
+            let kvs = NSUbiquitousKeyValueStore.default
+            kvs.set(true, forKey: hasConfiguredSplitKey)
+            if let preset {
+                kvs.set(preset.rawValue, forKey: preferredSplitPresetKey)
+            }
+        }
         if let preset {
             UserDefaults.standard.set(preset.rawValue, forKey: preferredSplitPresetKey)
-            kvs.set(preset.rawValue, forKey: preferredSplitPresetKey)
         }
         if let context {
             persistSplitSnapshot(context: context)
         }
+    }
+
+    /// UI tests run against synthetic data. Publishing that split into the
+    /// signed-in tester's iCloud account would overwrite a real plan.
+    private static var mirrorsSplitToICloud: Bool {
+        #if DEBUG
+        !UITestLaunch.isEnabled
+        #else
+        true
+        #endif
     }
 
     /// Pull split prefs from iCloud KVS into local UserDefaults (call on launch).
@@ -196,7 +210,9 @@ struct SeedData {
 
     static func loadSplitSnapshot() -> [SplitDayBackup]? {
         let json = UserDefaults.standard.string(forKey: splitSnapshotKey)
-            ?? NSUbiquitousKeyValueStore.default.string(forKey: splitSnapshotKey)
+            ?? (mirrorsSplitToICloud
+                ? NSUbiquitousKeyValueStore.default.string(forKey: splitSnapshotKey)
+                : nil)
         guard let json, let data = json.data(using: .utf8) else { return nil }
         return try? JSONDecoder().decode([SplitDayBackup].self, from: data)
     }
@@ -221,9 +237,11 @@ struct SeedData {
         else { return }
         UserDefaults.standard.set(json, forKey: splitSnapshotKey)
         UserDefaults.standard.set(true, forKey: hasConfiguredSplitKey)
-        let kvs = NSUbiquitousKeyValueStore.default
-        kvs.set(json, forKey: splitSnapshotKey)
-        kvs.set(true, forKey: hasConfiguredSplitKey)
+        if mirrorsSplitToICloud {
+            let kvs = NSUbiquitousKeyValueStore.default
+            kvs.set(json, forKey: splitSnapshotKey)
+            kvs.set(true, forKey: hasConfiguredSplitKey)
+        }
         persistDayPlanSnapshot(context: context)
     }
 
@@ -258,7 +276,9 @@ struct SeedData {
 
     static func loadDayPlanSnapshot() -> [DayPlanBackup]? {
         let json = UserDefaults.standard.string(forKey: dayPlanSnapshotKey)
-            ?? NSUbiquitousKeyValueStore.default.string(forKey: dayPlanSnapshotKey)
+            ?? (mirrorsSplitToICloud
+                ? NSUbiquitousKeyValueStore.default.string(forKey: dayPlanSnapshotKey)
+                : nil)
         guard let json, let data = json.data(using: .utf8) else { return nil }
         return try? JSONDecoder().decode([DayPlanBackup].self, from: data)
     }
@@ -268,7 +288,9 @@ struct SeedData {
               let json = String(data: data, encoding: .utf8)
         else { return }
         UserDefaults.standard.set(json, forKey: dayPlanSnapshotKey)
-        NSUbiquitousKeyValueStore.default.set(json, forKey: dayPlanSnapshotKey)
+        if mirrorsSplitToICloud {
+            NSUbiquitousKeyValueStore.default.set(json, forKey: dayPlanSnapshotKey)
+        }
     }
 
     static func captureDayPlans(context: ModelContext) -> [DayPlanBackup] {

@@ -81,55 +81,57 @@ enum RestTimerSoundService {
         gen.impactOccurred(intensity: remainingWholeSeconds <= 2 ? 0.9 : 0.55)
     }
 
-    /// Fired once when the timer hits zero.
+    /// One chirp at zero. The caller decides whether a call or the sound switch forbids it.
+    static func playChirp(duck: Bool) {
+        if duck { configureSession(duck: true) } else { configureSessionIfNeeded() }
+        startBackgroundKeepAlive()
+        playTone(frequency: 880, duration: 0.12, volume: 0.55)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.14) {
+            playTone(frequency: 1175, duration: 0.35, volume: 0.65)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
+                if duck { endDuck() }
+                stopBackgroundKeepAlive()
+            }
+        }
+    }
+
+    static func stopChirp() {
+        player?.stop()
+        endDuck()
+    }
+
+    /// Fired once when the timer hits zero. Kept for callers that still want the old bundle.
     static func playComplete() {
         if RestTimerPreferences.isSoundEnabled {
-            configureSessionIfNeeded()
-            startBackgroundKeepAlive()
-            // Two-tone “go” — easy to hear over gym noise.
-            playTone(frequency: 880, duration: 0.12, volume: 0.55)
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.14) {
-                playTone(frequency: 1175, duration: 0.35, volume: 0.65)
-                // Drop keep-alive after the chirp finishes.
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
-                    stopBackgroundKeepAlive()
-                }
-            }
+            playChirp(duck: true)
         } else {
             stopBackgroundKeepAlive()
         }
-        playCompleteHaptic()
-    }
-
-    // MARK: - Haptics
-
-    private static func playCompleteHaptic() {
-        let gen = UINotificationFeedbackGenerator()
-        gen.prepare()
-        gen.notificationOccurred(.success)
-        let impact = UIImpactFeedbackGenerator(style: .heavy)
-        impact.prepare()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
-            impact.impactOccurred(intensity: 1.0)
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.20) {
-            impact.impactOccurred(intensity: 1.0)
-        }
+        HapticService.restFinished()
     }
 
     // MARK: - Session / engine
 
-    private static func configureSessionIfNeeded() {
+    /// Keep-alive stays mix-only. Ducking is only for the chirp, then it comes off.
+    static func configureSession(duck: Bool) {
         let session = AVAudioSession.sharedInstance()
+        var options: AVAudioSession.CategoryOptions = [.mixWithOthers]
+        if duck { options.insert(.duckOthers) }
         do {
-            // playback + mixWithOthers: gym music can keep playing; we still get
-            // background execution with UIBackgroundModes audio.
-            try session.setCategory(.playback, mode: .default, options: [.mixWithOthers])
+            try session.setCategory(.playback, mode: .default, options: options)
             didConfigureSession = true
             try session.setActive(true, options: [])
         } catch {
             // Tone path may still work; otherwise we fall back to system sound.
         }
+    }
+
+    static func endDuck() {
+        configureSession(duck: false)
+    }
+
+    private static func configureSessionIfNeeded() {
+        if !didConfigureSession { configureSession(duck: false) }
     }
 
     private static func makeKeepAlivePlayer() -> AVAudioPlayer? {
