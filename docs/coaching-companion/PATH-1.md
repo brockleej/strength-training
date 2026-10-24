@@ -109,7 +109,7 @@ Do not add fields to `rocklog.coach.session` without bumping that schema. Batch 
 | Schema + codec | `Shared/CoachFormat/` — session v1 unchanged; batch v1 envelope |
 | RockLog export | Summary sheet: **This workout**, **Last week**, **Choose workouts…**, **Unsent workouts**. History sheet: this workout, last week, or choose. Settings: **Send last workout** is the single newest finished session (the footer still says “last week”; that footer is stale). 1 session → session file; 2+ → batch |
 | Share-after-finish | **Offer to send after finish**, behind **Use RockCoach** (off by default) |
-| Monthly table | `MonthlyOverload` on Progress and on the coach client screen. **Pending PR #10:** midnight on the 1st counts in both months. Not merged. |
+| Monthly table | `MonthlyOverload` on Progress and on the coach client screen. On `main` as of `a877aad` (pull request #10, **not on TestFlight yet**) midnight on the 1st counts only in the month that is starting. |
 | RockCoach app | target **RockCoach** · bundle `com.lee.rockcoach` · in this GitHub repo · **not TestFlight** · local SwiftData roster |
 | Not started | avahost Path 1.5, assign workouts, App Store listing. Units, bodyweight load, stacks, reorder, and rest groups: [../specs/units-bodyweight-machine-stacks.md](../specs/units-bodyweight-machine-stacks.md) |
 

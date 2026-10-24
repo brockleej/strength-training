@@ -93,7 +93,7 @@ Layered on the foundation above for a more freeform, physique-aware gym log:
 - **US Navy body-fat → FFMI** muscularity index, bands, trends
 - Height / sex profile wiring for composition math
 - Progress dashboard polish and range/lift presentation (built on the original Progress tab)
-- **This month vs last month** best set per lift (Progress and RockCoach). A session saved at the exact start of a month can be counted in both months. **Pending PR #10** — not merged, not fixed on `main`.
+- **This month vs last month** best set per lift (Progress and RockCoach). On `main` (`a877aad`, pull request #10, **not on TestFlight yet**) a workout at the exact start of a month counts only in the month that is starting. The TestFlight build can still show that workout in both months.
 
 ### Planned training and the coach app
 - **Planned workouts** — a next-up list on Today (file order). Focus shows last time, the plan, and this session.
@@ -154,7 +154,7 @@ Dark UI from a real log (August 2026, iPhone 17 Pro Max). These frames predate t
 ### Progress & body
 - Dashboard, charts, drill-down — **previous distro** (evolved in both)
 - Body metrics + Navy/FFMI — **RockLog**
-- This month vs last month best set — **RockLog** (midnight-on-the-1st double count is **pending PR #10**)
+- This month vs last month best set — **RockLog**. Midnight at the start of a month counts in the new month only on `main` (`a877aad`, **not on TestFlight yet**).
 
 ### Library & settings
 - Exercise library, backup, HealthKit settings, progression aggressiveness — **previous distro**
@@ -259,13 +259,17 @@ A new export includes body measurements and planned programs, along with the lib
 
 The iCloud store opens as `RockLogSchemaV1` with an empty migration plan. The next model change is `RockLogSchemaV2` plus a lightweight stage. Details for units, bodyweight loads, machine stacks, in-workout reorder, and rest groups: [docs/specs/units-bodyweight-machine-stacks.md](docs/specs/units-bodyweight-machine-stacks.md).
 
-**Pending PR #10** (not merged): the this-month / last-month table still treats midnight on the 1st as inside both months.
+## Month table on main, not on TestFlight yet
+
+Merged to `main` in `a877aad` (pull request #10). **Not on TestFlight yet.**
+
+The this-month / last-month card on Progress, and the same table in RockCoach, count a workout in one month only. A session at the exact start of a month (midnight as the 1st begins) belongs to the month that is starting. February, including a leap day, and a daylight-saving change stay with the phone’s calendar. The TestFlight build can still show that midnight workout in both months.
 
 Request beta access via [Issues](https://github.com/brockleej/strength-training/issues).
 
 ### What’s new — planned workouts and split import
 
-This is the latest tester paste in the repo. The backup, schema, and 5 lb rounding work above is on `main` and is **not** part of that paste until a TestFlight build includes `eb497bd`.
+This is the latest tester paste in the repo. The backup work (`eb497bd`) and the month-table fix (`a877aad`) are on `main` and are **not** part of that paste until a TestFlight build includes them.
 
 See [docs/TESTFLIGHT-WHAT-TO-TEST.md](docs/TESTFLIGHT-WHAT-TO-TEST.md) for the tester copy (plain language).
 

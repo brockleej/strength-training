@@ -1,10 +1,8 @@
-# Units, body weight, machine stacks, workout order, and rest
+# Units, body weight, machine stacks, workout order, rest, and the lift screen
 
-Spec only. No code in this change. Nothing here has shipped.
+Spec only. No code in this change. Nothing in this file has shipped.
 
 Audience: Lee, before anyone builds it. Tester-facing copy waits until a build exists.
-
-The five parts:
 
 | | What Lee gets |
 | --- | --- |
@@ -13,6 +11,7 @@ The five parts:
 | **c** | A saved stack for each machine, so a target rounds to a weight the stack can actually load, and reps move to keep the effort. |
 | **d** | Drag exercises into a new order during the workout. The session keeps that order. Saving it back to the day or the program is a separate choice. |
 | **e** | Groups of two to four exercises. Logging a set moves to the next one in the group and comes back around. Rest follows the exercise just finished, and each lift has its own default rest. |
+| **Focus** | A starting-weight choice (last time, or the suggestion). A planned weight always wins. Previous moves the way Next already does. Done stays where it is. |
 
 Lee’s notes for **d** and **e**, in his words: he is on the individual exercises most of the time and wants to rearrange them from inside the workout. He sometimes cycles two to four exercises before moving on. Rest depends on the exercise he just did: some leave him breathing hard, some need a short break.
 
@@ -28,7 +27,7 @@ Assist is the only bodyweight mode. There is no “body weight plus added load�
 
 There is no per-machine stack. The stepper does not know that a machine only moves in 10 lb jumps.
 
-During a workout, **Reorder / edit day plan** opens the day-plan editor and writes the library order (`Exercise` day sort). The next session on that day follows it. The session itself does not keep a private order, except a planned workout: those sessions set `followsSessionRoster` and list lifts by `ExerciseRecord.sortOrder`. The lift screen (Focus) has next / previous. It has no drag handle. Lee spends his time on that screen.
+During a workout, **Reorder / edit day plan** opens the day-plan editor and writes the library order (`Exercise` day sort). The next session on that day follows it. The session itself does not keep a private order, except a planned workout: those sessions set `followsSessionRoster` and list lifts by `ExerciseRecord.sortOrder`. The lift screen (Focus) has next / previous. It has no drag handle. Lee spends his time on that screen. How that screen fills the stepper, and how Previous differs from Next, is under [Focus screen](#focus-screen).
 
 Rest is one duration for the whole app (default 3 minutes, Settings chips from 1 to 5 minutes). Each lift can turn auto-rest on or off. That on/off flag lives in UserDefaults, so a backup does not include it. Logging a set starts the timer when the lift’s auto-rest is on. While it runs, the chips are **−30**, **+30**, and **Skip**. There is no circuit, and Next walks the whole list rather than a pair of lifts.
 
@@ -310,11 +309,84 @@ UserDefaults rest on/off values are copied once onto the exercise, then the exer
 
 ---
 
+## Focus screen
+
+Lee’s answers from the optimization session, in his words: “Make that a user option. If it is a custom plan default to the plan weight.” Done stays where it is. Recovery stays as it works now: back at the top, restart at the bottom. The only navigation change is that Previous mirrors Next.
+
+Both pieces are small. Neither needs a new SwiftData field. Neither changes coach files or progression math.
+
+### What the lift screen does today
+
+**Next set default** (Settings) is a different control, and it stays. **Last session** refills the next set from the same set number last time. **Last set** repeats the set just logged. The default is Last session.
+
+The first number on the steppers uses that same control. With Last session, a planned target for this set number is used in place of last time, so a planned lift already opens on the plan when that setting is on. With Last set, and nothing logged yet this session, the stepper opens on the progression suggestion instead, and the plan is skipped.
+
+**Next** sits at the top of the lift (the accent capsule). It skips lifts marked Done and wraps around the list. If every other lift is already Done, it steps one lift forward in list order so a finished lift can still be reviewed, and it does not wrap in that fallback. On the last lift, with nothing else unfinished, Next is hidden.
+
+**Previous** sits at the top, to the left of Next (the chevron). It moves one lift toward the start of the list. It does not skip Done lifts, and it does not wrap. On the first lift it is hidden.
+
+**Done** sits on the bottom row, to the right of Warm and Log set. Tapping it marks this lift finished and moves on the same path as Next. After that, the same button reads **Resume** and un-marks the lift without leaving it. That is the restart at the bottom. The back chevron stays at the top. Leave both where they are.
+
+### Starting weight
+
+A new Settings choice, next to Next set default: **Starting weight**.
+
+| Choice | What the steppers show when this set has no prescribed plan weight |
+| --- | --- |
+| **Last time** (default) | The same set number from the last completed session. If last time had fewer sets, the best working set from that session. |
+| **Suggested** | The progression suggestion for the mode selected on this lift (strength or endurance), including the 5 lb snap already on `main`. |
+
+A custom plan wins over both. When this workout is a planned session and this set number has a prescribed weight, the steppers open on that prescribed weight and those prescribed reps. The Starting weight setting does not apply. Next set default does not apply to that set either: after set 1, set 2 still opens on the plan when the plan has a set 2.
+
+When the plan has no target for this set number, the rules above take over. Sets after the first, with no plan target, still follow Next set default.
+
+Under the steppers, one line shows last time and the suggestion together, for example `Last time 225×5 · Suggested 230×5`. The line is text. It does not write the steppers, and logging saves the stepper numbers. Editing the steppers leaves the line as it was. A missing side is left off the line (no last time yet, or no suggestion yet). The PLAN column on a planned lift stays the place that shows the prescribed sets. The line does not repeat the plan.
+
+When a stack profile exists (part **c**), the suggestion in that line is the stack-legal weight and the adjusted reps. The plan number on the steppers stays the prescribed weight. Stepping off that number with − / + then follows the stack. Opening the lift does not replace the plan number with the stack-rounded suggestion.
+
+The choice is stored on this phone the same way Next set default is (UserDefaults). It is not a SwiftData field and it is not in the backup. Default is Last time, so a phone that has never chosen stays on today’s first-set behavior for an unplanned lift.
+
+**RockLog** owns the Settings control, the prefill choice, and the line under the steppers. **Progression** is only read, to fill the Suggested side. **RockCoach** does not get this control. The coach still sees the sets that were logged.
+
+### Previous mirrors Next
+
+Previous uses the same rule as Next, walking backward.
+
+1. Look backward through the list, wrapping past the start, and stop on the first lift that is not Done.
+2. If every other lift is Done, or this is the only lift, step one lift backward in list order so a finished lift can still be reviewed. That fallback does not wrap. On the first lift, Previous is hidden.
+
+Done and Resume stay on the bottom row. Resume still un-marks the lift and stays on it. Next stays the top capsule. Previous stays the top chevron. Groups (part **e**) change which lift is “next” inside a circuit. This Previous rule is the one used when he is moving through the session list, including from one group to another. Inside a group, the auto-advance in part **e** is a separate path. Previous from inside a group still follows this skip-and-wrap rule across the session order, so back does not get stuck on a lift he already marked Done.
+
+### Tests
+
+**Starting weight**
+
+- Setting Last time, no plan. Last session set 1 was 225×5. Suggestion is 230×5. Steppers open on 225×5. The line reads last time 225×5 and suggested 230×5. Logging without an edit saves 225×5.
+- Setting Suggested, same history. Steppers open on 230×5. The line is unchanged. Logging without an edit saves 230×5.
+- A planned set prescribes 185×8. Both settings open the steppers on 185×8. The line still shows 225×5 and 230×5. Logging without an edit saves 185×8.
+- The plan’s set 2 is 205×5. Next set default is Last set. After set 1 is logged, the steppers show 205×5.
+- The plan has no set 3. After set 2, Next set default fills set 3.
+- Changing the stepper does not change the line.
+- No last session: the Last time choice uses the suggestion when there is one, and otherwise the same empty default as today. The line omits last time.
+- No suggestion: the line omits the suggested side. Last time still fills the steppers when that choice is on and there is no plan weight.
+- A stack profile’s suggestion on the line can differ from a prescribed plan weight on the steppers.
+
+**Previous**
+
+- Lifts A B C. B is Done. From A, Next opens C. From C, Previous opens A.
+- A B C, none Done. From A, Previous opens C. From C, Next opens A.
+- A B C, A and C Done, standing on B. Next opens C (the review fallback, one step forward). Previous opens A (one step back).
+- Standing on A with B and C Done. Previous is hidden. Next opens B.
+- Standing on C with A and B Done. Next is hidden. Previous opens B.
+- One lift. Next and Previous are both hidden.
+- Done stays on the bottom row, right of Log set. After Done, that button reads Resume. Resume clears Done and stays on this lift.
+- The Previous control remains the top chevron. Next remains the top capsule.
+
 ## Schema in one step
 
 `RockLogSchemaV1` shipped in source at `eb497bd` and is frozen. Parts **b**, **c**, and **e** add optional fields with defaults in **one** `RockLogSchemaV2` and one lightweight stage. Shipping the screens in a later order is fine. Adding a further stored field after V2 is V3, so the fields we already know about belong in V2 even if the screen comes later.
 
-Part **a** is key-value. Part **d** uses V1 fields.
+Part **a** is key-value. Part **d** uses V1 fields. Focus starting weight is key-value, same as Next set default. Previous is a behavior change on the lift screen.
 
 CloudKit will accept this only as a lightweight additive change. There is no custom migration stage.
 
@@ -322,17 +394,19 @@ CloudKit will accept this only as a lightweight additive change. There is no cus
 
 ## Suggested build order
 
-1. **Reorder (d).** No migration. It is the gap he feels on the lift screen. The day-plan editor stays for editing the library.
-2. **Per-lift rest and ±15 (the rest half of e).** Small, and it matches “the last exercise decides the break.” Circuits can follow in the next slice.
-3. **Groups and auto-advance (the rest of e).**
-4. **Body-weight lookup and added-load mode (b).** No new measurement model. Date-based assist math is the part that stops old assisted e1RMs from moving when he updates the scale.
-5. **Pounds / kilograms and plate math (a).**
-6. **Stack profiles and rep compensation (c).** Needs the unit work so a kilogram stack and a pound stack stay distinct, and needs the shared Epley helper.
-7. **Rest learning.** After real timer samples exist. Suggest only.
+1. **Starting weight (Focus).** Settings choice, plan weight always wins, comparison line under the steppers. No migration.
+2. **Previous mirrors Next (Focus).** Done and Resume stay on the bottom row. Back stays at the top. No migration.
+3. **Reorder (d).** No migration. It is the gap he feels on the lift screen. The day-plan editor stays for editing the library.
+4. **Per-lift rest and ±15 (the rest half of e).** Small, and it matches “the last exercise decides the break.” Circuits can follow in the next slice.
+5. **Groups and auto-advance (the rest of e).**
+6. **Body-weight lookup and added-load mode (b).** No new measurement model. Date-based assist math is the part that stops old assisted e1RMs from moving when he updates the scale.
+7. **Pounds / kilograms and plate math (a).**
+8. **Stack profiles and rep compensation (c).** Needs the unit work so a kilogram stack and a pound stack stay distinct, and needs the shared Epley helper.
+9. **Rest learning.** After real timer samples exist. Suggest only.
 
-Pending pull request **#10** (month boundaries for the this-month / last-month table) is independent. It can land any time. It does not block this list.
+The month-boundary fix is already on `main` (`a877aad`, pull request #10) and is **not on TestFlight yet**. It does not block this list.
 
-One V2 migration can land with step 2, containing the optional fields for steps 2 through 6, so later steps do not each mint a schema version.
+One V2 migration can land with the per-lift rest step, containing the optional fields for rest, groups, bodyweight load, and stacks, so later steps do not each mint a schema version. The two Focus items do not add fields.
 
 ## Tests
 

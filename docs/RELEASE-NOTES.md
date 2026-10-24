@@ -21,9 +21,19 @@ Merged 2026-10-24. **Do not paste this into App Store Connect until a TestFlight
 
 See `docs/TESTFLIGHT-WHAT-TO-TEST.md` (on main, not TestFlight yet).
 
-## Pending PR #10 — not merged
+## On main, not on TestFlight yet — `a877aad` (PR #10)
 
-The this-month / last-month comparison can count a workout logged at midnight on the 1st in both months. The fix (count it only in the month that is starting) is pull request #10. It is not on `main`. Do not tell testers it is fixed.
+Merged 2026-10-24. **Do not paste this into App Store Connect until a TestFlight build includes it.** Tester wording is in `docs/TESTFLIGHT-WHAT-TO-TEST.md` under the same heading.
+
+### What’s new
+
+- The this-month / last-month card counts a workout in one month only.
+- A workout logged at the exact start of a month belongs to the month that is starting. It no longer also appears in the month before.
+- The same rule is on the RockCoach table. February (including a leap day) and daylight-saving months still follow the phone’s calendar.
+
+### What to test
+
+See `docs/TESTFLIGHT-WHAT-TO-TEST.md` (on main, not TestFlight yet).
 
 ## 1.0 (next after 25) — 2026-09-13
 

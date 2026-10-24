@@ -5,13 +5,15 @@ Paste into App Store Connect → the build → **Test Details** → **What to Te
 
 App Apple ID: `6797695631` · bundle `com.lee.lift2026`
 
-`docs/testflight-notes-next.txt` is the planned-workout paste (the “after 25” block below). It does not include the backup fixes.
+`docs/testflight-notes-next.txt` is the planned-workout paste (the “after 25” block below). It does not include the backup fixes or the month-table fix.
 
 ---
 
 ## On main, not on TestFlight yet — do not paste
 
-Source commit `eb497bd` (pull request #9). Paste this only after the Cloud build that contains it is VALID.
+Source commits `eb497bd` (pull request #9) and `a877aad` (pull request #10). Paste a block only after the Cloud build that contains that commit is VALID.
+
+### Backup, rounding, and restore (`eb497bd`)
 
 ```
 What's new: Saving a backup now includes your body measurements and any planned workouts, along with your lifts and history. Putting a backup back asks first. If something is wrong with the file, RockLog leaves this phone alone. A lift this version does not understand is skipped, and you'll see how many. The first time you do a lift, the suggested weight rounds to the nearest 5 pounds.
@@ -24,9 +26,16 @@ Please try:
 5) Screenshot anything that looks off.
 ```
 
-## Pending PR #10 — do not paste, not merged
+### This month vs last month (`a877aad`)
 
-A workout saved at the exact start of a month (midnight on the 1st) can show up in both that month and the month before on the Progress “this month vs last month” card, and in RockCoach’s same table. The fix is open pull request #10. It is not on `main` and not on TestFlight.
+```
+What's new: A workout logged right at the start of a month counts in that new month only. It no longer also shows in the month before. Progress and RockCoach use the same rule.
+
+Please try:
+1) Open Progress and look at this month vs last month. A workout from the 1st of this month should be in this month only.
+2) If you use RockCoach, that table should agree.
+3) Screenshot anything that looks off.
+```
 
 ---
 

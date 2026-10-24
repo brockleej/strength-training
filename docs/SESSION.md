@@ -2,9 +2,12 @@
 
 **Status (2026-10-24):** The 2026-09-13 planned-workout work below is on `main` (merge `a4179c1` and the commits it names). It is no longer an unpushed local branch.
 
-**On `main`, not on TestFlight yet:** `eb497bd` (pull request #9) — backup includes body measurements and planned programs, restore rolls back on failure, schema `RockLogSchemaV1`, 5 lb rounding after one session, stable same-date order. Tester text is in `docs/TESTFLIGHT-WHAT-TO-TEST.md` under “do not paste.”
+**On `main`, not on TestFlight yet:**
 
-**Not merged:** pull request #10 — this-month / last-month table counts midnight on the 1st in both months.
+- `eb497bd` (pull request #9) — backup includes body measurements and planned programs, restore rolls back on failure, schema `RockLogSchemaV1`, 5 lb rounding after one session, stable same-date order.
+- `a877aad` (pull request #10) — this-month / last-month table counts midnight on the 1st only in the month that is starting.
+
+Tester text for both is in `docs/TESTFLIGHT-WHAT-TO-TEST.md` under “do not paste.”
 
 **Spec, not built:** [docs/specs/units-bodyweight-machine-stacks.md](specs/units-bodyweight-machine-stacks.md).
 

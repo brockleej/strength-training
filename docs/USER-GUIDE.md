@@ -218,7 +218,7 @@ Trends across finished sessions — not a live workout screen.
 - **Workouts** and **working sets** in the selected range.
 - **Workouts** chart — frequency over time.
 - **Body** — log weight, waist, neck, etc. Navy body-fat and FFMI if height + sex are saved. A weight you log here also updates Settings → Body profile → weight, which is what assisted lifts use. Those are one current number plus a history of check-ins. Assisted math uses the current number, including after you change it.
-- **This month vs last month** — each lift’s best working set, grouped by day. A workout saved at the exact start of a month (midnight on the 1st) can show in both months. That is still true on `main`. **Pending PR #10** (not merged).
+- **This month vs last month** — each lift’s best working set, grouped by day. On the latest source (`a877aad`, **not on TestFlight yet**), a workout at the exact start of a month counts only in the month that is starting. The TestFlight build can still show that workout in both months.
 - **PRs this month**.
 - **Sets by muscle**.
 - **Strength vs endurance** — how you split set counts.
