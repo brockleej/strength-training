@@ -1,0 +1,411 @@
+# Units, body weight, machine stacks, workout order, and rest
+
+Spec only. No code in this change. Nothing here has shipped.
+
+Audience: Lee, before anyone builds it. Tester-facing copy waits until a build exists.
+
+The five parts:
+
+| | What Lee gets |
+| --- | --- |
+| **a** | A kilograms / pounds setting. One stored unit. Plate math in both. |
+| **b** | Body weight over time, used for bodyweight lifts and for strength relative to body weight. |
+| **c** | A saved stack for each machine, so a target rounds to a weight the stack can actually load, and reps move to keep the effort. |
+| **d** | Drag exercises into a new order during the workout. The session keeps that order. Saving it back to the day or the program is a separate choice. |
+| **e** | Groups of two to four exercises. Logging a set moves to the next one in the group and comes back around. Rest follows the exercise just finished, and each lift has its own default rest. |
+
+Lee’s notes for **d** and **e**, in his words: he is on the individual exercises most of the time and wants to rearrange them from inside the workout. He sometimes cycles two to four exercises before moving on. Rest depends on the exercise he just did: some leave him breathing hard, some need a short break.
+
+## What the app does today
+
+Weights are pounds everywhere they are stored: set `weightLbs`, body-metric weight, the Settings body-weight number, coach files, and planned-workout files. The Focus stepper jumps **5 lb → 1 lb → 0.5 lb**. Progression rounds targets to the nearest 5 lb (`snap5`), including a lift that has only one prior session (on `main` as of `eb497bd`, not on TestFlight yet). There is no kilogram setting. Pull request #9 left kilograms for later.
+
+Body measurements already exist. `BodyMetricEntry` is a dated log of weight, waist, neck, chest, arm, and hips (pounds and inches). `BodyCompositionMath` turns the latest waist, neck, hips, height, and sex into a Navy body-fat estimate and an FFMI. It can already pick the latest entry on or before a date. That is the log to extend. A second `WeightEntry` model would duplicate it. The April 2026 feature note that proposed `WeightEntry` is out of date on this point.
+
+A different number, Settings → Body profile → weight, is what assisted lifts use. Effective load is body weight minus the assistance on the stack. Logging a body-metric weight overwrites that Settings number, including when the log is backdated. Every old assisted set then recalculates with the new number, because the set does not store the body weight it used.
+
+Assist is the only bodyweight mode. There is no “body weight plus added load” mode (weighted pull-up, dip with a chain).
+
+There is no per-machine stack. The stepper does not know that a machine only moves in 10 lb jumps.
+
+During a workout, **Reorder / edit day plan** opens the day-plan editor and writes the library order (`Exercise` day sort). The next session on that day follows it. The session itself does not keep a private order, except a planned workout: those sessions set `followsSessionRoster` and list lifts by `ExerciseRecord.sortOrder`. The lift screen (Focus) has next / previous. It has no drag handle. Lee spends his time on that screen.
+
+Rest is one duration for the whole app (default 3 minutes, Settings chips from 1 to 5 minutes). Each lift can turn auto-rest on or off. That on/off flag lives in UserDefaults, so a backup does not include it. Logging a set starts the timer when the lift’s auto-rest is on. While it runs, the chips are **−30**, **+30**, and **Skip**. There is no circuit, and Next walks the whole list rather than a pair of lifts.
+
+The iCloud store on `main` is `RockLogSchemaV1` with an empty migration plan (`eb497bd`, not on TestFlight yet). V1 is frozen. The next stored fields are `RockLogSchemaV2` plus one lightweight stage. CloudKit will not run a heavy migration. New fields need defaults so existing phones open.
+
+Coach files are `rocklog.coach.session` v1. The schema rejects unknown fields. Coach progression compares the stored `weightLbs` and does not apply the assisted-load formula. Exercise order in the file is the array order. Sets sit under their lift. Rest is not in the file.
+
+---
+
+## a) Kilograms and pounds
+
+### Stored unit
+
+Pounds stay the one stored unit. Every set, measurement, backup, coach file, and program file is already pounds. A kilogram preference changes what the screen shows and what the plate math uses. It does not rewrite old numbers.
+
+The Settings choice is **Pounds** or **Kilograms**, default pounds. It syncs the same way height and body weight do (this phone, plus iCloud key-value). Existing logs stay pounds. The first launch after the setting exists still shows pounds.
+
+### Display and entry
+
+The number on the stepper is in the chosen unit. Saving converts that entry into pounds and stores the pounds.
+
+Round-trip while you stay in one unit: the number you typed is the number you see next time. Do that by storing the pound equivalent of the entered display value, at a precision that converts back onto the same display step.
+
+Switching units converts the stored pounds and rounds onto the other unit’s display step. Switching back can land one step away. That drift is limited to the moment you change units. Staying in pounds, or staying in kilograms, does not drift.
+
+Display steps:
+
+| Unit | Readout | Stepper cycle |
+| --- | --- | --- |
+| Pounds | nearest 0.5 lb | 5 → 1 → 0.5, as today |
+| Kilograms | nearest 0.25 kg | 2.5 → 1 → 0.5 |
+
+Half-pound and quarter-kilogram ties round half away from zero, matching today’s `snap5` (`rounded()`).
+
+Girths stay inches. The Navy formula stays in inches and pounds underneath the screen. Only the weight readout follows the unit setting. Centimetres are an open question.
+
+Backup still rejects a non-finite weight, a negative weight, and a weight over 10,000 lb. That ceiling is in canonical pounds. A kilogram entry converts before the check.
+
+### Plate math
+
+Plate math is separate from the stepper step. It answers “which plates go on the bar?” in the unit you are looking at.
+
+| | Bar | Plates, each side, pairs |
+| --- | --- | --- |
+| Pounds | 45 lb | 45, 35, 25, 10, 5, 2.5, 1.25 |
+| Kilograms | 20 kg | 25, 20, 15, 10, 5, 2.5, 1.25 |
+
+The calculator uses that unit’s bar and plates. A 20 kg bar is not shown as a 45 lb bar with converted plates. The calculator is a readout on the lift screen. It does not change the stored weight.
+
+### Progression rounding
+
+When the lift has no machine stack (part **c**), the suggestion snaps in the active unit, then converts back to stored pounds:
+
+- Pounds: nearest 5 lb (today’s rule, including a single prior session).
+- Kilograms: nearest 2.5 kg.
+
+The suggestion the lifter sees sits on their plate grid. The stored target is the pound equivalent of that snapped display value.
+
+### Imports and exports
+
+Backup JSON, coach files, and `rocklog.program` / `rocklog.split` files keep `weightLbs` as pounds. An old file with no unit field is pounds. A new file may include `"weightUnit": "lb"` as a label. The numbers do not get rescaled to the reader’s display unit.
+
+The display preference can ride along as metadata. Restoring a file does not switch the phone’s unit unless we later add an explicit choice. Default: leave the phone’s setting alone.
+
+### App vs coach
+
+**RockLog** owns the Settings control, stepper labels, the plate readout, the key-value preference, and converting at the edge so SwiftData stays in pounds. Screens that print `lb` today (History volume, Progress, Focus, monthly deltas) take the preference.
+
+**Shared progression** owns the snap. `snap5` becomes “snap to the active increment” with the unit passed in. ProgressionLab’s weight increment stays a pound value in the lab, and the lab labels it as pounds.
+
+**RockCoach** keeps file numbers in pounds. A display toggle on the coach’s phone can convert for reading. Comparison and e1RM stay in pounds internally. Monthly delta text (`+5 lb`) is formatted by the screen, in the unit that screen is showing.
+
+No new SwiftData model. No `RockLogSchemaV2` for the preference; it is key-value, like the body profile. Set values do not migrate.
+
+---
+
+## b) Body weight over time, bodyweight lifts, relative strength
+
+### Use the log that already exists
+
+`BodyMetricEntry` with kind `weight` is the history. `BodyCompositionMath.latest(kind:asOf:)` is the lookup. Height and sex stay on the body profile. FFMI and Navy body fat keep using that path.
+
+The Settings body-weight number stays the fallback when the log is empty, and the number assist uses until a log exists. Logging a weight updates the Settings number to the latest weight **by date**, not to a backdated entry that is older than the log’s newest row.
+
+### Load for one set
+
+Three ways a stored weight is interpreted. The first two exist. The third is new.
+
+| Mode | What you type | Load used for volume, e1RM, and progression |
+| --- | --- | --- |
+| Bar | The weight on the bar or machine | That weight |
+| Assist | The help the machine gives (the “−100” on the stack) | Body weight minus assistance, never below zero |
+| Added | The extra load (belt, chain, dumbbell between the feet) | Body weight plus that load |
+
+Body weight for a set is the latest body-metric weight on or before the set’s time, then the session date, then the Settings number. If none is set, assist and added contribute no load, and the lift screen says to save a body weight. That matches assist today.
+
+Old assisted sets, once this ships, use the body weight from the date of the set when a log exists. Until the log has a row that old, they keep using the Settings number. We do not invent past weigh-ins.
+
+Relative strength on a lift is that set’s e1RM divided by the same body weight. The lift detail can show it once a weigh-in exists (for example “1.21 × body weight”). The strength score on Progress stays the absolute sum unless Lee turns on a relative view. That toggle is an open question, not part of the first build.
+
+### App vs coach
+
+**RockLog** owns check-in (already on Progress), the three load modes on the lift, the date lookup, and the relative-strength line on the lift detail. `effectiveLoadLbs` grows the added case and takes the body weight for that date instead of always reading the live Settings number.
+
+**Progression** already receives effective load for assist. Added mode feeds it the same way: the algorithm sees body weight plus added load, so a heavier body at the same added load counts as more load. Suggestions stay in the mode the lifter types (assistance, or added plates), converted back from the effective target so the stepper shows the number they will dial.
+
+**RockCoach** does not have the body-metric log. A set that uses body weight includes the body weight used that day on the coach file, plus the mode. Coach progression then compares effective load. Comparing raw assistance across months treats “less help” as “lighter,” which is the wrong direction. This is a coach-schema addition: optional fields, still readable when they are absent. v1 files stay valid. A build of RockCoach that shares this repo reads the new fields. The locked “do not add fields without a version bump” rule means the file’s `schemaVersion` moves to 2 when those fields ship, and this repo’s coach updates with it.
+
+### Data and migration
+
+No new measurement model. One new stored field on the exercise (or on the set): the load mode. Existing rows are bar, or assist when `isAssisted` is already true. Added is opt-in per lift.
+
+That field is `RockLogSchemaV2`. Optional, with a default, lightweight stage from V1. V1 stays untouched. Backup writes the field. An older backup that omits it restores as bar or assist, using the same nil-vs-empty care PR #9 used for measurements.
+
+The April feature note’s ÷ body-weight strength score and Hall of Fame are not this work.
+
+---
+
+## c) Machine stack increments
+
+### Profile
+
+Each exercise can save a stack profile. Empty means “use the normal stepper and the 5 lb / 2.5 kg snap.”
+
+A profile is either:
+
+- a fixed step, such as 10 lb from the first plate up to a top pin, or
+- an explicit list of pin weights.
+
+Plus add-on plates (the magnets): a small list such as 2.5 and 5. An available weight is a pin, or a pin plus one add-on. Stacking several magnets is an open question; the first version allows one add-on at a time.
+
+The profile remembers whether those pins were entered in pounds or kilograms. A 10 kg stack and a 10 lb stack are different machines. Comparison against stored sets converts the available weights into pounds.
+
+### Rounding a prescribed load
+
+The program, the progression suggestion, or the stepper can ask for a weight the stack cannot load. The profile’s policy picks the replacement:
+
+- **Nearest** available weight (ties round down, so the lifter is not handed more than they asked).
+- **Down** to the next available weight at or below the target.
+- **Up** to the next available weight at or above the target.
+
+The policy is saved on the profile. Default is nearest.
+
+### Reps follow the effort
+
+After the weight moves, reps change so the Epley estimate stays as close as possible to the original target. The formula already in the app is `weight × (1 + reps / 30)`.
+
+Ideal reps at the new weight `w2`, given the original e1RM `e`:
+
+`reps = 30 × (e / w2 − 1)`
+
+Round that to the nearest whole rep, minimum 1. If the rounded reps would push the new e1RM further from the target than the other neighbour, keep the neighbour that lands closer. Cap reps at the mode’s existing ceiling when one exists (strength rep cap in progression). Show the stack weight and the adjusted reps together. The lifter can still log a different pair.
+
+Example. Target 205 lb × 5. e1RM = 205 × (1 + 5/30) = 239.2. The 10 lb pins on either side are 200 and 210. 205 sits halfway, and a halfway tie rounds down, so the weight becomes 200. At 200 lb, ideal reps = 30 × (239.2 / 200 − 1) = 5.9, which rounds to 6. The suggestion becomes 200 × 6.
+
+Warm-up targets round onto the stack the same way. They do not change the working-set suggestion.
+
+### App vs coach
+
+**RockLog** owns the profile editor (on the exercise, and a short cut from the lift screen), the policy control, and snapping the stepper so − / + land on available weights. The 5 / 1 / 0.5 cycle remains for lifts with no profile.
+
+**Shared progression** owns “given a target weight and reps, and a list of available pounds, return the weight and reps to suggest.” RockLog and RockCoach both call it. Planned-workout targets in the file stay the coach’s ideal numbers. The phone rounds when it displays and when it pre-fills. Import does not rewrite the file.
+
+**RockCoach** can show the same rounded pair when the athlete’s export includes the stack profile, or when the coach types a target. The first version can ship rounding on the phone only, and add the profile to the coach file in the same schema bump as part **b**. Until the file carries the profile, the coach shows the ideal target and the phone shows the stack-legal one. That gap should be short. Prefer one schema bump that carries body weight, load mode, and stack together.
+
+### Data and migration
+
+The profile is stored on the exercise: step or pin list, add-ons, unit of the pins, policy. All optional. No profile means today’s behaviour. `RockLogSchemaV2`, same lightweight stage as part **b**. Backup includes the profile. Old backups restore with no profile.
+
+Part **a**’s 5 lb / 2.5 kg snap is the fallback only when the lift has no profile.
+
+---
+
+## d) Drag to reorder during the workout
+
+### What he can do
+
+On the lift list and on the lift screen, long-press the lift number and drag. That is the same gesture the day plan already uses. The new order is this session’s order immediately.
+
+The session stores it on the records that already exist: `ExerciseRecord.sortOrder`, and `followsSessionRoster = true` for this workout. The list, Focus next / previous, and History then read that order. The library day plan is unchanged.
+
+Two optional actions, each a button he taps on purpose:
+
+- **Save order to this day** writes the library day plan (`Exercise` day sort) so the next unplanned session on that day starts in this order.
+- **Save order to remaining planned days** updates later unused planned sessions with this day name. Finished history is left alone. This queued session updates either way, because it is the session he is in.
+
+Closing the workout without those buttons keeps the order on this session only.
+
+Planned sessions already follow their own roster. Reordering one of them updates that session’s record order. It still does not change the day plan or the other queued days until he taps the matching button.
+
+### History, coach, progression
+
+History already lists a session’s lifts by record `sortOrder`. After a reorder, that is the order he trained. Sessions he never reorders keep the order their records were created in. We do not rebuild old sessions.
+
+The coach file lists exercises in session order. Reorder changes that array order. It does not move sets between lifts. Coach progression matches on the lift name, then weight and reps. Order is not an input. e1RM, PRs, the strength score, and the month table do not change because two lifts swapped places.
+
+The same-date session sort from `eb497bd` (newest date, then session id) is about which session is “last.” It is not exercise order.
+
+### Data and migration
+
+No new model and no schema version. `sortOrder` and `followsSessionRoster` are already on V1. Using them for a normal session is a behaviour change. Backup already writes both. A phone on the TestFlight build from before this work still restores the fields; it only shows a private order for sessions that already had `followsSessionRoster` set (planned workouts).
+
+### App vs coach
+
+**RockLog** owns the drag gesture on the list and on Focus, the two save-back buttons, and writing record order.
+
+**RockCoach** displays the exported order. It does not write back into RockLog. Progression services do not gain an order input.
+
+---
+
+## e) Groups of two to four, and rest after each lift
+
+### The group
+
+A group is two, three, or four lifts in this session. He builds it from the lift list (select the lifts, or drag one onto another). One lift sits in at most one group. Lifts outside a group stay straight sets: log, rest, stay on that lift.
+
+Logging a **working** set moves Focus to the next lift in the group. After the last lift in the group, it returns to the first lift in the group that is not finished. Warm-up sets stay on the current lift so he can warm the first movement up before the group starts. That warm-up choice is an open question; it is the recommendation.
+
+Set counts may differ. Each lift finishes on its own. A lift drops out of the loop when he taps **Done**, or when a planned workout already gave it a set count and he has logged that many working sets. The others keep going. When every lift in the group is done, the existing “finish this workout?” prompt runs if the rest of the session is done too.
+
+### Rest follows the exercise he just did
+
+Rest starts when he logs the set, for the exercise he just logged, before the screen moves on. The countdown keeps running on the next lift. He is resting from the hard set while he sets up the next one. Logging the next set replaces that countdown with the rest for the exercise he just finished.
+
+There is no single rest at the end of the round. A squat can ask for three minutes and a curl for one minute inside the same group.
+
+Each exercise has its own default rest, editable on the lift and on Edit exercise. Until he sets one, the app seeds it:
+
+| Kind of lift | Starting default |
+| --- | --- |
+| Squat, deadlift, lunge, leg press | 3 min |
+| Other compounds (bench, row, overhead, pull-up, dip) | 2 min |
+| Isolation (curl, raise, extension, fly) | 90 sec |
+| Anything we cannot tell | The Settings rest duration (3 min today) |
+
+The seed uses the muscles and the name already on the exercise. His edit replaces the seed and is what we remember. Auto-rest on/off per lift stays. Off means logging does not start a timer. **Start** still can.
+
+On a running timer the chips are **−15**, **+15**, and **Skip**. Skip is one tap and clears the countdown. The Settings screen still picks the fallback duration (the 1–5 minute chips). The ±15 buttons only nudge the timer that is running.
+
+### Learning his real rests
+
+Optional, and off until he turns it on. The app records, for a lift, how long the timer actually ran: from the start until Skip, until he logs the next set, or until it hits zero, whichever comes first. A gap between `completedAt` stamps is not enough, because in a group that gap includes the other exercises.
+
+Ignore a sample under 10 seconds (a stray Skip) or over 10 minutes (the phone sat down). After 8 kept samples, if the median is at least 15 seconds away from the saved default, offer a new default once. He confirms. The app does not change the default by itself, and it does not ask again that session.
+
+Weight and rep suggestions ignore rest. A short rest does not add weight.
+
+### History, coach, progression
+
+History keeps each lift’s sets together, in the session’s lift order from part **d**. A group draws one label on those lifts (“with the next two” or the group’s names) so the pairing is visible. Sets are not interleaved into one list in the first version. A minute-by-minute timeline can wait.
+
+The coach file gains an optional group id and position on each exercise, in the same schema bump as parts **b** and **c**. Absent means “not in a group.” Coach progression still scores each lift on its own. The group is context for the coach, not a change to the best-set rule.
+
+Per-lift rest can be included on the export as the default he had that day. The coach does not suggest weights from it.
+
+### Data and migration
+
+New optional fields, all on `RockLogSchemaV2` with defaults:
+
+- On the exercise: default rest in seconds. `0` means “not chosen,” so the seed or the Settings duration applies. This replaces the UserDefaults on/off flag as the thing backup must keep. The on/off flag moves onto the exercise as well so a reinstall keeps “rest off on face pulls.”
+- On the session’s exercise record: optional group id, position in the group (1…4). Empty means not in a group.
+- On the set, only if learning ships: planned rest seconds and actual rest seconds. Both optional. The first circuit build can ship without them.
+
+V1 is not edited. One lightweight stage. Existing sessions have no groups and rest behaviour stays the global timer until an exercise has its own default.
+
+Backup writes the new fields. An older file that omits them leaves groups empty and rest on the Settings default. A file that includes groups restores them.
+
+Program JSON (`rocklog.program`) can carry a group on a planned lift later. Old program files have no group and import as straight sets. The first build does not need to read groups from the file. Saving a group back to a planned day uses the same explicit button as part **d**.
+
+UserDefaults rest on/off values are copied once onto the exercise, then the exercise is the source of truth.
+
+### App vs coach
+
+**RockLog** owns creating the group, auto-advance, the per-lift rest editor, the timer chips, and the optional learning prompt.
+
+**Shared code** owns “given the group and which lifts are done, which lift is next” so the rule is testable without the screen. The timer service stays in the app.
+
+**RockCoach** shows the group label and the rest default when the file has them. It does not advance sets and it does not edit RockLog’s defaults.
+
+---
+
+## Schema in one step
+
+`RockLogSchemaV1` shipped in source at `eb497bd` and is frozen. Parts **b**, **c**, and **e** add optional fields with defaults in **one** `RockLogSchemaV2` and one lightweight stage. Shipping the screens in a later order is fine. Adding a further stored field after V2 is V3, so the fields we already know about belong in V2 even if the screen comes later.
+
+Part **a** is key-value. Part **d** uses V1 fields.
+
+CloudKit will accept this only as a lightweight additive change. There is no custom migration stage.
+
+`PreviewSampleData` gains whatever new fields the models grow, or previews crash. Backup’s nil-vs-empty rule from PR #9 applies to every new array.
+
+## Suggested build order
+
+1. **Reorder (d).** No migration. It is the gap he feels on the lift screen. The day-plan editor stays for editing the library.
+2. **Per-lift rest and ±15 (the rest half of e).** Small, and it matches “the last exercise decides the break.” Circuits can follow in the next slice.
+3. **Groups and auto-advance (the rest of e).**
+4. **Body-weight lookup and added-load mode (b).** No new measurement model. Date-based assist math is the part that stops old assisted e1RMs from moving when he updates the scale.
+5. **Pounds / kilograms and plate math (a).**
+6. **Stack profiles and rep compensation (c).** Needs the unit work so a kilogram stack and a pound stack stay distinct, and needs the shared Epley helper.
+7. **Rest learning.** After real timer samples exist. Suggest only.
+
+Pending pull request **#10** (month boundaries for the this-month / last-month table) is independent. It can land any time. It does not block this list.
+
+One V2 migration can land with step 2, containing the optional fields for steps 2 through 6, so later steps do not each mint a schema version.
+
+## Tests
+
+**a. Units**
+
+- 100 kg entered, stored as pounds, shown again as 100 kg.
+- Staying in pounds, 225 stays 225. A 47.5 lb log still displays 47.5.
+- Switching to kilograms and back moves at most one display step, and a second toggle in the same direction does not walk further.
+- Plate readout for 135 lb is a 45 lb bar plus the pound plates. 60 kg uses a 20 kg bar plus the kilogram plates.
+- A one-session suggestion of 137.3 lb still becomes 135 lb. The same load with kilograms selected snaps to 2.5 kg, not to 5 lb converted for display after the fact.
+- A backup with no `weightUnit` restores as pounds. Numbers in an old file are unchanged.
+- A weight that converts to more than 10,000 lb is refused on restore, with nothing changed.
+
+**b. Body weight**
+
+- Latest weigh-in on or before the session date is the one assist and added-load use. A later weigh-in does not change that session’s e1RM.
+- A backdated weigh-in does not replace the Settings number when a newer log exists.
+- Assist with no weigh-in and no Settings weight contributes 0 and says so.
+- Added mode: body weight 180 and a 25 lb belt is load 205. Progression’s next target is expressed as added weight, not as 205 on the belt stepper.
+- Relative line is e1RM / that day’s body weight. Missing weigh-in hides the line.
+- Navy / FFMI tests still pass on the same entries.
+- An old backup without a load mode restores assist flags as they are. A new backup round-trips added mode.
+- Coach file: assisted set includes the body weight used. Coach “up / down” follows effective load (less assistance is up).
+
+**c. Stacks**
+
+- Fixed 10 lb step from 10 to 200 exposes 10, 20, …, 200. A 2.5 add-on also exposes 12.5, 22.5, …
+- Nearest, down, and up policies, including a tie (nearest tie goes down).
+- 205 × 5 on a 10 lb stack becomes 200 × 6 under nearest-with-tie-down, and the new e1RM is closer to the original than 200 × 5 or 200 × 7.
+- A lift with no profile still snaps to 5 lb or 2.5 kg.
+- A kilogram pin list stays on kilogram pins after a pound display conversion.
+- Planned target in the file is unchanged after the phone shows a rounded pair.
+- Backup round-trips a profile. An old backup restores with no profile and the old stepper.
+
+**d. Reorder**
+
+- Drag on the list and drag from the lift screen write the same `sortOrder`.
+- After a drag, `followsSessionRoster` is true and the library day order is unchanged.
+- Save to this day updates the day plan. Skipping that button leaves the day plan.
+- Save to remaining planned days updates unused sessions with that day name and leaves finished sessions.
+- History order matches the session order.
+- Coach export array order matches the session. Best-set comparison for a lift is unchanged when its neighbours move.
+- A planned session’s roster reorder does not change a different queued day.
+
+**e. Groups and rest**
+
+- A group of 2, 3, and 4 advances on a working set and wraps to the first unfinished member.
+- A 5th lift is refused.
+- Unequal counts: the lift that has hit its planned count is skipped; the partner keeps getting sets.
+- A warm-up log does not advance.
+- Rest after a squat uses the squat default; the next log, on a curl, starts the curl default even if the squat timer was still running.
+- Skip clears the timer in one tap. −15 / +15 move a running timer by 15 seconds and do not change the saved default.
+- Seed: a squat starts at 3 minutes, a curl at 90 seconds, an unknown lift at the Settings duration. An edited default wins over the seed.
+- Learning: 8 samples, median 45 seconds from a 90 second default, offers 45 once. A 12 minute sample is ignored. Declining leaves the default.
+- e1RM for the lift is unchanged by the rest value.
+- V1 store opens on V2. Old sessions have no group. Backup round-trips a group and a per-lift rest. A file that omits them does not clear rests already on the phone.
+- Coach file with a group id shows the pairing. A v1 file without it still imports, each lift on its own.
+
+## Open questions for Lee
+
+1. Pounds as the stored unit, kilograms as a view. Confirm, or say if you want the store converted to kilograms instead.
+2. Kilogram suggestions snap to 2.5 kg. Prefer 1.25 or 5?
+3. Girths stay inches for now?
+4. On RockCoach, always show the pounds the athlete logged, or follow a unit setting on the coach’s phone?
+5. Added load (body weight plus a belt) is a third mode next to bar and assist. Is that the split you want?
+6. Relative strength on the lift screen only, for the first build. A “divide the strength score by body weight” switch can wait. Agree?
+7. Stack policy default is nearest, and an exact halfway tie rounds down. Prefer always down (never more than the target)?
+8. One magnet at a time, or several?
+9. One stack profile per exercise. A “same machine as this other lift” copy can wait. Agree?
+10. Reorder saves the session always. Extra buttons save the day plan, and the remaining planned days. You do not want a reorder to change next week unless you tap that. Confirm.
+11. From the lift screen, is long-press on the lift number the right drag handle?
+12. Replace −30 / +30 with −15 / +15. Confirm.
+13. Warm-up sets stay on the current lift; working sets advance the group. Prefer warm-ups to advance too?
+14. The seed table (3 min legs, 2 min other compounds, 90 sec isolation) is a starting point. Change any of those?
+15. Rest learning only suggests, and only after you turn it on. It never edits the default alone. Confirm.
+16. A group is not written into the program file until you tap save. The phone can do groups before the program format knows about them. Agree?

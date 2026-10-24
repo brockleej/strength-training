@@ -5,6 +5,29 @@ Paste into App Store Connect → the build → **Test Details** → **What to Te
 
 App Apple ID: `6797695631` · bundle `com.lee.lift2026`
 
+`docs/testflight-notes-next.txt` is the planned-workout paste (the “after 25” block below). It does not include the backup fixes.
+
+---
+
+## On main, not on TestFlight yet — do not paste
+
+Source commit `eb497bd` (pull request #9). Paste this only after the Cloud build that contains it is VALID.
+
+```
+What's new: Saving a backup now includes your body measurements and any planned workouts, along with your lifts and history. Putting a backup back asks first. If something is wrong with the file, RockLog leaves this phone alone. A lift this version does not understand is skipped, and you'll see how many. The first time you do a lift, the suggested weight rounds to the nearest 5 pounds.
+
+Please try:
+1) Settings → Export backup. The file name still starts with RockLog-backup-.
+2) Optional, and only on a phone you can stand to replace: restore that same file. Your days, lifts, history, body measurements, and planned workouts should match what you exported. Don't restore leaves the phone as it was.
+3) Optional: restore an older backup from before this build. History should match the file. Body measurements and planned workouts that were already on the phone should still be there.
+4) Do one new lift a single time and finish. Next session, the suggested weight should be a multiple of 5 lb (a 137 lb log suggests 135).
+5) Screenshot anything that looks off.
+```
+
+## Pending PR #10 — do not paste, not merged
+
+A workout saved at the exact start of a month (midnight on the 1st) can show up in both that month and the month before on the Progress “this month vs last month” card, and in RockCoach’s same table. The fix is open pull request #10. It is not on `main` and not on TestFlight.
+
 ---
 
 ## Next TestFlight — after 25 (planned list, split import, AI instructions)

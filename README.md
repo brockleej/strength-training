@@ -93,6 +93,12 @@ Layered on the foundation above for a more freeform, physique-aware gym log:
 - **US Navy body-fat → FFMI** muscularity index, bands, trends
 - Height / sex profile wiring for composition math
 - Progress dashboard polish and range/lift presentation (built on the original Progress tab)
+- **This month vs last month** best set per lift (Progress and RockCoach). A session saved at the exact start of a month can be counted in both months. **Pending PR #10** — not merged, not fixed on `main`.
+
+### Planned training and the coach app
+- **Planned workouts** — a next-up list on Today (file order). Focus shows last time, the plan, and this session.
+- **Import training split** and one **Instructions for AI** file (program and split).
+- **RockCoach** companion in this repo (local builds, not TestFlight): send this workout, last week, a chosen list, or unsent workouts.
 
 ### Brand, design, ops
 - **RockLog** name (App Store: *RockLog* · subtitle e.g. *Strength training gym log*), icon (Icon Composer), launch screen
@@ -116,7 +122,7 @@ Many UI screens still **sit on original ViewModels and services**; RockLog chang
 
 ## Screenshots
 
-Dark UI from a real log (August 2026, iPhone 17 Pro Max). App Store 6.9" frames live in [`docs/screenshots/asc-6.9/`](docs/screenshots/asc-6.9/). What each file is: [docs/SCREENSHOTS.md](docs/SCREENSHOTS.md).
+Dark UI from a real log (August 2026, iPhone 17 Pro Max). These frames predate the planned-workout list on Today and the last / plan / this session columns. App Store 6.9" frames live in [`docs/screenshots/asc-6.9/`](docs/screenshots/asc-6.9/). What each file is: [docs/SCREENSHOTS.md](docs/SCREENSHOTS.md).
 
 <p align="center">
   <img src="docs/screenshots/workout.png" alt="Focus: Hack Squat last vs this" width="200" />
@@ -132,11 +138,11 @@ Dark UI from a real log (August 2026, iPhone 17 Pro Max). App Store 6.9" frames 
 ## Feature map (full product)
 
 ### Training session
-- **Today** — day picker, week rotation (A/B/All), resume or start, gym pass  
-  *(day/start session: previous distro · split/rotation/pass: RockLog)*
+- **Today** — day picker, week rotation (A/B/All), resume or start, gym pass. While planned workouts are waiting, a next-up list replaces the day cards.  
+  *(day/start session: previous distro · split/rotation/pass/planned list: RockLog)*
 - **Exercise list** — overview, recipe/target secondary line, progress by **marked-done** lifts  
   *(list foundation: previous distro · done tracking: RockLog)*
-- **Focus** — weight × reps steppers, strength/endurance mode, last-vs-this, Warm · Log · Done  
+- **Focus** — weight × reps steppers, strength/endurance mode, last-vs-this (last / plan / this session when a plan is loaded), Warm · Log · Done  
   *(logging core: previous distro · layout / done / last-vs-this: RockLog)*
 - **Rest timer**, **assist**, **each-side** — RockLog
 - **Progression suggestions**, **PR celebration**, **HealthKit** — previous distro (still central)
@@ -148,10 +154,11 @@ Dark UI from a real log (August 2026, iPhone 17 Pro Max). App Store 6.9" frames 
 ### Progress & body
 - Dashboard, charts, drill-down — **previous distro** (evolved in both)
 - Body metrics + Navy/FFMI — **RockLog**
+- This month vs last month best set — **RockLog** (midnight-on-the-1st double count is **pending PR #10**)
 
 ### Library & settings
 - Exercise library, backup, HealthKit settings, progression aggressiveness — **previous distro**
-- Freeform split editor, rest timer prefs, body profile, gym pass, iCloud status polish — **RockLog**
+- Freeform split editor, rest timer prefs, body profile, gym pass, iCloud status polish, planned-workout import, split import, Instructions for AI, RockCoach send — **RockLog**
 
 ### Design
 - Tokenized dark UI direction — **previous distro**
@@ -211,6 +218,9 @@ cd strength-training
 open RockLog.xcodeproj
 # or
 xcodebuild -scheme RockLog -destination 'platform=iOS Simulator,name=iPhone 17'
+
+# RockCoach companion (local only, not TestFlight)
+xcodebuild -scheme RockCoach -destination 'platform=iOS Simulator,name=iPhone 17' build
 ```
 
 Set your **signing team** on the app target → Signing & Capabilities, then Run.
@@ -235,15 +245,27 @@ xcodebuild test -scheme ProgressionLab -destination 'platform=macOS'
 | --- | --- |
 | **HealthKit** | Physical device |
 | **CloudKit** | Paid team, iCloud entitlement, signed-in iCloud |
-| **Backup** | Settings → Export before risky restores |
+| **Backup** | Settings → Export before a restore. Contents on `main` are described under [Backup on main, not on TestFlight yet](#backup-on-main-not-on-testflight-yet). |
 
 ## TestFlight
 
 **Xcode Cloud** on this fork ships **RockLog** (`com.lee.lift2026`) to internal TestFlight on every push to **`main`**. **RockCoach** lives in this repo for local Xcode builds — it is not on TestFlight.
 
+## Backup on main, not on TestFlight yet
+
+Merged to `main` in `eb497bd` (pull request #9). **Not on TestFlight yet.** The build testers have does not include this.
+
+A new export includes body measurements and planned programs, along with the library, split, day plans, and sessions. An older file that omits those sections leaves the measurements and programs already on the phone. A file that includes an empty list clears them. Restore saves once; if that save fails, the phone rolls back to what it had. A file with bad numbers (negative reps, a weight that is not a real number, a weight over 10,000 lb, a measurement kind this app does not know) is refused and nothing changes. A lift whose training mode this version does not understand is skipped, and the app says how many. A lift you have only done once suggests a weight rounded to the nearest 5 lb. Two workouts with the same date are ordered by session id so the suggestion does not flip.
+
+The iCloud store opens as `RockLogSchemaV1` with an empty migration plan. The next model change is `RockLogSchemaV2` plus a lightweight stage. Details for units, bodyweight loads, machine stacks, in-workout reorder, and rest groups: [docs/specs/units-bodyweight-machine-stacks.md](docs/specs/units-bodyweight-machine-stacks.md).
+
+**Pending PR #10** (not merged): the this-month / last-month table still treats midnight on the 1st as inside both months.
+
 Request beta access via [Issues](https://github.com/brockleej/strength-training/issues).
 
 ### What’s new — planned workouts and split import
+
+This is the latest tester paste in the repo. The backup, schema, and 5 lb rounding work above is on `main` and is **not** part of that paste until a TestFlight build includes `eb497bd`.
 
 See [docs/TESTFLIGHT-WHAT-TO-TEST.md](docs/TESTFLIGHT-WHAT-TO-TEST.md) for the tester copy (plain language).
 
@@ -255,19 +277,23 @@ Sample program file: [docs/periodization/fixtures/sample-8-week-block.rocklog.pr
 
 ```
 RockLog/
-├── Models/           # Core graph (original) + SplitDay, BodyMetricEntry (RockLog)
-├── ViewModels/       # Feature VMs (original pattern; new VMs for body metrics, etc.)
+├── Models/           # Core graph + SplitDay, BodyMetricEntry, TrainingBlock
+│                     # Store: RockLogSchemaV1 (main, not TestFlight yet)
+├── ViewModels/
 ├── Views/
-│   ├── Today/ Workout/ History/ Progress/ Library/ Settings/
-│   └── DesignSystem/ # Token/component system (original direction, RockLog polish)
-├── Services/         # Progression, HK, backup (original) + rest, body, gym pass (RockLog)
-├── Utilities/
-├── RockLog.icon/     # App icon
+│   ├── Today/ Workout/ History/ Progress/ Library/ Settings/ Onboarding/
+│   └── DesignSystem/
+├── Services/         # Progression, HealthKit, backup, rest, body, gym pass, program import
+├── Utilities/        # PreviewSampleData
+├── RockLog.icon/
 └── LaunchScreen.storyboard
+RockCoach/            # Companion app — local scheme, not TestFlight
 RockLog.xcodeproj
 RockLogTests/
-Shared/Algorithm/     # Progression pure core — previous distro
+Shared/Algorithm/     # Progression + backup models
+Shared/CoachFormat/   # rocklog.coach.session, monthly overload table
 progression-lab/      # macOS tool — previous distro
+docs/specs/           # units, body weight, stacks, reorder, rest
 ```
 
 Agent notes: [AGENTS.md](AGENTS.md).

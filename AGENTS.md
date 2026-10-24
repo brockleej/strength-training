@@ -42,7 +42,7 @@ No lint commands are configured.
 
 ### ProgressionLab (macOS dev tool)
 
-Local-only macOS app for visualizing and tuning the progression algorithm. Never ships to TestFlight (separate scheme, not part of the Xcode Cloud workflow). See [docs/superpowers/specs/2026-05-03-progression-lab-design.md](docs/superpowers/specs/2026-05-03-progression-lab-design.md).
+Local-only macOS app for visualizing and tuning the progression algorithm. Never ships to TestFlight (separate scheme, not part of the Xcode Cloud workflow). This repo has no ProgressionLab design doc (an older note pointed at `docs/superpowers/specs/2026-05-03-progression-lab-design.md`, which is not here).
 
 ```bash
 # Build the macOS dev tool
@@ -84,7 +84,9 @@ Utilities/     -> PreviewSampleData (preview helpers only)
 - **SwiftData relationships:** Always define cascade delete rules on parent-side relationships.
 - **CloudKit sync:** SwiftData uses `cloudKitDatabase: .automatic` with the `iCloud.com.lee.lift2026` container. `CloudKitSyncService` monitors account status and sync events in Settings.
 - **HealthKit:** `HealthKitWorkoutService` handles authorization, starting/stopping Apple Fitness workouts, and saving workout metadata. Always check authorization status before performing HealthKit operations.
-- **Adding a new SwiftData `@Model`:** the model must be registered in the `Schema([...])` array in `RockLogApp.swift` and also added to `PreviewSampleData`. Forgetting either causes runtime crashes — the schema in the app entry point is the source of truth for what CloudKit syncs.
+- **SwiftData schema:** `RockLogApp` opens `Schema(versionedSchema: RockLogSchemaV1.self)` with `RockLogMigrationPlan` (no stages yet). V1 is the current model list and is frozen. This landed on `main` in `eb497bd` and is **not on TestFlight yet**. The next model or stored field is `RockLogSchemaV2` plus one lightweight stage. CloudKit will not run a heavy stage. Also add new models to `PreviewSampleData`. Weights are stored as pounds. There is no kilogram setting yet — see [docs/specs/units-bodyweight-machine-stacks.md](docs/specs/units-bodyweight-machine-stacks.md).
+- **Backup:** export on `main` includes `trainingBlocks` and `bodyMetrics`. A missing key keeps rows already on the phone. An empty array clears them. Invalid files are rejected before restore. Unknown `trainingMode` values are skipped and counted. Same commit as the schema, **not on TestFlight yet**.
+- **Monthly overload:** `Shared/CoachFormat/MonthlyOverload.swift` feeds the Progress card and RockCoach. Month membership still uses closed `DateInterval.contains`, so midnight on the 1st counts in both months. **Pending PR #10** (not merged).
 
 ## SwiftUI Conventions
 

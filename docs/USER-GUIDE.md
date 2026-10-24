@@ -110,9 +110,10 @@ Tap a lift. This is **Focus** — weight, reps, rest, and this session vs last t
 
 ### Sets
 
-The table is **last vs this** when you have history.
+The table is **last vs this** when you have history. When the workout came from a planned list, the columns are **last**, **plan**, and **this session**. This session stays blank until you log a set.
 
 - **Last** — tap a previous set to load it into the steppers.
+- **Plan** — the sets from the file, when this workout was planned.
 - **This** — what you logged today.
 - Swipe a this-session set **left** to delete it (full swipe or trash). Remaining sets renumber.
 - **History** (below) expands older sessions.
@@ -186,6 +187,8 @@ After each **Log set**, steppers seed the next set from:
 
 First set of a lift also uses last session, recent average, and the progression suggestion. Ice on the stepper means “this is the suggested bump.”
 
+On the latest source (`eb497bd`, **not on TestFlight yet**), a lift you have only done once suggests a weight rounded to the nearest 5 lb. The TestFlight build you have can still suggest the exact weight you logged (137 lb stays 137 until that build ships).
+
 Change this anytime; it applies to the next log, not past sets.
 
 ---
@@ -199,7 +202,7 @@ Finished workouts only. Incomplete / cancelled sessions do not appear.
 
 **Open a session**
 - Lifts and sets, comparison to similar days, Apple Health stats if you saved them.
-- **Send to RockCoach** (paper plane) sends this workout to your coach. Not a backup — see [RockCoach](#rockcoach).
+- **Send to RockCoach** (paper plane) offers **This workout**, **Last week**, or **Choose workouts…**. Not a backup — see [RockCoach](#rockcoach).
 - **Edit** reopens that session on the Workout tab. Sets stay in History the whole time. When you are done, **Save Changes** (same as Finish).
 
 Swipe a History row to delete a workout (you will be asked). That is permanent.
@@ -214,7 +217,8 @@ Trends across finished sessions — not a live workout screen.
 - **Strength score** — strongest estimated 1RM (Epley) for each muscle, added together. Barbell and dumbbell bench share chest — only the stronger one counts. Sets tagged **Side** count both limbs so a one-arm curl can sit next to a barbell curl. The badge is change vs a month ago. This is *strength*, not “total pounds moved.” The first open of Progress can spin briefly; it should not freeze.
 - **Workouts** and **working sets** in the selected range.
 - **Workouts** chart — frequency over time.
-- **Body** — log weight, waist, neck, etc. Navy body-fat and FFMI if height + sex are saved.
+- **Body** — log weight, waist, neck, etc. Navy body-fat and FFMI if height + sex are saved. A weight you log here also updates Settings → Body profile → weight, which is what assisted lifts use. Those are one current number plus a history of check-ins. Assisted math uses the current number, including after you change it.
+- **This month vs last month** — each lift’s best working set, grouped by day. A workout saved at the exact start of a month (midnight on the 1st) can show in both months. That is still true on `main`. **Pending PR #10** (not merged).
 - **PRs this month**.
 - **Sets by muscle**.
 - **Strength vs endurance** — how you split set counts.
@@ -236,7 +240,9 @@ Your library — not today’s session.
 
 Assigning a lift to Push (and maybe Legs) is what makes it show on Today and on that day’s workout list. A/B labels hide it on the other week unless you pick **All** mid-session.
 
-Day order and which days exist are **Settings → Edit training split**. You can swipe extra days off; the last day stays so Today still has something to start. If planned workouts are waiting, **Use planned workouts as my split** sits under the last preset (same as the prompt after you add a file). The list of lifts *on* a day is Exercises, **Edit [Day] list** on Today, or **Reorder / edit day plan** on the workout overview.
+Day order and which days exist are **Settings → Edit training split**. You can swipe extra days off; the last day stays so Today still has something to start. The list of lifts *on* a day is Exercises, **Edit [Day] list** on Today, or **Reorder / edit day plan** on the workout overview. That reorder changes the day plan for next time. It does not keep a separate order just for today.
+
+When you add a planned-workout file, RockLog asks **Use this as your training split?** You can choose **Use this split** or **Keep my current split**. Edit training split does not show that choice again later. The preset list (Push / Pull / Legs and the others) is a different action: it replaces your days, then asks for starter lifts or empty days.
 
 ---
 
@@ -250,14 +256,15 @@ If someone *does* coach you, turn **Use RockCoach** on, then send finished worko
 
 ### Send a workout
 
-- After **Finish**, the summary **paper plane**: **This workout** or **Unsent workouts**.
-- History → open a session → paper plane (that workout only).
+- After **Finish**, the summary **paper plane**: **This workout**, **Last week**, **Choose workouts…**, or **Unsent workouts**.
+- History → open a session → paper plane: **This workout**, **Last week**, or **Choose workouts…**.
 - **Settings → RockCoach**
   - **Use RockCoach** — show or hide the rest of this feature.
   - **Your name on coach files** — printed on the file, not your Apple ID.
   - **Offer to send after finish** — opens the send sheet when you finish a live workout (not when you save a History edit).
-  - **Send last workout to coach**
+  - **Send last workout to coach** — the single most recent finished workout, not the whole of last week.
   - **Send unsent workouts** — everything finished that you have not sent yet.
+  - **Choose workouts to send** — pick the sessions yourself.
 
 One workout is a session file. Two or more unsent workouts go as one batch file. Send the attachment — do not paste the file as text.
 
@@ -270,6 +277,10 @@ One workout is a session file. Two or more unsent workouts go as one batch file.
 - **Export backup** — JSON of the library, split, day plans, and sessions. The file is named `RockLog-backup-YYYY-MM-DD.json`. Older `strength-training-backup-*.json` files still restore.
 - **Restore from backup** — asks before replacing your current split and exercises. **Don’t restore** leaves this phone as-is.
 
+**On the TestFlight build before `eb497bd`:** that file does not include body measurements or planned programs. Restoring deletes the planned programs on the phone even though the file never contained them. A restore that fails partway can leave the log half-replaced.
+
+**On `main`, not on TestFlight yet (`eb497bd`):** the file also includes body measurements and planned programs. An older file that leaves those sections out keeps what is already on the phone. A file that includes an empty list clears them. If the restore fails, the phone stays as it was. A broken file (bad numbers, a duplicate, a measurement type the app does not know) is refused and nothing changes. A lift with a training mode this version does not understand is skipped, and RockLog tells you how many. Weights are still pounds. A weight over 10,000 lb is refused.
+
 Use this for safekeeping or another device. Do not restore a `.rocklogcoach` file.
 
 ### Planned workouts
@@ -277,7 +288,12 @@ Use this for safekeeping or another device. Do not restore a `.rocklogcoach` fil
 A planned-workout file (`.rocklogprogram` or a JSON whose format is `rocklog.program`) adds upcoming days with the target sets already filled in. It does **not** replace your history. After you add the file, RockLog asks if you want to **use this as your training split** (days + lifts on each day). **Keep my current split** leaves Today’s days as they are.
 
 - **Settings → Add planned workouts**, or open the file from Files / a share sheet.
-- Confirm **Add workouts**. Then choose **Use this split** or **Keep my current split**. You can also do that later: **Settings → Edit training split → Use planned workouts as my split** (under presets). The file is a queue — missed gym days stay next up. **Start this block today** is optional (slides every date); you do not need it for rolling-on-train.
+- Confirm **Add workouts**. Then choose **Use this split** or **Keep my current split**. That question is asked when you add the file. Edit training split does not offer it again afterward.
+- The file is a queue — missed gym days stay next up. **Start this block today** is optional (slides every date); you do not need it for rolling-on-train.
+- **Settings → Import training split** uses the same kind of file with a split format. It replaces days and lifts. It does not add a planned list. If a plan is still waiting, choose **Keep remaining planned workouts** or **Remove leftover plan**. History stays.
+- **Settings → Instructions for AI** shares one file you can hand to a chatbot if you want it to write a plan or a split. You do not need it to train.
+- **Settings → Remove unused planned workouts** deletes planned days you have not started. Finished workouts stay in History.
+- **Settings → Add planned workouts** again: **Add** keeps leftover planned days. **Replace unused plan** swaps them. History stays.
 - Today shows **Next up: Lower** (or whatever is first unused). Start that day to load those ramps and work sets — not every lift on the day plan. Two Lowers in one week can be different (deadlift first, Romanian later).
 - Starting a different day leaves the queue alone.
 - A missed calendar day is not saved as a finished workout. History uses the day you actually trained.
@@ -302,6 +318,8 @@ A planned-workout file (`.rocklogprogram` or a JSON whose format is `rocklog.pro
 | Membership barcode | Today → **Gym pass** |
 | Fix yesterday’s weights | History → session → **Edit** |
 | Show or hide coach send | Settings → **RockCoach** → **Use RockCoach** |
-| Send a workout to your coach | Turn Use RockCoach on, then summary or History paper plane |
+| Send a workout to your coach | Turn Use RockCoach on, then summary or History paper plane (this workout, last week, or a chosen list) |
+| Import a split without erasing history | Settings → **Import training split** |
+| Let a chatbot write a plan | Settings → **Instructions for AI** |
 | Save / move this phone’s log | Settings → **Export backup** |
 | Add planned workouts | Settings → **Add planned workouts**, or open the file |
