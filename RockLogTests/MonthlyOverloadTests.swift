@@ -471,13 +471,13 @@ final class MonthlyOverloadTests: XCTestCase {
     func test_review_sessionExactlyAtMonthStart_countedOnlyInThisMonth() {
         let windows = MonthlyOverload.monthWindows(now: now, calendar: calendar)!
         XCTAssertEqual(windows.this.start, windows.last.end)
-        let lift = UUID()
+        let liftID = UUID()
         let result = review([
-            session(windows.this.start, lift(id: lift, name: "Boundary", set(100, 5))),
+            session(windows.this.start, lift(id: liftID, name: "Boundary", set(100, 5))),
         ])
         XCTAssertEqual(result.thisMonthWorkoutCount, 1)
         XCTAssertEqual(result.lastMonthWorkoutCount, 0)
-        let row = result.rows.first { $0.exerciseID == lift }
+        let row = result.rows.first { $0.exerciseID == liftID }
         XCTAssertNil(row?.lastMonth)
         XCTAssertEqual(row?.thisMonth, MonthlyOverload.WorkingSet(weightLbs: 100, reps: 5))
         XCTAssertEqual(row?.comparison, .new)
@@ -487,17 +487,17 @@ final class MonthlyOverloadTests: XCTestCase {
     func test_review_newYearsMidnight_belongsToJanuaryOnly() {
         let januaryNow = date(2026, 1, 15)
         let windows = MonthlyOverload.monthWindows(now: januaryNow, calendar: calendar)!
-        let lift = UUID()
+        let liftID = UUID()
         let result = review([
-            session(windows.this.start, lift(id: lift, name: "New Year", set(185, 5))),
+            session(windows.this.start, lift(id: liftID, name: "New Year", set(185, 5))),
         ], now: januaryNow)
         XCTAssertEqual(windows.this.start, windows.last.end)
         XCTAssertEqual(result.lastMonthLabel, "Dec")
         XCTAssertEqual(result.thisMonthLabel, "Jan")
         XCTAssertEqual(result.lastMonthWorkoutCount, 0)
         XCTAssertEqual(result.thisMonthWorkoutCount, 1)
-        XCTAssertNil(result.rows.first { $0.exerciseID == lift }?.lastMonth)
-        XCTAssertEqual(result.rows.first { $0.exerciseID == lift }?.comparison, .new)
+        XCTAssertNil(result.rows.first { $0.exerciseID == liftID }?.lastMonth)
+        XCTAssertEqual(result.rows.first { $0.exerciseID == liftID }?.comparison, .new)
     }
 
     // MARK: - Coach documents (RockCoach path)
