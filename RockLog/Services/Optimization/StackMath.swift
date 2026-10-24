@@ -140,7 +140,7 @@ nonisolated enum StackMath {
         if let maxReps { rounded = min(maxReps, rounded) }
         let neighbor = ideal >= Double(rounded) ? rounded + 1 : rounded - 1
         guard neighbor >= 1 else { return rounded }
-        let cappedNeighbor = maxReps.map { min($0, neighbor) } ?? neighbor
+        let cappedNeighbor = min(ceiling, maxReps.map { min($0, neighbor) } ?? neighbor)
         guard cappedNeighbor != rounded, cappedNeighbor >= 1 else { return rounded }
         let roundedDistance = abs(epley(newWeight, rounded) - estimate)
         let neighborDistance = abs(epley(newWeight, cappedNeighbor) - estimate)
