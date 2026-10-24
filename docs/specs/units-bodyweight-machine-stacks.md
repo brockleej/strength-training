@@ -688,3 +688,42 @@ One V2 migration can land with the per-lift rest step, containing the optional f
 16. A group is not written into the program file until you tap save. The phone can do groups before the program format knows about them. Agree?
 17. The last-5-seconds tick tones go away, so an audiobook dips once at zero instead of five times. The 10-second cue is a haptic only, and its switch starts off. Confirm.
 18. A learned stack step is the largest of 10, 15, and 20 lb that fits the corrected weights, and it is written after three sessions agree. A custom step is the greatest common divisor when it is above 5 lb. Change either rule?
+
+## Crash when a set is logged with no live session
+
+`WorkoutViewModel.findOrCreateRecord` used to call `fatalError` when Focus asked it to log a set and the session was already gone. That happens after a restore replaces the store, after the session is suspended, or when the session row has been deleted while the lift screen is still up.
+
+The finder now returns nil. `addSet`, marking a lift done, and adding a lift to the session return without writing. The screen does not trap. `RockLogTests` covers a log with no live session.
+
+## Warm-up tag
+
+Warm-up is a tag on the set being logged. It is left out of estimated one-rep max, progression, suggestions, and same-weight carry.
+
+Logging a warm-up does not copy the tag onto the next set. The next set opens warm only when that set's own plan says warm. `setLogged` clears the tag. The old bug was `FocusView.apply(prefill:)` copying `isWarmup` from the set just logged, and a no-op clear when the tag was already on.
+
+An optional ramp, off until the lift asks for it, offers 50% × 8, 70% × 5, and 85% × 3 of the first working weight, snapped down to the stack step or to 5 lb. Nothing in that ramp is logged until he taps it. Those sets are warm-ups, so they stay out of the numbers above.
+
+## Where the code moved
+
+The new behavior lives beside the screens, not inside them.
+
+| Path | What it holds |
+| --- | --- |
+| `RockLog/Services/Optimization/` | Units, load, stacks, carry, focus order, circuits, rest policy. Pure functions the tests call without a phone. |
+| `RockLog/Models/Gym.swift`, `MachineStackProfile.swift` | Gyms and the (gym, lift) stack. |
+| `Shared/Algorithm/BackupMigration.swift` | Backup payload v1 → v2, and the unknown-key count. |
+| `Shared/CoachFormat/InterchangeCodec.swift` | The one JSON envelope. |
+| `Shared/RestActivity/RestActivityAttributes.swift` | Live Activity fields compiled into the app. |
+| `RockLogWidget/` | The extension. Its own bundle id, profile, and App Group are in [rest-widget.md](rest-widget.md). |
+| `docs/format/` | JSON Schema, field table, and synthetic samples. |
+| `docs/specs/schema-v2-rollback.md` | How to leave V2, and the rule against promoting the production CloudKit schema. |
+
+`RockLogSchemaV2` is the only new schema stage. It is not V3.
+
+## Interchange file
+
+Import, export, backup, `.rocklogprogram`, split, and coach files share one envelope: `format` `rocklog.interchange`, `formatVersion`, `weightUnit`, `kind`, and `payload`. The field table, the version rules, and the synthetic samples are in [docs/format/README.md](../format/README.md).
+
+The backup payload inside that envelope is version 2. Version 1 still opens. `BackupMigration.promoteToCurrent` is the pure step, and it only changes the version number. Version 0 and any version above 2 are refused. Unknown keys and unknown enum values are counted on the restore prompt. Weights stay full-precision pounds. Stack pins keep `pinUnitRaw`. Ids are not minted again, and a duplicate id in one list is refused.
+
+Coach files moved to `schemaVersion` 2 in the same change as the RockCoach reader. The reader accepts 1 and 2 and refuses 0 and 3. A version 1 coach file still imports.
