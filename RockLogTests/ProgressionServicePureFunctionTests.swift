@@ -22,6 +22,19 @@ final class ProgressionServicePureFunctionTests: XCTestCase {
         XCTAssertEqual(suggestion?.targetReps, 8)
     }
 
+    func test_singleSession_snapsOffGridWeightToFivePounds() {
+        // Assisted effective load can be off the plate grid. 137.3 → 135.
+        let records = AlgorithmFixtures.steadyHistory(count: 1, weight: 137.3, reps: 6)
+        let suggestion = ProgressionService.suggestion(
+            records: records,
+            mode: .highWeightLowReps,
+            params: .productionModerate
+        )
+        XCTAssertEqual(suggestion?.basis, .notEnoughData)
+        XCTAssertEqual(suggestion?.targetWeight, 135)
+        XCTAssertEqual(suggestion?.targetReps, 6)
+    }
+
     func test_zeroSessions_returnsNil() {
         let suggestion = ProgressionService.suggestion(
             records: [],
