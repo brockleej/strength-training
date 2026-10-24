@@ -79,6 +79,7 @@ struct WorkoutSummaryView: View {
 
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 20) {
                     BigStat(label: "Duration", value: durationText, unit: durationText == "—" ? nil : "min")
+                        .accessibilityIdentifier(AccessibilityID.summaryDuration)
                     BigStat(label: "Volume", value: TodayStats.formatVolume(SessionMath.volume(of: session)), unit: "lb")
                     BigStat(label: "Sets", value: "\(SessionMath.setCount(of: session))")
                     BigStat(label: "PRs", value: "\(prCount)", tone: prCount > 0 ? .uplift.pr : .uplift.fg)
@@ -190,6 +191,7 @@ struct WorkoutSummaryView: View {
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .accessibilityIdentifier(AccessibilityID.summaryDone)
 
             Button {
                 workoutVM.dismissSummaryToDetail()
@@ -202,6 +204,7 @@ struct WorkoutSummaryView: View {
                     .foregroundStyle(Color.uplift.onAccent)
             }
             .buttonStyle(.plain)
+            .accessibilityIdentifier(AccessibilityID.summaryDetails)
         }
         .padding(.bottom, 12)
     }

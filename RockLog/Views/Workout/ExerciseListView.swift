@@ -203,6 +203,7 @@ struct ExerciseListView: View {
                     .buttonStyle(.plain)
                     .frame(minHeight: 44)
                     .contentShape(Rectangle())
+                    .accessibilityIdentifier(AccessibilityID.workoutHome)
                     .accessibilityLabel("Home")
                     .accessibilityHint("Leave the workout list and return to Today. Your session stays available to resume.")
 
@@ -454,6 +455,7 @@ struct ExerciseListView: View {
                         onToggleSecondary: toggleSecondaryMode
                     )
                     .contentShape(Rectangle())
+                    .accessibilityIdentifier(AccessibilityID.workoutExercise(exercise.name))
                     .swipeToDelete {
                         exercisePendingRemoval = exercise
                     } onTap: {
@@ -570,6 +572,7 @@ struct ExerciseListView: View {
                 .foregroundStyle(Color.uplift.onAccent)
             }
             .buttonStyle(.plain)
+            .accessibilityIdentifier(AccessibilityID.workoutFinish)
         }
         .padding(.bottom, 12)
     }

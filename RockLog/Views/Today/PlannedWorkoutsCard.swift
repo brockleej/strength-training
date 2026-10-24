@@ -35,6 +35,7 @@ struct PlannedWorkoutsCard: View {
                     }, onTap: {
                         onSelect?(row.id)
                     })
+                    .accessibilityIdentifier(AccessibilityID.plannedRow(row.dayType.rawValue))
                     .accessibilityLabel(rowAccessibility(row))
                     .accessibilityHint("Shows the lifts in this workout")
             }

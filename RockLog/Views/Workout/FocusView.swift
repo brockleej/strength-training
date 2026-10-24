@@ -143,6 +143,7 @@ struct FocusView: View {
                 .buttonStyle(.plain)
                 .frame(minHeight: 44)
                 .contentShape(Rectangle())
+                .accessibilityIdentifier(AccessibilityID.focusBack)
                 .accessibilityLabel("Back to workout")
                 .accessibilityHint("Return to the workout exercise list to finish or change lifts")
 
@@ -491,6 +492,9 @@ struct FocusView: View {
                         .foregroundStyle(Color.uplift.onAccent)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityIdentifier(
+                        focusVM.isEditingSet ? AccessibilityID.focusUpdateSet : AccessibilityID.focusLogSet
+                    )
 
                     doneWithLiftButton
                 }
@@ -506,6 +510,7 @@ struct FocusView: View {
                             .padding(.vertical, 6)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityIdentifier(AccessibilityID.focusCancelEdit)
                 }
             }
             .padding(.horizontal, 16)

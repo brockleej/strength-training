@@ -276,6 +276,12 @@ struct SettingsView: View {
             ) { result in
                 handleImportResult(result)
             }
+            #if DEBUG
+            .task {
+                guard let data = UITestLaunch.consumePendingBackup() else { return }
+                stageRestoreConfirmation(from: data)
+            }
+            #endif
         }
     }
 
@@ -289,6 +295,7 @@ struct SettingsView: View {
                     } label: {
                         Label("Edit training split", systemImage: "calendar")
                     }
+                    .accessibilityIdentifier(AccessibilityID.settingsEditSplit)
                     if plannedQueueOwnsToday {
                         Text(PlannedBlockQueue.splitPausedWhileQueued)
                             .font(.uplift.text(13, weight: .medium))
@@ -621,12 +628,14 @@ struct SettingsView: View {
                         Label("Add planned workouts", systemImage: "calendar.badge.plus")
                             .foregroundStyle(Color.uplift.accent)
                     }
+                    .accessibilityIdentifier(AccessibilityID.settingsAddPlanned)
                     Button {
                         isImporting = true
                     } label: {
                         Label("Import training split", systemImage: "rectangle.split.3x1")
                             .foregroundStyle(Color.uplift.accent)
                     }
+                    .accessibilityIdentifier(AccessibilityID.settingsImportSplit)
                     Button(action: sharePlannedWorkoutInstructions) {
                         Label("Instructions for AI", systemImage: "doc.text")
                             .foregroundStyle(Color.uplift.accent)
@@ -650,6 +659,7 @@ struct SettingsView: View {
                         Label("Export backup", systemImage: "square.and.arrow.up")
                             .foregroundStyle(Color.uplift.accent)
                     }
+                    .accessibilityIdentifier(AccessibilityID.settingsExport)
 
                     Button {
                         isImporting = true
@@ -657,6 +667,7 @@ struct SettingsView: View {
                         Label("Restore from backup", systemImage: "square.and.arrow.down")
                             .foregroundStyle(Color.uplift.customBadge)
                     }
+                    .accessibilityIdentifier(AccessibilityID.settingsRestore)
                 } header: {
                     sectionHeader("Backup")
                 } footer: {
@@ -825,6 +836,9 @@ struct SettingsView: View {
         }
         .listRowBackground(Color.uplift.surface1)
         .task {
+            #if DEBUG
+            if UITestLaunch.isEnabled { return }
+            #endif
             guard CloudKitSyncService.isEnabled else { return }
             await cloudKitSyncService.checkAccountStatus()
         }
@@ -1001,18 +1015,27 @@ struct SettingsView: View {
                     pendingSplitDocument = document
                     showImportSplitConfirm = true
                 case .backup(let backupData):
-                    let backup = try BackupService.decode(backupData)
-                    let current = BackupService.summarizeStore(context: modelContext)
-                    let incoming = BackupService.summarize(backup: backup)
-                    pendingRestoreData = backupData
-                    pendingRestorePrompt = BackupService.restorePrompt(current: current, incoming: incoming)
-                    showRestoreConfirmation = true
+                    stageRestoreConfirmation(from: backupData)
                 }
             } catch {
                 errorMessage = error.localizedDescription
                 showError = true
             }
         case .failure(let error):
+            errorMessage = error.localizedDescription
+            showError = true
+        }
+    }
+
+    private func stageRestoreConfirmation(from backupData: Data) {
+        do {
+            let backup = try BackupService.decode(backupData)
+            let current = BackupService.summarizeStore(context: modelContext)
+            let incoming = BackupService.summarize(backup: backup)
+            pendingRestoreData = backupData
+            pendingRestorePrompt = BackupService.restorePrompt(current: current, incoming: incoming)
+            showRestoreConfirmation = true
+        } catch {
             errorMessage = error.localizedDescription
             showError = true
         }

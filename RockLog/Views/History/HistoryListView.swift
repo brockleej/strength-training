@@ -87,6 +87,7 @@ private struct HistoryContent: View {
                     systemImage: "dumbbell",
                     description: "Complete a workout to see it here."
                 )
+                .accessibilityIdentifier(AccessibilityID.historyEmpty)
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
             } else {

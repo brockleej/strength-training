@@ -60,6 +60,11 @@
 		D4E5F60718293A4B5C6D7E02 /* ProgramImportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4E5F60718293A4B5C6D7E01 /* ProgramImportTests.swift */; };
 		C4D4A0015A1DE70DE7E7E002 /* SwipeToDeleteLogicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4D4A0015A1DE70DE7E7E001 /* SwipeToDeleteLogicTests.swift */; };
 		C4D4A0015A1DE70DE7E7E004 /* DayTypeRegistryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4D4A0015A1DE70DE7E7E003 /* DayTypeRegistryTests.swift */; };
+		C3B0A0003C0B000000000002 /* InMemoryRockLogStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3B0A0003C0B000000000001 /* InMemoryRockLogStore.swift */; };
+		C3B0A0013C0B000000000002 /* PlannedBlockQueueTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3B0A0013C0B000000000001 /* PlannedBlockQueueTests.swift */; };
+		C3B0A0023C0B000000000002 /* SplitImportEdgeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3B0A0023C0B000000000001 /* SplitImportEdgeTests.swift */; };
+		C3B0A0033C0B000000000002 /* WorkoutEdgeCaseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3B0A0033C0B000000000001 /* WorkoutEdgeCaseTests.swift */; };
+		C3B0A0043C0B000000000002 /* PastBuildRegressionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3B0A0043C0B000000000001 /* PastBuildRegressionTests.swift */; };
 		C0ACF001D0C000000000000D /* CoachInbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0ACF001D0C000000000000C /* CoachInbox.swift */; };
 		C0ACF001D0C000000000000E /* CoachInbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0ACF001D0C000000000000C /* CoachInbox.swift */; };
 		C0ACF001D0C000000000000F /* CoachSessionDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0ACF001D0C0000000000001 /* CoachSessionDocument.swift */; };
@@ -105,6 +110,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = A0C0AC02C0AC0200000003;
 			remoteInfo = RockCoachShare;
+		};
+		A11B00013C0B00000000000B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E18CFB572F4A312400991D60 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = E18CFB5E2F4A312400991D60;
+			remoteInfo = RockLog;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -165,6 +177,12 @@
 		D4E5F60718293A4B5C6D7E01 /* ProgramImportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgramImportTests.swift; sourceTree = "<group>"; };
 		C4D4A0015A1DE70DE7E7E001 /* SwipeToDeleteLogicTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwipeToDeleteLogicTests.swift; sourceTree = "<group>"; };
 		C4D4A0015A1DE70DE7E7E003 /* DayTypeRegistryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayTypeRegistryTests.swift; sourceTree = "<group>"; };
+		C3B0A0003C0B000000000001 /* InMemoryRockLogStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InMemoryRockLogStore.swift; sourceTree = "<group>"; };
+		C3B0A0013C0B000000000001 /* PlannedBlockQueueTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlannedBlockQueueTests.swift; sourceTree = "<group>"; };
+		C3B0A0023C0B000000000001 /* SplitImportEdgeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitImportEdgeTests.swift; sourceTree = "<group>"; };
+		C3B0A0033C0B000000000001 /* WorkoutEdgeCaseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutEdgeCaseTests.swift; sourceTree = "<group>"; };
+		C3B0A0043C0B000000000001 /* PastBuildRegressionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PastBuildRegressionTests.swift; sourceTree = "<group>"; };
+		A11B00013C0B000000000002 /* RockLogUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RockLogUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		C0ACF001D0C000000000000C /* CoachInbox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoachInbox.swift; sourceTree = "<group>"; };
 		C0ACF001D0C0000000000010 /* CompareGridTable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompareGridTable.swift; sourceTree = "<group>"; };
 		C0ACF001D0C0000000000020 /* MonthlyOverload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthlyOverload.swift; sourceTree = "<group>"; };
@@ -241,6 +259,11 @@
 			path = RockLog;
 			sourceTree = "<group>";
 		};
+		A11B00013C0B000000000009 /* RockLogUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = RockLogUITests;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -275,6 +298,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		E18CFB5C2F4A312400991D60 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A11B00013C0B000000000007 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -373,6 +403,11 @@
 				D4E5F60718293A4B5C6D7E01 /* ProgramImportTests.swift */,
 				C4D4A0015A1DE70DE7E7E001 /* SwipeToDeleteLogicTests.swift */,
 				C4D4A0015A1DE70DE7E7E003 /* DayTypeRegistryTests.swift */,
+				C3B0A0003C0B000000000001 /* InMemoryRockLogStore.swift */,
+				C3B0A0013C0B000000000001 /* PlannedBlockQueueTests.swift */,
+				C3B0A0023C0B000000000001 /* SplitImportEdgeTests.swift */,
+				C3B0A0033C0B000000000001 /* WorkoutEdgeCaseTests.swift */,
+				C3B0A0043C0B000000000001 /* PastBuildRegressionTests.swift */,
 			);
 			path = RockLogTests;
 			sourceTree = "<group>";
@@ -478,6 +513,7 @@
 				E18CFB602F4A312400991D60 /* Products */,
 				DCE6C1DA63A5EBF17D0B879B /* Frameworks */,
 				51C16B157883C4911DC9C13D /* RockLogTests */,
+				A11B00013C0B000000000009 /* RockLogUITests */,
 				08081F3FD2336389AEDC8540 /* progression-lab */,
 				0F1B900D7BD7B14B41F6AEC0 /* progression-lab-tests */,
 			);
@@ -488,6 +524,7 @@
 			children = (
 				E18CFB5F2F4A312400991D60 /* RockLog.app */,
 				FCD72FE4DBC5F2CB9BEB771B /* RockLogTests.xctest */,
+				A11B00013C0B000000000002 /* RockLogUITests.xctest */,
 				D831F8CB0728963D5B3EAFD0 /* ProgressionLab.app */,
 				8F65F06B7DAEC56D1511479D /* progression_lab_tests.xctest */,
 				A0C0AC01C0AC0100000001 /* RockCoach.app */,
@@ -576,6 +613,27 @@
 			productReference = A0C0AC02C0AC0200000001 /* RockCoachShare.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		A11B00013C0B000000000001 /* RockLogUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A11B00013C0B000000000003 /* Build configuration list for PBXNativeTarget "RockLogUITests" */;
+			buildPhases = (
+				A11B00013C0B000000000006 /* Sources */,
+				A11B00013C0B000000000007 /* Frameworks */,
+				A11B00013C0B000000000008 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A11B00013C0B00000000000A /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				A11B00013C0B000000000009 /* RockLogUITests */,
+			);
+			name = RockLogUITests;
+			productName = RockLogUITests;
+			productReference = A11B00013C0B000000000002 /* RockLogUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 		CF2665086E70C7E1BDE1852D /* RockLogTests */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 20AF46B0AD2E826ABB190CEE /* Build configuration list for PBXNativeTarget "RockLogTests" */;
@@ -645,6 +703,7 @@
 			targets = (
 				E18CFB5E2F4A312400991D60 /* RockLog */,
 				CF2665086E70C7E1BDE1852D /* RockLogTests */,
+				A11B00013C0B000000000001 /* RockLogUITests */,
 				4F24BB600FA0AED51F0C2A5B /* ProgressionLab */,
 				63987D9F4690E57A621DFB86 /* progression-lab-tests */,
 				A0C0AC01C0AC0100000003 /* RockCoach */,
@@ -693,6 +752,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		E18CFB5D2F4A312400991D60 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A11B00013C0B000000000008 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -758,6 +824,18 @@
 				D4E5F60718293A4B5C6D7E02 /* ProgramImportTests.swift in Sources */,
 				C4D4A0015A1DE70DE7E7E002 /* SwipeToDeleteLogicTests.swift in Sources */,
 				C4D4A0015A1DE70DE7E7E004 /* DayTypeRegistryTests.swift in Sources */,
+				C3B0A0003C0B000000000002 /* InMemoryRockLogStore.swift in Sources */,
+				C3B0A0013C0B000000000002 /* PlannedBlockQueueTests.swift in Sources */,
+				C3B0A0023C0B000000000002 /* SplitImportEdgeTests.swift in Sources */,
+				C3B0A0033C0B000000000002 /* WorkoutEdgeCaseTests.swift in Sources */,
+				C3B0A0043C0B000000000002 /* PastBuildRegressionTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A11B00013C0B000000000006 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -820,6 +898,11 @@
 			name = RockCoachShare;
 			target = A0C0AC02C0AC0200000003 /* RockCoachShare */;
 			targetProxy = A0C0AC02C0AC020000000D /* PBXContainerItemProxy */;
+		};
+		A11B00013C0B00000000000A /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = E18CFB5E2F4A312400991D60 /* RockLog */;
+			targetProxy = A11B00013C0B00000000000B /* PBXContainerItemProxy */;
 		};
 		F6CD2017D76F9477DC870001 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -889,6 +972,51 @@
 				SWIFT_VERSION = 5.0;
 			};
 			name = Debug;
+		};
+		A11B00013C0B000000000004 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 53AH938CUW;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.lee.rocklog.uitests;
+				PRODUCT_NAME = RockLogUITests;
+				SDKROOT = iphoneos;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = RockLog;
+			};
+			name = Debug;
+		};
+		A11B00013C0B000000000005 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 53AH938CUW;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.lee.rocklog.uitests;
+				PRODUCT_NAME = RockLogUITests;
+				SDKROOT = iphoneos;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = RockLog;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
 		};
 		7152696AB04AF5E250B6EF40 /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -1295,6 +1423,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		A11B00013C0B000000000003 /* Build configuration list for PBXNativeTarget "RockLogUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A11B00013C0B000000000004 /* Debug */,
+				A11B00013C0B000000000005 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		20AF46B0AD2E826ABB190CEE /* Build configuration list for PBXNativeTarget "RockLogTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

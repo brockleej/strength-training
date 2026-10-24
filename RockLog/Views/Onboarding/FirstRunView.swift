@@ -100,7 +100,8 @@ struct FirstRunView: View {
                     setupChoice(
                         title: "Restore from backup",
                         detail: "Use a RockLog JSON export. Replaces this empty setup with that split and log.",
-                        selected: false
+                        selected: false,
+                        identifier: AccessibilityID.firstRunRestore
                     ) {
                         selectedPreset = nil
                         isImportingBackup = true
@@ -110,7 +111,8 @@ struct FirstRunView: View {
                         setupChoice(
                             title: preset.rawValue,
                             detail: preset.detail,
-                            selected: selectedPreset == preset
+                            selected: selectedPreset == preset,
+                            identifier: AccessibilityID.firstRunChoice(preset.rawValue)
                         ) {
                             selectedPreset = preset
                         }
@@ -120,7 +122,7 @@ struct FirstRunView: View {
                 .padding(.bottom, 16)
             }
             .scrollIndicators(.hidden)
-            setupContinue("Continue", enabled: selectedPreset != nil) {
+            setupContinue("Continue", enabled: selectedPreset != nil, identifier: AccessibilityID.firstRunContinue) {
                 withAnimation(.easeInOut(duration: 0.25)) { setupStep = .pickStarters }
             }
         }
@@ -158,21 +160,23 @@ struct FirstRunView: View {
                 setupChoice(
                     title: "Add starter exercises",
                     detail: "Pins 3–5 common lifts on each day. Swap or remove them anytime.",
-                    selected: includeStarters == true
+                    selected: includeStarters == true,
+                    identifier: AccessibilityID.firstRunStarters
                 ) {
                     includeStarters = true
                 }
                 setupChoice(
                     title: "Leave empty",
                     detail: "Days start blank. Add your own from Exercises or when you train.",
-                    selected: includeStarters == false
+                    selected: includeStarters == false,
+                    identifier: AccessibilityID.firstRunLeaveEmpty
                 ) {
                     includeStarters = false
                 }
             }
             .padding(.horizontal, 24)
             Spacer(minLength: 12)
-            setupContinue("Continue", enabled: includeStarters != nil) {
+            setupContinue("Continue", enabled: includeStarters != nil, identifier: AccessibilityID.firstRunContinue) {
                 applySetupAndShowWelcome()
             }
         }
@@ -247,6 +251,7 @@ struct FirstRunView: View {
                 Spacer()
                 if page < pages.count - 1 {
                     Button("Skip") { onFinished() }
+                        .accessibilityIdentifier(AccessibilityID.firstRunSkip)
                         .font(.uplift.text(15, weight: .semibold))
                         .foregroundStyle(Color.uplift.fgMuted)
                         .padding(.horizontal, 4)
@@ -324,6 +329,7 @@ struct FirstRunView: View {
         title: String,
         detail: String,
         selected: Bool,
+        identifier: String,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
@@ -355,9 +361,10 @@ struct FirstRunView: View {
             }
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier(identifier)
     }
 
-    private func setupContinue(_ title: String, enabled: Bool, action: @escaping () -> Void) -> some View {
+    private func setupContinue(_ title: String, enabled: Bool, identifier: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(title)
                 .font(.uplift.text(16, weight: .semibold))
@@ -371,6 +378,7 @@ struct FirstRunView: View {
         }
         .buttonStyle(.plain)
         .disabled(!enabled)
+        .accessibilityIdentifier(identifier)
         .padding(.horizontal, 24)
         .padding(.bottom, 28)
     }
