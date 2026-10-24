@@ -33,7 +33,9 @@ nonisolated enum RockLogSchemaV1: VersionedSchema {
 }
 
 /// Additive stage. New fields have defaults. New models are Gym and
-/// MachineStackProfile. Nothing in V1 is removed or renamed. No unique
+/// MachineStackProfile. The stack offset, the session's gym id, and the
+/// gym's empty location fields are part of this first V2, not a later one.
+/// Nothing in V1 is removed or renamed. No unique
 /// constraints. The pin list is a string on the profile. Do not promote
 /// the production CloudKit schema from a build that contains this stage
 /// until that deploy is an explicit choice. See docs/specs/schema-v2-rollback.md.

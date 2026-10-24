@@ -21,6 +21,8 @@ nonisolated enum StackOrigin: String, Codable, Sendable {
 
 nonisolated struct StackDefinition: Equatable, Sendable {
     var step: Double?
+    /// Pounds (or the pin unit) left over after whole steps. 10 lb with offset 5 is 145, 155, 165.
+    var offset: Double = 0
     var pins: [Double]
     var pinUnit: MassUnit
     var addOns: [Double]
@@ -35,6 +37,7 @@ nonisolated struct StackDefinition: Equatable, Sendable {
 
     static let empty = StackDefinition(
         step: nil,
+        offset: 0,
         pins: [],
         pinUnit: .pounds,
         addOns: [],
@@ -55,6 +58,7 @@ nonisolated struct StackDefinition: Equatable, Sendable {
             return pins.sorted()
         }
         guard let step, step > 0 else { return [] }
+        let offset = Self.normalizedOffset(self.offset, step: step)
         let lower: Double
         let upper: Double
         if rangeMax > rangeMin {
@@ -62,15 +66,21 @@ nonisolated struct StackDefinition: Equatable, Sendable {
             upper = rangeMax
         } else {
             let span = max(target, step) * 2 + step * 4
-            lower = step
+            lower = 0
             upper = max(span, step * 20)
         }
+        var cursor = offset
+        if cursor + 0.001 < lower {
+            let jumps = ((lower - offset) / step).rounded(.up)
+            cursor = offset + jumps * step
+        }
         var values: [Double] = []
-        var cursor = lower
         // Guard a runaway loop on a tiny step.
         let limit = 400
         while cursor <= upper + 0.001 && values.count < limit {
-            values.append((cursor * 1000).rounded() / 1000)
+            if cursor > 0.001 {
+                values.append((cursor * 1000).rounded() / 1000)
+            }
             cursor += step
         }
         return values
@@ -87,6 +97,14 @@ nonisolated struct StackDefinition: Equatable, Sendable {
             }
         }
         return set.sorted()
+    }
+
+    static func normalizedOffset(_ offset: Double, step: Double) -> Double {
+        guard step > 0, offset.isFinite else { return 0 }
+        var value = offset.truncatingRemainder(dividingBy: step)
+        if value < 0 { value += step }
+        if value > step - 0.001 { value = 0 }
+        return value
     }
 }
 
@@ -191,26 +209,71 @@ nonisolated struct StackSessionSample: Equatable, Sendable {
     var correctedPounds: [Double]
 }
 
+nonisolated struct LearnedProfile: Equatable, Sendable {
+    var step: Double
+    var offset: Double
+    var sessionIDs: [UUID]
+}
+
 nonisolated enum StackLearning {
     static let candidates: [Double] = [20, 15, 10]
+    /// A weight is on the grid when it is within half a pound of offset + n × step.
+    static let tolerance = 0.5
 
-    static func fits(_ weight: Double, step: Double) -> Bool {
-        guard step > 0, weight.isFinite else { return false }
-        let nearest = (weight / step).rounded() * step
-        return abs(weight - nearest) <= 0.5
+    static func fits(_ weight: Double, step: Double, offset: Double = 0) -> Bool {
+        distance(weight, step: step, offset: offset) <= tolerance + 0.001
     }
 
-    /// Largest of 20 / 15 / 10 that fits every corrected weight.
+    static func distance(_ weight: Double, step: Double, offset: Double) -> Double {
+        guard step > 0, weight.isFinite, offset.isFinite else { return .infinity }
+        let shifted = weight - StackDefinition.normalizedOffset(offset, step: step)
+        let nearest = (shifted / step).rounded() * step
+        return abs(shifted - nearest)
+    }
+
+    /// Largest of 20 / 15 / 10 whose pooled weights share one remainder.
     /// Otherwise the greatest common divisor when it is above 5 lb.
-    static func sessionStep(correctedPounds: [Double]) -> Double? {
+    static func pair(correctedPounds: [Double]) -> (step: Double, offset: Double)? {
         let weights = correctedPounds.filter { $0 > 0 && $0.isFinite }
         guard !weights.isEmpty else { return nil }
-        for step in candidates where weights.allSatisfy({ fits($0, step: step) }) {
-            return step
+        for step in candidates {
+            if let offset = sharedOffset(weights, step: step) {
+                return (step, offset)
+            }
         }
         let divisor = greatestCommonDivisor(weights)
-        if divisor > 5.001 { return divisor }
-        return nil
+        guard divisor > 5.001, let offset = sharedOffset(weights, step: divisor) else { return nil }
+        return (divisor, offset)
+    }
+
+    /// Kept so older call sites can ask for the step alone.
+    static func sessionStep(correctedPounds: [Double]) -> Double? {
+        pair(correctedPounds: correctedPounds)?.step
+    }
+
+    static func sharedOffset(_ weights: [Double], step: Double) -> Double? {
+        guard step > 0 else { return nil }
+        var candidates = weights.map { positiveRemainder($0, step: step) }
+        candidates.append(0)
+        var best: (offset: Double, worst: Double)?
+        for candidate in candidates {
+            let worst = weights.map { distance($0, step: step, offset: candidate) }.max() ?? .infinity
+            guard worst <= tolerance + 0.001 else { continue }
+            if let best {
+                if worst > best.worst + 0.001 { continue }
+                if abs(worst - best.worst) <= 0.001 && candidate >= best.offset - 0.001 { continue }
+            }
+            best = (candidate, worst)
+        }
+        return best?.offset
+    }
+
+    static func positiveRemainder(_ weight: Double, step: Double) -> Double {
+        guard step > 0 else { return 0 }
+        var rem = weight - (weight / step).rounded(.down) * step
+        if rem < 0 { rem += step }
+        if abs(rem - step) <= 0.001 || rem > step - tolerance { return 0 }
+        return rem
     }
 
     static func greatestCommonDivisor(_ weights: [Double]) -> Double {
@@ -224,13 +287,16 @@ nonisolated enum StackLearning {
     }
 
     /// What to store after this session. Nil means "leave the profile alone".
+    /// A learned pair stays until three newer qualifying sessions, pooled, no longer fit it.
     static func learnedStep(
         sessions: [StackSessionSample],
         clearedAt: Date?,
         currentStep: Double?,
+        currentOffset: Double = 0,
         origin: StackOrigin?,
-        learningEnabled: Bool
-    ) -> (step: Double, sessionIDs: [UUID])? {
+        learningEnabled: Bool,
+        learnedSessionIDs: [UUID] = []
+    ) -> LearnedProfile? {
         guard learningEnabled, origin != .typed else { return nil }
         let qualifying = sessions
             .filter { sample in
@@ -240,19 +306,39 @@ nonisolated enum StackLearning {
             }
             .sorted { $0.date < $1.date }
         guard qualifying.count >= 3 else { return nil }
-        let last = Array(qualifying.suffix(3))
-        let ids = last.map(\.id)
-        let steps = last.map { sessionStep(correctedPounds: $0.correctedPounds) }
-        if let first = steps[0], steps.allSatisfy({ $0 == first }) {
-            if let currentStep, abs(currentStep - first) < 0.01 { return nil }
-            return (first, ids)
+
+        let window: [StackSessionSample]
+        if origin == .learned, currentStep != nil {
+            let known = Set(learnedSessionIDs)
+            let anchor = qualifying.filter { known.contains($0.id) }.map(\.date).max()
+            let newer = qualifying.filter { sample in
+                if known.contains(sample.id) { return false }
+                if let anchor { return sample.date > anchor }
+                return true
+            }
+            let source = known.isEmpty ? qualifying : newer
+            guard source.count >= 3 else { return nil }
+            window = Array(source.suffix(3))
+            let pool = window.flatMap(\.correctedPounds)
+            if fitsPool(pool, step: currentStep ?? 0, offset: currentOffset) { return nil }
+        } else {
+            window = Array(qualifying.suffix(3))
         }
-        // No learned step yet: a shared pin across the three sessions still counts,
-        // even when each session's own largest step differs (140 / 150 / 160 → 10).
-        guard currentStep == nil else { return nil }
-        let union = last.flatMap(\.correctedPounds)
-        guard let common = sessionStep(correctedPounds: union) else { return nil }
-        return (common, ids)
+
+        let pool = window.flatMap(\.correctedPounds)
+        guard let found = pair(correctedPounds: pool) else { return nil }
+        if let currentStep, origin == .learned,
+           abs(currentStep - found.step) < 0.01,
+           abs(currentOffset - found.offset) < 0.01 {
+            return nil
+        }
+        return LearnedProfile(step: found.step, offset: found.offset, sessionIDs: window.map(\.id))
+    }
+
+    static func fitsPool(_ weights: [Double], step: Double, offset: Double) -> Bool {
+        let kept = weights.filter { $0 > 0 && $0.isFinite }
+        guard !kept.isEmpty else { return false }
+        return kept.allSatisfy { fits($0, step: step, offset: offset) }
     }
 
     private static func gcd(_ a: Int, _ b: Int) -> Int {
@@ -318,5 +404,33 @@ nonisolated enum GymStackLookup {
         if let current = chosen(gymID) { return current }
         if let homeGymID, homeGymID != gymID, let home = chosen(homeGymID) { return home }
         return nil
+    }
+}
+
+// MARK: - Same-gym history
+
+nonisolated enum GymHistory {
+    struct Row: Equatable, Sendable {
+        var id: UUID
+        /// Nil counts as Home. Sessions from before the gym field are Home.
+        var gymID: UUID?
+    }
+
+    struct Selection: Equatable, Sendable {
+        var ids: Set<UUID>
+        /// True when a travel gym still has fewer than two sessions, so the line uses Home.
+        var usedHome: Bool
+    }
+
+    static func select(rows: [Row], activeGymID: UUID, homeGymID: UUID) -> Selection {
+        func isHome(_ id: UUID?) -> Bool { id == nil || id == homeGymID }
+        if activeGymID == homeGymID {
+            return Selection(ids: Set(rows.filter { isHome($0.gymID) }.map(\.id)), usedHome: false)
+        }
+        let travel = rows.filter { $0.gymID == activeGymID }
+        if travel.count >= 2 {
+            return Selection(ids: Set(travel.map(\.id)), usedHome: false)
+        }
+        return Selection(ids: Set(rows.filter { isHome($0.gymID) }.map(\.id)), usedHome: true)
     }
 }

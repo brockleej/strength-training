@@ -272,7 +272,9 @@ extension WorkoutViewModel {
         guard GymLibrary.storeHasGyms(modelContext),
               modelContext.container.schema.entities.contains(where: { $0.name == "MachineStackProfile" })
         else { return }
-        let gymID = GymLibrary.activeID(in: modelContext)
+        assignCurrentGym(to: session)
+        let gymID = session.gymID ?? GymLibrary.activeID(in: modelContext)
+        let homeID = GymLibrary.ensureHome(in: modelContext).id
         for record in session.exerciseRecordsArray {
             guard let exercise = record.exercise else { continue }
             let corrected = record.loggedSetsArray
@@ -281,29 +283,84 @@ extension WorkoutViewModel {
             guard !corrected.isEmpty else { continue }
             let profile = StackProfileStore.findOrCreate(gymID: gymID, exerciseID: exercise.id, in: modelContext)
             let definition = profile.definition
-            var samples = priorStackSamples(exerciseID: exercise.id, excluding: session.id)
+            var samples = priorStackSamples(exerciseID: exercise.id, gymID: gymID, homeID: homeID, excluding: session.id)
             samples.append(StackSessionSample(id: session.id, date: session.date, correctedPounds: corrected))
             guard let learned = StackLearning.learnedStep(
                 sessions: samples,
                 clearedAt: definition.clearedAt,
                 currentStep: definition.step,
+                currentOffset: definition.offset,
                 origin: definition.origin,
-                learningEnabled: definition.learningEnabled
+                learningEnabled: definition.learningEnabled,
+                learnedSessionIDs: definition.learnedSessionIDs
             ) else { continue }
             var next = definition
             next.step = learned.step
+            next.offset = learned.offset
             next.pins = []
             next.origin = .learned
             next.policy = .nearest
             next.pinUnit = .pounds
             next.learnedSessionIDs = learned.sessionIDs
-            next.rangeMin = learned.step
-            next.rangeMax = max(learned.step * 40, 200)
+            next.rangeMin = learned.offset > 0.001 ? learned.offset : learned.step
+            next.rangeMax = max(learned.step * 40, 400)
             // The profile is the only row this writes. History and plan files stay put.
             profile.definition = next
             profile.updatedAt = Date()
         }
         try? modelContext.save()
+    }
+
+    /// The workout header and the session agree. Unlogged plan rows snap to the new gym.
+    func selectGym(_ gym: Gym) {
+        GymLibrary.select(gym)
+        guard let session = activeSession else {
+            setMutationEpoch &+= 1
+            return
+        }
+        session.gymID = gym.id
+        session.gymName = gym.name
+        for record in session.exerciseRecordsArray {
+            guard let exercise = record.exercise,
+                  let stack = stackDefinition(for: exercise) else { continue }
+            for set in record.plannedSetsArray {
+                let offer = StackMath.snap(weightPounds: set.weightLbs, reps: set.reps, stack: stack)
+                set.weightLbs = offer.weightPounds
+                set.reps = offer.reps
+            }
+        }
+        try? modelContext.save()
+        setMutationEpoch &+= 1
+    }
+
+    func assignCurrentGym(to session: WorkoutSession) {
+        guard GymLibrary.storeHasGyms(modelContext) else { return }
+        let home = GymLibrary.ensureHome(in: modelContext)
+        let active = GymLibrary.activeID(in: modelContext)
+        let gyms = (try? modelContext.fetch(FetchDescriptor<Gym>())) ?? []
+        let gym = gyms.first { $0.id == active } ?? home
+        session.gymID = gym.id
+        if session.gymName.isEmpty || session.gymID == gym.id {
+            session.gymName = gym.name
+        }
+    }
+
+    /// Last completed session for this lift at the active gym. A first visit to a
+    /// travel gym uses Home and says so.
+    func historyRecord(for exercise: Exercise, mode: TrainingMode) -> (record: ExerciseRecord?, usedHome: Bool) {
+        let records = exercise.completedRecords(mode: mode, excludingSessionID: activeSession?.id)
+        guard GymLibrary.storeHasGyms(modelContext), let context = exercise.modelContext else {
+            return (records.first, false)
+        }
+        let home = GymLibrary.ensureHome(in: context)
+        let active = GymLibrary.activeID(in: context)
+        let selection = GymHistory.select(
+            rows: records.map { GymHistory.Row(id: $0.id, gymID: $0.session?.gymID) },
+            activeGymID: active,
+            homeGymID: home.id
+        )
+        let record = records.first { selection.ids.contains($0.id) }
+        return (record, selection.usedHome && record != nil)
     }
 
     func applyTypedStack(exercise: Exercise, step: Double?, pins: [Double]) {
@@ -322,11 +379,18 @@ extension WorkoutViewModel {
         setMutationEpoch &+= 1
     }
 
-    private func priorStackSamples(exerciseID: UUID, excluding sessionID: UUID) -> [StackSessionSample] {
+    private func priorStackSamples(
+        exerciseID: UUID,
+        gymID: UUID,
+        homeID: UUID,
+        excluding sessionID: UUID
+    ) -> [StackSessionSample] {
         let descriptor = FetchDescriptor<WorkoutSession>()
         let sessions = (try? modelContext.fetch(descriptor)) ?? []
         return sessions.compactMap { session in
             guard session.id != sessionID, session.isCompleted else { return nil }
+            let sessionGym = session.gymID ?? homeID
+            guard sessionGym == gymID else { return nil }
             let weights = session.exerciseRecordsArray
                 .filter { $0.exercise?.id == exerciseID }
                 .flatMap(\.loggedSetsArray)

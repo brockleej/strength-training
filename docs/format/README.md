@@ -78,6 +78,8 @@ The JSON Schema is `rocklog.interchange.schema.json`. Templates and synthetic sa
 | planState | string | — | Missing means a normal log. `planned` or `skipped`. |
 | followsSessionRoster | bool | — | Missing means false. |
 | planOrder | integer | — | Missing means 0. Index inside an imported block. |
+| gymID | UUID string | — | Missing means Home. V2. |
+| gymName | string | — | Missing means the name was not stored. Kept after the gym is deleted. V2. |
 
 ### Exercise log
 
@@ -161,6 +163,9 @@ The JSON Schema is `rocklog.interchange.schema.json`. Templates and synthetic sa
 | isHome | bool | — | Required. |
 | createdAt | string, ISO-8601 | — | Required. |
 | sortOrder | integer | — | Required. |
+| latitude | number | degrees | Missing means location is not set. Reserved, empty in this build. |
+| longitude | number | degrees | Missing means location is not set. |
+| radiusMeters | number | meters | Missing means location is not set. |
 
 ### Stack profile
 
@@ -170,6 +175,7 @@ The JSON Schema is `rocklog.interchange.schema.json`. Templates and synthetic sa
 | gymID | UUID string | — | Required. |
 | exerciseID | UUID string | — | Required. |
 | stepPounds | number | pounds | Required. 0 means no fixed step. |
+| offsetPounds | number | pounds | Missing means 0. Step 10 with offset 5 is 145, 155, 165. |
 | pinsRaw | string | numbers in `pinUnitRaw`, comma-separated, full precision | Required. Empty means no pin list. |
 | pinUnitRaw | string | `lb` or `kg` | Required. The pin list is not rescaled to pounds. |
 | addOnsRaw | string | same unit as the pins | Required. One add-on at a time. |

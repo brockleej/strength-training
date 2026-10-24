@@ -122,6 +122,7 @@ private nonisolated let exerciseKeys: Set<String> = [
 private nonisolated let sessionKeys: Set<String> = [
     "id", "date", "dayType", "notes", "isCompleted", "exerciseRecords",
     "rotationTrack", "durationSeconds", "planState", "followsSessionRoster", "planOrder",
+    "gymID", "gymName",
 ]
 private nonisolated let recordKeys: Set<String> = [
     "id", "exerciseID", "trainingMode", "sortOrder", "isCompleted", "notes", "sets",
@@ -138,9 +139,11 @@ private nonisolated let splitDayKeys: Set<String> = [
 private nonisolated let dayPlanKeys: Set<String> = ["dayName", "exerciseIDs"]
 private nonisolated let blockKeys: Set<String> = ["id", "name", "notes", "startDate", "importedAt", "sessionIDs"]
 private nonisolated let metricKeys: Set<String> = ["id", "date", "kindRaw", "value", "note"]
-private nonisolated let gymKeys: Set<String> = ["id", "name", "isHome", "createdAt", "sortOrder"]
+private nonisolated let gymKeys: Set<String> = [
+    "id", "name", "isHome", "createdAt", "sortOrder", "latitude", "longitude", "radiusMeters",
+]
 private nonisolated let stackKeys: Set<String> = [
-    "id", "gymID", "exerciseID", "stepPounds", "pinsRaw", "pinUnitRaw", "addOnsRaw",
+    "id", "gymID", "exerciseID", "stepPounds", "offsetPounds", "pinsRaw", "pinUnitRaw", "addOnsRaw",
     "policyRaw", "originRaw", "learnedSessionIDsRaw", "clearedAt", "learningEnabled",
     "rangeMin", "rangeMax", "updatedAt",
 ]

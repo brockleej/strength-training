@@ -674,7 +674,7 @@ struct ExerciseListView: View {
             .accessibilityIdentifier(AccessibilityID.workoutEditDayPlan)
             Menu("Gym") {
                 ForEach(gyms) { gym in
-                    Button(gym.name) { GymLibrary.select(gym) }
+                    Button(gym.name) { workoutVM.selectGym(gym) }
                 }
             }
             .accessibilityIdentifier(AccessibilityID.settingsGym)

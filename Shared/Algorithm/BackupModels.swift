@@ -59,6 +59,10 @@ struct GymBackup: Codable, Equatable {
     var isHome: Bool
     var createdAt: Date
     var sortOrder: Int
+    /// Reserved. Missing means location is not set.
+    var latitude: Double? = nil
+    var longitude: Double? = nil
+    var radiusMeters: Double? = nil
 }
 
 struct StackProfileBackup: Codable, Equatable {
@@ -66,6 +70,8 @@ struct StackProfileBackup: Codable, Equatable {
     var gymID: UUID
     var exerciseID: UUID
     var stepPounds: Double
+    /// Missing means offset 0. A 10 lb step with offset 5 is 145, 155, 165.
+    var offsetPounds: Double? = nil
     var pinsRaw: String
     var pinUnitRaw: String
     var addOnsRaw: String
@@ -228,6 +234,10 @@ struct WorkoutSessionBackup: Codable {
     let followsSessionRoster: Bool?
     /// File-order index in an imported block. Optional for older backups.
     let planOrder: Int?
+    /// Missing means Home, filled in on restore when Home exists.
+    let gymID: UUID?
+    /// Name at the time of the workout. Kept after the gym row is deleted.
+    let gymName: String?
 
     init(
         id: UUID,
@@ -240,7 +250,9 @@ struct WorkoutSessionBackup: Codable {
         durationSeconds: Double? = nil,
         planState: String? = nil,
         followsSessionRoster: Bool? = nil,
-        planOrder: Int? = nil
+        planOrder: Int? = nil,
+        gymID: UUID? = nil,
+        gymName: String? = nil
     ) {
         self.id = id
         self.date = date
@@ -253,6 +265,8 @@ struct WorkoutSessionBackup: Codable {
         self.planState = planState
         self.followsSessionRoster = followsSessionRoster
         self.planOrder = planOrder
+        self.gymID = gymID
+        self.gymName = gymName
     }
 }
 

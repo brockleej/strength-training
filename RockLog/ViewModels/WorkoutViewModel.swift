@@ -1086,6 +1086,7 @@ final class WorkoutViewModel {
         }
         let session = WorkoutSession(dayType: dayType, date: now, rotationTrack: rotationTrack)
         modelContext.insert(session)
+        assignCurrentGym(to: session)
         try? modelContext.save()
         activeSession = session
         celebratedExerciseIDsThisSession = []
@@ -1101,6 +1102,7 @@ final class WorkoutViewModel {
         session.track = rotationTrack
         session.isCompleted = false
         session.date = now
+        assignCurrentGym(to: session)
         suppressUnplannedDayLifts(on: session)
         try? modelContext.save()
         activeSession = session

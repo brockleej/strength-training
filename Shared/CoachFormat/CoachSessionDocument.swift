@@ -99,6 +99,8 @@ nonisolated struct CoachSessionPayload: Codable, Hashable, Identifiable, Sendabl
     var exercises: [CoachExercisePayload]
     /// Gym the athlete trained in. Missing on files from before the gym selector.
     var gymID: UUID? = nil
+    /// Name at export time. History can still show it after the gym row is gone.
+    var gymName: String? = nil
 }
 
 nonisolated struct CoachExercisePayload: Codable, Hashable, Identifiable, Sendable {
@@ -113,6 +115,10 @@ nonisolated struct CoachExercisePayload: Codable, Hashable, Identifiable, Sendab
     var restSeconds: Int? = nil
     /// Learned or typed stack step, in pounds, when the phone sent one.
     var stackStepPounds: Double? = nil
+    /// Shared remainder, in pounds. Missing means there was no profile.
+    var stackOffsetLbs: Double? = nil
+    /// Explicit pins, converted to pounds. Missing means a step, or the 5 lb snap.
+    var stackPinsLbs: [Double]? = nil
 }
 
 nonisolated struct CoachSetPayload: Codable, Hashable, Sendable {

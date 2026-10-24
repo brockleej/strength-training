@@ -72,6 +72,7 @@ struct SettingsView: View {
     private var restLearningEnabled: Bool = false
     @Query(sort: \Gym.sortOrder) private var gyms: [Gym]
     @State private var newGymName = ""
+    @State private var gymPendingDelete: Gym?
 
     @AppStorage(CoachAthletePreferences.enabledKey)
     private var coachFeaturesEnabled: Bool = false
@@ -279,6 +280,24 @@ struct SettingsView: View {
             } message: {
                 Text("Deletes planned workouts you haven’t started. Finished workouts stay in History.")
             }
+            .confirmationDialog(
+                "Delete \(gymPendingDelete?.name ?? "this gym")?",
+                isPresented: Binding(
+                    get: { gymPendingDelete != nil },
+                    set: { if !$0 { gymPendingDelete = nil } }
+                ),
+                titleVisibility: .visible
+            ) {
+                Button("Delete gym", role: .destructive) {
+                    if let gym = gymPendingDelete {
+                        GymLibrary.deleteTravelGym(gym, in: modelContext)
+                    }
+                    gymPendingDelete = nil
+                }
+                Button("Cancel", role: .cancel) { gymPendingDelete = nil }
+            } message: {
+                Text("Its stack profiles are deleted. Finished workouts keep the gym name.")
+            }
             .fileImporter(
                 isPresented: $isImporting,
                 allowedContentTypes: [.json, .rockLogProgram],
@@ -413,11 +432,17 @@ struct SettingsView: View {
                             GymLibrary.select(gym)
                         }
                         .foregroundStyle(Color.uplift.fg)
+                        .contextMenu {
+                            if !gym.isHome {
+                                Button("Make default") { GymLibrary.makeHome(gym, in: modelContext) }
+                                Button("Delete", role: .destructive) { gymPendingDelete = gym }
+                            }
+                        }
                     }
                     TextField("New gym", text: $newGymName)
                         .onSubmit {
-                            let trimmed = newGymName.trimmingCharacters(in: .whitespaces)
-                            guard !trimmed.isEmpty else { return }
+                            let trimmed = newGymName.trimmingCharacters(in: .whitespacesAndNewlines)
+                            guard !trimmed.isEmpty, !GymLibrary.nameIsTaken(trimmed, in: modelContext) else { return }
                             let gym = Gym(name: trimmed, sortOrder: gyms.count)
                             modelContext.insert(gym)
                             try? modelContext.save()

@@ -70,11 +70,14 @@ final class OptimizationLogicTests: XCTestCase {
         XCTAssertEqual(planned.reps, 6)
     }
 
-    func test_learning_threeSessions_andThe150Slip() {
-        XCTAssertNil(StackLearning.sessionStep(correctedPounds: [145, 185, 225]))
-        XCTAssertEqual(StackLearning.sessionStep(correctedPounds: [140]), 20)
-        XCTAssertEqual(StackLearning.sessionStep(correctedPounds: [150]), 15)
-        XCTAssertEqual(StackLearning.sessionStep(correctedPounds: [25, 50, 75]), 25)
+    func test_learning_poolsThreeSessions_andKeepsTheOffset() {
+        XCTAssertEqual(StackLearning.pair(correctedPounds: [140])?.step, 20)
+        XCTAssertEqual(StackLearning.pair(correctedPounds: [140])?.offset ?? -1, 0, accuracy: 0.01)
+        XCTAssertEqual(StackLearning.pair(correctedPounds: [150])?.step, 15)
+        XCTAssertEqual(StackLearning.pair(correctedPounds: [25, 50, 75])?.step, 25)
+        // 145, 185, and 225 share remainder 5 on a 20 lb step, so the pair is 20 / 5.
+        XCTAssertEqual(StackLearning.pair(correctedPounds: [145, 185, 225])?.step, 20)
+        XCTAssertEqual(StackLearning.pair(correctedPounds: [145, 185, 225])?.offset ?? -1, 5, accuracy: 0.01)
 
         let one = sample(1, [140])
         XCTAssertNil(StackLearning.learnedStep(sessions: [one], clearedAt: nil, currentStep: nil, origin: nil, learningEnabled: true))
@@ -82,14 +85,59 @@ final class OptimizationLogicTests: XCTestCase {
         XCTAssertNil(StackLearning.learnedStep(sessions: two, clearedAt: nil, currentStep: nil, origin: nil, learningEnabled: true))
 
         let twenty = [sample(1, [140]), sample(2, [160]), sample(3, [180])]
-        XCTAssertEqual(StackLearning.learnedStep(sessions: twenty, clearedAt: nil, currentStep: nil, origin: nil, learningEnabled: true)?.step, 20)
+        let learnedTwenty = StackLearning.learnedStep(sessions: twenty, clearedAt: nil, currentStep: nil, origin: nil, learningEnabled: true)
+        XCTAssertEqual(learnedTwenty?.step, 20)
+        XCTAssertEqual(learnedTwenty?.offset ?? -1, 0, accuracy: 0.01)
 
         let mixed = [sample(1, [140]), sample(2, [150]), sample(3, [160])]
-        XCTAssertEqual(StackLearning.learnedStep(sessions: mixed, clearedAt: nil, currentStep: nil, origin: nil, learningEnabled: true)?.step, 10)
+        let learnedTen = StackLearning.learnedStep(sessions: mixed, clearedAt: nil, currentStep: nil, origin: nil, learningEnabled: true)
+        XCTAssertEqual(learnedTen?.step, 10)
+        XCTAssertEqual(learnedTen?.offset ?? -1, 0, accuracy: 0.01)
 
-        let oneFifty = [sample(1, [150]), sample(2, [150]), sample(3, [150])]
-        let learned = StackLearning.learnedStep(sessions: oneFifty, clearedAt: nil, currentStep: 20, origin: .learned, learningEnabled: true)
-        XCTAssertEqual(learned?.step, 15, "150 fits 15. The spec sentence that says 10 disagrees with the fit rule.")
+        let offsetFive = [sample(1, [145]), sample(2, [155]), sample(3, [165])]
+        let learnedOffset = StackLearning.learnedStep(sessions: offsetFive, clearedAt: nil, currentStep: nil, origin: nil, learningEnabled: true)
+        XCTAssertEqual(learnedOffset?.step, 10)
+        XCTAssertEqual(learnedOffset?.offset ?? -1, 5, accuracy: 0.01)
+
+        let oneFortyAndOneFiftyFive = [sample(1, [140]), sample(2, [155]), sample(3, [140])]
+        let fifteen = StackLearning.learnedStep(sessions: oneFortyAndOneFiftyFive, clearedAt: nil, currentStep: nil, origin: nil, learningEnabled: true)
+        XCTAssertEqual(fifteen?.step, 15)
+        XCTAssertEqual(fifteen?.offset ?? -1, 5, accuracy: 0.01)
+
+        let oneFifty = [sample(1, [150]), sample(2, [165]), sample(3, [180])]
+        XCTAssertEqual(StackLearning.learnedStep(sessions: oneFifty, clearedAt: nil, currentStep: nil, origin: nil, learningEnabled: true)?.step, 15)
+
+        let ids = twenty.map(\.id)
+        let oneSlip = twenty + [sample(4, [150])]
+        XCTAssertNil(StackLearning.learnedStep(
+            sessions: oneSlip,
+            clearedAt: nil,
+            currentStep: 20,
+            currentOffset: 0,
+            origin: .learned,
+            learningEnabled: true,
+            learnedSessionIDs: ids
+        ))
+        let replaced = twenty + [sample(4, [140]), sample(5, [150]), sample(6, [160])]
+        let next = StackLearning.learnedStep(
+            sessions: replaced,
+            clearedAt: nil,
+            currentStep: 20,
+            currentOffset: 0,
+            origin: .learned,
+            learningEnabled: true,
+            learnedSessionIDs: ids
+        )
+        XCTAssertEqual(next?.step, 10)
+        XCTAssertEqual(next?.offset ?? -1, 0, accuracy: 0.01)
+
+        var stack = StackDefinition.empty
+        stack.step = 10
+        stack.offset = 5
+        stack.rangeMin = 5
+        stack.rangeMax = 400
+        let offer = StackMath.snap(weightPounds: 147, reps: 5, stack: stack)
+        XCTAssertEqual(offer.weightPounds, 145, accuracy: 0.01)
 
         XCTAssertNil(StackLearning.learnedStep(sessions: mixed, clearedAt: nil, currentStep: nil, origin: .typed, learningEnabled: true))
         let cleared = Date(timeIntervalSince1970: 10_000)
@@ -156,6 +204,27 @@ final class OptimizationLogicTests: XCTestCase {
         )
         XCTAssertEqual(resolved?.step, 15)
         XCTAssertNil(GymStackLookup.resolve(exerciseID: lift, gymID: away, homeGymID: nil, profiles: []))
+
+        let homeSession = UUID()
+        let travelA = UUID()
+        let travelB = UUID()
+        let rows = [
+            GymHistory.Row(id: homeSession, gymID: home),
+            GymHistory.Row(id: travelA, gymID: away),
+        ]
+        let firstVisit = GymHistory.select(rows: [GymHistory.Row(id: homeSession, gymID: nil)], activeGymID: away, homeGymID: home)
+        XCTAssertTrue(firstVisit.usedHome)
+        XCTAssertTrue(firstVisit.ids.contains(homeSession))
+        let stillHome = GymHistory.select(rows: rows, activeGymID: away, homeGymID: home)
+        XCTAssertTrue(stillHome.usedHome)
+        XCTAssertFalse(stillHome.ids.contains(travelA))
+        let twoTravels = GymHistory.select(
+            rows: rows + [GymHistory.Row(id: travelB, gymID: away)],
+            activeGymID: away,
+            homeGymID: home
+        )
+        XCTAssertFalse(twoTravels.usedHome)
+        XCTAssertEqual(twoTravels.ids, [travelA, travelB])
     }
 
     func test_typedStepBeatsANewerLearnedStep_andLearningDoesNotRewriteSamples() {

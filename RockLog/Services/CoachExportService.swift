@@ -4,15 +4,28 @@
 //
 
 import Foundation
+import SwiftData
 
-/// The gym id rides on the coach file when the store already has a gym.
-/// A container that predates the gym model exports without one.
+/// The gym rides on the coach file when the store already has a gym.
+/// A session with no gym yet is exported as Home. A container that predates
+/// the gym model exports without one.
 @MainActor
-func coachGymID(in context: ModelContext?) -> UUID? {
-    guard let context, let gyms = try? context.fetch(FetchDescriptor<Gym>()), !gyms.isEmpty else {
-        return nil
+func coachGym(for session: WorkoutSession) -> (id: UUID, name: String)? {
+    guard let context = session.modelContext,
+          let gyms = try? context.fetch(FetchDescriptor<Gym>()),
+          !gyms.isEmpty
+    else { return nil }
+    if let id = session.gymID, let gym = gyms.first(where: { $0.id == id }) {
+        let name = session.gymName.isEmpty ? gym.name : session.gymName
+        return (id, name)
     }
-    return GymLibrary.activeID(in: context)
+    if let id = session.gymID, !session.gymName.isEmpty {
+        return (id, session.gymName)
+    }
+    if let home = gyms.first(where: \.isHome) {
+        return (home.id, home.name)
+    }
+    return nil
 }
 
 enum CoachExportError: LocalizedError {
@@ -67,6 +80,10 @@ enum CoachExportService {
             let name = record.exercise?.name.trimmingCharacters(in: .whitespacesAndNewlines)
             let notes = record.notes.trimmingCharacters(in: .whitespacesAndNewlines)
             let muscle = record.exercise?.muscleGroup.trimmingCharacters(in: .whitespacesAndNewlines)
+            let stack = stackUsed(for: record.exercise, in: session)
+            let pins = stack.map { profile in
+                profile.pins.map { MassMath.pounds(fromDisplay: $0, unit: profile.pinUnit) }
+            } ?? []
             exercises.append(
                 CoachExercisePayload(
                     id: record.id,
@@ -78,7 +95,9 @@ enum CoachExportService {
                     groupID: record.groupID,
                     groupPosition: record.groupPosition > 0 ? record.groupPosition : nil,
                     restSeconds: record.exercise?.defaultRestSeconds ?? 0 > 0 ? record.exercise?.defaultRestSeconds : nil,
-                    stackStepPounds: nil
+                    stackStepPounds: stack?.step,
+                    stackOffsetLbs: stack?.step == nil ? nil : stack?.offset,
+                    stackPinsLbs: pins.isEmpty ? nil : pins
                 )
             )
         }
@@ -100,9 +119,24 @@ enum CoachExportService {
                 notes: notes.isEmpty ? nil : notes,
                 effortRating: session.effortRating,
                 exercises: exercises,
-                gymID: coachGymID(in: session.modelContext)
+                gymID: coachGym(for: session)?.id,
+                gymName: coachGym(for: session)?.name
             )
         )
+    }
+
+    /// The profile for the session's gym, then Home. Not whichever gym is selected now.
+    private static func stackUsed(for exercise: Exercise?, in session: WorkoutSession) -> StackDefinition? {
+        guard let exercise, let context = session.modelContext ?? exercise.modelContext else { return nil }
+        guard GymLibrary.storeHasGyms(context) else { return nil }
+        let gyms = (try? context.fetch(FetchDescriptor<Gym>())) ?? []
+        let home = gyms.first(where: \.isHome)?.id
+        let gym = session.gymID ?? home
+        guard let gym else { return nil }
+        let profiles = ((try? context.fetch(FetchDescriptor<MachineStackProfile>())) ?? []).map {
+            StackCandidate(id: $0.id, gymID: $0.gymID, exerciseID: $0.exerciseID, updatedAt: $0.updatedAt, stack: $0.definition)
+        }
+        return GymStackLookup.resolve(exerciseID: exercise.id, gymID: gym, homeGymID: home, profiles: profiles)
     }
 
     static func encodedData(for session: WorkoutSession) throws -> Data {

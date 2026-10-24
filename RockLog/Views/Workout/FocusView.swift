@@ -54,11 +54,12 @@ struct FocusView: View {
 
     /// Prior completed session for this lift (excludes the active session so
     /// History-edit mode doesn’t treat the workout you’re editing as “last time”).
+    private var history: (record: ExerciseRecord?, usedHome: Bool) {
+        workoutVM.historyRecord(for: exercise, mode: workoutVM.selectedMode)
+    }
+
     private var lastCompletedRecord: ExerciseRecord? {
-        exercise.lastCompletedRecord(
-            mode: workoutVM.selectedMode,
-            excludingSessionID: workoutVM.activeSession?.id
-        )
+        history.record
     }
 
     /// Last-session sets for inline comparison in FocusSetsCard.
@@ -828,7 +829,8 @@ struct FocusView: View {
             sessionLast: sessionLast.map { WeightReps(weight: $0.weight, reps: $0.reps) },
             repeatLastSet: mode == .repeatLast,
             starting: StartingWeightPreferences.choice,
-            stack: stack
+            stack: stack,
+            lastAtHome: history.usedHome
         ))
         var weight = resolved.weight
         var reps = resolved.reps

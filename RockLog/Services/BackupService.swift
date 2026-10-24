@@ -166,7 +166,9 @@ struct BackupService {
                 durationSeconds: s.durationSeconds > 0 ? s.durationSeconds : nil,
                 planState: s.planState.isEmpty ? nil : s.planState,
                 followsSessionRoster: s.followsSessionRoster ? true : nil,
-                planOrder: s.planOrder
+                planOrder: s.planOrder,
+                gymID: s.gymID,
+                gymName: s.gymName.isEmpty ? nil : s.gymName
             )
         }
 
@@ -224,7 +226,10 @@ struct BackupService {
                 name: gym.name,
                 isHome: gym.isHome,
                 createdAt: gym.createdAt,
-                sortOrder: gym.sortOrder
+                sortOrder: gym.sortOrder,
+                latitude: gym.latitude,
+                longitude: gym.longitude,
+                radiusMeters: gym.radiusMeters
             )
         }.sorted { lhs, rhs in
             if lhs.sortOrder != rhs.sortOrder { return lhs.sortOrder < rhs.sortOrder }
@@ -239,6 +244,7 @@ struct BackupService {
                 gymID: profile.gymID,
                 exerciseID: profile.exerciseID,
                 stepPounds: profile.stepPounds,
+                offsetPounds: profile.offsetPounds == 0 ? nil : profile.offsetPounds,
                 pinsRaw: profile.pinsRaw,
                 pinUnitRaw: profile.pinUnitRaw,
                 addOnsRaw: profile.addOnsRaw,
@@ -639,6 +645,8 @@ struct BackupService {
             session.planState = sb.planState ?? ""
             session.followsSessionRoster = sb.followsSessionRoster ?? false
             session.planOrder = sb.planOrder ?? 0
+            session.gymID = sb.gymID
+            session.gymName = sb.gymName ?? ""
             if let duration = sb.durationSeconds, duration > 0 {
                 session.durationSeconds = duration
             }
@@ -730,6 +738,9 @@ struct BackupService {
                 let gym = Gym(name: snapshot.name, isHome: snapshot.isHome, sortOrder: snapshot.sortOrder)
                 gym.id = snapshot.id
                 gym.createdAt = snapshot.createdAt
+                gym.latitude = snapshot.latitude
+                gym.longitude = snapshot.longitude
+                gym.radiusMeters = snapshot.radiusMeters
                 context.insert(gym)
             }
         }
@@ -744,6 +755,7 @@ struct BackupService {
             let profile = MachineStackProfile(gymID: snapshot.gymID, exerciseID: snapshot.exerciseID)
             profile.id = snapshot.id
             profile.stepPounds = snapshot.stepPounds
+            profile.offsetPounds = snapshot.offsetPounds ?? 0
             profile.pinsRaw = snapshot.pinsRaw
             profile.pinUnitRaw = snapshot.pinUnitRaw
             profile.addOnsRaw = snapshot.addOnsRaw

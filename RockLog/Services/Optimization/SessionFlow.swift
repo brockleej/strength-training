@@ -71,11 +71,14 @@ nonisolated struct WeightReps: Equatable, Sendable {
 nonisolated struct OpeningLine: Equatable, Sendable {
     var last: WeightReps?
     var suggested: WeightReps?
+    /// The travel gym has no history of its own yet, so last time is Home's.
+    var lastAtHome: Bool = false
 
     func text(unit: MassUnit = .pounds) -> String {
         var parts: [String] = []
         if let last {
-            parts.append("Last time \(Self.pair(last, unit: unit))")
+            let place = lastAtHome ? " at Home" : ""
+            parts.append("Last time \(Self.pair(last, unit: unit))\(place)")
         }
         if let suggested {
             parts.append("Suggested \(Self.pair(suggested, unit: unit))")
@@ -104,6 +107,7 @@ nonisolated enum StartingWeight {
         var repeatLastSet: Bool
         var starting: StartingWeightChoice
         var stack: StackDefinition?
+        var lastAtHome: Bool = false
         var emptyWeight: Double = 0
         var emptyReps: Int = 10
     }
@@ -119,7 +123,7 @@ nonisolated enum StartingWeight {
     static func resolve(_ input: Input) -> Result {
         let suggested = snapped(input.suggestion, stack: input.stack)
         let last = input.lastTimeSameSet ?? (input.loggedCount == 0 ? input.lastTimeBest : nil)
-        let line = OpeningLine(last: last ?? input.lastTimeSameSet, suggested: suggested)
+        let line = OpeningLine(last: last ?? input.lastTimeSameSet, suggested: suggested, lastAtHome: input.lastAtHome)
 
         if let plan = input.plan {
             let snappedPlan = snapped(plan, stack: input.stack) ?? plan

@@ -16,6 +16,8 @@ final class MachineStackProfile {
     var exerciseID: UUID = UUID()
     /// 0 means "no fixed step" (a pin list, or no profile).
     var stepPounds: Double = 0
+    /// Remainder after whole steps, in pounds. 0 is 140, 150, 160 on a 10 lb step.
+    var offsetPounds: Double = 0
     /// Comma-separated pin weights in `pinUnitRaw`.
     var pinsRaw: String = ""
     var pinUnitRaw: String = "lb"
@@ -43,6 +45,7 @@ final class MachineStackProfile {
         get {
             StackDefinition(
                 step: stepPounds > 0 ? stepPounds : nil,
+                offset: offsetPounds,
                 pins: Self.numbers(pinsRaw),
                 pinUnit: MassUnit(rawValue: pinUnitRaw) ?? .pounds,
                 addOns: Self.numbers(addOnsRaw),
@@ -57,6 +60,7 @@ final class MachineStackProfile {
         }
         set {
             stepPounds = newValue.step ?? 0
+            offsetPounds = newValue.step == nil ? 0 : newValue.offset
             pinsRaw = Self.joined(newValue.pins)
             pinUnitRaw = newValue.pinUnit.rawValue
             addOnsRaw = Self.joined(newValue.addOns)
@@ -73,6 +77,7 @@ final class MachineStackProfile {
     func applyTyped(step: Double?, pins: [Double], unit: MassUnit) {
         var next = definition
         next.step = step.map { MassMath.clampedStackStep($0, unit: unit) }
+        next.offset = 0
         next.pins = pins
         next.pinUnit = unit
         next.origin = .typed
@@ -89,6 +94,7 @@ final class MachineStackProfile {
         var next = definition
         guard next.origin == .learned || next.origin == nil else { return }
         next.step = nil
+        next.offset = 0
         next.pins = []
         next.origin = nil
         next.learnedSessionIDs = []
