@@ -89,7 +89,7 @@ final class ProgressionServiceParityTests: XCTestCase {
                 // Pure API — recreate the same input the wrapper builds internally.
                 let snapshots = exercise.recordsArray
                     .filter { $0.session?.isCompleted == true }
-                    .sorted { ($0.session?.date ?? .distantPast) > ($1.session?.date ?? .distantPast) }
+                    .sorted { ProgressionService.isNewerForProgression($0, than: $1) }
                     .compactMap { record -> ExerciseRecordSnapshot? in
                         guard let sessionDate = record.session?.date else { return nil }
                         return ExerciseRecordSnapshot(
@@ -129,7 +129,7 @@ final class ProgressionServiceParityTests: XCTestCase {
             let wrapperAvg = ProgressionService.recentAverage(for: exercise, mode: mode)
             let snapshots = exercise.recordsArray
                 .filter { $0.session?.isCompleted == true }
-                .sorted { ($0.session?.date ?? .distantPast) > ($1.session?.date ?? .distantPast) }
+                .sorted { ProgressionService.isNewerForProgression($0, than: $1) }
                 .compactMap { record -> ExerciseRecordSnapshot? in
                     guard let sessionDate = record.session?.date else { return nil }
                     return ExerciseRecordSnapshot(
@@ -145,5 +145,47 @@ final class ProgressionServiceParityTests: XCTestCase {
             XCTAssertEqual(wrapperAvg?.reps, pureAvg?.reps, "reps mismatch for \(mode)")
             XCTAssertEqual(wrapperAvg?.sessionCount, pureAvg?.sessionCount, "session count mismatch for \(mode)")
         }
+    }
+
+    /// Same timestamp used to leave order up to the relationship array.
+    /// Descending session id is the tie-break: the FFFF session is newest,
+    /// so the recent pair is 1 rep and 10 reps and the suggestion stays on reps.
+    func test_b9_sameDateSessions_orderBySessionID() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let exercise = Exercise(name: "Squat", dayType: .legs, muscleGroup: "Quads")
+        context.insert(exercise)
+        let when = Date(timeIntervalSince1970: 1_700_000_000)
+
+        // Insert low ids first. A date-only sort would keep that order and
+        // treat the two 10-rep sessions as the recent pair (weight bump).
+        let rows: [(String, Int)] = [
+            ("00000000-0000-0000-0000-000000000001", 10),
+            ("00000000-0000-0000-0000-000000000002", 10),
+            ("FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF", 1),
+        ]
+        for (id, reps) in rows {
+            let session = WorkoutSession(dayType: .legs, date: when)
+            session.id = UUID(uuidString: id)!
+            session.isCompleted = true
+            context.insert(session)
+            let record = ExerciseRecord(trainingMode: .highWeightLowReps)
+            record.exercise = exercise
+            record.session = session
+            context.insert(record)
+            let set = SetRecord(setNumber: 1, weightLbs: 50, reps: reps, isWarmup: false)
+            set.exerciseRecord = record
+            context.insert(set)
+        }
+        try context.save()
+
+        let suggestion = ProgressionService.suggestion(
+            for: exercise,
+            mode: .highWeightLowReps,
+            aggressiveness: .moderate
+        )
+        XCTAssertEqual(suggestion?.basis, .improving)
+        XCTAssertEqual(suggestion?.targetWeight, 50)
+        XCTAssertEqual(suggestion?.targetReps, 8)
     }
 }
