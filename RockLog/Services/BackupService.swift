@@ -42,7 +42,10 @@ struct BackupRestoreReport: Equatable {
         }
         let noun = droppedExerciseRecords == 1 ? "exercise log" : "exercise logs"
         let modes = unknownTrainingModes.joined(separator: ", ")
-        return "Backup restored. Skipped \(droppedExerciseRecords) \(noun) with an unknown training mode (\(modes))."
+        let modePhrase = unknownTrainingModes.count == 1
+            ? "an unknown training mode (\(modes))"
+            : "unknown training modes (\(modes))"
+        return "Backup restored. Skipped \(droppedExerciseRecords) \(noun) with \(modePhrase)."
     }
 }
 
@@ -357,8 +360,12 @@ struct BackupService {
         guard incoming.droppedExerciseRecordCount > 0 else { return message }
         let count = incoming.droppedExerciseRecordCount
         let noun = count == 1 ? "exercise log" : "exercise logs"
+        let verb = count == 1 ? "uses" : "use"
         let modes = incoming.unknownTrainingModes.joined(separator: ", ")
-        return message + " \(count) \(noun) use an unknown training mode (\(modes)) and will be skipped."
+        let modePhrase = incoming.unknownTrainingModes.count == 1
+            ? "an unknown training mode (\(modes))"
+            : "unknown training modes (\(modes))"
+        return message + " \(count) \(noun) \(verb) \(modePhrase) and will be skipped."
     }
 
     // MARK: - Restore
