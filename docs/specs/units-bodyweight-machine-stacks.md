@@ -12,6 +12,7 @@ Audience: Lee, before anyone builds it. Tester-facing copy waits until a build e
 | **d** | Drag exercises into a new order during the workout. The session keeps that order. Saving it back to the day or the program is a separate choice. |
 | **e** | Groups of two to four exercises. Logging a set moves to the next one in the group and comes back around. Rest follows the exercise just finished, and each lift has its own default rest. |
 | **Focus** | A starting-weight choice (last time, or the suggestion). A planned weight always wins. Previous moves the way Next already does. Done stays where it is. |
+| **Rest alert** | One pocket-strength buzz at zero, an optional tap at 10 seconds, a chime that dips an audiobook without stopping it, and the countdown on the Lock Screen and Dynamic Island. |
 
 Lee’s notes for **d** and **e**, in his words: he is on the individual exercises most of the time and wants to rearrange them from inside the workout. He sometimes cycles two to four exercises before moving on. Rest depends on the exercise he just did: some leave him breathing hard, some need a short break.
 
@@ -29,7 +30,7 @@ There is no per-machine stack. The stepper does not know that a machine only mov
 
 During a workout, **Reorder / edit day plan** opens the day-plan editor and writes the library order (`Exercise` day sort). The next session on that day follows it. The session itself does not keep a private order, except a planned workout: those sessions set `followsSessionRoster` and list lifts by `ExerciseRecord.sortOrder`. The lift screen (Focus) has next / previous. It has no drag handle. Lee spends his time on that screen. How that screen fills the stepper, and how Previous differs from Next, is under [Focus screen](#focus-screen).
 
-Rest is one duration for the whole app (default 3 minutes, Settings chips from 1 to 5 minutes). Each lift can turn auto-rest on or off. That on/off flag lives in UserDefaults, so a backup does not include it. Logging a set starts the timer when the lift’s auto-rest is on. While it runs, the chips are **−30**, **+30**, and **Skip**. There is no circuit, and Next walks the whole list rather than a pair of lifts.
+Rest is one duration for the whole app (default 3 minutes, Settings chips from 1 to 5 minutes). Each lift can turn auto-rest on or off. That on/off flag lives in UserDefaults, so a backup does not include it. Logging a set starts the timer when the lift’s auto-rest is on. While it runs, the chips are **−30**, **+30**, and **Skip**. There is no circuit, and Next walks the whole list rather than a pair of lifts. The countdown he sees off the lift screen is not a Live Activity. Sound is a tick on each of the last 5 seconds plus a two-tone chirp at zero, mixed on top of other audio (`.mixWithOthers`) without ducking it. A success haptic and two heavy taps fire at zero, and those generators run while the app is on screen. Local-notification banners for the timer were removed on purpose. The app still clears any leftover ones on launch. How that should change is under [Rest alert](#rest-alert).
 
 The iCloud store on `main` is `RockLogSchemaV1` with an empty migration plan (`eb497bd`, not on TestFlight yet). V1 is frozen. The next stored fields are `RockLogSchemaV2` plus one lightweight stage. CloudKit will not run a heavy migration. New fields need defaults so existing phones open.
 
@@ -382,6 +383,84 @@ Done and Resume stay on the bottom row. Resume still un-marks the lift and stays
 - Done stays on the bottom row, right of Log set. After Done, that button reads Resume. Resume clears Done and stays on this lift.
 - The Previous control remains the top chevron. Next remains the top capsule.
 
+## Rest alert
+
+Lee’s words: the phone is in his pocket, in his hand, or on the ground next to him. Sound is on, and sometimes an audiobook is playing, or he is on a call.
+
+This is how the rest timer tells him the break is over. It does not change which lift the rest belongs to (part **e**) or the length of that rest. The on-screen rest card stays: Start, the running countdown, Skip, and the ±15 nudge from part **e**. That card is not a banner.
+
+### At zero, and at 10 seconds
+
+At zero, one strong haptic. The pattern is the three sharp taps already used when a workout is completed (`HapticService.workoutCompleted`): full intensity, about a quarter of a second, so he can feel it in a pocket when the phone can play it. It fires once. The last-5-seconds tick tones go away, so an audiobook is not bumped five times.
+
+A Settings switch, **Tap at 10 seconds**, default off. When it is on, one light tap fires as the countdown crosses 10 seconds. No chime with that tap. A rest shorter than 10 seconds does not tap. Adding time back above 10 seconds arms the tap once more. Skip before zero cancels whatever has not fired.
+
+### Chime, and an audiobook
+
+At zero, one short chirp, the current two-tone “go,” only when sound is on and he is not in a call. The session for that chirp is `.playback` with `.mixWithOthers` and `.duckOthers`. Other audio dips for the length of the chirp and then comes back. The chirp does not pause or stop the audiobook. Do not use a category option that interrupts spoken audio.
+
+The near-silent loop that keeps the timer alive while the screen is locked stays `.mixWithOthers` only. It must not hold `.duckOthers` for the whole rest, or the book would stay quiet for minutes. Ducking turns on just before the chirp and turns off when the chirp finishes.
+
+The existing sound switch stays. Off means haptics only, including no chirp and no duck.
+
+### A call
+
+If a call is connected (CallKit: a call that has not ended, including a call on hold), the timer still runs and the Live Activity still counts. Sound does not play. Ducking does not run. The zero haptic and the optional 10-second tap still fire. A call that starts during the rest cuts off a chirp that is already playing. A call that ends before zero allows the chirp when zero arrives.
+
+An audiobook is not a call. Other audio playing is not a reason to mute the chirp.
+
+### Countdown off the phone screen
+
+Do not post a notification that updates every second. That banner is what an older build stacked on each tick, and it stays gone.
+
+When rest starts, start one Live Activity. Its countdown is a system timer from now until the rest end date, so the number moves without the app pushing an update every second. Update the activity only when the end date changes (±15 or a new rest) or when rest ends (Skip, or zero). The activity shows the exercise name and the time left.
+
+On a phone with a Dynamic Island, the system puts it there. On a phone without one, the same activity is the Lock Screen timer and the system’s Live Activity banner. There is no second layout to build. RockLog’s minimum system is iOS 26.2, so every phone the app runs on has Live Activities. The island itself is the hardware. iPad, if the app is run there, gets the Lock Screen activity and no island.
+
+The in-app rest card still shows the same countdown while he is on the lift.
+
+Ending rest (zero, Skip, or logging a set that replaces the timer) ends the activity. Leaving it up after the set is logged is wrong.
+
+### Pocket, lock, background, Silent, Focus, permission
+
+The phone in his hand with RockLog open plays the Core Haptics pattern and the chirp directly.
+
+The phone locked, or RockLog in the background, keeps the process awake the way it does today (`UIBackgroundModes` audio and the mix-only keep-alive) so the chirp can still play and the activity can still be ended at zero. App haptics often do not run with the screen off. For that case, one Live Activity alert at zero carries the system buzz he feels in a pocket. If the app’s own pattern already played, the alert does not also buzz. He gets one buzz, not two.
+
+If the system suspends RockLog anyway, one local notification armed for the end time is the backup buzz and chirp. It is a single notification, not a tick. When the app itself plays the end, it cancels that notification. Skip cancels it too.
+
+The silent switch does not mute the chirp. The session stays `.playback`, which is what lets a gym timer sound while the ringer is off. That matches the timer today.
+
+A Focus mode that silences notifications can swallow the Live Activity alert and the backup notification. The Lock Screen activity can still show the countdown, and the in-app chirp can still play, because that chirp is the app’s audio session and not a notification. This build does not mark the alert Time Sensitive. Breaking through Focus is a later choice.
+
+Live Activities off, or the system refusing to start one: rest still runs, the on-screen card still counts, the chirp and the in-app haptic still follow the rules above. No per-second banner is substituted. Notification permission denied: the backup notification is skipped, once, without asking on every set. Ask the first time he leaves the app during a rest, from that moment, not from a cold Settings lecture. Denied stays denied until he turns it on himself.
+
+### Apple Watch, later
+
+Not this build. A later watch glance can take a “rest done” event and play a watch haptic. Nothing in the first rest-alert work adds a watch target, and the iPhone Live Activity is not described as a watch buzz.
+
+### App, data, coach
+
+**RockLog** owns the activity, the audio session, the call check, and the two haptics. The Live Activity UI lives in a widget extension. `NSSupportsLiveActivities` is set. No new SwiftData model. **Tap at 10 seconds** is UserDefaults, default off, same place as the sound switch. It is not in the backup.
+
+**Progression** and **RockCoach** do not read this. A missed buzz does not change the logged set.
+
+### Tests
+
+- Zero fires the strong pattern once. A second poll at zero does not fire it again.
+- **Tap at 10 seconds** off: crossing 10 does nothing. On: one light tap as it crosses 10, and no chirp at that moment. A 8 second rest never taps. Adding time from 5 back to 20 arms one more tap.
+- The chirp’s audio options are `.mixWithOthers` and `.duckOthers`. The keep-alive options are `.mixWithOthers` only. After the chirp, ducking is off.
+- Other audio playing, no connected call: the chirp plays. The session does not use the option that interrupts spoken audio, and it does not stop the other player.
+- A connected call: no chirp, no duck, zero haptic still requested. A call that begins during the chirp stops it.
+- Skip: no zero haptic, no chirp, the Live Activity ends, the backup notification is cancelled.
+- ±15 updates the activity’s end date once per tap. The activity is not updated every second. The countdown view is a timer interval.
+- Live Activities unavailable: starting rest does not crash, the on-screen card still counts, and no per-second notification is scheduled.
+- Notification permission denied: the backup notification is not scheduled, and rest in the foreground still chirps.
+- Background or locked: the code arms one end-time notification and does not arm tick notifications. A device check, not a unit test: locked in a pocket, one buzz at zero, audiobook dips and continues, a call stays silent of the chirp.
+- The silent switch does not change the category away from `.playback`.
+- The end alert is not Time Sensitive.
+- Phones without a Dynamic Island use the same activity. The countdown does not depend on an island-only view.
+
 ## Schema in one step
 
 `RockLogSchemaV1` shipped in source at `eb497bd` and is frozen. Parts **b**, **c**, and **e** add optional fields with defaults in **one** `RockLogSchemaV2` and one lightweight stage. Shipping the screens in a later order is fine. Adding a further stored field after V2 is V3, so the fields we already know about belong in V2 even if the screen comes later.
@@ -398,15 +477,16 @@ CloudKit will accept this only as a lightweight additive change. There is no cus
 2. **Previous mirrors Next (Focus).** Done and Resume stay on the bottom row. Back stays at the top. No migration.
 3. **Reorder (d).** No migration. It is the gap he feels on the lift screen. The day-plan editor stays for editing the library.
 4. **Per-lift rest and ±15 (the rest half of e).** Small, and it matches “the last exercise decides the break.” Circuits can follow in the next slice.
-5. **Groups and auto-advance (the rest of e).**
-6. **Body-weight lookup and added-load mode (b).** No new measurement model. Date-based assist math is the part that stops old assisted e1RMs from moving when he updates the scale.
-7. **Pounds / kilograms and plate math (a).**
-8. **Stack profiles and rep compensation (c).** Needs the unit work so a kilogram stack and a pound stack stay distinct, and needs the shared Epley helper.
-9. **Rest learning.** After real timer samples exist. Suggest only.
+5. **Rest alert.** Pocket buzz, 10-second tap, ducked chime, Live Activity. Uses the timer from today, so it can sit beside per-lift rest and does not wait on circuits. The per-lift length, once it exists, is the duration this alert counts.
+6. **Groups and auto-advance (the rest of e).**
+7. **Body-weight lookup and added-load mode (b).** No new measurement model. Date-based assist math is the part that stops old assisted e1RMs from moving when he updates the scale.
+8. **Pounds / kilograms and plate math (a).**
+9. **Stack profiles and rep compensation (c).** Needs the unit work so a kilogram stack and a pound stack stay distinct, and needs the shared Epley helper.
+10. **Rest learning.** After real timer samples exist. Suggest only.
 
 The month-boundary fix is already on `main` (`a877aad`, pull request #10) and is **not on TestFlight yet**. It does not block this list.
 
-One V2 migration can land with the per-lift rest step, containing the optional fields for rest, groups, bodyweight load, and stacks, so later steps do not each mint a schema version. The two Focus items do not add fields.
+One V2 migration can land with the per-lift rest step, containing the optional fields for rest, groups, bodyweight load, and stacks, so later steps do not each mint a schema version. The two Focus items and the rest alert do not add SwiftData fields. The rest alert does add a widget extension for the Live Activity.
 
 ## Tests
 
@@ -465,6 +545,8 @@ One V2 migration can land with the per-lift rest step, containing the optional f
 - V1 store opens on V2. Old sessions have no group. Backup round-trips a group and a per-lift rest. A file that omits them does not clear rests already on the phone.
 - Coach file with a group id shows the pairing. A v1 file without it still imports, each lift on its own.
 
+**Rest alert.** Cases are under [Rest alert](#rest-alert). No SwiftData change.
+
 ## Open questions for Lee
 
 1. Pounds as the stored unit, kilograms as a view. Confirm, or say if you want the store converted to kilograms instead.
@@ -483,3 +565,4 @@ One V2 migration can land with the per-lift rest step, containing the optional f
 14. The seed table (3 min legs, 2 min other compounds, 90 sec isolation) is a starting point. Change any of those?
 15. Rest learning only suggests, and only after you turn it on. It never edits the default alone. Confirm.
 16. A group is not written into the program file until you tap save. The phone can do groups before the program format knows about them. Agree?
+17. The last-5-seconds tick tones go away, so an audiobook dips once at zero instead of five times. The 10-second cue is a haptic only, and its switch starts off. Confirm.
