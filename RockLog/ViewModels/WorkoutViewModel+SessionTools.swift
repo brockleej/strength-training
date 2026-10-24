@@ -16,6 +16,25 @@ struct SessionCarryState: Equatable {
     var line: String?
 }
 
+enum CircuitStore {
+    /// Clear a circuit partner when its lift is removed or deleted.
+    @MainActor
+    static func detach(exerciseID: UUID, in context: ModelContext) {
+        let records = (try? context.fetch(FetchDescriptor<ExerciseRecord>())) ?? []
+        let seats = records.compactMap { record -> CircuitSeat? in
+            guard let id = record.exercise?.id else { return nil }
+            return CircuitSeat(recordID: record.id, exerciseID: id, groupID: record.groupID, position: record.groupPosition)
+        }
+        let next = CircuitMembership.removing(exerciseID: exerciseID, from: seats)
+        let byID = Dictionary(uniqueKeysWithValues: records.map { ($0.id, $0) })
+        for seat in next {
+            guard let record = byID[seat.recordID] else { continue }
+            record.groupID = seat.groupID
+            record.groupPosition = seat.position
+        }
+    }
+}
+
 extension WorkoutViewModel {
     func bodyWeightPoundsForLogging(on date: Date = .now) -> Double {
         let entries = (try? modelContext.fetch(FetchDescriptor<BodyMetricEntry>())) ?? []
@@ -158,6 +177,16 @@ extension WorkoutViewModel {
             }
         }
         session.followsSessionRoster = true
+        let seats = session.exerciseRecordsArray.compactMap { record -> CircuitSeat? in
+            guard let exerciseID = record.exercise?.id else { return nil }
+            return CircuitSeat(recordID: record.id, exerciseID: exerciseID, groupID: record.groupID, position: record.groupPosition)
+        }
+        let fixed = CircuitMembership.afterDrag(orderedExerciseIDs: orderedIDs, seats: seats)
+        let byID = Dictionary(uniqueKeysWithValues: session.exerciseRecordsArray.map { ($0.id, $0) })
+        for seat in fixed {
+            byID[seat.recordID]?.groupID = seat.groupID
+            byID[seat.recordID]?.groupPosition = seat.position
+        }
         try? modelContext.save()
         setMutationEpoch &+= 1
     }
@@ -201,6 +230,11 @@ extension WorkoutViewModel {
     }
 
     // MARK: - Circuits
+
+    /// Partners of a lift that is leaving. A group of one is cleared in this save.
+    func detachFromCircuits(_ exercise: Exercise) {
+        CircuitStore.detach(exerciseID: exercise.id, in: modelContext)
+    }
 
     func createCircuit(exerciseIDs: [UUID]) {
         guard CircuitAdvance.canCreate(count: exerciseIDs.count), let session = activeSession else { return }

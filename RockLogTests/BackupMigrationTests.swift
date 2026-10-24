@@ -128,6 +128,28 @@ final class BackupMigrationTests: XCTestCase {
         XCTAssertTrue(incoming.autoRestEnabled)
     }
 
+    func test_orphanedGroup_isClearedOnRestore() throws {
+        let container = try store()
+        let context = container.mainContext
+        let json = Data("""
+        {"version":2,"exportedAt":"2026-01-01T00:00:00Z","exercises":[
+        {"id":"11111111-1111-4111-8111-111111111111","name":"A","dayType":"Push","muscleGroup":"Chest","sortOrder":0,"isCustom":true,"notes":""},
+        {"id":"22222222-2222-4222-8222-222222222222","name":"B","dayType":"Push","muscleGroup":"Chest","sortOrder":1,"isCustom":true,"notes":""},
+        {"id":"33333333-3333-4333-8333-333333333333","name":"C","dayType":"Push","muscleGroup":"Chest","sortOrder":2,"isCustom":true,"notes":""}
+        ],"sessions":[{"id":"44444444-4444-4444-8444-444444444444","date":"2026-01-02T00:00:00Z","dayType":"Push","notes":"","isCompleted":false,"exerciseRecords":[
+        {"id":"55555555-5555-4555-8555-555555555555","exerciseID":"11111111-1111-4111-8111-111111111111","trainingMode":"Strength","sortOrder":0,"isCompleted":false,"notes":"","sets":[],"groupID":"AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAA","groupPosition":1},
+        {"id":"66666666-6666-4666-8666-666666666666","exerciseID":"22222222-2222-4222-8222-222222222222","trainingMode":"Strength","sortOrder":1,"isCompleted":false,"notes":"","sets":[],"groupID":"AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAA","groupPosition":2},
+        {"id":"77777777-7777-4777-8777-777777777777","exerciseID":"33333333-3333-4333-8333-333333333333","trainingMode":"Strength","sortOrder":2,"isCompleted":false,"notes":"","sets":[],"groupID":"BBBBBBBB-BBBB-4BBB-8BBB-BBBBBBBBBBBB","groupPosition":1}
+        ]}],"splitDays":[]}
+        """.utf8)
+        let report = try BackupService.restore(from: json, context: context)
+        XCTAssertEqual(report.orphanedGroupIDs, [UUID(uuidString: "BBBBBBBB-BBBB-4BBB-8BBB-BBBBBBBBBBBB")!])
+        let records = try context.fetch(FetchDescriptor<ExerciseRecord>())
+        let kept = records.filter { $0.groupID != nil }
+        XCTAssertEqual(kept.count, 2)
+        XCTAssertTrue(kept.allSatisfy { $0.groupID == UUID(uuidString: "AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAA") })
+    }
+
     func test_exportRestoreExport_matchesApartFromExportedAt() throws {
         let container = try store()
         let context = container.mainContext

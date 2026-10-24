@@ -123,6 +123,7 @@ struct ExerciseLibraryView: View {
             ) {
                 Button(ListMutationCopy.deleteFromLibrary, role: .destructive) {
                     if let exercise = exercisePendingDelete {
+                        CircuitStore.detach(exerciseID: exercise.id, in: modelContext)
                         modelContext.delete(exercise)
                         try? modelContext.save()
                     }

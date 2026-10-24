@@ -278,6 +278,31 @@ final class OptimizationLogicTests: XCTestCase {
         XCTAssertNil(FocusNavigation.previousIndex(count: 1, index: 0, isDone: { _ in false }))
     }
 
+    func test_groupedLift_leavesOnRemoveAndOnDrag() {
+        let group = UUID()
+        let a = UUID()
+        let b = UUID()
+        let c = UUID()
+        let d = UUID()
+        func seat(_ exercise: UUID, _ record: UUID, position: Int) -> CircuitSeat {
+            CircuitSeat(recordID: record, exerciseID: exercise, groupID: group, position: position)
+        }
+        let trio = [seat(a, UUID(), position: 1), seat(b, UUID(), position: 2), seat(c, UUID(), position: 3)]
+        let removed = CircuitMembership.removing(exerciseID: b, from: trio)
+        XCTAssertEqual(removed.filter { $0.groupID == group }.map(\.exerciseID).sorted { $0.uuidString < $1.uuidString }, [a, c].sorted { $0.uuidString < $1.uuidString })
+        let pair = [seat(a, UUID(), position: 1), seat(b, UUID(), position: 2)]
+        XCTAssertTrue(CircuitMembership.removing(exerciseID: a, from: pair).allSatisfy { $0.groupID == nil })
+        let dragged = CircuitMembership.afterDrag(
+            orderedExerciseIDs: [a, b, d, c],
+            seats: trio + [CircuitSeat(recordID: UUID(), exerciseID: d, groupID: nil, position: 0)]
+        )
+        XCTAssertNil(dragged.first { $0.exerciseID == c }?.groupID)
+        XCTAssertEqual(dragged.first { $0.exerciseID == a }?.groupID, group)
+        XCTAssertEqual(dragged.first { $0.exerciseID == b }?.groupID, group)
+        let split = CircuitMembership.afterDrag(orderedExerciseIDs: [a, d, b], seats: pair)
+        XCTAssertTrue(split.allSatisfy { $0.groupID == nil })
+    }
+
     func test_circuit_workingSetsAdvance_warmupsDoNot() {
         let members = [
             CircuitMember(exerciseID: UUID(uuidString: "00000000-0000-0000-0000-000000000001")!, position: 1, isDone: false, loggedWorkingSets: 0, plannedWorkingCount: 3),

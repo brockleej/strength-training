@@ -189,6 +189,7 @@ struct EditExerciseView: View {
             titleVisibility: .visible
         ) {
             Button(ListMutationCopy.deleteFromLibrary, role: .destructive) {
+                CircuitStore.detach(exerciseID: exercise.id, in: modelContext)
                 modelContext.delete(exercise)
                 try? modelContext.save()
                 dismiss()

@@ -205,6 +205,84 @@ nonisolated enum CircuitAdvance {
     }
 }
 
+nonisolated struct CircuitSeat: Equatable, Sendable {
+    var recordID: UUID
+    var exerciseID: UUID
+    var groupID: UUID?
+    var position: Int
+}
+
+nonisolated enum CircuitMembership {
+    /// Drop one lift. A group left with fewer than two members is cleared.
+    static func removing(exerciseID: UUID, from seats: [CircuitSeat]) -> [CircuitSeat] {
+        let groups = Set(seats.filter { $0.exerciseID == exerciseID }.compactMap(\.groupID))
+        var next = seats.filter { $0.exerciseID != exerciseID }
+        for group in groups {
+            next = dissolve(group, in: next)
+        }
+        return next
+    }
+
+    /// A group that is no longer a contiguous block loses the member that left.
+    /// A pair that is split is cleared. A group that stays together is unchanged.
+    static func afterDrag(orderedExerciseIDs: [UUID], seats: [CircuitSeat]) -> [CircuitSeat] {
+        var next = seats
+        for group in Set(seats.compactMap(\.groupID)) {
+            let members = next.filter { $0.groupID == group }.map(\.exerciseID)
+            guard members.count >= 2 else { continue }
+            if isContiguous(members, in: orderedExerciseIDs) { continue }
+            if members.count == 2 {
+                next = clear(group, in: next)
+                continue
+            }
+            let ordered = members.compactMap { id in orderedExerciseIDs.firstIndex(of: id).map { (id, $0) } }
+                .sorted { $0.1 < $1.1 }
+            var departed: UUID?
+            for candidate in ordered {
+                let rest = members.filter { $0 != candidate.0 }
+                if isContiguous(rest, in: orderedExerciseIDs) {
+                    departed = candidate.0
+                    break
+                }
+            }
+            if let departed {
+                next = next.map { seat in
+                    guard seat.exerciseID == departed else { return seat }
+                    var copy = seat
+                    copy.groupID = nil
+                    copy.position = 0
+                    return copy
+                }
+                next = dissolve(group, in: next)
+            } else {
+                next = clear(group, in: next)
+            }
+        }
+        return next
+    }
+
+    private static func isContiguous(_ members: [UUID], in order: [UUID]) -> Bool {
+        let indexes = members.compactMap { order.firstIndex(of: $0) }
+        guard indexes.count == members.count, let low = indexes.min(), let high = indexes.max() else { return false }
+        return high - low + 1 == indexes.count
+    }
+
+    private static func dissolve(_ group: UUID, in seats: [CircuitSeat]) -> [CircuitSeat] {
+        guard seats.filter({ $0.groupID == group }).count < 2 else { return seats }
+        return clear(group, in: seats)
+    }
+
+    private static func clear(_ group: UUID, in seats: [CircuitSeat]) -> [CircuitSeat] {
+        seats.map { seat in
+            guard seat.groupID == group else { return seat }
+            var copy = seat
+            copy.groupID = nil
+            copy.position = 0
+            return copy
+        }
+    }
+}
+
 // MARK: - Session order
 
 nonisolated enum SessionOrder {

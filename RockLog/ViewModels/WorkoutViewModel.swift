@@ -802,6 +802,7 @@ final class WorkoutViewModel {
     /// Hides auto-listed day exercises and deletes this session's sets/record.
     func removeExerciseFromSession(_ exercise: Exercise) {
         guard let session = activeSession else { return }
+        detachFromCircuits(exercise)
         let records = session.exerciseRecordsArray.filter { $0.exercise?.id == exercise.id }
         for record in records {
             for set in record.setsArray {
