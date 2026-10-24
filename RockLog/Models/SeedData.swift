@@ -13,7 +13,7 @@ struct SeedData {
     /// Runs on every launch and after every backup restore — existing records
     /// keep their relationships (rename only), and restoring an old backup
     /// re-applies the fix on the spot.
-    static func migrateExerciseNames(context: ModelContext) {
+    static func migrateExerciseNames(context: ModelContext, saves: Bool = true) {
         let renames = [
             "Hip Abduction (Inner)": "Hip Adduction (Inner)",
             "Rear Deltoid": "Rear Delt Fly",
@@ -38,7 +38,7 @@ struct SeedData {
                 }
             }
         }
-        if changed { try? context.save() }
+        if changed, saves { try? context.save() }
     }
 
     /// Upgrade stock compound lifts to multi-muscle labels (idempotent).
@@ -316,13 +316,19 @@ struct SeedData {
     }
 
     /// Restore a backup's day rosters (or derive them from restored exercises).
-    static func restoreDayPlans(from backup: AppBackup, context: ModelContext) {
+    /// - Parameter saves: When false, only mutates SwiftData rows. The caller
+    ///   saves once and writes the UserDefaults mirror after that save commits.
+    static func restoreDayPlans(from backup: AppBackup, context: ModelContext, saves: Bool = true) {
         if let plans = backup.dayPlans, !plans.isEmpty {
-            storeDayPlanSnapshot(plans)
-            _ = applyDayPlanSnapshot(plans, context: context)
+            if saves {
+                storeDayPlanSnapshot(plans)
+            }
+            _ = applyDayPlanSnapshot(plans, context: context, saves: saves)
             return
         }
-        persistDayPlanSnapshot(context: context)
+        if saves {
+            persistDayPlanSnapshot(context: context)
+        }
     }
 
     /// Pin each snapshot day's roster to those IDs. Extra lifts (re-seeded starters
@@ -334,7 +340,8 @@ struct SeedData {
     static func applyDayPlanSnapshot(
         _ snapshot: [DayPlanBackup],
         context: ModelContext,
-        replaceAllMembership: Bool = false
+        replaceAllMembership: Bool = false,
+        saves: Bool = true
     ) -> Bool {
         guard !snapshot.isEmpty else { return false }
         let exercises = (try? context.fetch(FetchDescriptor<Exercise>())) ?? []
@@ -368,7 +375,7 @@ struct SeedData {
                 changed = true
             }
         }
-        if changed {
+        if changed, saves {
             try? context.save()
         }
         return changed
@@ -389,7 +396,11 @@ struct SeedData {
         return stripSeedExtrasUsingPreset(context: context)
     }
 
-    static func applySplitSnapshot(_ snapshot: [SplitDayBackup], context: ModelContext) -> Bool {
+    static func applySplitSnapshot(
+        _ snapshot: [SplitDayBackup],
+        context: ModelContext,
+        saves: Bool = true
+    ) -> Bool {
         let desired = snapshot.sorted { $0.sortOrder < $1.sortOrder }
         guard !desired.isEmpty else { return false }
         let existing = fetchSplitDays(context: context)
@@ -438,7 +449,7 @@ struct SeedData {
             }
         }
 
-        if changed {
+        if changed, saves {
             try? context.save()
         }
         return changed
@@ -470,19 +481,19 @@ struct SeedData {
 
     /// Seeds day types only when the store is empty. Prefer the saved snapshot,
     /// then the last preset — never bro-split over a configured iCloud split.
-    static func seedSplitDaysIfNeeded(context: ModelContext) {
+    static func seedSplitDaysIfNeeded(context: ModelContext, saves: Bool = true) {
         let count = (try? context.fetchCount(FetchDescriptor<SplitDay>())) ?? 0
         guard count == 0 else { return }
 
         if let snapshot = loadSplitSnapshot(), !snapshot.isEmpty {
-            _ = applySplitSnapshot(snapshot, context: context)
+            _ = applySplitSnapshot(snapshot, context: context, saves: saves)
             return
         }
 
         if UserDefaults.standard.bool(forKey: hasConfiguredSplitKey) {
             let raw = UserDefaults.standard.string(forKey: preferredSplitPresetKey) ?? ""
             if let preset = SplitPreset(rawValue: raw) {
-                insertPresetDays(preset, context: context)
+                insertPresetDays(preset, context: context, saves: saves)
             }
             return
         }
@@ -510,13 +521,15 @@ struct SeedData {
         )) ?? []
     }
 
-    private static func insertPresetDays(_ preset: SplitPreset, context: ModelContext) {
+    private static func insertPresetDays(_ preset: SplitPreset, context: ModelContext, saves: Bool = true) {
         for (index, def) in preset.definitions.enumerated() {
             let day = SplitDay(definition: def)
             day.sortOrder = index
             context.insert(day)
         }
-        try? context.save()
+        if saves {
+            try? context.save()
+        }
     }
 
     /// Upgrade stock day icons when the user still has the old defaults

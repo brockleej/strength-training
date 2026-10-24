@@ -9,7 +9,7 @@ Pushes to `main` archive RockLog for TestFlight. Do not point the workflow at th
 1. App Store Connect → your app → Xcode Cloud → the workflow that archives RockLog.
 2. Edit workflow → Actions. Add **Test** and place it **before Archive**.
 3. Scheme: **RockLog** (the shared scheme in `RockLog.xcodeproj`). Leave RockCoach out.
-4. The scheme’s test plan is `RockLog.xcodeproj/xcshareddata/xctestplans/RockLog.xctestplan`. It already includes `RockLogTests` and `RockLogUITests`. You do not need a second plan in App Store Connect.
+4. The scheme’s test plan is `RockLog.xcodeproj/xcshareddata/xctestplans/RockLogSuite.xctestplan`. It is named `RockLogSuite` so it does not collide with the RockLog scheme. It already includes `RockLogTests` and `RockLogUITests`. You do not need a second plan in App Store Connect.
 5. Destinations: one small iPhone simulator and one large iPhone simulator. Names depend on the Xcode Cloud image. Locally this repo uses iPhone 17; also run an iPhone SE (or the smallest installed phone) and iPhone 17 Pro Max (or the largest installed phone). UI tests need a simulator. Unit tests are hosted in RockLog.app.
 6. Save the workflow. The next build on that branch runs tests, then archives only if tests pass.
 

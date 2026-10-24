@@ -12,6 +12,7 @@
 import XCTest
 @testable import RockLog
 
+@MainActor
 final class MonthlyOverloadTests: XCTestCase {
 
     private var calendar: Calendar {
@@ -114,6 +115,43 @@ final class MonthlyOverloadTests: XCTestCase {
         XCTAssertTrue(feb.contains(date(2026, 2, 28, hour: 23)))
         XCTAssertFalse(feb.contains(date(2026, 3, 1, hour: 0)))
         XCTAssertEqual(calendar.dateComponents([.day], from: feb.start, to: feb.end).day, 28)
+    }
+
+    /// `DateInterval.contains` includes `end`. A month window must not: `end` is
+    /// the first instant of the next month.
+    func test_monthWindow_includesStart_excludesOwnEnd() {
+        let window = MonthlyOverload.monthInterval(containing: now, calendar: calendar)!
+        XCTAssertTrue(window.contains(window.start))
+        XCTAssertFalse(window.contains(window.end))
+        XCTAssertTrue(window.contains(window.end.addingTimeInterval(-1)))
+    }
+
+    /// Leap-day February stays 29 days. A fix that hardcodes 28 would miss this.
+    func test_february_leapYear_includesDay29_excludesMarchStart() {
+        let march = date(2024, 3, 10)
+        let thisMonth = MonthlyOverload.monthInterval(containing: march, calendar: calendar)!
+        let feb = MonthlyOverload.previousMonthInterval(before: thisMonth, calendar: calendar)!
+        XCTAssertTrue(feb.contains(date(2024, 2, 29, hour: 12)))
+        XCTAssertFalse(feb.contains(date(2024, 3, 1, hour: 0)))
+        XCTAssertFalse(feb.contains(feb.end))
+        XCTAssertEqual(calendar.dateComponents([.day], from: feb.start, to: feb.end).day, 29)
+    }
+
+    /// America/Denver springs forward on 2026-03-08 (02:00 → 03:00). The skipped
+    /// hour stays inside March, and April 1 00:00 does not.
+    func test_march_acrossSpringForward_excludesAprilStart() {
+        let march = MonthlyOverload.monthInterval(containing: date(2026, 3, 20), calendar: calendar)!
+        let end = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: march.end)
+        XCTAssertEqual(end.year, 2026)
+        XCTAssertEqual(end.month, 4)
+        XCTAssertEqual(end.day, 1)
+        XCTAssertEqual(end.hour, 0)
+        XCTAssertEqual(end.minute, 0)
+        XCTAssertTrue(march.contains(date(2026, 3, 8, hour: 1)))
+        XCTAssertTrue(march.contains(date(2026, 3, 8, hour: 3)))
+        XCTAssertTrue(march.contains(date(2026, 3, 31, hour: 23)))
+        XCTAssertFalse(march.contains(date(2026, 4, 1, hour: 0)))
+        XCTAssertFalse(march.contains(march.end))
     }
 
     // MARK: - Best working set
@@ -427,6 +465,40 @@ final class MonthlyOverloadTests: XCTestCase {
         ])
         XCTAssertEqual(result.rows.first { $0.exerciseID == julyLift }?.comparison, .missing)
         XCTAssertEqual(result.rows.first { $0.exerciseID == augustLift }?.comparison, .new)
+    }
+
+    /// A session timestamp equal to this month's start (last month's end) is
+    /// this month only. Closed `DateInterval.contains` would count it twice.
+    func test_review_sessionExactlyAtMonthStart_countedOnlyInThisMonth() {
+        let windows = MonthlyOverload.monthWindows(now: now, calendar: calendar)!
+        XCTAssertEqual(windows.this.start, windows.last.end)
+        let liftID = UUID()
+        let result = review([
+            session(windows.this.start, lift(id: liftID, name: "Boundary", set(100, 5))),
+        ])
+        XCTAssertEqual(result.thisMonthWorkoutCount, 1)
+        XCTAssertEqual(result.lastMonthWorkoutCount, 0)
+        let row = result.rows.first { $0.exerciseID == liftID }
+        XCTAssertNil(row?.lastMonth)
+        XCTAssertEqual(row?.thisMonth, MonthlyOverload.WorkingSet(weightLbs: 100, reps: 5))
+        XCTAssertEqual(row?.comparison, .new)
+    }
+
+    /// Same exclusive boundary across the year: midnight Jan 1 is January, not December.
+    func test_review_newYearsMidnight_belongsToJanuaryOnly() {
+        let januaryNow = date(2026, 1, 15)
+        let windows = MonthlyOverload.monthWindows(now: januaryNow, calendar: calendar)!
+        let liftID = UUID()
+        let result = review([
+            session(windows.this.start, lift(id: liftID, name: "New Year", set(185, 5))),
+        ], now: januaryNow)
+        XCTAssertEqual(windows.this.start, windows.last.end)
+        XCTAssertEqual(result.lastMonthLabel, "Dec")
+        XCTAssertEqual(result.thisMonthLabel, "Jan")
+        XCTAssertEqual(result.lastMonthWorkoutCount, 0)
+        XCTAssertEqual(result.thisMonthWorkoutCount, 1)
+        XCTAssertNil(result.rows.first { $0.exerciseID == liftID }?.lastMonth)
+        XCTAssertEqual(result.rows.first { $0.exerciseID == liftID }?.comparison, .new)
     }
 
     // MARK: - Coach documents (RockCoach path)

@@ -9,6 +9,7 @@
 import XCTest
 @testable import RockLog
 
+@MainActor
 final class SwipeToDeleteLogicTests: XCTestCase {
 
     private let rowWidth: CGFloat = 360

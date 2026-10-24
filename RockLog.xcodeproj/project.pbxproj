@@ -38,6 +38,8 @@
 		A0C0AC02C0AC020000000C /* RockCoachShare.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = A0C0AC02C0AC0200000001 /* RockCoachShare.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		A3A7A993E817CEC629FC7D7A /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8227BD6A0FFEBA20B7444236 /* Foundation.framework */; settings = {ATTRIBUTES = (Required, ); }; };
 		A7E2C91B4D6F80E1A2B3C4D6 /* WorkoutSessionLogicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7E2C91B4D6F80E1A2B3C4D5 /* WorkoutSessionLogicTests.swift */; };
+		B3F1A0016395BACKUPTEST02 /* BackupRestoreRegressionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3F1A0016395BACKUPTEST01 /* BackupRestoreRegressionTests.swift */; };
+		B6F1A0016395SCHEMATEST02 /* RockLogSchemaMigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6F1A0016395SCHEMATEST01 /* RockLogSchemaMigrationTests.swift */; };
 		A86332EC74EEB61D502B9A66 /* ProgressionLabApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2375B8872C6A1C21691DF866 /* ProgressionLabApp.swift */; };
 		AB75C1610447582730CCCB17 /* TrainingMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = E15010E72FA7E5AB009EF2FB /* TrainingMode.swift */; };
 		B2C3D4E5F60718293A4B5C6D /* BodyCompositionMathTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B5C /* BodyCompositionMathTests.swift */; };
@@ -168,6 +170,8 @@
 		B8E4F2A01C3D5E7082A4B6C1 /* MonthlyOverloadTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MonthlyOverloadTests.swift; sourceTree = "<group>"; };
 		A284E56C056FDF4F4E7CE02C /* ProgressionServicePureFunctionTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ProgressionServicePureFunctionTests.swift; sourceTree = "<group>"; };
 		A7E2C91B4D6F80E1A2B3C4D5 /* WorkoutSessionLogicTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkoutSessionLogicTests.swift; sourceTree = "<group>"; };
+		B3F1A0016395BACKUPTEST01 /* BackupRestoreRegressionTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BackupRestoreRegressionTests.swift; sourceTree = "<group>"; };
+		B6F1A0016395SCHEMATEST01 /* RockLogSchemaMigrationTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RockLogSchemaMigrationTests.swift; sourceTree = "<group>"; };
 		A9D1927AD35565C0B0F0CB4D /* EffortScaleTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EffortScaleTests.swift; sourceTree = "<group>"; };
 		AA363F8D7BCEA2FCDE96CCEE /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.0.sdk/System/Library/Frameworks/Cocoa.framework; sourceTree = DEVELOPER_DIR; };
 		B3E6DCDC4270F67C50095A9A /* SimulationStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SimulationStore.swift; sourceTree = "<group>"; };
@@ -183,6 +187,7 @@
 		C3B0A0033C0B000000000001 /* WorkoutEdgeCaseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutEdgeCaseTests.swift; sourceTree = "<group>"; };
 		C3B0A0043C0B000000000001 /* PastBuildRegressionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PastBuildRegressionTests.swift; sourceTree = "<group>"; };
 		A11B00013C0B000000000002 /* RockLogUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RockLogUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A11B00013C0B00000000000C /* RockLogSuite.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; name = RockLogSuite.xctestplan; path = RockLog.xcodeproj/xcshareddata/xctestplans/RockLogSuite.xctestplan; sourceTree = "<group>"; };
 		C0ACF001D0C000000000000C /* CoachInbox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoachInbox.swift; sourceTree = "<group>"; };
 		C0ACF001D0C0000000000010 /* CompareGridTable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompareGridTable.swift; sourceTree = "<group>"; };
 		C0ACF001D0C0000000000020 /* MonthlyOverload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthlyOverload.swift; sourceTree = "<group>"; };
@@ -392,6 +397,8 @@
 				84E0B9265A12EFB99615DBA6 /* PrevSessionsStripDataTests.swift */,
 				D469A75D83D9297C0A3174B3 /* FocusTargetLogicTests.swift */,
 				A7E2C91B4D6F80E1A2B3C4D5 /* WorkoutSessionLogicTests.swift */,
+				B3F1A0016395BACKUPTEST01 /* BackupRestoreRegressionTests.swift */,
+				B6F1A0016395SCHEMATEST01 /* RockLogSchemaMigrationTests.swift */,
 				C9D0E12F3A4B5C6D7E8F9011 /* CloudKitErrorFormattingTests.swift */,
 				C8E4F1A29B0D4E6F8A1C3D5E /* SplitScheduleLogicTests.swift */,
 				EB1C5CC453A0B417B4B47C31 /* WorkoutFormatTests.swift */,
@@ -514,6 +521,7 @@
 				DCE6C1DA63A5EBF17D0B879B /* Frameworks */,
 				51C16B157883C4911DC9C13D /* RockLogTests */,
 				A11B00013C0B000000000009 /* RockLogUITests */,
+				A11B00013C0B00000000000C /* RockLogSuite.xctestplan */,
 				08081F3FD2336389AEDC8540 /* progression-lab */,
 				0F1B900D7BD7B14B41F6AEC0 /* progression-lab-tests */,
 			);
@@ -813,6 +821,8 @@
 				F10E09BC7B41DF904051DC08 /* PrevSessionsStripDataTests.swift in Sources */,
 				93349D7552961CAD8C765FB7 /* FocusTargetLogicTests.swift in Sources */,
 				A7E2C91B4D6F80E1A2B3C4D6 /* WorkoutSessionLogicTests.swift in Sources */,
+				B3F1A0016395BACKUPTEST02 /* BackupRestoreRegressionTests.swift in Sources */,
+				B6F1A0016395SCHEMATEST02 /* RockLogSchemaMigrationTests.swift in Sources */,
 				C9D0E12F3A4B5C6D7E8F9012 /* CloudKitErrorFormattingTests.swift in Sources */,
 				D9F5A2B30C1E5F708B2D4E6F /* SplitScheduleLogicTests.swift in Sources */,
 				52260489A0E5F8F397C552CE /* WorkoutFormatTests.swift in Sources */,

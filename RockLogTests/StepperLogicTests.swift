@@ -6,6 +6,7 @@
 import XCTest
 @testable import RockLog
 
+@MainActor
 final class StepperLogicTests: XCTestCase {
 
     // MARK: - increment / decrement

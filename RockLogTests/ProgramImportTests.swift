@@ -805,7 +805,7 @@ final class ProgramImportTests: XCTestCase {
         let planned = try context.fetch(FetchDescriptor<WorkoutSession>())
             .filter { $0.planStatus == .planned }
         XCTAssertFalse(planned.isEmpty)
-        ProgramImportService.replaceSplit(fromSessions: planned, context: context)
+        ProgramImportService.replaceSplit(from: document, context: context)
 
         let days = try context.fetch(
             FetchDescriptor<SplitDay>(sortBy: [SortDescriptor(\SplitDay.sortOrder)])

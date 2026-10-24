@@ -3,6 +3,8 @@
 //  Shared by RockLog Progress and RockCoach client review.
 //
 //  Calendar-month progressive-overload recap. Derived view only.
+//  Each month is a half-open local range [start, end): end is the first
+//  instant of the next month and belongs to that next month only.
 //
 //  Best working set: heaviest non-warmup set; if weights tie, higher reps
 //  wins; if those tie, the first occurrence is kept.
@@ -94,20 +96,38 @@ nonisolated enum MonthlyOverload {
 
     // MARK: - Calendar windows
 
+    /// Local calendar month as a half-open range `[start, end)`.
+    ///
+    /// `Calendar.dateInterval(of: .month)` reports `end` as the first instant of
+    /// the next month. `DateInterval.contains` includes that instant, so a
+    /// session logged at midnight on the 1st would count in both months
+    /// (and December would keep January 1 when the range wraps the year).
+    /// Membership here is `start <= date < end`. Length still comes from the
+    /// calendar, so February (28 or 29) and DST months stay correct.
+    nonisolated struct MonthWindow: Equatable, Sendable {
+        let start: Date
+        let end: Date
+
+        func contains(_ date: Date) -> Bool {
+            date >= start && date < end
+        }
+    }
+
     /// `[start, end)` of the calendar month containing `date`.
-    static func monthInterval(containing date: Date, calendar: Calendar) -> DateInterval? {
-        calendar.dateInterval(of: .month, for: date)
+    static func monthInterval(containing date: Date, calendar: Calendar) -> MonthWindow? {
+        guard let interval = calendar.dateInterval(of: .month, for: date) else { return nil }
+        return MonthWindow(start: interval.start, end: interval.end)
     }
 
     /// Calendar month immediately before `interval` (handles year wrap).
-    static func previousMonthInterval(before interval: DateInterval, calendar: Calendar) -> DateInterval? {
-        guard let lastStart = calendar.date(byAdding: .month, value: -1, to: interval.start) else {
-            return nil
-        }
-        return calendar.dateInterval(of: .month, for: lastStart)
+    static func previousMonthInterval(before interval: MonthWindow, calendar: Calendar) -> MonthWindow? {
+        guard let lastStart = calendar.date(byAdding: .month, value: -1, to: interval.start),
+              let previous = calendar.dateInterval(of: .month, for: lastStart)
+        else { return nil }
+        return MonthWindow(start: previous.start, end: previous.end)
     }
 
-    static func monthWindows(now: Date, calendar: Calendar) -> (this: DateInterval, last: DateInterval)? {
+    static func monthWindows(now: Date, calendar: Calendar) -> (this: MonthWindow, last: MonthWindow)? {
         guard let thisMonth = monthInterval(containing: now, calendar: calendar),
               let lastMonth = previousMonthInterval(before: thisMonth, calendar: calendar)
         else { return nil }
@@ -324,7 +344,7 @@ nonisolated enum MonthlyOverload {
         return (Int.max, name)
     }
 
-    private static func monthLabel(_ interval: DateInterval, calendar: Calendar) -> String {
+    private static func monthLabel(_ interval: MonthWindow, calendar: Calendar) -> String {
         let formatter = DateFormatter()
         formatter.calendar = calendar
         formatter.locale = calendar.locale ?? .current

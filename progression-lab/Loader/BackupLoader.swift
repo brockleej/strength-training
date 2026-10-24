@@ -47,7 +47,7 @@ struct BackupLoader {
             throw BackupLoaderError.decodeFailed(url, underlying: error)
         }
 
-        guard backup.version <= supportedBackupVersion else {
+        guard (1...supportedBackupVersion).contains(backup.version) else {
             throw BackupLoaderError.unsupportedVersion(
                 found: backup.version,
                 supported: supportedBackupVersion
