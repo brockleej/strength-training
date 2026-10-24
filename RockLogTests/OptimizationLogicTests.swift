@@ -307,10 +307,17 @@ final class OptimizationLogicTests: XCTestCase {
     func test_warmupTag_doesNotCopy_andRampIsNotLogged() {
         XCTAssertFalse(WarmupPolicy.nextTag(planSaysWarmup: false))
         XCTAssertTrue(WarmupPolicy.nextTag(planSaysWarmup: true))
-        let ramp = WarmupPolicy.ramp(workingWeight: 200, stackStep: 10)
-        XCTAssertEqual(ramp.map(\.isWarmup), [true, true, true])
-        XCTAssertEqual(ramp.map(\.reps), [8, 5, 3])
-        XCTAssertEqual(ramp.first?.weight, 100)
+        let plain = WarmupPolicy.ramp(workingWeight: 200, stack: nil)
+        XCTAssertEqual(plain.map(\.isWarmup), [true, true])
+        XCTAssertEqual(plain.map(\.weight), [100, 150])
+        var stack = StackDefinition.empty
+        stack.step = 10
+        stack.rangeMin = 10
+        stack.rangeMax = 400
+        // 140 × 3/4 is 105, halfway between 100 and 110, so the stack tie goes down.
+        let snapped = WarmupPolicy.ramp(workingWeight: 140, stack: stack)
+        XCTAssertEqual(snapped.map(\.weight), [70, 100])
+        XCTAssertEqual(snapped.map(\.isWarmup), [true, true])
     }
 
     func test_startingWeight_planWins_andLineOmitsAMissingSide() {

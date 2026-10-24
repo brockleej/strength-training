@@ -309,22 +309,22 @@ nonisolated enum WarmupPolicy {
         planSaysWarmup
     }
 
-    /// Optional ramp toward the first working weight. The lifter taps a row
-    /// to apply it; nothing is logged until they do. Excluded from e1RM by
-    /// the warm-up tag when they log it.
-    static func ramp(workingWeight: Double, stackStep: Double?) -> [WeightReps] {
+    /// Two offers under the first working weight: about half, then about
+    /// three quarters. Snapped to the stack when there is one, otherwise 5 lb.
+    /// Nothing is logged until the lifter taps an offer.
+    static func ramp(workingWeight: Double, stack: StackDefinition?) -> [WeightReps] {
         guard workingWeight > 0 else { return [] }
-        let fractions: [(Double, Int)] = [(0.5, 8), (0.7, 5), (0.85, 3)]
-        return fractions.map { fraction, reps in
+        return [0.5, 0.75].compactMap { fraction in
             let raw = workingWeight * fraction
             let weight: Double
-            if let stackStep, stackStep > 0 {
-                weight = (raw / stackStep).rounded(.down) * stackStep
+            if let stack, stack.isActive {
+                weight = StackMath.snap(weightPounds: raw, reps: 5, stack: stack).weightPounds
             } else {
                 weight = MassMath.snap(raw, quantum: 5)
             }
-            return WeightReps(weight: max(0, weight), reps: reps, isWarmup: true)
-        }.filter { $0.weight > 0 }
+            guard weight > 0.5, weight + 0.01 < workingWeight else { return nil }
+            return WeightReps(weight: weight, reps: 5, isWarmup: true)
+        }
     }
 }
 

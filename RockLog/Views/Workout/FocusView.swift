@@ -1028,7 +1028,7 @@ struct FocusView: View {
         Group {
             if exercise.suggestWarmupRamp, loggedSets.isEmpty {
                 let working = MassMath.storedPounds(fromEntered: focusVM.offeredWeight, unit: MassUnitPreferences.unit)
-                let ramp = WarmupPolicy.ramp(workingWeight: working, stackStep: workoutVM.stackDefinition(for: exercise)?.step)
+                let ramp = WarmupPolicy.ramp(workingWeight: working, stack: workoutVM.stackDefinition(for: exercise))
                 if !ramp.isEmpty {
                     HStack(spacing: 8) {
                         ForEach(Array(ramp.enumerated()), id: \.offset) { _, step in
