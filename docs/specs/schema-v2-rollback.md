@@ -17,3 +17,11 @@ New rows (gyms, stack profiles, offered weights, load mode, rest seconds, circui
 5. Do not copy the V2 store file onto the old build. That is the path that will not open.
 
 There is no in-place downgrade. The safe direction is backup, delete, install the old build, restore.
+
+## CloudKit
+
+V2 does not rename a field. Every new stored value is optional or has a default: rest seconds, the rest switch, the warm-up ramp switch, load mode, offered weight, the body weight used on a set, circuit group id and position, gyms, and stack profiles. Relationships stay optional. The pin list is one string (`pinsRaw`), not a related row per pin. There is no unique constraint, so two devices can each insert a profile for the same gym and lift. The reader picks one. It does not delete the other.
+
+`updatedAt` ships in this first V2. It is not a later schema. Do not add `RockLogSchemaV3` for it.
+
+Do not promote the production CloudKit schema from this branch. The app does not call a schema-deploy API. Deploying development schema to production is a console step, and it waits until Lee asks for it. A test that opens a V1 store under V2 uses a synthetic on-disk store with `cloudKitDatabase: .none`.

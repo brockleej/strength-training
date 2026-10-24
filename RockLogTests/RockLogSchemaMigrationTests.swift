@@ -58,6 +58,56 @@ final class RockLogSchemaMigrationTests: XCTestCase {
         XCTAssertEqual(metrics.map(\.value), [180])
     }
 
+    /// A store that was opened as version 1.0.0, then opened by this build.
+    /// Synthetic rows only. This does not touch the production CloudKit schema.
+    func test_v1Store_opensUnderV2() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("rocklog-v1-under-v2-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let storeURL = directory.appendingPathComponent("RockLog.store")
+        let exerciseID = UUID()
+        try writeVersionedV1(url: storeURL, exerciseID: exerciseID)
+
+        let schema = Schema(versionedSchema: RockLogSchemaV2.self)
+        let config = ModelConfiguration(
+            schema: schema,
+            url: storeURL,
+            cloudKitDatabase: ModelConfiguration.CloudKitDatabase.none
+        )
+        let container = try ModelContainer(
+            for: schema,
+            migrationPlan: RockLogMigrationPlan.self,
+            configurations: [config]
+        )
+        let context = container.mainContext
+        let exercises = try context.fetch(FetchDescriptor<Exercise>())
+        XCTAssertEqual(exercises.map(\.id), [exerciseID])
+        XCTAssertEqual(exercises.first?.defaultRestSeconds, 0)
+        XCTAssertEqual(exercises.first?.autoRestEnabled, true)
+        XCTAssertEqual(exercises.first?.autoRestCopied, false)
+        XCTAssertEqual(exercises.first?.suggestWarmupRamp, false)
+        XCTAssertEqual(exercises.first?.loadModeRaw, "")
+        let gyms = try context.fetch(FetchDescriptor<Gym>())
+        XCTAssertTrue(gyms.isEmpty)
+        let profiles = try context.fetch(FetchDescriptor<MachineStackProfile>())
+        XCTAssertTrue(profiles.isEmpty)
+    }
+
+    private func writeVersionedV1(url: URL, exerciseID: UUID) throws {
+        let schema = Schema(versionedSchema: RockLogSchemaV1.self)
+        let config = ModelConfiguration(
+            schema: schema,
+            url: url,
+            cloudKitDatabase: ModelConfiguration.CloudKitDatabase.none
+        )
+        let container = try ModelContainer(for: schema, configurations: [config])
+        let exercise = Exercise(name: "Version One Press", dayType: .push, muscleGroup: "Chest", isCustom: true)
+        exercise.id = exerciseID
+        container.mainContext.insert(exercise)
+        try container.mainContext.save()
+    }
+
     /// The pre-versioning container: `Schema([...])` and no migration plan.
     private func writeUnversionedFixture(
         url: URL,
