@@ -133,7 +133,8 @@ nonisolated enum StackMath {
     ) -> Int {
         guard originalWeight > 0, newWeight > 0, originalReps > 0 else { return max(1, originalReps) }
         let estimate = originalWeight * (1 + Double(originalReps) / 30)
-        let ideal = 30 * (estimate / newWeight - 1)
+        let ceiling = min(30, max(1, maxReps ?? 30))
+        let ideal = min(max(30 * (estimate / newWeight - 1), 1), Double(ceiling))
         var rounded = Int(ideal.rounded())
         rounded = max(1, rounded)
         if let maxReps { rounded = min(maxReps, rounded) }

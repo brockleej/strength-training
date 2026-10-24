@@ -328,11 +328,21 @@ nonisolated enum WarmupPolicy {
 
 nonisolated enum RestSeed {
     static func seconds(name: String, muscles: String, settingsFallback: Int) -> Int {
-        let haystack = (name + " " + muscles).lowercased()
+        let haystack = folded(name + " " + muscles)
         if containsAny(haystack, ["squat", "deadlift", "lunge", "leg press"]) { return 180 }
         if containsAny(haystack, ["bench", "row", "overhead", "pull-up", "pullup", "chin-up", "dip"]) { return 120 }
         if containsAny(haystack, ["curl", "raise", "extension", "fly", "flye"]) { return 90 }
         return settingsFallback > 0 ? settingsFallback : 180
+    }
+
+    /// Case, accents, and unicode hyphens fold onto the English seed words.
+    private static func folded(_ text: String) -> String {
+        let hyphens = ["\u{2010}", "\u{2011}", "\u{2013}", "\u{2014}"]
+        let plain = hyphens.reduce(text) { $0.replacingOccurrences(of: $1, with: "-") }
+        return plain.folding(
+            options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive],
+            locale: Locale(identifier: "en_US_POSIX")
+        )
     }
 
     private static func containsAny(_ haystack: String, _ needles: [String]) -> Bool {

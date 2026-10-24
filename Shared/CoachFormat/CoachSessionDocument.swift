@@ -8,8 +8,14 @@ import Foundation
 nonisolated enum CoachFormat {
     static let formatName = "rocklog.coach.session"
     static let batchFormatName = "rocklog.coach.batch"
-    static let schemaVersion = 1
-    static let batchSchemaVersion = 1
+    static let schemaVersion = 2
+    static let minimumSchemaVersion = 1
+    static let batchSchemaVersion = 2
+    static let minimumBatchSchemaVersion = 1
+
+    static func accepts(_ version: Int, current: Int = schemaVersion, minimum: Int = minimumSchemaVersion) -> Bool {
+        version >= minimum && version <= current
+    }
     static let utTypeIdentifier = "com.lee.rocklog.coach.session"
     static let pathExtension = "rocklogcoach"
 }
@@ -72,7 +78,7 @@ nonisolated struct CoachSessionDocument: Codable, Hashable, Identifiable, Sendab
             case .wrongFormat(let name):
                 return "Not a RockCoach file (format \(name))."
             case .unsupportedVersion(let v):
-                return "RockCoach file version \(v) is newer than this app."
+                return "RockCoach file version \(v) is not supported by this app."
             }
         }
     }
@@ -178,7 +184,7 @@ nonisolated enum CoachSessionCodec {
         guard doc.format == CoachFormat.formatName else {
             throw CoachSessionDocument.CoachFormatError.wrongFormat(doc.format)
         }
-        guard doc.schemaVersion == CoachFormat.schemaVersion else {
+        guard CoachFormat.accepts(doc.schemaVersion) else {
             throw CoachSessionDocument.CoachFormatError.unsupportedVersion(doc.schemaVersion)
         }
         return doc
@@ -189,7 +195,7 @@ nonisolated enum CoachSessionCodec {
         guard doc.format == CoachFormat.batchFormatName else {
             throw CoachSessionDocument.CoachFormatError.wrongFormat(doc.format)
         }
-        guard doc.schemaVersion == CoachFormat.batchSchemaVersion else {
+        guard CoachFormat.accepts(doc.schemaVersion, current: CoachFormat.batchSchemaVersion, minimum: CoachFormat.minimumBatchSchemaVersion) else {
             throw CoachSessionDocument.CoachFormatError.unsupportedVersion(doc.schemaVersion)
         }
         guard doc.sessions.count >= 2 else {

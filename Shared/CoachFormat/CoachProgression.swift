@@ -27,10 +27,11 @@ nonisolated enum CoachProgression {
         exercise.sets
             .filter { !$0.resolvedWarmup }
             .max { lhs, rhs in
-                if lhs.effectiveLoadLbs != rhs.effectiveLoadLbs {
+                if abs(lhs.effectiveLoadLbs - rhs.effectiveLoadLbs) > 0.01 {
                     return lhs.effectiveLoadLbs < rhs.effectiveLoadLbs
                 }
-                return lhs.reps < rhs.reps
+                if lhs.reps != rhs.reps { return lhs.reps < rhs.reps }
+                return lhs.setNumber < rhs.setNumber
             }
     }
 

@@ -316,6 +316,9 @@ final class OptimizationLogicTests: XCTestCase {
     func test_restSeed_andLearningStaysQuietUntilEight() {
         XCTAssertEqual(RestSeed.seconds(name: "Back Squat", muscles: "Quads", settingsFallback: 90), 180)
         XCTAssertEqual(RestSeed.seconds(name: "Curl", muscles: "Biceps", settingsFallback: 120), 90)
+        XCTAssertEqual(RestSeed.seconds(name: "Squa\u{0301}t", muscles: "Quads", settingsFallback: 90), 180)
+        XCTAssertEqual(RestSeed.seconds(name: "PULL\u{2011}UP", muscles: "Back", settingsFallback: 90), 120)
+        XCTAssertEqual(StackMath.adjustedReps(originalWeight: 100, originalReps: 5, newWeight: 1), 30)
         XCTAssertNil(RestLearning.offer(samples: [90, 90, 90], savedDefault: 180, enabled: true, alreadyOfferedThisSession: false))
         XCTAssertNil(RestLearning.offer(samples: Array(repeating: 90, count: 8), savedDefault: 180, enabled: false, alreadyOfferedThisSession: false))
         XCTAssertEqual(RestLearning.offer(samples: Array(repeating: 90, count: 8), savedDefault: 180, enabled: true, alreadyOfferedThisSession: false), 90)
