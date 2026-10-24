@@ -99,8 +99,14 @@ nonisolated enum InterchangeCodec {
         if object["format"]?.string != InterchangeFormat.name {
             object = liftLegacy(object)
         }
-        var current = object["formatVersion"]?.int ?? 1
-        if current > InterchangeFormat.walkableVersion {
+        guard let versionNumber = object["formatVersion"]?.number,
+              versionNumber.isFinite,
+              versionNumber == versionNumber.rounded()
+        else {
+            throw InterchangeError.unsupportedVersion(object["formatVersion"]?.int ?? -1)
+        }
+        var current = Int(versionNumber)
+        if current < 1 || current > InterchangeFormat.walkableVersion {
             throw InterchangeError.unsupportedVersion(current)
         }
         while current < version {

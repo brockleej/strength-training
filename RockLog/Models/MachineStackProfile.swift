@@ -29,6 +29,9 @@ final class MachineStackProfile {
     var learningEnabled: Bool = true
     var rangeMin: Double = 0
     var rangeMax: Double = 0
+    /// Last time a person or learning wrote this row. Nil until then.
+    /// Two devices keep both rows. The reader prefers a typed step, then the later time.
+    var updatedAt: Date? = nil
 
     init(gymID: UUID, exerciseID: UUID) {
         self.id = UUID()

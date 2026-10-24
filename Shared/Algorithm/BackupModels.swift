@@ -76,6 +76,8 @@ struct StackProfileBackup: Codable, Equatable {
     var learningEnabled: Bool
     var rangeMin: Double
     var rangeMax: Double
+    /// When this row was last typed, learned, or cleared. Nil on files from before the field.
+    var updatedAt: Date? = nil
 }
 
 /// One body-measurement row. `kindRaw` is `BodyMetricKind.rawValue`.
@@ -113,6 +115,12 @@ struct BackupSummary: Equatable {
     var droppedExerciseRecordCount: Int = 0
     /// Distinct unknown mode strings, file order.
     var unknownTrainingModes: [String] = []
+    /// Keys this build does not store. Reported, not applied.
+    var unknownKeyCount: Int = 0
+    var unknownKeyPaths: [String] = []
+    /// Enum strings this build does not know. Reported, not applied.
+    var unknownEnumCount: Int = 0
+    var unknownEnums: [String] = []
 
     var hasSplitWithExercises: Bool {
         !splitDayNames.isEmpty && assignedExerciseCount > 0
@@ -167,6 +175,8 @@ struct ExerciseBackup: Codable {
     let autoRestEnabled: Bool?
     /// "bar", "assist", "added", or missing.
     let loadModeRaw: String?
+    /// Missing means the lift does not offer a warm-up ramp.
+    let suggestWarmupRamp: Bool?
 
     init(
         id: UUID,
@@ -181,7 +191,8 @@ struct ExerciseBackup: Codable {
         daySortOrdersRaw: String? = nil,
         defaultRestSeconds: Int? = nil,
         autoRestEnabled: Bool? = nil,
-        loadModeRaw: String? = nil
+        loadModeRaw: String? = nil,
+        suggestWarmupRamp: Bool? = nil
     ) {
         self.id = id
         self.name = name
@@ -196,6 +207,7 @@ struct ExerciseBackup: Codable {
         self.defaultRestSeconds = defaultRestSeconds
         self.autoRestEnabled = autoRestEnabled
         self.loadModeRaw = loadModeRaw
+        self.suggestWarmupRamp = suggestWarmupRamp
     }
 }
 

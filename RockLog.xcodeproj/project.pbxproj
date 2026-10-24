@@ -55,6 +55,8 @@
 		RESTACT0000000000000002 /* RestActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = RESTACT0000000000000001 /* RestActivityAttributes.swift */; };
 		OPTLOG0000000000000002 /* OptimizationLogicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = OPTLOG0000000000000001 /* OptimizationLogicTests.swift */; };
 		HIST010000000000000002 /* HistoricalFormatRoundTripTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = HIST010000000000000001 /* HistoricalFormatRoundTripTests.swift */; };
+		B4C0A0010000000000000002 /* BackupMigration.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4C0A0010000000000000001 /* BackupMigration.swift */; };
+		B4C0A0020000000000000002 /* BackupMigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4C0A0020000000000000001 /* BackupMigrationTests.swift */; };
 		RLWEMB0000000000000002 /* RockLogWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = RLWFILE0000000000000001 /* RockLogWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		C0ACF001D0C0000000000004 /* CoachSessionDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0ACF001D0C0000000000001 /* CoachSessionDocument.swift */; };
 		C0ACF001D0C0000000000007 /* CoachProgression.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0ACF001D0C0000000000006 /* CoachProgression.swift */; };
@@ -242,6 +244,8 @@
 		RESTACT0000000000000001 /* RestActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RestActivityAttributes.swift; sourceTree = "<group>"; };
 		OPTLOG0000000000000001 /* OptimizationLogicTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OptimizationLogicTests.swift; sourceTree = "<group>"; };
 		HIST010000000000000001 /* HistoricalFormatRoundTripTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoricalFormatRoundTripTests.swift; sourceTree = "<group>"; };
+		B4C0A0010000000000000001 /* BackupMigration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupMigration.swift; sourceTree = "<group>"; };
+		B4C0A0020000000000000001 /* BackupMigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupMigrationTests.swift; sourceTree = "<group>"; };
 		RLWFILE0000000000000001 /* RockLogWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = RockLogWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -470,6 +474,7 @@
 				C3B0A0043C0B000000000001 /* PastBuildRegressionTests.swift */,
 				OPTLOG0000000000000001 /* OptimizationLogicTests.swift */,
 				HIST010000000000000001 /* HistoricalFormatRoundTripTests.swift */,
+				B4C0A0020000000000000001 /* BackupMigrationTests.swift */,
 			);
 			path = RockLogTests;
 			sourceTree = "<group>";
@@ -570,6 +575,7 @@
 				8EB559FDE4D121DA2D8342FB /* AlgorithmInput.swift */,
 				FC5ED87967CB436716AA1EF1 /* ProgressionTypes.swift */,
 				9C9B1F409EF0053F85ACE816 /* BackupModels.swift */,
+				B4C0A0010000000000000001 /* BackupMigration.swift */,
 				87211BB2F7AB169D53339453 /* ProgressionService.swift */,
 			);
 			path = Algorithm;
@@ -938,6 +944,7 @@
 				C3B0A0043C0B000000000002 /* PastBuildRegressionTests.swift in Sources */,
 				OPTLOG0000000000000002 /* OptimizationLogicTests.swift in Sources */,
 				HIST010000000000000002 /* HistoricalFormatRoundTripTests.swift in Sources */,
+				B4C0A0020000000000000002 /* BackupMigrationTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -992,6 +999,7 @@
 				30C661C6E4E303A2AD8F7D62 /* AlgorithmInput.swift in Sources */,
 				2334F6309DF8766B63363CB5 /* ProgressionTypes.swift in Sources */,
 				06EAF8373D2C66680087860B /* BackupModels.swift in Sources */,
+				B4C0A0010000000000000002 /* BackupMigration.swift in Sources */,
 				37C45FF0E0D33AE49B93AB69 /* ProgressionService.swift in Sources */,
 				C0ACF001D0C0000000000002 /* CoachSessionDocument.swift in Sources */,
 				INTCHG0000000000000002 /* InterchangeCodec.swift in Sources */,

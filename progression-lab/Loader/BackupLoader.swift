@@ -26,7 +26,7 @@ struct BackupLoader {
 
     /// Backup schema versions this build can parse. Bump in lockstep with
     /// `BackupService.currentVersion` in the iOS app.
-    static let supportedBackupVersion = 1
+    static let supportedBackupVersion = 2
 
     /// Load and parse a backup JSON at the given URL. The URL must already be
     /// readable (the caller is responsible for security-scoped resource access).

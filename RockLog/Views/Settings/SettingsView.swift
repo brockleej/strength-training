@@ -1117,9 +1117,9 @@ struct SettingsView: View {
 
     private func stageRestoreConfirmation(from backupData: Data) {
         do {
-            let backup = try BackupService.decode(backupData)
+            let opened = try BackupService.open(backupData)
             let current = BackupService.summarizeStore(context: modelContext)
-            let incoming = BackupService.summarize(backup: backup)
+            let incoming = BackupService.summarize(backup: opened.backup, inspection: opened.inspection)
             pendingRestoreData = backupData
             pendingRestorePrompt = BackupService.restorePrompt(current: current, incoming: incoming)
             showRestoreConfirmation = true

@@ -35,23 +35,40 @@ enum BackupError: LocalizedError {
 struct BackupRestoreReport: Equatable {
     var droppedExerciseRecords: Int
     var unknownTrainingModes: [String]
+    var unknownKeyCount: Int = 0
+    var unknownEnumCount: Int = 0
+    var orphanedGroupIDs: [UUID] = []
 
     var userFacingSummary: String {
-        guard droppedExerciseRecords > 0 else {
-            return "Backup restored successfully."
+        var sentences: [String] = []
+        if droppedExerciseRecords > 0 {
+            let noun = droppedExerciseRecords == 1 ? "exercise log" : "exercise logs"
+            let modes = unknownTrainingModes.joined(separator: ", ")
+            let modePhrase = unknownTrainingModes.count == 1
+                ? "an unknown training mode (\(modes))"
+                : "unknown training modes (\(modes))"
+            sentences.append("Skipped \(droppedExerciseRecords) \(noun) with \(modePhrase).")
         }
-        let noun = droppedExerciseRecords == 1 ? "exercise log" : "exercise logs"
-        let modes = unknownTrainingModes.joined(separator: ", ")
-        let modePhrase = unknownTrainingModes.count == 1
-            ? "an unknown training mode (\(modes))"
-            : "unknown training modes (\(modes))"
-        return "Backup restored. Skipped \(droppedExerciseRecords) \(noun) with \(modePhrase)."
+        if unknownKeyCount > 0 || unknownEnumCount > 0 {
+            sentences.append("Left out \(unknownKeyCount) unknown fields and \(unknownEnumCount) unknown values.")
+        }
+        if !orphanedGroupIDs.isEmpty {
+            let noun = orphanedGroupIDs.count == 1 ? "group" : "groups"
+            sentences.append("Cleared \(orphanedGroupIDs.count) \(noun) that no longer had two lifts.")
+        }
+        if sentences.isEmpty { return "Backup restored successfully." }
+        return "Backup restored. " + sentences.joined(separator: " ")
     }
 }
 
+struct OpenedBackup {
+    var backup: AppBackup
+    var inspection: BackupInspection
+}
+
 struct BackupService {
-    static let currentVersion = 1
-    static let minimumVersion = 1
+    static let currentVersion = BackupMigration.currentVersion
+    static let minimumVersion = BackupMigration.minimumVersion
     /// Heavier than any bar a person can load. Rejects corrupted or hand-edited values such as 1e9.
     static let maximumWeightLbs = 10_000.0
     /// Pounds or inches. Same ceiling as weight; a real measurement is far below it.
@@ -69,7 +86,12 @@ struct BackupService {
             ])
         )) ?? []
 
-        let exerciseBackups = exercises.map { e in
+        let exerciseBackups = exercises
+            .sorted { lhs, rhs in
+                if lhs.sortOrder != rhs.sortOrder { return lhs.sortOrder < rhs.sortOrder }
+                return lhs.id.uuidString < rhs.id.uuidString
+            }
+            .map { e in
             ExerciseBackup(
                 id: e.id,
                 name: e.name,
@@ -83,11 +105,17 @@ struct BackupService {
                 daySortOrdersRaw: e.daySortOrdersRaw,
                 defaultRestSeconds: e.defaultRestSeconds,
                 autoRestEnabled: e.autoRestEnabled,
-                loadModeRaw: e.loadModeRaw.isEmpty ? nil : e.loadModeRaw
+                loadModeRaw: e.loadModeRaw.isEmpty ? nil : e.loadModeRaw,
+                suggestWarmupRamp: e.suggestWarmupRamp ? true : nil
             )
         }
 
-        let sessionBackups = sessions.map { s in
+        let sessionBackups = sessions
+            .sorted { lhs, rhs in
+                if lhs.date != rhs.date { return lhs.date < rhs.date }
+                return lhs.id.uuidString < rhs.id.uuidString
+            }
+            .map { s in
             WorkoutSessionBackup(
                 id: s.id,
                 date: s.date,
@@ -95,7 +123,10 @@ struct BackupService {
                 notes: s.notes,
                 isCompleted: s.isCompleted,
                 exerciseRecords: s.exerciseRecordsArray
-                    .sorted { $0.sortOrder < $1.sortOrder }
+                    .sorted { lhs, rhs in
+                        if lhs.sortOrder != rhs.sortOrder { return lhs.sortOrder < rhs.sortOrder }
+                        return lhs.id.uuidString < rhs.id.uuidString
+                    }
                     .map { r in
                         ExerciseRecordBackup(
                             id: r.id,
@@ -105,7 +136,10 @@ struct BackupService {
                             isCompleted: r.isCompleted,
                             notes: r.notes,
                             sets: r.setsArray
-                                .sorted { $0.setNumber < $1.setNumber }
+                                .sorted { lhs, rhs in
+                                    if lhs.setNumber != rhs.setNumber { return lhs.setNumber < rhs.setNumber }
+                                    return lhs.id.uuidString < rhs.id.uuidString
+                                }
                                 .map { s in
                                     SetRecordBackup(
                                         id: s.id,
@@ -192,7 +226,10 @@ struct BackupService {
                 createdAt: gym.createdAt,
                 sortOrder: gym.sortOrder
             )
-        }.sorted { $0.sortOrder < $1.sortOrder }
+        }.sorted { lhs, rhs in
+            if lhs.sortOrder != rhs.sortOrder { return lhs.sortOrder < rhs.sortOrder }
+            return lhs.id.uuidString < rhs.id.uuidString
+        }
             : nil
 
         let profileBackups: [StackProfileBackup]? = context.container.schema.entities.contains { $0.name == "MachineStackProfile" }
@@ -211,7 +248,8 @@ struct BackupService {
                 clearedAt: profile.clearedAt,
                 learningEnabled: profile.learningEnabled,
                 rangeMin: profile.rangeMin,
-                rangeMax: profile.rangeMax
+                rangeMax: profile.rangeMax,
+                updatedAt: profile.updatedAt
             )
         }.sorted { $0.id.uuidString < $1.id.uuidString }
             : nil
@@ -242,15 +280,34 @@ struct BackupService {
     // MARK: - Preview / confirm
 
     static func decode(_ data: Data) throws -> AppBackup {
+        try open(data).backup
+    }
+
+    /// Decode, promote v1 to v2, and count keys and enum values this build will not apply.
+    static func open(_ data: Data) throws -> OpenedBackup {
         let legacy = try legacyBackupData(data)
+        let raw = try InterchangeCodec.parseObject(legacy)
+        let promoted: [String: JSONValue]
+        do {
+            promoted = try BackupMigration.promoteToCurrent(raw)
+        } catch let error as BackupMigrationError {
+            switch error {
+            case .unsupportedVersion(let version):
+                throw BackupError.unsupportedVersion(version)
+            case .malformed:
+                throw BackupError.invalidBackup("This backup could not be read. Nothing was changed.")
+            }
+        }
+        let inspection = BackupInspection.inspect(promoted)
+        let payload = try InterchangeCodec.encode(promoted)
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
-        let backup = try decoder.decode(AppBackup.self, from: legacy)
+        let backup = try decoder.decode(AppBackup.self, from: payload)
         guard backup.version >= minimumVersion, backup.version <= currentVersion else {
             throw BackupError.unsupportedVersion(backup.version)
         }
         try validate(backup)
-        return backup
+        return OpenedBackup(backup: backup, inspection: inspection)
     }
 
     /// Interchange files unwrap to the backup payload. Older backups pass through.
@@ -274,14 +331,19 @@ struct BackupService {
         if let blocks = backup.trainingBlocks {
             try rejectDuplicateIDs(blocks.map(\.id), noun: "training block")
         }
+        if let days = backup.splitDays {
+            try rejectDuplicateIDs(days.map(\.id), noun: "split day")
+        }
+        if let gyms = backup.gyms {
+            try rejectDuplicateIDs(gyms.map(\.id), noun: "gym")
+        }
+        if let profiles = backup.stackProfiles {
+            try rejectDuplicateIDs(profiles.map(\.id), noun: "stack profile")
+        }
         if let metrics = backup.bodyMetrics {
             try rejectDuplicateIDs(metrics.map(\.id), noun: "body measurement")
             for metric in metrics {
-                guard BodyMetricKind(rawValue: metric.kindRaw) != nil else {
-                    throw BackupError.invalidBackup(
-                        "Body measurement \(metric.id.uuidString) has unknown kind \"\(metric.kindRaw)\". Restore was cancelled and nothing was changed."
-                    )
-                }
+                guard BodyMetricKind(rawValue: metric.kindRaw) != nil else { continue }
                 if !metric.value.isFinite || metric.value < 0 || metric.value > maximumMeasurement {
                     throw BackupError.invalidBackup(
                         "Body measurement \(metric.id.uuidString) has value \(metric.value). Value must be a finite number from 0 through \(Int(maximumMeasurement)). Restore was cancelled and nothing was changed."
@@ -323,7 +385,7 @@ struct BackupService {
         }
     }
 
-    static func summarize(backup: AppBackup) -> BackupSummary {
+    static func summarize(backup: AppBackup, inspection: BackupInspection = .empty) -> BackupSummary {
         let splitNames: [String]
         if let stored = backup.splitDays, !stored.isEmpty {
             splitNames = stored.sorted { $0.sortOrder < $1.sortOrder }.map(\.name)
@@ -345,7 +407,11 @@ struct BackupService {
             exerciseCount: backup.exercises.count,
             sessionCount: backup.sessions.count,
             droppedExerciseRecordCount: dropped.count,
-            unknownTrainingModes: dropped.modes
+            unknownTrainingModes: dropped.modes,
+            unknownKeyCount: inspection.unknownKeyCount,
+            unknownKeyPaths: inspection.unknownKeyPaths,
+            unknownEnumCount: inspection.unknownEnumCount,
+            unknownEnums: inspection.unknownEnums
         )
     }
 
@@ -420,15 +486,27 @@ struct BackupService {
     }
 
     private static func dropWarning(appendedTo message: String, incoming: BackupSummary) -> String {
-        guard incoming.droppedExerciseRecordCount > 0 else { return message }
-        let count = incoming.droppedExerciseRecordCount
-        let noun = count == 1 ? "exercise log" : "exercise logs"
-        let verb = count == 1 ? "uses" : "use"
-        let modes = incoming.unknownTrainingModes.joined(separator: ", ")
-        let modePhrase = incoming.unknownTrainingModes.count == 1
-            ? "an unknown training mode (\(modes))"
-            : "unknown training modes (\(modes))"
-        return message + " \(count) \(noun) \(verb) \(modePhrase) and will be skipped."
+        var extra = ""
+        if incoming.droppedExerciseRecordCount > 0 {
+            let count = incoming.droppedExerciseRecordCount
+            let noun = count == 1 ? "exercise log" : "exercise logs"
+            let verb = count == 1 ? "uses" : "use"
+            let modes = incoming.unknownTrainingModes.joined(separator: ", ")
+            let modePhrase = incoming.unknownTrainingModes.count == 1
+                ? "an unknown training mode (\(modes))"
+                : "unknown training modes (\(modes))"
+            extra += " \(count) \(noun) \(verb) \(modePhrase) and will be skipped."
+        }
+        if incoming.unknownKeyCount > 0 || incoming.unknownEnumCount > 0 {
+            extra += " \(incoming.unknownKeyCount) unknown fields and \(incoming.unknownEnumCount) unknown values will be reported and not applied."
+            if !incoming.unknownKeyPaths.isEmpty {
+                extra += " Fields: \(incoming.unknownKeyPaths.joined(separator: ", "))."
+            }
+            if !incoming.unknownEnums.isEmpty {
+                extra += " Values: \(incoming.unknownEnums.joined(separator: ", "))."
+            }
+        }
+        return message + extra
     }
 
     // MARK: - Restore
@@ -461,14 +539,15 @@ struct BackupService {
         context: ModelContext,
         persisting: ((ModelContext) throws -> Void)? = nil
     ) throws -> BackupRestoreReport {
-        let backup = try decode(data)
+        let opened = try open(data)
+        let backup = opened.backup
         let previousAutosave = context.autosaveEnabled
         context.autosaveEnabled = false
         defer { context.autosaveEnabled = previousAutosave }
 
         let report: BackupRestoreReport
         do {
-            report = try writeBackup(backup, into: context)
+            report = try writeBackup(backup, inspection: opened.inspection, into: context)
             if let persisting {
                 try persisting(context)
             } else {
@@ -492,7 +571,11 @@ struct BackupService {
     /// nullification. `context.delete(model:)` would skip that and leave
     /// inverses pointing at deleted rows.
     @MainActor
-    private static func writeBackup(_ backup: AppBackup, into context: ModelContext) throws -> BackupRestoreReport {
+    private static func writeBackup(
+        _ backup: AppBackup,
+        inspection: BackupInspection,
+        into context: ModelContext
+    ) throws -> BackupRestoreReport {
         for set in try context.fetch(FetchDescriptor<SetRecord>()) {
             context.delete(set)
         }
@@ -530,6 +613,7 @@ struct BackupService {
                 exercise.autoRestCopied = true
             }
             exercise.loadModeRaw = eb.loadModeRaw ?? ""
+            exercise.suggestWarmupRamp = eb.suggestWarmupRamp ?? false
             context.insert(exercise)
             exerciseMap[eb.id] = exercise
         }
@@ -666,12 +750,13 @@ struct BackupService {
             profile.learningEnabled = snapshot.learningEnabled
             profile.rangeMin = snapshot.rangeMin
             profile.rangeMax = snapshot.rangeMax
+            profile.updatedAt = snapshot.updatedAt
             context.insert(profile)
         }
         }
 
         for snapshot in backup.bodyMetrics ?? [] {
-            let kind = BodyMetricKind(rawValue: snapshot.kindRaw) ?? .weight
+            guard let kind = BodyMetricKind(rawValue: snapshot.kindRaw) else { continue }
             let entry = BodyMetricEntry(
                 kind: kind,
                 value: snapshot.value,
@@ -688,10 +773,33 @@ struct BackupService {
         SeedData.migrateExerciseNames(context: context, saves: false)
         restoreSplitDays(from: backup, context: context, saves: false)
         SeedData.restoreDayPlans(from: backup, context: context, saves: false)
+        let orphans = dissolveOrphanedGroups(in: context)
         return BackupRestoreReport(
             droppedExerciseRecords: droppedExerciseRecords,
-            unknownTrainingModes: unknownModes
+            unknownTrainingModes: unknownModes,
+            unknownKeyCount: inspection.unknownKeyCount,
+            unknownEnumCount: inspection.unknownEnumCount,
+            orphanedGroupIDs: orphans
         )
+    }
+
+    /// A group id left with fewer than two lifts is cleared. The ids are reported.
+    @MainActor
+    private static func dissolveOrphanedGroups(in context: ModelContext) -> [UUID] {
+        let records = (try? context.fetch(FetchDescriptor<ExerciseRecord>())) ?? []
+        var counts: [UUID: Int] = [:]
+        for record in records {
+            guard let group = record.groupID else { continue }
+            counts[group, default: 0] += 1
+        }
+        let orphans = counts.filter { $0.value < 2 }.map(\.key).sorted { $0.uuidString < $1.uuidString }
+        guard !orphans.isEmpty else { return [] }
+        let orphanSet = Set(orphans)
+        for record in records where record.groupID.map(orphanSet.contains) == true {
+            record.groupID = nil
+            record.groupPosition = 0
+        }
+        return orphans
     }
 
     /// UserDefaults / iCloud KVS mirrors. Called only after the store save commits.
@@ -710,7 +818,9 @@ struct BackupService {
     /// Prefer the stored split. Older backups only have session/exercise names —
     /// rebuild from session days (not catalog home days, which add unused Arms / Full Body).
     private static func restoreSplitDays(from backup: AppBackup, context: ModelContext, saves: Bool) {
-        if let stored = backup.splitDays, !stored.isEmpty {
+        if let stored = backup.splitDays {
+            // An empty list is a v2 file that has no days. Do not invent a split.
+            guard !stored.isEmpty else { return }
             _ = SeedData.applySplitSnapshot(stored, context: context, saves: saves)
             return
         }
