@@ -14,7 +14,7 @@ Resume: *Continue RockCoach Path 1 from `docs/coaching-companion/PATH-1.md`.*
 |---|----------|
 | 1 | **RockLog** = athlete logging only |
 | 2 | **RockLog Coach** = separate review companion |
-| 3 | Shared backend later; **import OK as backup**. Path 1 = **no backend** |
+| 3 | Shared backend later. Path 1 = **no backend**. Coach files are **not** a RockLog backup (the app copy says this; an early freeze line that said “import OK as backup” is retired). |
 | 4 | Shared format: **`rocklog.coach.session` v1** |
 | 5 | Coach **read-only first**; **assign workouts later** |
 | 6 | **No tonnage** in the product (raw sets / reps / progression only) |
@@ -50,7 +50,7 @@ RockLog  ──writes workouts──►  (files now / avahost later)  ──read
 | **RockLog Coach** | New app: import/view sessions, history, progression (**read-only**) |
 | **Backend** | **Not required** |
 
-**Client UX after Finish** (Settings: “Share session with coach”):
+**Client UX after Finish** (Settings: **Use RockCoach**, then **Offer to send after finish**):
 
 1. Build `rocklog.coach.session` JSON  
 2. Temp file e.g. `Lee-Pull-2026-08-11.rocklogcoach`  
@@ -102,15 +102,18 @@ Shared Swift: `Shared/CoachFormat/CoachSessionDocument.swift` + `CoachProgressio
 
 Do not add fields to `rocklog.coach.session` without bumping that schema. Batch is a new format name, not a session v2.
 
-## Path 1 status (2026-08-17)
+## Path 1 status (2026-10-24)
 
 | Piece | Where |
 |--------|--------|
 | Schema + codec | `Shared/CoachFormat/` — session v1 unchanged; batch v1 envelope |
-| RockLog export | This workout **or** since last share (unsent completed IDs). 1 → session file; 2+ → batch |
-| Share-after-finish | Settings toggle → share **this** workout |
+| RockLog export | Summary sheet: **This workout**, **Last week**, **Choose workouts…**, **Unsent workouts**. History sheet: this workout, last week, or choose. Settings: **Send last workout** is the single newest finished session (the footer still says “last week”; that footer is stale). 1 session → session file; 2+ → batch |
+| Share-after-finish | **Offer to send after finish**, behind **Use RockCoach** (off by default) |
+| Monthly table | `MonthlyOverload` on Progress and on the coach client screen. On `main` as of `a877aad` (pull request #10, **not on TestFlight yet**) midnight on the 1st counts only in the month that is starting. |
 | RockCoach app | target **RockCoach** · bundle `com.lee.rockcoach` · in this GitHub repo · **not TestFlight** · local SwiftData roster |
-| Not started | avahost Path 1.5, assign workouts, App Store listing |
+| Not started | avahost Path 1.5, assign workouts, App Store listing. Units, bodyweight load, stacks, reorder, and rest groups: [../specs/units-bodyweight-machine-stacks.md](../specs/units-bodyweight-machine-stacks.md) |
+
+Coach progression still compares raw `weightLbs`. Assisted sets store the assistance in that field. The spec says a later file should carry the body weight used so “less help” reads as progress.
 
 ---
 

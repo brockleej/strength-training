@@ -1,5 +1,40 @@
 # RockLog release notes
 
+There is no separate `CHANGELOG`. This file is the release log. The Xcode project’s `CURRENT_PROJECT_VERSION` for the RockLog app target is still **17**, while the notes below talk about build 25 and “next after 25.” The live TestFlight build number is not recorded in this repo.
+
+## On main, not on TestFlight yet — `eb497bd` (PR #9)
+
+Merged 2026-10-24. **Do not paste this into App Store Connect until a TestFlight build includes it.** Tester wording is in `docs/TESTFLIGHT-WHAT-TO-TEST.md` under the same heading.
+
+### What’s new
+
+- **Backup file** now includes body measurements and planned programs, plus the library, split, day plans, and sessions.
+- An older backup that does not have those sections leaves measurements and programs already on the phone. A file that includes an empty list clears them.
+- Restore is one save. If the save fails, the phone is unchanged.
+- A file with bad numbers, a duplicate id, or a measurement kind the app does not know is refused. Nothing is changed.
+- A lift with a training mode this version does not understand is skipped. The app says how many.
+- A lift you have only logged once suggests a weight on the 5 lb grid (137.3 lb becomes 135).
+- Two workouts saved with the same date stay in a stable order (session id), so the next suggestion does not flip.
+- The on-device store is versioned (`RockLogSchemaV1`). No data is rewritten. The next schema change needs a second version.
+
+### What to test
+
+See `docs/TESTFLIGHT-WHAT-TO-TEST.md` (on main, not TestFlight yet).
+
+## On main, not on TestFlight yet — `a877aad` (PR #10)
+
+Merged 2026-10-24. **Do not paste this into App Store Connect until a TestFlight build includes it.** Tester wording is in `docs/TESTFLIGHT-WHAT-TO-TEST.md` under the same heading.
+
+### What’s new
+
+- The this-month / last-month card counts a workout in one month only.
+- A workout logged at the exact start of a month belongs to the month that is starting. It no longer also appears in the month before.
+- The same rule is on the RockCoach table. February (including a leap day) and daylight-saving months still follow the phone’s calendar.
+
+### What to test
+
+See `docs/TESTFLIGHT-WHAT-TO-TEST.md` (on main, not TestFlight yet).
+
 ## 1.0 (next after 25) — 2026-09-13
 
 TestFlight after **25**. RockCoach stays local (not on TestFlight).
@@ -186,7 +221,7 @@ TestFlight build **8** (marketing version **1.0**). Previous TF upload was **bui
 
 ### Later (not this build)
 
-- Fresh **README + App Store screenshots** (`docs/screenshots/` is stale). See `docs/SCREENSHOTS.md`.
+- Fresh **README + App Store screenshots**. Those frames were recaptured for the 2026-08-26 listing (`docs/SCREENSHOTS.md`). They still predate the planned-workout list.
 
 ---
 
