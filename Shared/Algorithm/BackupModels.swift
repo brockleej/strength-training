@@ -16,6 +16,10 @@ struct AppBackup: Codable {
     let splitDays: [SplitDayBackup]?
     /// Per-day exercise IDs in list order. Missing on backups made before this field.
     let dayPlans: [DayPlanBackup]?
+    /// Planned programs. Missing on backups made before this field.
+    /// Nil means the file did not know about blocks (leave the store's blocks alone).
+    /// An empty array means the backup explicitly has none.
+    let trainingBlocks: [TrainingBlockBackup]?
 
     init(
         version: Int,
@@ -23,7 +27,8 @@ struct AppBackup: Codable {
         exercises: [ExerciseBackup],
         sessions: [WorkoutSessionBackup],
         splitDays: [SplitDayBackup]? = nil,
-        dayPlans: [DayPlanBackup]? = nil
+        dayPlans: [DayPlanBackup]? = nil,
+        trainingBlocks: [TrainingBlockBackup]? = nil
     ) {
         self.version = version
         self.exportedAt = exportedAt
@@ -31,7 +36,18 @@ struct AppBackup: Codable {
         self.sessions = sessions
         self.splitDays = splitDays
         self.dayPlans = dayPlans
+        self.trainingBlocks = trainingBlocks
     }
+}
+
+/// One imported program and the session ids that belong to it.
+struct TrainingBlockBackup: Codable, Equatable {
+    var id: UUID
+    var name: String
+    var notes: String
+    var startDate: Date
+    var importedAt: Date
+    var sessionIDs: [UUID]
 }
 
 /// Ordered roster for one split day. Source of truth after restore / iCloud merge.

@@ -109,6 +109,113 @@ final class BackupRestoreRegressionTests: XCTestCase {
         XCTAssertEqual(names, ["After Rollback", "Keep Me"])
     }
 
+    // MARK: - B1
+
+    func test_b1_trainingBlock_survivesExportRestore() throws {
+        let container = try inMemoryContainer()
+        let context = container.mainContext
+        let start = Date(timeIntervalSince1970: 1_700_000_000)
+        let imported = Date(timeIntervalSince1970: 1_700_086_400)
+        let sessionDate = Date(timeIntervalSince1970: 1_700_172_800)
+        let block = TrainingBlock(name: "Hypertrophy", startDate: start, notes: "8 weeks")
+        block.importedAt = imported
+        let session = WorkoutSession(dayType: .push, date: sessionDate)
+        session.isCompleted = false
+        session.planOrder = 2
+        session.trainingBlock = block
+        context.insert(block)
+        context.insert(session)
+        try context.save()
+
+        let data = try BackupService.export(context: context)
+        let decoded = try BackupService.decode(data)
+        XCTAssertEqual(decoded.trainingBlocks?.count, 1)
+        XCTAssertEqual(decoded.trainingBlocks?.first?.name, "Hypertrophy")
+        XCTAssertEqual(decoded.trainingBlocks?.first?.sessionIDs, [session.id])
+
+        try BackupService.restore(from: data, context: context)
+
+        let blocks = try context.fetch(FetchDescriptor<TrainingBlock>())
+        XCTAssertEqual(blocks.count, 1)
+        let restored = try XCTUnwrap(blocks.first)
+        XCTAssertEqual(restored.id, block.id)
+        XCTAssertEqual(restored.name, "Hypertrophy")
+        XCTAssertEqual(restored.notes, "8 weeks")
+        XCTAssertEqual(restored.startDate.timeIntervalSince1970, start.timeIntervalSince1970, accuracy: 1)
+        XCTAssertEqual(restored.importedAt.timeIntervalSince1970, imported.timeIntervalSince1970, accuracy: 1)
+        let restoredSessions = try context.fetch(FetchDescriptor<WorkoutSession>())
+        XCTAssertEqual(restoredSessions.count, 1)
+        XCTAssertEqual(restoredSessions.first?.id, session.id)
+        XCTAssertEqual(restoredSessions.first?.trainingBlock?.id, restored.id)
+        XCTAssertEqual(restored.sessionsArray.map(\.id), [session.id])
+    }
+
+    func test_b1_backupWithoutTrainingBlocks_stillLoadsAndKeepsExistingProgram() throws {
+        let container = try inMemoryContainer()
+        let context = container.mainContext
+        let block = TrainingBlock(
+            name: "Keep Program",
+            startDate: Date(timeIntervalSince1970: 1_600_000_000),
+            notes: "pre-field"
+        )
+        context.insert(block)
+        context.insert(Exercise(name: "Old Lift", dayType: .push, muscleGroup: "Chest", isCustom: true))
+        try context.save()
+        let blockID = block.id
+
+        let exerciseID = UUID(uuidString: "AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA")!
+        let json = """
+        {
+          "version": 1,
+          "exportedAt": "2026-01-01T00:00:00Z",
+          "exercises": [
+            {
+              "id": "\(exerciseID.uuidString)",
+              "name": "From Old File",
+              "dayType": "Push",
+              "muscleGroup": "Chest",
+              "sortOrder": 0,
+              "isCustom": true,
+              "notes": ""
+            }
+          ],
+          "sessions": []
+        }
+        """
+        let data = Data(json.utf8)
+        let decoded = try BackupService.decode(data)
+        XCTAssertNil(decoded.trainingBlocks)
+
+        try BackupService.restore(from: data, context: context)
+
+        let exercises = try context.fetch(FetchDescriptor<Exercise>())
+        XCTAssertEqual(exercises.map(\.name), ["From Old File"])
+        let blocks = try context.fetch(FetchDescriptor<TrainingBlock>())
+        XCTAssertEqual(blocks.map(\.id), [blockID])
+        XCTAssertEqual(blocks.map(\.name), ["Keep Program"])
+        XCTAssertEqual(blocks.map(\.notes), ["pre-field"])
+    }
+
+    func test_b1_emptyTrainingBlockArray_replacesExistingProgram() throws {
+        let container = try inMemoryContainer()
+        let context = container.mainContext
+        context.insert(TrainingBlock(name: "Going Away", startDate: Date(timeIntervalSince1970: 1_600_000_000)))
+        try context.save()
+
+        let json = """
+        {
+          "version": 1,
+          "exportedAt": "2026-01-01T00:00:00Z",
+          "exercises": [],
+          "sessions": [],
+          "trainingBlocks": []
+        }
+        """
+        try BackupService.restore(from: Data(json.utf8), context: context)
+        let blocks = try context.fetch(FetchDescriptor<TrainingBlock>())
+        XCTAssertTrue(blocks.isEmpty)
+    }
+
     // MARK: - Helpers
 
     private func inMemoryContainer() throws -> ModelContainer {

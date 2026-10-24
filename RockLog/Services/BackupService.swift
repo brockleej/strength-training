@@ -112,13 +112,34 @@ struct BackupService {
             )
         }
 
+        let blocks = try context.fetch(FetchDescriptor<TrainingBlock>())
+        let blockBackups = blocks.map { block in
+            let sessionIDs = block.sessionsArray.sorted { lhs, rhs in
+                if lhs.planOrder != rhs.planOrder { return lhs.planOrder < rhs.planOrder }
+                if lhs.date != rhs.date { return lhs.date < rhs.date }
+                return lhs.id.uuidString < rhs.id.uuidString
+            }.map(\.id)
+            return TrainingBlockBackup(
+                id: block.id,
+                name: block.name,
+                notes: block.notes,
+                startDate: block.startDate,
+                importedAt: block.importedAt,
+                sessionIDs: sessionIDs
+            )
+        }.sorted { lhs, rhs in
+            if lhs.startDate != rhs.startDate { return lhs.startDate < rhs.startDate }
+            return lhs.id.uuidString < rhs.id.uuidString
+        }
+
         let backup = AppBackup(
             version: currentVersion,
             exportedAt: .now,
             exercises: exerciseBackups,
             sessions: sessionBackups,
             splitDays: splitBackups,
-            dayPlans: SeedData.captureDayPlans(from: exercises, splitDays: splitDays)
+            dayPlans: SeedData.captureDayPlans(from: exercises, splitDays: splitDays),
+            trainingBlocks: blockBackups
         )
 
         let encoder = JSONEncoder()
@@ -285,9 +306,6 @@ struct BackupService {
         for day in try context.fetch(FetchDescriptor<SplitDay>()) {
             context.delete(day)
         }
-        for block in try context.fetch(FetchDescriptor<TrainingBlock>()) {
-            context.delete(block)
-        }
 
         var exerciseMap: [UUID: Exercise] = [:]
         for eb in backup.exercises {
@@ -308,6 +326,7 @@ struct BackupService {
             exerciseMap[eb.id] = exercise
         }
 
+        var sessionMap: [UUID: WorkoutSession] = [:]
         for sb in backup.sessions {
             let dayType = DayType(rawValue: sb.dayType)
             let session = WorkoutSession(
@@ -325,6 +344,7 @@ struct BackupService {
                 session.durationSeconds = duration
             }
             context.insert(session)
+            sessionMap[session.id] = session
 
             for rb in sb.exerciseRecords {
                 guard let trainingMode = TrainingMode(rawValue: rb.trainingMode) else { continue }
@@ -357,6 +377,28 @@ struct BackupService {
                     record.sets?.append(set)
                     context.insert(set)
                 }
+            }
+        }
+
+        // Nil leaves existing programs in place (the file predates the field).
+        // An array, including empty, replaces them.
+        if backup.trainingBlocks != nil {
+            for block in try context.fetch(FetchDescriptor<TrainingBlock>()) {
+                context.delete(block)
+            }
+        }
+        for snapshot in backup.trainingBlocks ?? [] {
+            let block = TrainingBlock(
+                name: snapshot.name,
+                startDate: snapshot.startDate,
+                notes: snapshot.notes
+            )
+            block.id = snapshot.id
+            block.importedAt = snapshot.importedAt
+            block.sessions = []
+            context.insert(block)
+            for sessionID in snapshot.sessionIDs {
+                sessionMap[sessionID]?.trainingBlock = block
             }
         }
 
