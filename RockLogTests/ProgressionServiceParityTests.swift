@@ -7,6 +7,7 @@ import XCTest
 import SwiftData
 @testable import RockLog
 
+@MainActor
 final class ProgressionServiceParityTests: XCTestCase {
 
     /// Build a temporary in-memory SwiftData container for testing.

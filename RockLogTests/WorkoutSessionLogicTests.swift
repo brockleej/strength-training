@@ -7,6 +7,7 @@ import XCTest
 import SwiftData
 @testable import RockLog
 
+@MainActor
 final class WorkoutSessionLogicTests: XCTestCase {
 
     // MARK: - Finish prompt
@@ -256,8 +257,8 @@ final class WorkoutSessionLogicTests: XCTestCase {
 @MainActor
 final class SplitPersistenceTests: XCTestCase {
 
-    override func setUp() {
-        super.setUp()
+    override func setUp() async throws {
+        try await super.setUp()
         let defaults = UserDefaults.standard
         let kvs = NSUbiquitousKeyValueStore.default
         for key in [

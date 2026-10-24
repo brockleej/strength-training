@@ -6,6 +6,7 @@
 import XCTest
 @testable import RockLog
 
+@MainActor
 final class E1RMDetectionTests: XCTestCase {
 
     // MARK: - E1RM.estimate (Epley)

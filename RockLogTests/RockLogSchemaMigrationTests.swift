@@ -31,7 +31,11 @@ final class RockLogSchemaMigrationTests: XCTestCase {
         )
 
         let schema = Schema(versionedSchema: RockLogSchemaV1.self)
-        let config = ModelConfiguration(schema: schema, url: storeURL, cloudKitDatabase: .none)
+        let config = ModelConfiguration(
+            schema: schema,
+            url: storeURL,
+            cloudKitDatabase: ModelConfiguration.CloudKitDatabase.none
+        )
         let container = try ModelContainer(
             for: schema,
             migrationPlan: RockLogMigrationPlan.self,
@@ -62,7 +66,11 @@ final class RockLogSchemaMigrationTests: XCTestCase {
         metricID: UUID
     ) throws {
         let schema = Schema(RockLogSchemaV1.models)
-        let config = ModelConfiguration(schema: schema, url: url, cloudKitDatabase: .none)
+        let config = ModelConfiguration(
+            schema: schema,
+            url: url,
+            cloudKitDatabase: ModelConfiguration.CloudKitDatabase.none
+        )
         let container = try ModelContainer(for: schema, configurations: [config])
         let context = container.mainContext
 

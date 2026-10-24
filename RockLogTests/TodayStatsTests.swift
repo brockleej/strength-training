@@ -6,6 +6,7 @@
 import XCTest
 @testable import RockLog
 
+@MainActor
 final class TodayStatsTests: XCTestCase {
 
     private var calendar: Calendar {

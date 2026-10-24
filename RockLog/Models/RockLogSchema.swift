@@ -14,10 +14,12 @@ import SwiftData
 /// stage. Do not edit `V1` once a later version ships — add `RockLogSchemaV2`
 /// and a lightweight `MigrationStage` on `RockLogMigrationPlan`. CloudKit
 /// rejects a custom (heavy) stage.
-enum RockLogSchemaV1: VersionedSchema {
-    static var versionIdentifier = Schema.Version(1, 0, 0)
+nonisolated enum RockLogSchemaV1: VersionedSchema {
+    nonisolated static var versionIdentifier: Schema.Version {
+        Schema.Version(1, 0, 0)
+    }
 
-    static var models: [any PersistentModel.Type] {
+    nonisolated static var models: [any PersistentModel.Type] {
         [
             Exercise.self,
             WorkoutSession.self,
@@ -30,11 +32,11 @@ enum RockLogSchemaV1: VersionedSchema {
     }
 }
 
-enum RockLogMigrationPlan: SchemaMigrationPlan {
-    static var schemas: [any VersionedSchema.Type] {
+nonisolated enum RockLogMigrationPlan: SchemaMigrationPlan {
+    nonisolated static var schemas: [any VersionedSchema.Type] {
         [RockLogSchemaV1.self]
     }
 
     /// Empty until the next schema version.
-    static var stages: [MigrationStage] { [] }
+    nonisolated static var stages: [MigrationStage] { [] }
 }

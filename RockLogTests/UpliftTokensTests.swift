@@ -5,8 +5,10 @@
 
 import XCTest
 import SwiftUI
+import UIKit
 @testable import RockLog
 
+@MainActor
 final class UpliftTokensTests: XCTestCase {
 
     private func components(of color: Color) -> (r: CGFloat, g: CGFloat, b: CGFloat, a: CGFloat) {

@@ -6,6 +6,7 @@
 import XCTest
 @testable import RockLog
 
+@MainActor
 final class FocusTargetLogicTests: XCTestCase {
 
     private func suggestion(_ w: Double, _ r: Int, _ b: ProgressionSuggestion.Basis) -> ProgressionSuggestion {
