@@ -12,6 +12,7 @@
 import XCTest
 @testable import RockLog
 
+@MainActor
 final class MonthlyOverloadTests: XCTestCase {
 
     private var calendar: Calendar {

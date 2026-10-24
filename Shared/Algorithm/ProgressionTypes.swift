@@ -46,7 +46,7 @@ struct ProgressionSuggestion {
     let basis: Basis
 
     enum Basis {
-        case notEnoughData  // < 2 sessions — show raw best set, no "Target:" label
+        case notEnoughData  // < 2 sessions — best set, weight snapped to 5 lb, no "Target:" label
         case consistent     // hitting threshold → weight bump suggested (show ↑)
         case improving      // building toward threshold → rep bump suggested
     }

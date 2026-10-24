@@ -54,22 +54,18 @@ struct RockLogApp: App {
     @MainActor
     private func openStore() async {
         await Task.yield()
-        let schema = Schema([
-            Exercise.self,
-            WorkoutSession.self,
-            ExerciseRecord.self,
-            SetRecord.self,
-            SplitDay.self,
-            BodyMetricEntry.self,
-            TrainingBlock.self,
-        ])
+        let schema = Schema(versionedSchema: RockLogSchemaV1.self)
         let config = ModelConfiguration(
             schema: schema,
             cloudKitDatabase: .automatic
         )
         do {
             container = try await Task.detached(priority: .userInitiated) {
-                try ModelContainer(for: schema, configurations: [config])
+                try ModelContainer(
+                    for: schema,
+                    migrationPlan: RockLogMigrationPlan.self,
+                    configurations: [config]
+                )
             }.value
         } catch {
             storeError = "Couldn’t open the workout store. \(error.localizedDescription)"

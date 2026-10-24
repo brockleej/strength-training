@@ -37,11 +37,14 @@ struct ProgressionService {
     ) -> ProgressionSuggestion? {
         let filtered = records.filter { $0.trainingMode == mode }
 
-        // Not enough data: surface the single session's best set as a raw reference.
+        // Fewer than two sessions: suggest that session's best weight on the
+        // same 5 lb grid as every other path. Assisted effective load can
+        // land off the grid (137.3); leaving it raw made the next target
+        // disagree with ProgressionSuggestion's snapped-weight contract.
         guard filtered.count >= 2 else {
             guard let first = filtered.first, let best = bestSet(in: first) else { return nil }
             return ProgressionSuggestion(
-                targetWeight: best.weightLbs,
+                targetWeight: snap5(best.weightLbs),
                 targetReps: best.reps,
                 basis: .notEnoughData
             )

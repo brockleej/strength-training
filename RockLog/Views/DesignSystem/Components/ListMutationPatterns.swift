@@ -34,6 +34,8 @@ enum ListMutationCopy {
     static let keepLastDayTitle = "Keep at least one day"
     static let keepLastDayMessage =
         "A split needs one day so Today can start a workout. You can delete extra days."
+    static let keepLastDayWithBlockMessage =
+        "A split needs one day so Today can start a workout. To train this block’s days and lifts instead, use it as your split. History stays."
     static let addExercise = "Add exercise"
     static let addDay = "Add day"
     /// In-session exercise list.

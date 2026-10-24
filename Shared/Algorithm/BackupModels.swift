@@ -16,6 +16,13 @@ struct AppBackup: Codable {
     let splitDays: [SplitDayBackup]?
     /// Per-day exercise IDs in list order. Missing on backups made before this field.
     let dayPlans: [DayPlanBackup]?
+    /// Planned programs. Missing on backups made before this field.
+    /// Nil means the file did not know about blocks (leave the store's blocks alone).
+    /// An empty array means the backup explicitly has none.
+    let trainingBlocks: [TrainingBlockBackup]?
+    /// Home measurements (weight, girths). Same nil-vs-empty rule as `trainingBlocks`:
+    /// nil preserves rows already on the phone; an array replaces them.
+    let bodyMetrics: [BodyMetricBackup]?
 
     init(
         version: Int,
@@ -23,7 +30,9 @@ struct AppBackup: Codable {
         exercises: [ExerciseBackup],
         sessions: [WorkoutSessionBackup],
         splitDays: [SplitDayBackup]? = nil,
-        dayPlans: [DayPlanBackup]? = nil
+        dayPlans: [DayPlanBackup]? = nil,
+        trainingBlocks: [TrainingBlockBackup]? = nil,
+        bodyMetrics: [BodyMetricBackup]? = nil
     ) {
         self.version = version
         self.exportedAt = exportedAt
@@ -31,7 +40,29 @@ struct AppBackup: Codable {
         self.sessions = sessions
         self.splitDays = splitDays
         self.dayPlans = dayPlans
+        self.trainingBlocks = trainingBlocks
+        self.bodyMetrics = bodyMetrics
     }
+}
+
+/// One body-measurement row. `kindRaw` is `BodyMetricKind.rawValue`.
+/// `value` is pounds for weight and inches for girths.
+struct BodyMetricBackup: Codable, Equatable {
+    var id: UUID
+    var date: Date
+    var kindRaw: String
+    var value: Double
+    var note: String
+}
+
+/// One imported program and the session ids that belong to it.
+struct TrainingBlockBackup: Codable, Equatable {
+    var id: UUID
+    var name: String
+    var notes: String
+    var startDate: Date
+    var importedAt: Date
+    var sessionIDs: [UUID]
 }
 
 /// Ordered roster for one split day. Source of truth after restore / iCloud merge.
@@ -45,6 +76,10 @@ struct BackupSummary: Equatable {
     var assignedExerciseCount: Int
     var exerciseCount: Int
     var sessionCount: Int
+    /// Exercise logs whose `trainingMode` this build does not understand.
+    var droppedExerciseRecordCount: Int = 0
+    /// Distinct unknown mode strings, file order.
+    var unknownTrainingModes: [String] = []
 
     var hasSplitWithExercises: Bool {
         !splitDayNames.isEmpty && assignedExerciseCount > 0

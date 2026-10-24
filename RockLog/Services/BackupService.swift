@@ -19,17 +19,43 @@ extension Notification.Name {
 
 enum BackupError: LocalizedError {
     case unsupportedVersion(Int)
+    case invalidBackup(String)
 
     var errorDescription: String? {
         switch self {
         case .unsupportedVersion(let v):
             return "Backup version \(v) is not supported by this version of the app."
+        case .invalidBackup(let message):
+            return message
         }
+    }
+}
+
+/// What restore kept and what it refused to insert.
+struct BackupRestoreReport: Equatable {
+    var droppedExerciseRecords: Int
+    var unknownTrainingModes: [String]
+
+    var userFacingSummary: String {
+        guard droppedExerciseRecords > 0 else {
+            return "Backup restored successfully."
+        }
+        let noun = droppedExerciseRecords == 1 ? "exercise log" : "exercise logs"
+        let modes = unknownTrainingModes.joined(separator: ", ")
+        let modePhrase = unknownTrainingModes.count == 1
+            ? "an unknown training mode (\(modes))"
+            : "unknown training modes (\(modes))"
+        return "Backup restored. Skipped \(droppedExerciseRecords) \(noun) with \(modePhrase)."
     }
 }
 
 struct BackupService {
     static let currentVersion = 1
+    static let minimumVersion = 1
+    /// Heavier than any bar a person can load. Rejects corrupted or hand-edited values such as 1e9.
+    static let maximumWeightLbs = 10_000.0
+    /// Pounds or inches. Same ceiling as weight; a real measurement is far below it.
+    static let maximumMeasurement = 10_000.0
 
     // MARK: - Export
 
@@ -112,13 +138,50 @@ struct BackupService {
             )
         }
 
+        let blocks = try context.fetch(FetchDescriptor<TrainingBlock>())
+        let blockBackups = blocks.map { block in
+            let sessionIDs = block.sessionsArray.sorted { lhs, rhs in
+                if lhs.planOrder != rhs.planOrder { return lhs.planOrder < rhs.planOrder }
+                if lhs.date != rhs.date { return lhs.date < rhs.date }
+                return lhs.id.uuidString < rhs.id.uuidString
+            }.map(\.id)
+            return TrainingBlockBackup(
+                id: block.id,
+                name: block.name,
+                notes: block.notes,
+                startDate: block.startDate,
+                importedAt: block.importedAt,
+                sessionIDs: sessionIDs
+            )
+        }.sorted { lhs, rhs in
+            if lhs.startDate != rhs.startDate { return lhs.startDate < rhs.startDate }
+            return lhs.id.uuidString < rhs.id.uuidString
+        }
+
+        let metrics = try context.fetch(FetchDescriptor<BodyMetricEntry>())
+        let metricBackups = metrics.map { entry in
+            BodyMetricBackup(
+                id: entry.id,
+                date: entry.date,
+                kindRaw: entry.kindRaw,
+                value: entry.value,
+                note: entry.note
+            )
+        }.sorted { lhs, rhs in
+            if lhs.date != rhs.date { return lhs.date < rhs.date }
+            if lhs.kindRaw != rhs.kindRaw { return lhs.kindRaw < rhs.kindRaw }
+            return lhs.id.uuidString < rhs.id.uuidString
+        }
+
         let backup = AppBackup(
             version: currentVersion,
             exportedAt: .now,
             exercises: exerciseBackups,
             sessions: sessionBackups,
             splitDays: splitBackups,
-            dayPlans: SeedData.captureDayPlans(from: exercises, splitDays: splitDays)
+            dayPlans: SeedData.captureDayPlans(from: exercises, splitDays: splitDays),
+            trainingBlocks: blockBackups,
+            bodyMetrics: metricBackups
         )
 
         let encoder = JSONEncoder()
@@ -133,10 +196,68 @@ struct BackupService {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         let backup = try decoder.decode(AppBackup.self, from: data)
-        guard backup.version <= currentVersion else {
+        guard backup.version >= minimumVersion, backup.version <= currentVersion else {
             throw BackupError.unsupportedVersion(backup.version)
         }
+        try validate(backup)
         return backup
+    }
+
+    /// Reject values that would corrupt the store. Unknown training modes are
+    /// not rejected here; restore skips them and reports the count.
+    static func validate(_ backup: AppBackup) throws {
+        try rejectDuplicateIDs(backup.exercises.map(\.id), noun: "exercise")
+        try rejectDuplicateIDs(backup.sessions.map(\.id), noun: "workout")
+        if let blocks = backup.trainingBlocks {
+            try rejectDuplicateIDs(blocks.map(\.id), noun: "training block")
+        }
+        if let metrics = backup.bodyMetrics {
+            try rejectDuplicateIDs(metrics.map(\.id), noun: "body measurement")
+            for metric in metrics {
+                guard BodyMetricKind(rawValue: metric.kindRaw) != nil else {
+                    throw BackupError.invalidBackup(
+                        "Body measurement \(metric.id.uuidString) has unknown kind \"\(metric.kindRaw)\". Restore was cancelled and nothing was changed."
+                    )
+                }
+                if !metric.value.isFinite || metric.value < 0 || metric.value > maximumMeasurement {
+                    throw BackupError.invalidBackup(
+                        "Body measurement \(metric.id.uuidString) has value \(metric.value). Value must be a finite number from 0 through \(Int(maximumMeasurement)). Restore was cancelled and nothing was changed."
+                    )
+                }
+            }
+        }
+
+        var recordIDs: [UUID] = []
+        var setIDs: [UUID] = []
+        for session in backup.sessions {
+            for record in session.exerciseRecords {
+                recordIDs.append(record.id)
+                for set in record.sets {
+                    setIDs.append(set.id)
+                    if set.reps < 0 {
+                        throw BackupError.invalidBackup(
+                            "Set \(set.id.uuidString) has reps \(set.reps). Reps must be zero or greater. Restore was cancelled and nothing was changed."
+                        )
+                    }
+                    if !set.weightLbs.isFinite || set.weightLbs < 0 || set.weightLbs > maximumWeightLbs {
+                        throw BackupError.invalidBackup(
+                            "Set \(set.id.uuidString) has weight \(set.weightLbs) lb. Weight must be a finite number from 0 through \(Int(maximumWeightLbs)) lb. Restore was cancelled and nothing was changed."
+                        )
+                    }
+                }
+            }
+        }
+        try rejectDuplicateIDs(recordIDs, noun: "exercise log")
+        try rejectDuplicateIDs(setIDs, noun: "set")
+    }
+
+    private static func rejectDuplicateIDs(_ ids: [UUID], noun: String) throws {
+        var seen = Set<UUID>()
+        for id in ids where !seen.insert(id).inserted {
+            throw BackupError.invalidBackup(
+                "Backup contains more than one \(noun) with id \(id.uuidString). Restore was cancelled and nothing was changed."
+            )
+        }
     }
 
     static func summarize(backup: AppBackup) -> BackupSummary {
@@ -154,12 +275,32 @@ struct BackupService {
                 .filter { !$0.isEmpty }
             return !primary.isEmpty || !extras.isEmpty
         }.count
+        let dropped = Self.unknownTrainingModes(in: backup)
         return BackupSummary(
             splitDayNames: splitNames,
             assignedExerciseCount: assigned,
             exerciseCount: backup.exercises.count,
-            sessionCount: backup.sessions.count
+            sessionCount: backup.sessions.count,
+            droppedExerciseRecordCount: dropped.count,
+            unknownTrainingModes: dropped.modes
         )
+    }
+
+    /// Exercise logs this build will skip, in file order. The mode list is distinct.
+    static func unknownTrainingModes(in backup: AppBackup) -> (count: Int, modes: [String]) {
+        var count = 0
+        var modes: [String] = []
+        var seen = Set<String>()
+        for session in backup.sessions {
+            for record in session.exerciseRecords {
+                guard TrainingMode(rawValue: record.trainingMode) == nil else { continue }
+                count += 1
+                if seen.insert(record.trainingMode).inserted {
+                    modes.append(record.trainingMode)
+                }
+            }
+        }
+        return (count, modes)
     }
 
     static func summarizeStore(context: ModelContext) -> BackupSummary {
@@ -184,11 +325,11 @@ struct BackupService {
         if current.hasSplitWithExercises {
             return RestorePrompt(
                 title: "Replace current split?",
-                message: """
+                message: dropWarning(appendedTo: """
                 There is currently a split with exercises in this app (\(current.splitPhrase)). \
                 Restore will replace that split, the lifts on those days, and your workout history \
                 with this backup (\(incoming.splitPhrase)). This cannot be undone.
-                """,
+                """, incoming: incoming),
                 confirmTitle: "Replace split and exercises",
                 cancelTitle: "Don't restore"
             )
@@ -196,56 +337,115 @@ struct BackupService {
         if current.sessionCount > 0 || current.assignedExerciseCount > 0 {
             return RestorePrompt(
                 title: "Restore backup?",
-                message: """
+                message: dropWarning(appendedTo: """
                 This will replace the workout data on this phone with this backup \
                 (\(incoming.splitPhrase)). This cannot be undone.
-                """,
+                """, incoming: incoming),
                 confirmTitle: "Replace all data",
                 cancelTitle: "Don't restore"
             )
         }
         return RestorePrompt(
             title: "Restore backup?",
-            message: "Load this backup onto this phone (\(incoming.splitPhrase))? It becomes your split, exercises, and workout history.",
+            message: dropWarning(
+                appendedTo: "Load this backup onto this phone (\(incoming.splitPhrase))? It becomes your split, exercises, and workout history.",
+                incoming: incoming
+            ),
             confirmTitle: "Restore",
             cancelTitle: "Don't restore"
         )
+    }
+
+    private static func dropWarning(appendedTo message: String, incoming: BackupSummary) -> String {
+        guard incoming.droppedExerciseRecordCount > 0 else { return message }
+        let count = incoming.droppedExerciseRecordCount
+        let noun = count == 1 ? "exercise log" : "exercise logs"
+        let verb = count == 1 ? "uses" : "use"
+        let modes = incoming.unknownTrainingModes.joined(separator: ", ")
+        let modePhrase = incoming.unknownTrainingModes.count == 1
+            ? "an unknown training mode (\(modes))"
+            : "unknown training modes (\(modes))"
+        return message + " \(count) \(noun) \(verb) \(modePhrase) and will be skipped."
     }
 
     // MARK: - Restore
 
     /// Tear down live workout UI, then replace the store.
     @MainActor
-    static func restoreAfterTearingDownUI(from data: Data, context: ModelContext) async throws {
+    @discardableResult
+    static func restoreAfterTearingDownUI(from data: Data, context: ModelContext) async throws -> BackupRestoreReport {
         NotificationCenter.default.post(name: .rockLogStoreWillReplace, object: nil)
         // Two turns so SwiftUI can unmount TabView / FocusView before deletes.
         await Task.yield()
         try await Task.sleep(for: .milliseconds(200))
-        try restore(from: data, context: context)
+        return try restore(from: data, context: context)
     }
 
+    /// Replace the store with `data`.
+    ///
+    /// Deletes, inserts, split days, and day plans are one unsaved transaction.
+    /// `context.save()` runs once at the end. A thrown save (or the test
+    /// `persisting` hook) rolls the context back, so a failure leaves the
+    /// previous rows in place. UserDefaults mirrors are written only after
+    /// that save commits.
+    ///
+    /// - Parameter persisting: Replaces `context.save()` for tests that need
+    ///   the write to fail. Production passes nil.
     @MainActor
-    static func restore(from data: Data, context: ModelContext) throws {
+    @discardableResult
+    static func restore(
+        from data: Data,
+        context: ModelContext,
+        persisting: ((ModelContext) throws -> Void)? = nil
+    ) throws -> BackupRestoreReport {
         let backup = try decode(data)
+        let previousAutosave = context.autosaveEnabled
+        context.autosaveEnabled = false
+        defer { context.autosaveEnabled = previousAutosave }
 
-        // context.delete(model:) is a SQL-level batch delete that bypasses the
-        // object graph — cascade rules and inverse nullification never fire.
-        // Fetching and deleting each instance individually lets SwiftData
-        // process relationships correctly before saving.
-        let sets = (try? context.fetch(FetchDescriptor<SetRecord>())) ?? []
-        sets.forEach { context.delete($0) }
-        let records = (try? context.fetch(FetchDescriptor<ExerciseRecord>())) ?? []
-        records.forEach { context.delete($0) }
-        let sessions = (try? context.fetch(FetchDescriptor<WorkoutSession>())) ?? []
-        sessions.forEach { context.delete($0) }
-        let exercises = (try? context.fetch(FetchDescriptor<Exercise>())) ?? []
-        exercises.forEach { context.delete($0) }
-        let splitDays = (try? context.fetch(FetchDescriptor<SplitDay>())) ?? []
-        splitDays.forEach { context.delete($0) }
-        let blocks = (try? context.fetch(FetchDescriptor<TrainingBlock>())) ?? []
-        blocks.forEach { context.delete($0) }
+        let report: BackupRestoreReport
+        do {
+            report = try writeBackup(backup, into: context)
+            if let persisting {
+                try persisting(context)
+            } else {
+                try context.save()
+            }
+        } catch {
+            context.rollback()
+            throw error
+        }
 
-        // Re-insert exercises, building an ID → Exercise map for linking records
+        commitRestorePreferences(from: backup, context: context)
+        // Reload on this call — a detached Task outlives test containers
+        // and the CloudKit store tear-down, then fetchCount traps (SIGTRAP).
+        DayTypeRegistry.shared.reload(context: context)
+        NotificationCenter.default.post(name: .rockLogStoreReplaced, object: nil)
+        return report
+    }
+
+    /// Mutate `context` to match `backup` without saving.
+    /// Fetch-and-delete each instance so SwiftData runs relationship
+    /// nullification. `context.delete(model:)` would skip that and leave
+    /// inverses pointing at deleted rows.
+    @MainActor
+    private static func writeBackup(_ backup: AppBackup, into context: ModelContext) throws -> BackupRestoreReport {
+        for set in try context.fetch(FetchDescriptor<SetRecord>()) {
+            context.delete(set)
+        }
+        for record in try context.fetch(FetchDescriptor<ExerciseRecord>()) {
+            context.delete(record)
+        }
+        for session in try context.fetch(FetchDescriptor<WorkoutSession>()) {
+            context.delete(session)
+        }
+        for exercise in try context.fetch(FetchDescriptor<Exercise>()) {
+            context.delete(exercise)
+        }
+        for day in try context.fetch(FetchDescriptor<SplitDay>()) {
+            context.delete(day)
+        }
+
         var exerciseMap: [UUID: Exercise] = [:]
         for eb in backup.exercises {
             let dayType = DayType(rawValue: eb.dayType)
@@ -265,7 +465,10 @@ struct BackupService {
             exerciseMap[eb.id] = exercise
         }
 
-        // Re-insert sessions → exercise records → sets
+        var sessionMap: [UUID: WorkoutSession] = [:]
+        var droppedExerciseRecords = 0
+        var unknownModes: [String] = []
+        var seenModes = Set<String>()
         for sb in backup.sessions {
             let dayType = DayType(rawValue: sb.dayType)
             let session = WorkoutSession(
@@ -283,9 +486,16 @@ struct BackupService {
                 session.durationSeconds = duration
             }
             context.insert(session)
+            sessionMap[session.id] = session
 
             for rb in sb.exerciseRecords {
-                guard let trainingMode = TrainingMode(rawValue: rb.trainingMode) else { continue }
+                guard let trainingMode = TrainingMode(rawValue: rb.trainingMode) else {
+                    droppedExerciseRecords += 1
+                    if seenModes.insert(rb.trainingMode).inserted {
+                        unknownModes.append(rb.trainingMode)
+                    }
+                    continue
+                }
                 let record = ExerciseRecord(trainingMode: trainingMode, sortOrder: rb.sortOrder)
                 record.id = rb.id
                 record.isCompleted = rb.isCompleted
@@ -318,36 +528,84 @@ struct BackupService {
             }
         }
 
-        try context.save()
+        // Nil leaves existing programs in place (the file predates the field).
+        // An array, including empty, replaces them.
+        if backup.trainingBlocks != nil {
+            for block in try context.fetch(FetchDescriptor<TrainingBlock>()) {
+                context.delete(block)
+            }
+        }
+        for snapshot in backup.trainingBlocks ?? [] {
+            let block = TrainingBlock(
+                name: snapshot.name,
+                startDate: snapshot.startDate,
+                notes: snapshot.notes
+            )
+            block.id = snapshot.id
+            block.importedAt = snapshot.importedAt
+            block.sessions = []
+            context.insert(block)
+            for sessionID in snapshot.sessionIDs {
+                sessionMap[sessionID]?.trainingBlock = block
+            }
+        }
 
-        // Old backups may still contain pre-rename exercise names —
-        // re-apply the idempotent migration so restored data is corrected immediately.
-        SeedData.migrateExerciseNames(context: context)
+        // Nil preserves measurements the file never contained. An array replaces them.
+        if backup.bodyMetrics != nil {
+            for entry in try context.fetch(FetchDescriptor<BodyMetricEntry>()) {
+                context.delete(entry)
+            }
+        }
+        for snapshot in backup.bodyMetrics ?? [] {
+            let kind = BodyMetricKind(rawValue: snapshot.kindRaw) ?? .weight
+            let entry = BodyMetricEntry(
+                kind: kind,
+                value: snapshot.value,
+                date: snapshot.date,
+                note: snapshot.note
+            )
+            entry.id = snapshot.id
+            entry.kindRaw = snapshot.kindRaw
+            context.insert(entry)
+        }
 
-        restoreSplitDays(from: backup, context: context)
-        SeedData.restoreDayPlans(from: backup, context: context)
+        // Renames, split days, and day-plan membership stay unsaved so they
+        // commit with the rows above or roll back with them.
+        SeedData.migrateExerciseNames(context: context, saves: false)
+        restoreSplitDays(from: backup, context: context, saves: false)
+        SeedData.restoreDayPlans(from: backup, context: context, saves: false)
+        return BackupRestoreReport(
+            droppedExerciseRecords: droppedExerciseRecords,
+            unknownTrainingModes: unknownModes
+        )
+    }
+
+    /// UserDefaults / iCloud KVS mirrors. Called only after the store save commits.
+    @MainActor
+    private static func commitRestorePreferences(from backup: AppBackup, context: ModelContext) {
+        if let plans = backup.dayPlans, !plans.isEmpty {
+            SeedData.storeDayPlanSnapshot(plans)
+        } else {
+            SeedData.persistDayPlanSnapshot(context: context)
+        }
         SeedData.markCatalogSeeded()
         SeedData.markDayPlansTrusted()
         SeedData.markSplitConfigured(context: context)
-        // Reload on this call — a detached Task outlives test containers
-        // and the CloudKit store tear-down, then fetchCount traps (SIGTRAP).
-        DayTypeRegistry.shared.reload(context: context)
-        NotificationCenter.default.post(name: .rockLogStoreReplaced, object: nil)
     }
 
     /// Prefer the stored split. Older backups only have session/exercise names —
     /// rebuild from session days (not catalog home days, which add unused Arms / Full Body).
-    private static func restoreSplitDays(from backup: AppBackup, context: ModelContext) {
+    private static func restoreSplitDays(from backup: AppBackup, context: ModelContext, saves: Bool) {
         if let stored = backup.splitDays, !stored.isEmpty {
-            _ = SeedData.applySplitSnapshot(stored, context: context)
+            _ = SeedData.applySplitSnapshot(stored, context: context, saves: saves)
             return
         }
         let inferred = inferSplit(from: backup)
         guard !inferred.isEmpty else {
-            SeedData.seedSplitDaysIfNeeded(context: context)
+            SeedData.seedSplitDaysIfNeeded(context: context, saves: saves)
             return
         }
-        _ = SeedData.applySplitSnapshot(inferred, context: context)
+        _ = SeedData.applySplitSnapshot(inferred, context: context, saves: saves)
     }
 
     static func inferSplit(from backup: AppBackup) -> [SplitDayBackup] {
