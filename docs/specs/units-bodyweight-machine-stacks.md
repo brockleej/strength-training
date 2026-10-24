@@ -15,8 +15,26 @@ Audience: Lee, before anyone builds it. Tester-facing copy waits until a build e
 | **Focus** | A starting-weight choice (last time, or the suggestion). A planned weight always wins. Previous moves the way Next already does. Done stays where it is. |
 | **Rest alert** | One pocket-strength buzz at zero, an optional tap at 10 seconds, a chime that dips an audiobook without stopping it, and the countdown on the Lock Screen and Dynamic Island. |
 | **Carry** | Editing one set’s weight updates only the later unlogged working sets that were planned at that same weight. Ramps stay on their plan, then snap to the lift’s stack step. |
+| **Warm-up** | One tap tags a set as a warm-up. It is logged and shown. It stays out of the suggestion, the e1RM, and same-weight carry. The tag does not stick to the next set. |
 
-Lee’s notes for **d** and **e**, in his words: he is on the individual exercises most of the time and wants to rearrange them from inside the workout. He sometimes cycles two to four exercises before moving on. Rest depends on the exercise he just did: some leave him breathing hard, some need a short break.
+Lee’s notes for **d** and **e**, in his words: he is on the individual exercises most of the time and wants to rearrange them from inside the workout. He sometimes cycles two to four exercises before moving on. Rest depends on the exercise he just did: some leave him breathing hard, some need a short break. On warm-ups: “I log warm ups.” He mostly does straight sets, with some ramps.
+
+## Answers from today
+
+Each of these is specified below. None of it has been built.
+
+| Answer | Where |
+| --- | --- |
+| Kilograms, with pounds still the stored unit | [a) Kilograms and pounds](#a-kilograms-and-pounds) |
+| Body weight over time, assist, and added load | [b) Body weight over time, bodyweight lifts, relative strength](#b-body-weight-over-time-bodyweight-lifts-relative-strength) |
+| Stack profiles learned from corrections, including the step and the offset | [c) Machine stack increments](#c-machine-stack-increments) and [Same-weight carry and the stack step](#same-weight-carry-and-the-stack-step) |
+| Gyms, Home as the fallback, the coach file’s gym id | [Gyms](#gyms) |
+| Reorder today’s workout, and keep the day plan as a separate save | [d) Drag to reorder during the workout](#d-drag-to-reorder-during-the-workout) |
+| Circuits of two to four, rest per lift | [e) Groups of two to four, and rest after each lift](#e-groups-of-two-to-four-and-rest-after-each-lift) |
+| Starting weight is a setting. A plan weight always wins. A line under the steppers shows last time and the suggestion. Done stays. Previous mirrors Next | [Focus screen](#focus-screen) |
+| Rest alert: pocket haptic, a chime that ducks, no chime on a call, Live Activity | [Rest alert](#rest-alert) |
+| Same-weight carry, with one undo | [Same-weight carry and the stack step](#same-weight-carry-and-the-stack-step) |
+| Warm-up is a one-tap tag, logged and shown, left out of progression, and not copied onto the next set | [Warm-ups](#warm-ups) |
 
 ## What the app does today
 
@@ -30,7 +48,9 @@ Assist is the only bodyweight mode. There is no “body weight plus added load�
 
 There is no per-machine stack, and no gym on a session. The stepper does not know that a machine only moves in 10, 15, or 20 lb jumps, or that the same lift at another gym starts on a different pin. Fixing set 1 from 145 to 140 leaves set 2 on 145 when set 2 was planned at 145, because nothing copies a correction onto the later sets that shared that plan weight. History can still reopen a finished workout (Edit, then Save Changes). That path stays as it is. The coach file has no gym id. Coach progression compares a lift with every past session of that lift.
 
-During a workout, **Reorder / edit day plan** opens the day-plan editor and writes the library order (`Exercise` day sort). The next session on that day follows it. The session itself does not keep a private order, except a planned workout: those sessions set `followsSessionRoster` and list lifts by `ExerciseRecord.sortOrder`. The lift screen (Focus) has next / previous. It has no drag handle. Lee spends his time on that screen. How that screen fills the stepper, and how Previous differs from Next, is under [Focus screen](#focus-screen).
+During a workout, the **⋯** menu item **Reorder / edit day plan** opens the day-plan editor and writes the library order (`Exercise` day sort). The next session on that day follows it. It does not reorder the list he is in today. The session itself does not keep a private order, except a planned workout: those sessions set `followsSessionRoster` and list lifts by `ExerciseRecord.sortOrder`. The lift screen (Focus) has next / previous. It has no drag handle. Lee spends his time on that screen. How that screen fills the stepper, and how Previous differs from Next, is under [Focus screen](#focus-screen).
+
+**Warm** is one tap on the set he is about to log. After he logs a warm-up, the next set opens with Warm still on. The prefill copies the tag from the set just logged, and from the same set number last time. `setLogged()` only clears the tag when it is already off, so a warm-up leaves it on. A work set logged that way is stored as a warm-up and drops out of the e1RM. Logging a set when no workout is open hits `fatalError` in `WorkoutViewModel.findOrCreateRecord` (“No active session when trying to create ExerciseRecord”) and crashes. The rest countdown and the per-lift on/off switch are the same button, so tapping the time turns auto-rest off.
 
 Rest is one duration for the whole app (default 3 minutes, Settings chips from 1 to 5 minutes). Each lift can turn auto-rest on or off. That on/off flag lives in UserDefaults, so a backup does not include it. Logging a set starts the timer when the lift’s auto-rest is on. While it runs, the chips are **−30**, **+30**, and **Skip**. There is no circuit, and Next walks the whole list rather than a pair of lifts. The countdown he sees off the lift screen is not a Live Activity. Sound is a tick on each of the last 5 seconds plus a two-tone chirp at zero, mixed on top of other audio (`.mixWithOthers`) without ducking it. A success haptic and two heavy taps fire at zero, and those generators run while the app is on screen. Local-notification banners for the timer were removed on purpose. The app still clears any leftover ones on launch. How that should change is under [Rest alert](#rest-alert).
 
@@ -216,6 +236,8 @@ On the lift list and on the lift screen, long-press the lift number and drag. Th
 
 The session stores it on the records that already exist: `ExerciseRecord.sortOrder`, and `followsSessionRoster = true` for this workout. The list, Focus next / previous, and History then read that order. The library day plan is unchanged.
 
+The **⋯** menu is the first slice of this. **Reorder today’s list** reorders this session. **Edit day plan** is a second item and is the library editor the menu opens today. The item that exists now, **Reorder / edit day plan**, stops being the one that changes next week’s day.
+
 Two optional actions, each a button he taps on purpose:
 
 - **Save order to this day** writes the library day plan (`Exercise` day sort) so the next unplanned session on that day starts in this order.
@@ -271,6 +293,8 @@ Each exercise has its own default rest, editable on the lift and on Edit exercis
 | Anything we cannot tell | The Settings rest duration (3 min today) |
 
 The seed uses the muscles and the name already on the exercise. His edit replaces the seed and is what we remember. Auto-rest on/off per lift stays. Off means logging does not start a timer. **Start** still can.
+
+The on/off switch and the countdown are separate controls. Tapping the time, **−15**, **+15**, or **Skip** does not turn auto-rest off for the lift. The switch is its own control and names this lift. Today they are one button.
 
 On a running timer the chips are **−15**, **+15**, and **Skip**. Skip is one tap and clears the countdown. The Settings screen still picks the fallback duration (the 1–5 minute chips). The ±15 buttons only nudge the timer that is running.
 
@@ -591,6 +615,47 @@ Backup gains a `gyms` array and a `stackProfiles` array, plus `gymId` and `gymNa
 - Sessions that predate the field are written to Home’s id on first launch. Export of one of those sessions sends Home’s id and name.
 - Latitude, longitude, and radius stay empty. Starting a workout does not ask for location.
 
+## Warm-ups
+
+Lee’s words: “I log warm ups.” He mostly does straight sets, with some ramps.
+
+**Warm** stays one tap on the set he is about to log, and on a set he is editing. The set is saved with that tag, shown in the list (the `w` mark it already has), kept in History, and sent on the coach file in the `isWarmup` field that file already has.
+
+A warm-up is left out of:
+
+- e1RM, PRs, and progression
+- the suggestion, and the Suggested side of the line under the steppers
+- same-weight carry
+
+The tag does not copy onto the next set. After he logs, the next set opens with Warm off, unless that next set’s plan is itself a warm-up. Last set, last session, and the set he just logged can still supply weight and reps. They do not supply the tag. A warm-up’s weight is not the working suggestion. Tapping Warm again is how the following set becomes a warm-up too.
+
+Straight sets stay untagged unless he taps Warm. A ramp is him changing the weight. The tag stays off while he does that, so the top set still counts.
+
+Editing a warm-up’s weight does not carry onto working sets. A working-set edit does not retag or rewrite a warm-up, even when the warm-up was planned at the same weight. This matches the carry rule already stated.
+
+### Optional ramp, later
+
+Not the bug fix. A later control, **Suggest warm-ups**, offers two sets under the first working weight: about half, then about three quarters. Each is snapped to this gym and lift’s stack, or to 5 lb when there is no profile. Each is tagged warm-up. Nothing is logged until he taps the offer. He can change the weight first.
+
+### Tests
+
+- Log 95×5 with Warm on. The next set opens with Warm off. Logging it without another tap stores a working set. The e1RM uses that working set and ignores the 95.
+- The plan’s set 1 is a warm-up and set 2 is not. After set 1, set 2 opens with Warm off.
+- Last session’s set 2 was a warm-up. This session’s set 2 opens with Warm off. Its weight can still come from last time.
+- Editing the logged warm-up does not turn Warm on for the following unlogged set.
+- The suggestion and the Suggested line ignore the 95. They show the working target.
+- Changing the warm-up from 95 to 105 does not change a later working set planned at 95. Changing that working set does not change the warm-up.
+- Suggest warm-ups, with a first working weight of 140 and a 10 lb stack, offers about 70 and about 105, tagged warm-up, and logs neither until he taps.
+
+## Logging must not crash
+
+`addSet` reaches `findOrCreateRecord`. If `activeSession` is nil, that function calls `fatalError` and the app dies. Replace that with a return. No record is created, no set is logged, and the screen stays as it is. Log set is only on an open workout. If the session has already been cleared, the tap does nothing.
+
+### Tests
+
+- Log set with a live session still appends the set.
+- Log set with no live session does not crash, does not insert a record, and does not insert a set.
+
 ## Rest alert
 
 Lee’s words: the phone is in his pocket, in his hand, or on the ground next to him. Sound is on, and sometimes an audiobook is playing, or he is on a call.
@@ -673,29 +738,39 @@ Not this build. A later watch glance can take a “rest done” event and play a
 
 `RockLogSchemaV1` shipped in source at `eb497bd` and is frozen. Parts **b**, **c**, **e**, and gyms add optional fields with defaults in **one** `RockLogSchemaV2` and one lightweight stage. Shipping the screens in a later order is fine. Adding a further stored field after V2 is V3, so the fields we already know about belong in V2 even if the screen comes later. The location fields on a gym are in that bump and stay empty.
 
-Part **a** is key-value. Part **d** uses V1 fields. Focus starting weight is key-value, same as Next set default. Previous is a behavior change on the lift screen. Same-weight carry is this session only and adds no field. Gyms, stack profiles, the session’s gym id, and the offered weight on a corrected set belong in this same V2. The gym’s location fields are reserved and left empty.
+Part **a** is key-value. Part **d** uses V1 fields. Focus starting weight is key-value, same as Next set default. Previous is a behavior change on the lift screen. Same-weight carry, the warm-up tag, and the crash fix add no field. `isWarmup` is already on V1. Gyms, stack profiles, the session’s gym id, and the offered weight on a corrected set belong in this same V2. The gym’s location fields are reserved and left empty.
 
 CloudKit will accept this only as a lightweight additive change. There is no custom migration stage.
 
 `PreviewSampleData` gains whatever new fields the models grow, or previews crash. Backup’s nil-vs-empty rule from PR #9 applies to every new array.
 
-## Suggested build order
+## Prioritized build list
 
-1. **Starting weight (Focus).** Settings choice, plan weight always wins, comparison line under the steppers. No migration.
-2. **Previous mirrors Next (Focus).** Done and Resume stay on the bottom row. Back stays at the top. No migration.
-3. **Same-weight carry.** No migration. Editing 145 on the first of two matching sets fills the second. Ramps stay. It can ship before a stack step exists.
-4. **Reorder (d).** No migration. It is the gap he feels on the lift screen. The day-plan editor stays for editing the library.
-5. **Per-lift rest and ±15 (the rest half of e).** Small, and it matches “the last exercise decides the break.” Circuits can follow in the next slice.
-6. **Rest alert.** Pocket buzz, 10-second tap, ducked chime, Live Activity. Uses the timer from today, so it can sit beside per-lift rest and does not wait on circuits. The per-lift length, once it exists, is the duration this alert counts.
-7. **Groups and auto-advance (the rest of e).**
-8. **Body-weight lookup and added-load mode (b).** No new measurement model. Date-based assist math is the part that stops old assisted e1RMs from moving when he updates the scale.
-9. **Pounds / kilograms and plate math (a).**
-10. **Gyms, stack steps, and learning (c).** The selector, a profile per gym and lift, Home as the fallback, 5/10/15/20 or a pin list, and the step plus offset learned from three sessions. Needs the unit work so a kilogram stack and a pound stack stay distinct, and needs the shared Epley helper. The coach file’s gym id ships in this step, in the schema 2 bump. Location detection stays later.
-11. **Rest learning.** After real timer samples exist. Suggest only.
+Ranked by how often it helps Lee, then by how likely it is to break a workout he already trusts. Effort is scope, not a calendar: **S** is one control or one function, **M** crosses a few screens, **L** adds a model, a file-format bump, or a new extension. One `RockLogSchemaV2` covers every row that needs a schema change. Those rows can ship later. Their fields belong in that single bump so a second migration is not required.
 
-The month-boundary fix is already on `main` (`a877aad`, pull request #10) and is **not on TestFlight yet**. It does not block this list.
+The month-boundary fix is already on `main` (`a877aad`, pull request #10) and is **not on TestFlight yet**. It is not a row below. Editing a finished workout stays as it is and is not a row. Automatic gym detection and an Apple Watch haptic are later, and they are not rows.
 
-One V2 migration can land with the per-lift rest step, containing the optional fields for rest, groups, bodyweight load, gyms, and stack profiles, so later steps do not each mint a schema version. The two Focus items, same-weight carry, and the rest alert do not add SwiftData fields. The rest alert does add a widget extension for the Live Activity. Editing a finished workout is unchanged and is not a build step. Automatic gym detection is not a build step.
+| | Build | Why this high or low | Risk | Effort | Depends on | Schema |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | **Warm-up tag stops copying onto the next set.** The set is still logged and shown. It stays out of e1RM, progression, suggestions, and same-weight carry. | He logs warm-ups every workout. A stuck tag drops the work set out of his e1RM. | Low. The tag already exists. | S | None | No |
+| 2 | **Logging a set must not crash.** Replace the `fatalError` when there is no live session with a return that logs nothing. | A crash loses the workout he is in. | Low | S | None | No |
+| 3 | **Rest on/off is a separate control from the countdown.** Tapping the time no longer turns rest off. | He uses the timer every set, and the time is the same button as the switch. | Low | S | None | No |
+| 4 | **A line under the steppers shows last time and the suggestion.** The line does not change what gets logged. | He asked to see both without the steppers jumping. | Low | S | None. Until stacks exist, the suggestion is today’s 5 lb snap. | No |
+| 5 | **Previous mirrors Next. Done stays on the bottom row.** | He asked for this, and he moves between lifts all session. | Low | S | None | No |
+| 6 | **The ⋯ menu reorders today’s list.** Edit day plan becomes a separate item. | The item he has now changes the library day, which is the wrong list. | Medium. The session order must not write the day plan. | S | None. Uses `sortOrder` and `followsSessionRoster`, already on V1. | No |
+| 7 | **Same-weight carry, with the changed rows marked and one Undo.** Ramps keep their plan. | This is the 145-then-forget-the-second-set miss. | Medium. A ramp must not flatten. | M | None. The leftover ramp snaps only after a stack step exists. Until then it stays on the plan. | No |
+| 8 | **Starting weight setting.** Last time or Suggested. A prescribed plan weight always wins. | The line in row 4 shows the numbers. This chooses which one fills an unplanned set. | Low | S | Row 4 can ship first. The setting is UserDefaults. | No |
+| 9 | **Drag to reorder on the list and on the lift, plus the two save-back buttons.** | Row 6 fixes the menu. Drag is how he wants to rearrange while standing on a lift. | Medium. Same risk as row 6, on a second gesture. | M | Row 6 | No |
+| 10 | **Per-lift rest and ±15.** | Rest follows the lift he just did. The global timer is what he has today. | Low | M | Row 3 is nicer first and is not required. | Yes. V2, rest seconds on the exercise. |
+| 11 | **Rest alert.** Pocket buzz, optional tap at 10 seconds, chime that ducks, no chime during a call, Live Activity instead of a per-second banner. | The phone is in his pocket, on an audiobook, or on a call. | Medium. Audio session and Live Activities. | L | The timer that already exists. Uses a per-lift duration after row 10. A widget extension, not a SwiftData model. | No |
+| 12 | **Circuits of two to four, with auto-advance.** Warm-ups stay on the current lift. | He does this sometimes, not every session. | Medium. Next and Previous change inside a group. | L | Rows 1 and 10. Warm-ups must not advance the group, and rest should already be per lift. | Yes. V2, group id on the session’s exercise record. |
+| 13 | **Body weight over time, and added load.** Assist keeps using the weigh-in from that date. | Stops old assisted e1RMs from moving when he updates the scale. | Medium. The date lookup is the part that must be right. | M | None | Yes. V2, the load mode and the body weight stored with the set. |
+| 14 | **Kilograms, plate math, and the display snap.** Pounds stay the stored unit. | He asked. It is not what he hits mid-set the way carry and warm-ups are. | Medium. A round trip must not walk the weight. | M | None. Stacks should come after, so a kilogram stack is not stored as a pound step. | No. The choice is key-value. Files may add a unit label. |
+| 15 | **Gyms, stack profiles, and learning the step and offset.** Home is the fallback. The coach file carries the gym id. | This is how a 145 suggestion becomes a pin the machine has. Carry covers the miss until then. | High. Coach schema 2, and progression must compare a gym with itself. | L | Row 14, and row 7 so the ramp can snap. | Yes. V2: Gym, stack profile, session gym id, offered weight. Coach file schema 2. |
+| 16 | **Suggest warm-ups.** About half and about three quarters of the first working weight, snapped to the stack, tagged warm-up, not logged until he taps. | Optional. He already logs warm-ups by hand. | Low | M | Row 1. Snapping uses row 15 when a profile exists, and 5 lb until then. | No |
+| 17 | **Rest learning.** Suggest a new default after real samples. It never edits the default alone. | Optional, and only useful after per-lift rest has something to learn. | Low | M | Row 10 | Yes. V2, optional sample fields on the set. |
+
+Rows 10, 12, 13, 15, and 17 share the one V2 migration. Shipping their screens later is fine. Adding a field after that bump is another version, so the fields go in together. Rows 1 through 9 and row 11 do not add SwiftData fields. Row 11 adds a widget extension.
 
 ## Tests
 
@@ -757,6 +832,10 @@ One V2 migration can land with the per-lift rest step, containing the optional f
 **Same-weight carry and the stack step.** Cases are under [Same-weight carry and the stack step](#same-weight-carry-and-the-stack-step).
 
 **Gyms.** Cases are under [Gyms](#gyms). Same V2 bump. Coach files go to schema 2 and still accept schema 1.
+
+**Warm-ups.** Cases are under [Warm-ups](#warm-ups). No schema change. The tag already exists.
+
+**Logging.** A set with no live session does not crash and does not insert anything. A set with a live session still saves.
 
 **Rest alert.** Cases are under [Rest alert](#rest-alert). No SwiftData change.
 
