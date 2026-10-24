@@ -97,6 +97,26 @@ final class OptimizationLogicTests: XCTestCase {
         XCTAssertNil(StackLearning.learnedStep(sessions: old, clearedAt: cleared, currentStep: nil, origin: nil, learningEnabled: true))
     }
 
+    func test_datedBodyWeight_keepsOldAssistedE1RMAndPR() {
+        let day = Date(timeIntervalSince1970: 1_700_000_000)
+        let later = Date(timeIntervalSince1970: 1_800_000_000)
+        let weighIns = [
+            LoadMath.WeighIn(date: day, pounds: 180),
+            LoadMath.WeighIn(date: later, pounds: 210),
+        ]
+        let lookedUp = LoadMath.bodyWeight(asOf: day.addingTimeInterval(3600), weighIns: weighIns, settingsPounds: 210)
+        XCTAssertEqual(lookedUp, 180, accuracy: 0.001)
+        // The set stores the body weight it used. A later weigh-in does not move that e1RM.
+        let stored = LoadMath.effective(mode: .assist, entered: 40, bodyWeight: 180)
+        let ifRewritten = LoadMath.effective(mode: .assist, entered: 40, bodyWeight: 210)
+        XCTAssertEqual(stored, 140, accuracy: 0.001)
+        XCTAssertEqual(ifRewritten, 170, accuracy: 0.001)
+        let oldE1 = E1RM.estimate(weightLbs: stored, reps: 5)
+        let prior = PRDetection.PriorBest(weight: stored, reps: 5, e1RM: oldE1, date: day)
+        XCTAssertNil(PRDetection.celebration(newWeight: stored, newReps: 5, priorBest: prior, alreadyCelebrated: false))
+        XCTAssertNotNil(PRDetection.celebration(newWeight: ifRewritten, newReps: 5, priorBest: prior, alreadyCelebrated: false))
+    }
+
     func test_kilogramPins_snapInKilograms_andSameWeightIsAHundredth() {
         var stack = StackDefinition.empty
         stack.pins = [10, 15, 20]
