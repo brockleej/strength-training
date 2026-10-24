@@ -216,6 +216,96 @@ final class BackupRestoreRegressionTests: XCTestCase {
         XCTAssertTrue(blocks.isEmpty)
     }
 
+    // MARK: - B2
+
+    func test_b2_bodyMetrics_surviveExportRestore() throws {
+        let container = try inMemoryContainer()
+        let context = container.mainContext
+        let morning = Date(timeIntervalSince1970: 1_700_200_000)
+        let evening = Date(timeIntervalSince1970: 1_700_230_000)
+        context.insert(BodyMetricEntry(kind: .weight, value: 185.5, date: morning, note: "fasted"))
+        context.insert(BodyMetricEntry(kind: .waist, value: 33.25, date: evening, note: ""))
+        try context.save()
+        let originalIDs = try context.fetch(FetchDescriptor<BodyMetricEntry>())
+            .sorted {
+                if $0.date != $1.date { return $0.date < $1.date }
+                return $0.kindRaw < $1.kindRaw
+            }
+            .map(\.id)
+        XCTAssertEqual(originalIDs.count, 2)
+
+        let data = try BackupService.export(context: context)
+        let decoded = try BackupService.decode(data)
+        XCTAssertEqual(decoded.bodyMetrics?.count, 2)
+
+        try BackupService.restore(from: data, context: context)
+
+        let restored = try context.fetch(FetchDescriptor<BodyMetricEntry>()).sorted {
+            if $0.date != $1.date { return $0.date < $1.date }
+            return $0.kindRaw < $1.kindRaw
+        }
+        XCTAssertEqual(restored.count, 2)
+        XCTAssertEqual(restored.map(\.kind), [.weight, .waist])
+        XCTAssertEqual(restored.map(\.value), [185.5, 33.25])
+        XCTAssertEqual(restored.map(\.note), ["fasted", ""])
+        XCTAssertEqual(restored.map(\.id), originalIDs)
+        XCTAssertEqual(restored[0].date.timeIntervalSince1970, morning.timeIntervalSince1970, accuracy: 1)
+        XCTAssertEqual(restored[1].date.timeIntervalSince1970, evening.timeIntervalSince1970, accuracy: 1)
+    }
+
+    func test_b2_backupWithoutBodyMetrics_stillLoadsAndKeepsExistingMeasurements() throws {
+        let container = try inMemoryContainer()
+        let context = container.mainContext
+        let entry = BodyMetricEntry(
+            kind: .neck,
+            value: 15.5,
+            date: Date(timeIntervalSince1970: 1_600_000_000),
+            note: "keep"
+        )
+        context.insert(entry)
+        try context.save()
+
+        let json = """
+        {
+          "version": 1,
+          "exportedAt": "2026-01-01T00:00:00Z",
+          "exercises": [],
+          "sessions": []
+        }
+        """
+        let decoded = try BackupService.decode(Data(json.utf8))
+        XCTAssertNil(decoded.bodyMetrics)
+        XCTAssertNil(decoded.trainingBlocks)
+
+        try BackupService.restore(from: Data(json.utf8), context: context)
+        let restored = try context.fetch(FetchDescriptor<BodyMetricEntry>())
+        XCTAssertEqual(restored.count, 1)
+        XCTAssertEqual(restored.first?.id, entry.id)
+        XCTAssertEqual(restored.first?.kind, .neck)
+        XCTAssertEqual(restored.first?.value, 15.5)
+        XCTAssertEqual(restored.first?.note, "keep")
+    }
+
+    func test_b2_emptyBodyMetricArray_replacesExistingMeasurements() throws {
+        let container = try inMemoryContainer()
+        let context = container.mainContext
+        context.insert(BodyMetricEntry(kind: .weight, value: 200, date: Date(timeIntervalSince1970: 1_600_000_000)))
+        try context.save()
+
+        let json = """
+        {
+          "version": 1,
+          "exportedAt": "2026-01-01T00:00:00Z",
+          "exercises": [],
+          "sessions": [],
+          "bodyMetrics": []
+        }
+        """
+        try BackupService.restore(from: Data(json.utf8), context: context)
+        let restored = try context.fetch(FetchDescriptor<BodyMetricEntry>())
+        XCTAssertTrue(restored.isEmpty)
+    }
+
     // MARK: - Helpers
 
     private func inMemoryContainer() throws -> ModelContainer {

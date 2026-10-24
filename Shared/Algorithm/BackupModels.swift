@@ -20,6 +20,9 @@ struct AppBackup: Codable {
     /// Nil means the file did not know about blocks (leave the store's blocks alone).
     /// An empty array means the backup explicitly has none.
     let trainingBlocks: [TrainingBlockBackup]?
+    /// Home measurements (weight, girths). Same nil-vs-empty rule as `trainingBlocks`:
+    /// nil preserves rows already on the phone; an array replaces them.
+    let bodyMetrics: [BodyMetricBackup]?
 
     init(
         version: Int,
@@ -28,7 +31,8 @@ struct AppBackup: Codable {
         sessions: [WorkoutSessionBackup],
         splitDays: [SplitDayBackup]? = nil,
         dayPlans: [DayPlanBackup]? = nil,
-        trainingBlocks: [TrainingBlockBackup]? = nil
+        trainingBlocks: [TrainingBlockBackup]? = nil,
+        bodyMetrics: [BodyMetricBackup]? = nil
     ) {
         self.version = version
         self.exportedAt = exportedAt
@@ -37,7 +41,18 @@ struct AppBackup: Codable {
         self.splitDays = splitDays
         self.dayPlans = dayPlans
         self.trainingBlocks = trainingBlocks
+        self.bodyMetrics = bodyMetrics
     }
+}
+
+/// One body-measurement row. `kindRaw` is `BodyMetricKind.rawValue`.
+/// `value` is pounds for weight and inches for girths.
+struct BodyMetricBackup: Codable, Equatable {
+    var id: UUID
+    var date: Date
+    var kindRaw: String
+    var value: Double
+    var note: String
 }
 
 /// One imported program and the session ids that belong to it.

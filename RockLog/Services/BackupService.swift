@@ -132,6 +132,21 @@ struct BackupService {
             return lhs.id.uuidString < rhs.id.uuidString
         }
 
+        let metrics = try context.fetch(FetchDescriptor<BodyMetricEntry>())
+        let metricBackups = metrics.map { entry in
+            BodyMetricBackup(
+                id: entry.id,
+                date: entry.date,
+                kindRaw: entry.kindRaw,
+                value: entry.value,
+                note: entry.note
+            )
+        }.sorted { lhs, rhs in
+            if lhs.date != rhs.date { return lhs.date < rhs.date }
+            if lhs.kindRaw != rhs.kindRaw { return lhs.kindRaw < rhs.kindRaw }
+            return lhs.id.uuidString < rhs.id.uuidString
+        }
+
         let backup = AppBackup(
             version: currentVersion,
             exportedAt: .now,
@@ -139,7 +154,8 @@ struct BackupService {
             sessions: sessionBackups,
             splitDays: splitBackups,
             dayPlans: SeedData.captureDayPlans(from: exercises, splitDays: splitDays),
-            trainingBlocks: blockBackups
+            trainingBlocks: blockBackups,
+            bodyMetrics: metricBackups
         )
 
         let encoder = JSONEncoder()
@@ -400,6 +416,25 @@ struct BackupService {
             for sessionID in snapshot.sessionIDs {
                 sessionMap[sessionID]?.trainingBlock = block
             }
+        }
+
+        // Nil preserves measurements the file never contained. An array replaces them.
+        if backup.bodyMetrics != nil {
+            for entry in try context.fetch(FetchDescriptor<BodyMetricEntry>()) {
+                context.delete(entry)
+            }
+        }
+        for snapshot in backup.bodyMetrics ?? [] {
+            let kind = BodyMetricKind(rawValue: snapshot.kindRaw) ?? .weight
+            let entry = BodyMetricEntry(
+                kind: kind,
+                value: snapshot.value,
+                date: snapshot.date,
+                note: snapshot.note
+            )
+            entry.id = snapshot.id
+            entry.kindRaw = snapshot.kindRaw
+            context.insert(entry)
         }
 
         // Renames, split days, and day-plan membership stay unsaved so they
