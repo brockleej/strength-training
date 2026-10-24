@@ -910,14 +910,14 @@ struct FocusView: View {
         let isAssisted = focusVM.isAssisted || exercise.loadMode == .assist
         focusVM.weight = MassMath.display(fromPounds: weight, unit: unit)
         ExerciseAssistPreferences.setPrefersAssist(isAssisted, for: exercise.id)
-        let loggedTheOffer = abs(weight - offered) <= 0.25
+        let loggedTheOffer = MassMath.sameStoredPounds(weight, offered)
         let setNumber = (focusVM.editingSetID.flatMap { id in loggedSets.first { $0.id == id }?.setNumber })
             ?? (loggedSets.count + 1)
 
         if let editingID = focusVM.editingSetID,
            let set = loggedSets.first(where: { $0.id == editingID }) {
             let previousWeight = set.weightLbs
-            let repsOnly = abs(previousWeight - weight) <= 0.25 && set.reps != reps
+            let repsOnly = MassMath.sameStoredPounds(previousWeight, weight) && set.reps != reps
             workoutVM.updateSet(
                 set,
                 weight: weight,
@@ -931,7 +931,7 @@ struct FocusView: View {
                 setNumber: set.setNumber,
                 newWeight: weight,
                 isWarmup: isWarmup,
-                loggedTheOffer: abs(previousWeight - weight) <= 0.25,
+                loggedTheOffer: MassMath.sameStoredPounds(previousWeight, weight),
                 repsOnly: repsOnly
             )
             focusVM.clearSelectionAfterSave()

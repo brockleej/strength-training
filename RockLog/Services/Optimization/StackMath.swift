@@ -161,11 +161,14 @@ nonisolated enum StackMath {
         guard stack.isActive else {
             return StackOffer(weightPounds: weightPounds, reps: reps)
         }
-        let available = availablePounds(stack, aroundPounds: weightPounds)
-        guard let chosen = select(target: weightPounds, available: available, policy: stack.policy) else {
+        // Choose the pin in its own unit, then convert that pin to pounds.
+        let target = MassMath.exactDisplay(fromPounds: weightPounds, unit: stack.pinUnit)
+        let available = stack.availableWeights(around: target)
+        guard let chosenDisplay = select(target: target, available: available, policy: stack.policy) else {
             return StackOffer(weightPounds: weightPounds, reps: reps)
         }
-        if abs(chosen - weightPounds) < 0.25 {
+        let chosen = MassMath.pounds(fromDisplay: chosenDisplay, unit: stack.pinUnit)
+        if MassMath.sameStoredPounds(chosen, weightPounds) {
             return StackOffer(weightPounds: weightPounds, reps: reps)
         }
         let newReps = adjustedReps(

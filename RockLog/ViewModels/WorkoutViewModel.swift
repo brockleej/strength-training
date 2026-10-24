@@ -997,7 +997,7 @@ final class WorkoutViewModel {
             set.loadModeRaw = (isAssisted && mode == .bar) ? LoadMode.assist.rawValue : mode.rawValue
         }
         if isAssisted { set.isAssisted = true }
-        if !isWarmup, let offeredWeight, abs(offeredWeight - weight) > 0.25 {
+        if !isWarmup, let offeredWeight, !MassMath.sameStoredPounds(offeredWeight, weight) {
             set.offeredWeightLbs = offeredWeight
         }
         let body = bodyWeightForLogging(exercise: exercise)

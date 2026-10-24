@@ -110,7 +110,7 @@ nonisolated enum SameWeightCarry {
                 stack: stack,
                 maxReps: maxReps
             )
-            if abs(offer.weightPounds - row.displayWeight) > 0.2 || offer.reps != row.reps {
+            if !MassMath.sameStoredPounds(offer.weightPounds, row.displayWeight) || offer.reps != row.reps {
                 next[index].displayWeight = offer.weightPounds
                 next[index].reps = offer.reps
                 snapped.append(row.setNumber)
@@ -127,6 +127,6 @@ nonisolated enum SameWeightCarry {
     }
 
     private static func same(_ lhs: Double, _ rhs: Double) -> Bool {
-        abs(lhs - rhs) < 0.25
+        MassMath.sameStoredPounds(lhs, rhs)
     }
 }

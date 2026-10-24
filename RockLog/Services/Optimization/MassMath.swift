@@ -35,6 +35,14 @@ nonisolated enum MassUnit: String, Codable, CaseIterable, Sendable {
         }
     }
 
+    /// Smallest stack step this unit will store. A typed kilogram step below this is raised.
+    var minimumStackStep: Double {
+        switch self {
+        case .pounds: 5
+        case .kilograms: 2.5
+        }
+    }
+
     /// Progression snap in this unit (5 lb or 2.5 kg).
     var progressionQuantum: Double {
         switch self {
@@ -91,6 +99,18 @@ nonisolated enum MassMath {
     static let poundsPerKilogram = 2.2046226218
 
     static let maximumStoredPounds = 10_000.0
+    /// Two stored weights are the same inside this band. Callers do not use `==`.
+    static let sameStoredToleranceLbs = 0.01
+
+    static func sameStoredPounds(_ lhs: Double, _ rhs: Double) -> Bool {
+        lhs.isFinite && rhs.isFinite && abs(lhs - rhs) <= sameStoredToleranceLbs
+    }
+
+    static func clampedStackStep(_ step: Double, unit: MassUnit) -> Double {
+        guard step.isFinite, step > 0 else { return unit.minimumStackStep }
+        if unit == .kilograms { return max(step, unit.minimumStackStep) }
+        return step
+    }
 
     static func snap(_ value: Double, quantum: Double) -> Double {
         guard quantum > 0, value.isFinite else { return value }

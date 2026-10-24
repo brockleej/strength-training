@@ -97,6 +97,31 @@ final class OptimizationLogicTests: XCTestCase {
         XCTAssertNil(StackLearning.learnedStep(sessions: old, clearedAt: cleared, currentStep: nil, origin: nil, learningEnabled: true))
     }
 
+    func test_kilogramPins_snapInKilograms_andSameWeightIsAHundredth() {
+        var stack = StackDefinition.empty
+        stack.pins = [10, 15, 20]
+        stack.pinUnit = .kilograms
+        let target = MassMath.pounds(fromDisplay: 14, unit: .kilograms)
+        let offer = StackMath.snap(weightPounds: target, reps: 5, stack: stack)
+        let shown = MassMath.exactDisplay(fromPounds: offer.weightPounds, unit: .kilograms)
+        XCTAssertEqual(shown, 15, accuracy: 0.001)
+        XCTAssertEqual(MassMath.clampedStackStep(1, unit: .kilograms), 2.5, accuracy: 0.001)
+        XCTAssertEqual(MassMath.clampedStackStep(10, unit: .pounds), 10, accuracy: 0.001)
+        XCTAssertTrue(MassMath.sameStoredPounds(140, 140.009))
+        XCTAssertFalse(MassMath.sameStoredPounds(140, 140.02))
+        let rows = [
+            CarrySet(setNumber: 1, planWeight: 140, reps: 5, isWarmup: false, isLogged: true, displayWeight: 140),
+            CarrySet(setNumber: 2, planWeight: 140.009, reps: 5, isWarmup: false, isLogged: false, displayWeight: 140.009),
+            CarrySet(setNumber: 3, planWeight: 140.02, reps: 5, isWarmup: false, isLogged: false, displayWeight: 140.02),
+        ]
+        let carried = SameWeightCarry.apply(
+            sets: rows,
+            edit: SameWeightCarry.Edit(setNumber: 1, newWeight: 150, isWarmup: false, loggedTheOffer: false, repsOnly: false)
+        )
+        XCTAssertEqual(carried.sets.first { $0.setNumber == 2 }?.displayWeight, 150)
+        XCTAssertEqual(carried.sets.first { $0.setNumber == 3 }?.displayWeight ?? 0, 140.02, accuracy: 0.001)
+    }
+
     func test_gymFallback_thenFivePounds() {
         let home = UUID()
         let away = UUID()

@@ -72,7 +72,7 @@ final class MachineStackProfile {
 
     func applyTyped(step: Double?, pins: [Double], unit: MassUnit) {
         var next = definition
-        next.step = step
+        next.step = step.map { MassMath.clampedStackStep($0, unit: unit) }
         next.pins = pins
         next.pinUnit = unit
         next.origin = .typed
