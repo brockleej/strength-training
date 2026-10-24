@@ -109,6 +109,12 @@ final class HealthKitWorkoutService {
     // MARK: - Authorization
 
     func requestAuthorization() async -> Bool {
+        #if DEBUG
+        if UITestLaunch.isEnabled {
+            authorizationStatus = false
+            return false
+        }
+        #endif
         guard isAvailable else { return false }
 
         do {
@@ -126,6 +132,12 @@ final class HealthKitWorkoutService {
     }
 
     func checkAuthorization() {
+        #if DEBUG
+        if UITestLaunch.isEnabled {
+            authorizationStatus = false
+            return
+        }
+        #endif
         guard isAvailable else {
             authorizationStatus = false
             return

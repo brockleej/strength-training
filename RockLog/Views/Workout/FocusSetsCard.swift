@@ -210,6 +210,7 @@ struct FocusSetsCard: View {
         ))
         .accessibilityElement(children: .combine)
         .accessibilityLabel(comparisonA11y(index: index, thisSet: thisSet, previous: previous, planned: planned, isSelected: isSelected))
+        .accessibilityIdentifier(AccessibilityID.focusSet(thisSet?.setNumber ?? index + 1))
     }
 
     @ViewBuilder
@@ -286,6 +287,7 @@ struct FocusSetsCard: View {
         .swipeToDelete(fullSwipeDeletes: true, onDelete: { onDelete(set) }, onTap: { onSelect(set) })
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(setAccessibilityLabel(set, isSelected: isSelected))
+        .accessibilityIdentifier(AccessibilityID.focusSet(set.setNumber))
         .accessibilityAddTraits(isSelected ? [.isSelected] : [])
     }
 

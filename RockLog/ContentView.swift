@@ -126,6 +126,7 @@ struct ContentView: View {
 
     private var chrome: some View {
         rootContent
+        .modifier(UITestDynamicTypeModifier())
         .tint(Color.uplift.accent)
         .preferredColorScheme(.dark)
         .fullScreenCover(isPresented: Binding(
@@ -137,6 +138,12 @@ struct ContentView: View {
             }
         }
         .task {
+            #if DEBUG
+            if UITestLaunch.isEnabled {
+                await bootUITestSession()
+                return
+            }
+            #endif
             // Hydrate iCloud split prefs before first-run UI, so a reinstall
             // does not ask to pick a split that already lives in KVS.
             SeedData.hydrateSplitPreferencesFromICloud()
@@ -178,6 +185,9 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(
             for: NSUbiquitousKeyValueStore.didChangeExternallyNotification
         )) { _ in
+            #if DEBUG
+            if UITestLaunch.isEnabled { return }
+            #endif
             SeedData.hydrateSplitPreferencesFromICloud()
             SeedData.reconcileSplitToSnapshot(context: modelContext)
             DayTypeRegistry.shared.reload(context: modelContext)
@@ -185,6 +195,9 @@ struct ContentView: View {
         // Second device often seeds before iCloud import finishes — re-dedupe after sync.
         .onChange(of: cloudKitSyncService.lastSyncDate) { _, newDate in
             guard newDate != nil else { return }
+            #if DEBUG
+            if UITestLaunch.isEnabled { return }
+            #endif
             SeedData.reconcileAfterCloudKitImport(context: modelContext)
             DayTypeRegistry.shared.reload(context: modelContext)
         }
@@ -237,6 +250,7 @@ struct ContentView: View {
             WorkoutTabView(viewModel: vm)
                 .tabItem { Label("Workout", systemImage: "dumbbell") }
                 .tag("workout")
+                .accessibilityIdentifier(AccessibilityID.appRoot)
             tab("history") {
                 HistoryListView(workoutVM: vm)
             }
@@ -270,6 +284,15 @@ struct ContentView: View {
         }
         do {
             let data = try Data(contentsOf: url)
+            handleIncomingData(data)
+        } catch {
+            incomingFileMessage = error.localizedDescription
+            showIncomingFileMessage = true
+        }
+    }
+
+    private func handleIncomingData(_ data: Data) {
+        do {
             switch try IncomingRockLogFile.parse(data) {
             case .program(let document):
                 pendingIncomingProgram = document
@@ -287,6 +310,46 @@ struct ContentView: View {
             showIncomingFileMessage = true
         }
     }
+
+    #if DEBUG
+    /// Seed the preset, then optionally present an injected file. Skips
+    /// iCloud hydration and the stock catalog (except the empty preset,
+    /// which matches a real first launch).
+    @MainActor
+    private func bootUITestSession() async {
+        let exerciseCount = (try? modelContext.fetchCount(FetchDescriptor<Exercise>())) ?? 0
+        let keepExisting = UITestLaunch.keepsRelaunchStore && exerciseCount > 0
+        if !keepExisting {
+            UITestFixture.seed(UITestLaunch.preset, context: modelContext)
+        }
+        DayTypeRegistry.shared.reload(context: modelContext)
+        showFirstUseSplitSetup = UITestLaunch.preset == .empty && !keepExisting
+        if workoutViewModel == nil {
+            workoutViewModel = WorkoutViewModel(
+                modelContext: modelContext,
+                healthKitService: healthKitService
+            )
+        }
+        if let data = UITestLaunch.injectedFileData() {
+            handleInjectedUITestFile(data)
+        }
+    }
+
+    @MainActor
+    private func handleInjectedUITestFile(_ data: Data) {
+        do {
+            switch try IncomingRockLogFile.parse(data) {
+            case .backup(let backup):
+                UITestLaunch.pendingBackupData = backup
+            default:
+                handleIncomingData(data)
+            }
+        } catch {
+            incomingFileMessage = error.localizedDescription
+            showIncomingFileMessage = true
+        }
+    }
+    #endif
 
     private func importIncomingSplit(_ document: ProgramDocument) {
         do {
@@ -358,6 +421,17 @@ struct ContentView: View {
             content()
         } else {
             Color.uplift.bgElev.ignoresSafeArea()
+        }
+    }
+}
+
+/// Applies a launch-argument content size during UI tests. Release is a no-op.
+private struct UITestDynamicTypeModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        if let size = UITestLaunch.dynamicTypeSize {
+            content.dynamicTypeSize(size)
+        } else {
+            content
         }
     }
 }

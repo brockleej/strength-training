@@ -54,6 +54,12 @@ struct RockLogApp: App {
     @MainActor
     private func openStore() async {
         await Task.yield()
+        #if DEBUG
+        if UITestLaunch.isEnabled {
+            openUITestStore()
+            return
+        }
+        #endif
         let schema = Schema(versionedSchema: RockLogSchemaV1.self)
         let config = ModelConfiguration(
             schema: schema,
@@ -71,4 +77,17 @@ struct RockLogApp: App {
             storeError = "Couldn’t open the workout store. \(error.localizedDescription)"
         }
     }
+
+    #if DEBUG
+    /// In-memory (or a wiped temp file for the relaunch test). No CloudKit.
+    @MainActor
+    private func openUITestStore() {
+        UITestLaunch.prepareDefaults()
+        do {
+            container = try UITestLaunch.makeContainer()
+        } catch {
+            storeError = "Couldn’t open the UI test store. \(error.localizedDescription)"
+        }
+    }
+    #endif
 }

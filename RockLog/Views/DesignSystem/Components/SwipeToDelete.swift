@@ -117,7 +117,9 @@ struct SwipeToDeleteModifier: ViewModifier {
             .frame(maxHeight: .infinity)
             .background(Color.uplift.down)
             .opacity(min(1, Double(-offsetX / revealWidth)))
-            .accessibilityHidden(true)
+            .accessibilityLabel("Remove")
+            .accessibilityIdentifier(AccessibilityID.swipeTrash)
+            .accessibilityAddTraits(.isButton)
     }
 
     private func handleTap(x: CGFloat) {
