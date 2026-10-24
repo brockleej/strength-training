@@ -19,11 +19,14 @@ extension Notification.Name {
 
 enum BackupError: LocalizedError {
     case unsupportedVersion(Int)
+    case invalidBackup(String)
 
     var errorDescription: String? {
         switch self {
         case .unsupportedVersion(let v):
             return "Backup version \(v) is not supported by this version of the app."
+        case .invalidBackup(let message):
+            return message
         }
     }
 }
@@ -45,6 +48,11 @@ struct BackupRestoreReport: Equatable {
 
 struct BackupService {
     static let currentVersion = 1
+    static let minimumVersion = 1
+    /// Heavier than any bar a person can load. Rejects corrupted or hand-edited values such as 1e9.
+    static let maximumWeightLbs = 10_000.0
+    /// Pounds or inches. Same ceiling as weight; a real measurement is far below it.
+    static let maximumMeasurement = 10_000.0
 
     // MARK: - Export
 
@@ -185,10 +193,68 @@ struct BackupService {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         let backup = try decoder.decode(AppBackup.self, from: data)
-        guard backup.version <= currentVersion else {
+        guard backup.version >= minimumVersion, backup.version <= currentVersion else {
             throw BackupError.unsupportedVersion(backup.version)
         }
+        try validate(backup)
         return backup
+    }
+
+    /// Reject values that would corrupt the store. Unknown training modes are
+    /// not rejected here; restore skips them and reports the count.
+    static func validate(_ backup: AppBackup) throws {
+        try rejectDuplicateIDs(backup.exercises.map(\.id), noun: "exercise")
+        try rejectDuplicateIDs(backup.sessions.map(\.id), noun: "workout")
+        if let blocks = backup.trainingBlocks {
+            try rejectDuplicateIDs(blocks.map(\.id), noun: "training block")
+        }
+        if let metrics = backup.bodyMetrics {
+            try rejectDuplicateIDs(metrics.map(\.id), noun: "body measurement")
+            for metric in metrics {
+                guard BodyMetricKind(rawValue: metric.kindRaw) != nil else {
+                    throw BackupError.invalidBackup(
+                        "Body measurement \(metric.id.uuidString) has unknown kind \"\(metric.kindRaw)\". Restore was cancelled and nothing was changed."
+                    )
+                }
+                if !metric.value.isFinite || metric.value < 0 || metric.value > maximumMeasurement {
+                    throw BackupError.invalidBackup(
+                        "Body measurement \(metric.id.uuidString) has value \(metric.value). Value must be a finite number from 0 through \(Int(maximumMeasurement)). Restore was cancelled and nothing was changed."
+                    )
+                }
+            }
+        }
+
+        var recordIDs: [UUID] = []
+        var setIDs: [UUID] = []
+        for session in backup.sessions {
+            for record in session.exerciseRecords {
+                recordIDs.append(record.id)
+                for set in record.sets {
+                    setIDs.append(set.id)
+                    if set.reps < 0 {
+                        throw BackupError.invalidBackup(
+                            "Set \(set.id.uuidString) has reps \(set.reps). Reps must be zero or greater. Restore was cancelled and nothing was changed."
+                        )
+                    }
+                    if !set.weightLbs.isFinite || set.weightLbs < 0 || set.weightLbs > maximumWeightLbs {
+                        throw BackupError.invalidBackup(
+                            "Set \(set.id.uuidString) has weight \(set.weightLbs) lb. Weight must be a finite number from 0 through \(Int(maximumWeightLbs)) lb. Restore was cancelled and nothing was changed."
+                        )
+                    }
+                }
+            }
+        }
+        try rejectDuplicateIDs(recordIDs, noun: "exercise log")
+        try rejectDuplicateIDs(setIDs, noun: "set")
+    }
+
+    private static func rejectDuplicateIDs(_ ids: [UUID], noun: String) throws {
+        var seen = Set<UUID>()
+        for id in ids where !seen.insert(id).inserted {
+            throw BackupError.invalidBackup(
+                "Backup contains more than one \(noun) with id \(id.uuidString). Restore was cancelled and nothing was changed."
+            )
+        }
     }
 
     static func summarize(backup: AppBackup) -> BackupSummary {

@@ -405,7 +405,207 @@ final class BackupRestoreRegressionTests: XCTestCase {
         XCTAssertFalse(sets.contains { $0.id == droppedSetID })
     }
 
+    // MARK: - B5
+
+    func test_b5_versionZeroAndNegative_areRejected() throws {
+        for version in [0, -1] {
+            let json = """
+            {"version":\(version),"exportedAt":"2026-01-01T00:00:00Z","exercises":[],"sessions":[]}
+            """
+            XCTAssertThrowsError(try BackupService.decode(Data(json.utf8))) { error in
+                guard case BackupError.unsupportedVersion(let found) = error else {
+                    return XCTFail("Expected unsupportedVersion, got \(error)")
+                }
+                XCTAssertEqual(found, version)
+                XCTAssertTrue(error.localizedDescription.contains("version \(version)"))
+            }
+        }
+    }
+
+    func test_b5_negativeReps_areRejected() throws {
+        let data = try encode(backupWithSet(weight: 100, reps: -1))
+        XCTAssertThrowsError(try BackupService.decode(data)) { error in
+            guard case BackupError.invalidBackup(let message) = error else {
+                return XCTFail("Expected invalidBackup, got \(error)")
+            }
+            XCTAssertTrue(message.contains("reps -1"), message)
+            XCTAssertTrue(message.contains("nothing was changed"), message)
+        }
+    }
+
+    func test_b5_negativeAndAbsurdWeight_areRejected() throws {
+        for weight in [-50.0, 1_000_000_000.0] {
+            let data = try encode(backupWithSet(weight: weight, reps: 5))
+            XCTAssertThrowsError(try BackupService.decode(data)) { error in
+                guard case BackupError.invalidBackup(let message) = error else {
+                    return XCTFail("Expected invalidBackup for \(weight), got \(error)")
+                }
+                XCTAssertTrue(message.contains("weight"), message)
+                XCTAssertTrue(message.contains("nothing was changed"), message)
+            }
+        }
+    }
+
+    func test_b5_duplicateExerciseIDs_areRejected() throws {
+        let shared = UUID()
+        let backup = AppBackup(
+            version: 1,
+            exportedAt: Date(timeIntervalSince1970: 1_700_000_000),
+            exercises: [
+                exerciseBackup(id: shared, name: "First"),
+                exerciseBackup(id: shared, name: "Second"),
+            ],
+            sessions: []
+        )
+        XCTAssertThrowsError(try BackupService.decode(try encode(backup))) { error in
+            guard case BackupError.invalidBackup(let message) = error else {
+                return XCTFail("Expected invalidBackup, got \(error)")
+            }
+            XCTAssertTrue(message.contains("exercise"), message)
+            XCTAssertTrue(message.contains(shared.uuidString), message)
+            XCTAssertTrue(message.contains("nothing was changed"), message)
+        }
+    }
+
+    func test_b5_duplicateSetIDs_areRejected() throws {
+        let shared = UUID()
+        let when = Date(timeIntervalSince1970: 1_700_000_000)
+        let exerciseID = UUID()
+        let backup = AppBackup(
+            version: 1,
+            exportedAt: when,
+            exercises: [exerciseBackup(id: exerciseID, name: "Bench")],
+            sessions: [
+                WorkoutSessionBackup(
+                    id: UUID(),
+                    date: when,
+                    dayType: "Push",
+                    notes: "",
+                    isCompleted: true,
+                    exerciseRecords: [
+                        ExerciseRecordBackup(
+                            id: UUID(),
+                            exerciseID: exerciseID,
+                            trainingMode: "Strength",
+                            sortOrder: 0,
+                            isCompleted: true,
+                            notes: "",
+                            sets: [
+                                SetRecordBackup(id: shared, setNumber: 1, weightLbs: 100, reps: 5, isWarmup: false, completedAt: when),
+                                SetRecordBackup(id: shared, setNumber: 2, weightLbs: 100, reps: 5, isWarmup: false, completedAt: when),
+                            ]
+                        ),
+                    ]
+                ),
+            ]
+        )
+        XCTAssertThrowsError(try BackupService.decode(try encode(backup))) { error in
+            guard case BackupError.invalidBackup(let message) = error else {
+                return XCTFail("Expected invalidBackup, got \(error)")
+            }
+            XCTAssertTrue(message.contains("set"), message)
+            XCTAssertTrue(message.contains(shared.uuidString), message)
+        }
+    }
+
+    func test_b5_unknownBodyMetricKind_isRejected() throws {
+        let metricID = UUID()
+        let backup = AppBackup(
+            version: 1,
+            exportedAt: Date(timeIntervalSince1970: 1_700_000_000),
+            exercises: [],
+            sessions: [],
+            bodyMetrics: [
+                BodyMetricBackup(
+                    id: metricID,
+                    date: Date(timeIntervalSince1970: 1_700_000_000),
+                    kindRaw: "wingspan",
+                    value: 70,
+                    note: ""
+                ),
+            ]
+        )
+        XCTAssertThrowsError(try BackupService.decode(try encode(backup))) { error in
+            guard case BackupError.invalidBackup(let message) = error else {
+                return XCTFail("Expected invalidBackup, got \(error)")
+            }
+            XCTAssertTrue(message.contains("wingspan"), message)
+            XCTAssertTrue(message.contains("nothing was changed"), message)
+        }
+    }
+
+    func test_b5_rejectedBackup_leavesExistingRows() throws {
+        let container = try inMemoryContainer()
+        let context = container.mainContext
+        let exercise = Exercise(name: "Keep Me", dayType: .push, muscleGroup: "Chest", isCustom: true)
+        context.insert(exercise)
+        context.insert(BodyMetricEntry(kind: .weight, value: 180, date: Date(timeIntervalSince1970: 1_600_000_000)))
+        try context.save()
+        let exerciseID = exercise.id
+
+        XCTAssertThrowsError(
+            try BackupService.restore(from: try encode(backupWithSet(weight: -50, reps: 5)), context: context)
+        )
+
+        let exercises = try context.fetch(FetchDescriptor<Exercise>())
+        XCTAssertEqual(exercises.map(\.id), [exerciseID])
+        XCTAssertEqual(exercises.map(\.name), ["Keep Me"])
+        let metrics = try context.fetch(FetchDescriptor<BodyMetricEntry>())
+        XCTAssertEqual(metrics.map(\.value), [180])
+    }
+
     // MARK: - Helpers
+
+    private func exerciseBackup(id: UUID, name: String) -> ExerciseBackup {
+        ExerciseBackup(
+            id: id,
+            name: name,
+            dayType: "Push",
+            muscleGroup: "Chest",
+            sortOrder: 0,
+            isCustom: true,
+            notes: ""
+        )
+    }
+
+    private func backupWithSet(weight: Double, reps: Int) -> AppBackup {
+        let when = Date(timeIntervalSince1970: 1_700_000_000)
+        let exerciseID = UUID()
+        return AppBackup(
+            version: 1,
+            exportedAt: when,
+            exercises: [exerciseBackup(id: exerciseID, name: "Bench")],
+            sessions: [
+                WorkoutSessionBackup(
+                    id: UUID(),
+                    date: when,
+                    dayType: "Push",
+                    notes: "",
+                    isCompleted: true,
+                    exerciseRecords: [
+                        ExerciseRecordBackup(
+                            id: UUID(),
+                            exerciseID: exerciseID,
+                            trainingMode: "Strength",
+                            sortOrder: 0,
+                            isCompleted: true,
+                            notes: "",
+                            sets: [
+                                SetRecordBackup(
+                                    id: UUID(),
+                                    setNumber: 1,
+                                    weightLbs: weight,
+                                    reps: reps,
+                                    isWarmup: false,
+                                    completedAt: when
+                                ),
+                            ]
+                        ),
+                    ]
+                ),
+            ]
+        )
+    }
 
     private func inMemoryContainer() throws -> ModelContainer {
         let config = ModelConfiguration(isStoredInMemoryOnly: true)

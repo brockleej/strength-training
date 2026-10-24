@@ -46,6 +46,25 @@ final class BackupLoaderTests: XCTestCase {
         XCTAssertTrue(dataset.summary.displayLine.contains("unknown trainingMode"))
     }
 
+    func test_versionZero_throws() throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("version-zero-\(UUID().uuidString).json")
+        let json = """
+        {"version":0,"exportedAt":"2026-01-01T00:00:00Z","exercises":[],"sessions":[]}
+        """
+        try json.write(to: url, atomically: true, encoding: .utf8)
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        XCTAssertThrowsError(try BackupLoader.load(from: url)) { error in
+            guard case BackupLoaderError.unsupportedVersion(let found, let supported) = error else {
+                XCTFail("Expected .unsupportedVersion, got \(error)")
+                return
+            }
+            XCTAssertEqual(found, 0)
+            XCTAssertEqual(supported, 1)
+        }
+    }
+
     func test_unsupportedVersion_throws() throws {
         let url = try fixtureURL("unsupported-version")
         XCTAssertThrowsError(try BackupLoader.load(from: url)) { error in
