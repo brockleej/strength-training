@@ -8,14 +8,33 @@ Audience: Lee, before anyone builds it. Tester-facing copy waits until a build e
 | --- | --- |
 | **a** | A kilograms / pounds setting. One stored unit. Plate math in both. |
 | **b** | Body weight over time, used for bodyweight lifts and for strength relative to body weight. |
-| **c** | A saved stack for each machine, so a target rounds to a weight the stack can actually load, and reps move to keep the effort. |
+| **c** | A saved stack for each gym and lift, so a target rounds to a weight that machine can load, and reps move to keep the effort. |
+| **Gyms** | A Home gym by default, and a one-tap switch when he travels. The coach file carries the gym id so the same machines are compared with each other. |
 | **d** | Drag exercises into a new order during the workout. The session keeps that order. Saving it back to the day or the program is a separate choice. |
 | **e** | Groups of two to four exercises. Logging a set moves to the next one in the group and comes back around. Rest follows the exercise just finished, and each lift has its own default rest. |
 | **Focus** | A starting-weight choice (last time, or the suggestion). A planned weight always wins. Previous moves the way Next already does. Done stays where it is. |
 | **Rest alert** | One pocket-strength buzz at zero, an optional tap at 10 seconds, a chime that dips an audiobook without stopping it, and the countdown on the Lock Screen and Dynamic Island. |
 | **Carry** | Editing one set’s weight updates only the later unlogged working sets that were planned at that same weight. Ramps stay on their plan, then snap to the lift’s stack step. |
+| **Warm-up** | One tap tags a set as a warm-up. It is logged and shown. It stays out of the suggestion, the e1RM, and same-weight carry. The tag does not stick to the next set. |
 
-Lee’s notes for **d** and **e**, in his words: he is on the individual exercises most of the time and wants to rearrange them from inside the workout. He sometimes cycles two to four exercises before moving on. Rest depends on the exercise he just did: some leave him breathing hard, some need a short break.
+Lee’s notes for **d** and **e**, in his words: he is on the individual exercises most of the time and wants to rearrange them from inside the workout. He sometimes cycles two to four exercises before moving on. Rest depends on the exercise he just did: some leave him breathing hard, some need a short break. On warm-ups: “I log warm ups.” He mostly does straight sets, with some ramps.
+
+## Answers from today
+
+Each of these is specified below. None of it has been built.
+
+| Answer | Where |
+| --- | --- |
+| Kilograms, with pounds still the stored unit | [a) Kilograms and pounds](#a-kilograms-and-pounds) |
+| Body weight over time, assist, and added load | [b) Body weight over time, bodyweight lifts, relative strength](#b-body-weight-over-time-bodyweight-lifts-relative-strength) |
+| Stack profiles learned from corrections, including the step and the offset | [c) Machine stack increments](#c-machine-stack-increments) and [Same-weight carry and the stack step](#same-weight-carry-and-the-stack-step) |
+| Gyms, Home as the fallback, the coach file’s gym id | [Gyms](#gyms) |
+| Reorder today’s workout, and keep the day plan as a separate save | [d) Drag to reorder during the workout](#d-drag-to-reorder-during-the-workout) |
+| Circuits of two to four, rest per lift | [e) Groups of two to four, and rest after each lift](#e-groups-of-two-to-four-and-rest-after-each-lift) |
+| Starting weight is a setting. A plan weight always wins. A line under the steppers shows last time and the suggestion. Done stays. Previous mirrors Next | [Focus screen](#focus-screen) |
+| Rest alert: pocket haptic, a chime that ducks, no chime on a call, Live Activity | [Rest alert](#rest-alert) |
+| Same-weight carry, with one undo | [Same-weight carry and the stack step](#same-weight-carry-and-the-stack-step) |
+| Warm-up is a one-tap tag, logged and shown, left out of progression, and not copied onto the next set | [Warm-ups](#warm-ups) |
 
 ## What the app does today
 
@@ -27,9 +46,11 @@ A different number, Settings → Body profile → weight, is what assisted lifts
 
 Assist is the only bodyweight mode. There is no “body weight plus added load” mode (weighted pull-up, dip with a chain).
 
-There is no per-machine stack. The stepper does not know that a machine only moves in 10, 15, or 20 lb jumps. Fixing set 1 from 145 to 140 leaves set 2 on 145 when set 2 was planned at 145, because nothing copies a correction onto the later sets that shared that plan weight. History can still reopen a finished workout (Edit, then Save Changes). That path stays as it is.
+There is no per-machine stack, and no gym on a session. The stepper does not know that a machine only moves in 10, 15, or 20 lb jumps, or that the same lift at another gym starts on a different pin. Fixing set 1 from 145 to 140 leaves set 2 on 145 when set 2 was planned at 145, because nothing copies a correction onto the later sets that shared that plan weight. History can still reopen a finished workout (Edit, then Save Changes). That path stays as it is. The coach file has no gym id. Coach progression compares a lift with every past session of that lift.
 
-During a workout, **Reorder / edit day plan** opens the day-plan editor and writes the library order (`Exercise` day sort). The next session on that day follows it. The session itself does not keep a private order, except a planned workout: those sessions set `followsSessionRoster` and list lifts by `ExerciseRecord.sortOrder`. The lift screen (Focus) has next / previous. It has no drag handle. Lee spends his time on that screen. How that screen fills the stepper, and how Previous differs from Next, is under [Focus screen](#focus-screen).
+During a workout, the **⋯** menu item **Reorder / edit day plan** opens the day-plan editor and writes the library order (`Exercise` day sort). The next session on that day follows it. It does not reorder the list he is in today. The session itself does not keep a private order, except a planned workout: those sessions set `followsSessionRoster` and list lifts by `ExerciseRecord.sortOrder`. The lift screen (Focus) has next / previous. It has no drag handle. Lee spends his time on that screen. How that screen fills the stepper, and how Previous differs from Next, is under [Focus screen](#focus-screen).
+
+**Warm** is one tap on the set he is about to log. After he logs a warm-up, the next set opens with Warm still on. The prefill copies the tag from the set just logged, and from the same set number last time. `setLogged()` only clears the tag when it is already off, so a warm-up leaves it on. A work set logged that way is stored as a warm-up and drops out of the e1RM. Logging a set when no workout is open hits `fatalError` in `WorkoutViewModel.findOrCreateRecord` (“No active session when trying to create ExerciseRecord”) and crashes. The rest countdown and the per-lift on/off switch are the same button, so tapping the time turns auto-rest off.
 
 Rest is one duration for the whole app (default 3 minutes, Settings chips from 1 to 5 minutes). Each lift can turn auto-rest on or off. That on/off flag lives in UserDefaults, so a backup does not include it. Logging a set starts the timer when the lift’s auto-rest is on. While it runs, the chips are **−30**, **+30**, and **Skip**. There is no circuit, and Next walks the whole list rather than a pair of lifts. The countdown he sees off the lift screen is not a Live Activity. Sound is a tick on each of the last 5 seconds plus a two-tone chirp at zero, mixed on top of other audio (`.mixWithOthers`) without ducking it. A success haptic and two heavy taps fire at zero, and those generators run while the app is on screen. Local-notification banners for the timer were removed on purpose. The app still clears any leftover ones on launch. How that should change is under [Rest alert](#rest-alert).
 
@@ -152,14 +173,16 @@ The April feature note’s ÷ body-weight strength score and Hall of Fame are no
 
 ### Profile
 
-Each exercise can save a stack profile. Empty means “use the normal stepper and the 5 lb / 2.5 kg snap.”
+A stack profile belongs to one gym and one lift. The gyms section is where that key, the Home fallback, and the selector live. Empty for that pair means “try Home, then the 5 lb / 2.5 kg snap.”
 
 A profile is either:
 
 - a fixed step, or
 - an explicit list of pin weights.
 
-The step control offers **10 lb**, **15 lb**, **20 lb**, and **Custom**. Custom is any step he types. A step learned from his corrections uses this same control and is described under [Same-weight carry and the stack step](#same-weight-carry-and-the-stack-step).
+A step profile stores a step and an offset. A weight is on the stack when it leaves that same offset after division by the step. Step 10 with offset 0 is 140, 150, 160. Step 10 with offset 5 is 145, 155, 165. He can instead store an explicit list of pins.
+
+Long-press the weight (the number on the stepper, not the lift number he drags) to set the profile for the gym selected on this workout and for this lift. The menu is **5 lb**, **10 lb**, **15 lb**, **20 lb**, and **Custom list**. A chosen step uses offset 0. A custom list is the pins he types. That choice is manual. Learning, below, is what fills a step and a non-zero offset when he has not set one.
 
 Plus add-on plates (the magnets): a small list such as 2.5 and 5. An available weight is a pin, or a pin plus one add-on. Stacking several magnets is an open question; the first version allows one add-on at a time.
 
@@ -191,7 +214,7 @@ Warm-up targets round onto the stack the same way. They do not change the workin
 
 ### App vs coach
 
-**RockLog** owns the profile editor (on the exercise, and a short cut from the lift screen), the policy control, and snapping the stepper so − / + land on available weights. The 5 / 1 / 0.5 cycle remains for lifts with no profile.
+**RockLog** owns the profile for the selected gym and this lift, the long-press on the weight, the policy control, and snapping the stepper so − / + land on available weights. The 5 / 1 / 0.5 cycle remains when this gym and Home both have no profile.
 
 **Shared progression** owns “given a target weight and reps, and a list of available pounds, return the weight and reps to suggest.” RockLog and RockCoach both call it. Planned-workout targets in the file stay the coach’s ideal numbers. The phone rounds when it displays and when it pre-fills. Import does not rewrite the file.
 
@@ -199,9 +222,9 @@ Warm-up targets round onto the stack the same way. They do not change the workin
 
 ### Data and migration
 
-The profile is stored on the exercise: step or pin list, add-ons, unit of the pins, policy, and whether the step was learned or typed. All optional. No profile means today’s behaviour. `RockLogSchemaV2`, same lightweight stage as part **b**. Backup includes the profile. Old backups restore with no profile. Learning also stores the weight a set was offered, on that set, when he logged something else. That field is optional and empty on older sets.
+Profiles are not columns on the exercise. They are their own rows, one per gym and lift, in the same `RockLogSchemaV2` as part **b**. The fields, the backup shape, and the coach file are under [Gyms](#gyms). Learning still stores the weight a set was offered, on that set, when he logged something else. That field is optional and empty on older sets.
 
-Part **a**’s 5 lb / 2.5 kg snap is the fallback only when the lift has no profile.
+Part **a**’s 5 lb / 2.5 kg snap is the fallback only when this gym and Home both have no profile for the lift.
 
 ---
 
@@ -212,6 +235,8 @@ Part **a**’s 5 lb / 2.5 kg snap is the fallback only when the lift has no prof
 On the lift list and on the lift screen, long-press the lift number and drag. That is the same gesture the day plan already uses. The new order is this session’s order immediately.
 
 The session stores it on the records that already exist: `ExerciseRecord.sortOrder`, and `followsSessionRoster = true` for this workout. The list, Focus next / previous, and History then read that order. The library day plan is unchanged.
+
+The **⋯** menu is the first slice of this. **Reorder today’s list** reorders this session. **Edit day plan** is a second item and is the library editor the menu opens today. The item that exists now, **Reorder / edit day plan**, stops being the one that changes next week’s day.
 
 Two optional actions, each a button he taps on purpose:
 
@@ -268,6 +293,8 @@ Each exercise has its own default rest, editable on the lift and on Edit exercis
 | Anything we cannot tell | The Settings rest duration (3 min today) |
 
 The seed uses the muscles and the name already on the exercise. His edit replaces the seed and is what we remember. Auto-rest on/off per lift stays. Off means logging does not start a timer. **Start** still can.
+
+The on/off switch and the countdown are separate controls. Tapping the time, **−15**, **+15**, or **Skip** does not turn auto-rest off for the lift. The switch is its own control and names this lift. Today they are one button.
 
 On a running timer the chips are **−15**, **+15**, and **Skip**. Skip is one tap and clears the countdown. The Settings screen still picks the fallback duration (the 1–5 minute chips). The ±15 buttons only nudge the timer that is running.
 
@@ -429,23 +456,23 @@ The PLAN column still shows 145 / 145 / 165. The rows he will log show the snapp
 
 With no step, the only snap is today’s nearest 5 lb.
 
-### Learning the step from corrections
+### Learning the step and the offset
 
-He should not have to set up a stack for the 145-versus-140 case. The phone learns the step from working sets he actually changed.
+He should not have to set up a stack for the 145-versus-140 case. The phone learns the profile for the gym selected on that session and for this lift. Corrections at a travel gym do not change Home.
 
 A session qualifies when he logs at least one working set at a weight other than the weight that set offered. Warm-ups do not qualify a session. Several sets in one session are one session, not several votes. The weights that count are the corrected working weights, so an unedited ramp at 165 does not spoil a correction to 140.
 
-For that session, try 20, 15, and 10 lb. A step fits when every corrected weight is a whole number of steps (within half a pound). The session’s step is the largest of those three that fits. 140 fits 20 and 10, so the session’s step is 20. 140 and 150 together fit 10 only. 150 and 165 fit 15. 145, 185, and 225 fit none of them.
+Take the corrected weights from the last three qualifying sessions at this gym and this lift, pooled. Try 20, 15, and 10 lb. A step fits when every pooled weight leaves the same remainder (within half a pound). That remainder is the offset. The pair is the largest step that fits, plus its offset. 140, 160, and 180 fit 20 with offset 0, and also 10 with offset 0, so the pair is 20 / 0. 140, 150, and 160 fit 10 / 0 only. 145, 155, and 165 fit 10 / 5. 140 and 155 fit 15 / 5. 145, 185, and 225 share no remainder on 20, 15, or 10.
 
-When none of the three fit, the custom candidate is the greatest common divisor of the corrected weights, and only if that divisor is greater than 5 lb. 25, 50, and 75 give 25. A divisor of 5 lb is the snap the app already uses, so a barbell does not grow a stack.
+When none of the three fit, the custom candidate is the greatest common divisor of the pooled weights, and only if that divisor is greater than 5 lb. The offset is the common remainder, which is 0 when the divisor goes in evenly. 25, 50, and 75 give step 25, offset 0. A divisor of 5 lb is the snap the app already uses, so a barbell does not grow a stack.
 
-The learned step is written when the last three qualifying sessions all have the same step. One session, or two, write nothing. A later session with a different step does not change a step already learned. Replacing 20 lb with 10 lb takes three new sessions whose step is 10. Sessions where he logs the offer are skipped. They do not count, and they do not wipe the three.
+One session, or two, write nothing. A pair already learned stays until three newer qualifying sessions in a row fail to fit it. One odd correction does not replace it. Those three sessions are then pooled on their own, and that pool writes the new pair. Sessions where he logs the offer are skipped. They do not count, and they do not wipe the three.
 
-Old workouts cannot teach this. The offer was not stored. From this build on, a working set he logs at a different weight stores the weight it was offered. That field is how the three sessions are read back.
+Old workouts cannot teach this. The offer was not stored. From this build on, a working set he logs at a different weight stores the weight it was offered. That field is how the three sessions are read back. The session’s gym id says which gym the sample belongs to.
 
-The learned step is the part **c** profile: a fixed step, pounds, nearest, tie down, marked learned. Future suggestions and plan weights snap with the table above. History is not rewritten. Progression still computes the ideal target first. The step rounds it.
+The learned pair is the part **c** profile: step, offset, pounds, nearest, tie down, marked learned, keyed by this gym and this lift. Future suggestions and plan weights snap with the table above. History is not rewritten. Progression still computes the ideal target first. The profile rounds it.
 
-On the exercise, next to the 10 / 15 / 20 / Custom control, a learned step says it was learned and names the three sessions in one line. **Clear** removes it and remembers the time, so those same three sessions do not write it back. Sets logged after Clear can teach a new step. Typing 10, 15, 20, or a custom step marks the profile as his. Learning does not replace a step he typed. **Learn stack from corrections** sits on that exercise, default on. Off means new corrections are only for this session’s carry. The switch is optional on the exercise. Empty means on.
+On the lift, a learned profile says it was learned and names the three sessions in one line. **Clear** removes it for this gym and this lift, and remembers the time, so those same three sessions do not write it back. Sets logged after Clear can teach a new pair. Long-pressing a step or a pin list marks the profile as his. Learning does not replace a profile he set. **Learn stack from corrections** sits on that gym and lift, default on. Off means new corrections are only for this session’s carry. Empty means on.
 
 ### Finished workouts stay as they are
 
@@ -459,7 +486,7 @@ Finding the bad 145 the next time he does the lift is the path this section is f
 
 **RockCoach** does not learn a step. Once the coach file includes the profile, the coach can show the same snapped pair. Until then, the phone is the place the step lives.
 
-The offered weight on a corrected set, the learned-or-typed flag, and the Clear time are optional fields in the same `RockLogSchemaV2` as part **c**. Empty on old data. Backup round-trips them. An old file restores with no step and no offers.
+The offered weight on a corrected set is an optional field in the same `RockLogSchemaV2`. The profile row (step, offset or pin list, learned or typed, Clear time, gym, lift) is defined under [Gyms](#gyms). Empty on old data. Backup round-trips them. An old file restores with no profiles and no offers.
 
 ### Tests
 
@@ -482,17 +509,19 @@ The offered weight on a corrected set, the learned-or-typed flag, and the Clear 
 **Learning**
 
 - One session, or two, of 145 corrected to 140 writes no step.
-- Three sessions whose corrected weights are 140, then 160, then 180 learn a 20 lb step.
-- Three sessions of 140, 150, and 160 learn 10 lb.
-- Three sessions of 150, 165, and 180 learn 15 lb.
-- After a 20 lb step is learned, one session that corrects to 150 leaves the step at 20. Three such sessions move it to 10.
+- Three sessions whose corrected weights are 140, then 160, then 180 learn step 20, offset 0.
+- Three sessions of 140, 150, and 160 learn step 10, offset 0.
+- Three sessions of 150, 165, and 180 learn step 15, offset 0.
+- Three sessions of 145, 155, and 165 learn step 10, offset 5. A later suggestion of 147 opens at 145.
+- Three sessions whose combined corrected weights are 140 and 155 learn step 15, offset 5.
+- After step 20 offset 0 is learned, one session that corrects to 150 leaves that pair. Three newer sessions whose corrected weights are 140, 150, and 160 replace it with step 10, offset 0.
 - Logged working weights 145, 185, and 225 learn nothing.
-- Three sessions of 25, 50, and 75 learn a custom step of 25.
+- Three sessions of 25, 50, and 75 learn a custom step of 25, offset 0.
 - A warm-up edited off its offer does not qualify the session.
-- A session that corrects 145 to 140 and leaves a ramp at 165 counts {140} only. Three of those learn 20 lb.
-- With a learned 10 lb step, a suggestion of 145 opens at 140, and a suggestion of 165×5 opens at 160×6.
-- Clear removes the step. The next suggestion uses the 5 lb snap. The same three old sessions do not write the step again.
-- A step he typed as 15 stays 15 when the logs would learn 10. Clear is the learned-step action. His typed step stays until he changes it.
+- A session that corrects 145 to 140 and leaves a ramp at 165 counts {140} only. Three of those learn step 20, offset 0.
+- With a learned step 10 offset 0, a suggestion of 145 opens at 140, and a suggestion of 165×5 opens at 160×6.
+- Clear on this gym and lift, with no Home profile, removes the pair. The next suggestion uses the 5 lb snap. The same three old sessions do not write the pair again.
+- A step he set to 15 (offset 0) stays 15 when the logs would learn 10. Clear is the learned-profile action. His step stays until he changes it.
 - Learn stack from corrections off: a third qualifying session does not write a step.
 - A set logged with no stored offer, including every set from before this field existed, does not qualify.
 - Three corrected sets inside one session are still one session.
@@ -500,6 +529,132 @@ The offered weight on a corrected set, the learned-or-typed flag, and the Clear 
 **Finished workouts**
 
 - History → Edit still asks “Edit this workout?” and Save Changes still saves. Reopening does not carry, does not snap, and does not store an offered weight.
+
+## Gyms
+
+Lee’s question: how is the phone going to know what that machine does? He mostly trains at one gym, and he travels some. He is not sure how to tell the coach which machine he is on at the time.
+
+The phone does not see the stack. He tells it which gym he is in. The profile for that gym and that lift is what the machine does. The coach finds out when the session file arrives. There is no live link in this build.
+
+### The selector
+
+The workout shows the gym at the top of the lift list, and the same control stays in the header on the lift screen. The first run creates one gym, named **Home**, and selects it. One tap opens the list: Home, every other gym, and **New gym**. New gym asks for a name. A blank name is refused. A name that matches an existing gym, ignoring case, is refused. The new gym becomes the selected one.
+
+The session stores that gym. Switching mid-workout retargets the session. Sets already logged stay as logged. Unlogged sets snap again with the profile for the gym he just picked. Learning from this session counts for the gym on the session when he finishes.
+
+Home can be renamed. It cannot be deleted. Another gym can be made Home. Profiles stay on the gym they were learned for. The fallback follows whichever gym is marked Home. Deleting a travel gym deletes its profiles and asks first. Sessions already finished keep that gym’s id and the name they stored, so History still reads “Hotel” after the row is gone.
+
+### Which profile the lift uses
+
+Look up the selected gym and this lift.
+
+1. That pair’s profile, if it has one.
+2. Otherwise Home’s profile for this lift.
+3. Otherwise the 5 lb snap, or the 2.5 kg snap when kilograms are showing.
+
+A travel gym starts with no profiles, so the first workout there uses Home’s stacks. The first time he long-presses the weight, or the third time he corrects this lift at that gym, the travel pair gets its own profile and stops following Home. Other lifts at that gym still follow Home until they have their own. Clear on the travel pair returns that lift to the Home fallback.
+
+Home’s leg press at step 10 offset 0 does not change the hotel’s leg press after the hotel has its own pair. Two lifts at one gym can have different steps.
+
+### By hand
+
+Long-press the stepper’s weight. The menu is **5**, **10**, **15**, **20**, and **Custom list**, for the selected gym and this lift. A step from that menu uses offset 0 and is marked manual. Custom list is the pins he types, in the unit on screen, stored as pounds. A manual profile is not replaced by learning. Choosing 5 stores a real profile, so a travel gym can stay on 5 lb plates while Home is on 10. Leaving the pair empty is what falls through to Home.
+
+### What the coach receives
+
+Sending a session is the same share as today. The file tells the coach the gym. It does not ping the coach while he is on the gym floor.
+
+`rocklog.coach.session` and `rocklog.coach.batch` move to `schemaVersion` 2 in the same bump as the body-weight fields and the group id. A version 1 file still imports. A version newer than 2 is still rejected. New fields are optional.
+
+On the session:
+
+- `gymId`, the stable id
+- `gymName`, the name at export time
+
+A session that has no gym yet is exported as Home’s id and Home’s name. On each exercise, optional `stackStepLbs`, `stackOffsetLbs`, and `stackPinsLbs` record the profile that was used for that lift in that gym. Absent means the phone had no profile and used the 5 lb snap. The coach does not learn profiles and does not edit them.
+
+Coach progression, and the phone’s progression for the open session, compare a lift with sessions of that same gym id. Sessions saved before this field existed count as Home. The first time he does a lift at a travel gym, there is no same-gym history, so the suggestion uses Home’s history and the line says the last time was at Home. The travel profile still snaps that suggestion when the travel pair has one. Once two travel sessions exist, later comparisons use the travel gym only. A Home session does not move the hotel’s “last time,” and a hotel session does not move Home’s.
+
+### Location, later
+
+Not this build, and not a silent switch. The gym row reserves optional latitude, longitude, and a radius, empty until then, so this stays inside the one schema bump. A later build can ask for location permission, match a gym, and offer “Switch to Hotel?” He confirms. Until he does, the selector stays where he set it.
+
+### Data, backup, migration
+
+Two new models, both registered in the V2 schema, both with defaults CloudKit can sync. No custom migration stage.
+
+**Gym.** Id, name, whether it is Home, created date, sort order. Optional latitude, longitude, and radius, all empty in this build. Exactly one gym has the Home flag.
+
+**Stack profile.** Id, gym id, exercise id, step in pounds, offset in pounds, pin list, the unit the pins were typed in, rounding policy, learned or manual, the Clear time, and whether learning is on. The app keeps a single profile for each gym and lift. Add-on magnets from part **c** live on this row.
+
+**Session.** Optional gym id, and the gym name stored at finish. Empty means Home.
+
+The first launch after the update creates Home and writes Home’s id onto sessions whose gym id is empty. That is an ordinary save after the store opens, not a second migration.
+
+Backup gains a `gyms` array and a `stackProfiles` array, plus `gymId` and `gymName` on each session. An old backup has neither array. Restore creates Home, attaches every restored session to it, and creates no profiles. A new backup round-trips gyms, profiles, and the session’s gym. Deleting the travel gym on the phone and then restoring a file that still contains it brings that gym and its profiles back.
+
+`PreviewSampleData` includes Home, or previews that touch a profile crash. The program file does not gain a gym. A plan is the coach’s ideal weights. The phone snaps them for whichever gym is selected when he starts that plan.
+
+### Tests
+
+- First launch creates one gym named Home and selects it. The workout header shows Home.
+- New gym “Hotel” selects Hotel. A second “hotel” is refused. A blank name is refused.
+- Home cannot be deleted. Deleting Hotel removes Hotel’s profiles and asks first. A finished Hotel session still shows the name Hotel.
+- Making Hotel the Home gym does not move profiles between gyms. The fallback reads Hotel.
+- Leg press at Home is step 10 offset 0. Hotel has no leg-press profile. A 145 suggestion at Hotel snaps to 140. After Hotel learns step 10 offset 5, 145 stays 145 and 147 snaps to 145. Home’s profile is still 10 / 0.
+- Hotel curl has no profile, and Home has no curl profile. The curl snaps to 5 lb.
+- Long-press the weight, choose 15. Hotel’s leg press stores step 15, offset 0, manual. Three corrections that would learn 10 do not replace it.
+- Long-press, custom list 140, 150, 170. A target of 160 snaps to 150 (tie, down).
+- Long-press uses the stepper weight. Long-press on the lift number is still the reorder drag.
+- Three Home sessions learn Home only. The same three corrections logged at Hotel learn Hotel only.
+- Switching from Home to Hotel mid-workout leaves logged sets as they are and resnaps the unlogged ones. The finished session’s gym id is Hotel.
+- A version 1 coach file imports, and the session counts as Home. A version 2 file round-trips `gymId`, `gymName`, and the exercise’s step, offset, and pins. A version 3 file is rejected.
+- Coach progression for a Hotel session with Hotel history does not use a heavier Home session of the same lift. The first Hotel session, with no Hotel history, uses Home and the line says the last time was at Home.
+- Phone progression uses the same gym split for the open session.
+- An old backup restores as Home and no profiles. A new backup restores Home, Hotel, both profiles, and each session’s gym id.
+- Sessions that predate the field are written to Home’s id on first launch. Export of one of those sessions sends Home’s id and name.
+- Latitude, longitude, and radius stay empty. Starting a workout does not ask for location.
+
+## Warm-ups
+
+Lee’s words: “I log warm ups.” He mostly does straight sets, with some ramps.
+
+**Warm** stays one tap on the set he is about to log, and on a set he is editing. The set is saved with that tag, shown in the list (the `w` mark it already has), kept in History, and sent on the coach file in the `isWarmup` field that file already has.
+
+A warm-up is left out of:
+
+- e1RM, PRs, and progression
+- the suggestion, and the Suggested side of the line under the steppers
+- same-weight carry
+
+The tag does not copy onto the next set. After he logs, the next set opens with Warm off, unless that next set’s plan is itself a warm-up. Last set, last session, and the set he just logged can still supply weight and reps. They do not supply the tag. A warm-up’s weight is not the working suggestion. Tapping Warm again is how the following set becomes a warm-up too.
+
+Straight sets stay untagged unless he taps Warm. A ramp is him changing the weight. The tag stays off while he does that, so the top set still counts.
+
+Editing a warm-up’s weight does not carry onto working sets. A working-set edit does not retag or rewrite a warm-up, even when the warm-up was planned at the same weight. This matches the carry rule already stated.
+
+### Optional ramp, later
+
+Not the bug fix. A later control, **Suggest warm-ups**, offers two sets under the first working weight: about half, then about three quarters. Each is snapped to this gym and lift’s stack, or to 5 lb when there is no profile. Each is tagged warm-up. Nothing is logged until he taps the offer. He can change the weight first.
+
+### Tests
+
+- Log 95×5 with Warm on. The next set opens with Warm off. Logging it without another tap stores a working set. The e1RM uses that working set and ignores the 95.
+- The plan’s set 1 is a warm-up and set 2 is not. After set 1, set 2 opens with Warm off.
+- Last session’s set 2 was a warm-up. This session’s set 2 opens with Warm off. Its weight can still come from last time.
+- Editing the logged warm-up does not turn Warm on for the following unlogged set.
+- The suggestion and the Suggested line ignore the 95. They show the working target.
+- Changing the warm-up from 95 to 105 does not change a later working set planned at 95. Changing that working set does not change the warm-up.
+- Suggest warm-ups, with a first working weight of 140 and a 10 lb stack, offers about 70 and about 105, tagged warm-up, and logs neither until he taps.
+
+## Logging must not crash
+
+`addSet` reaches `findOrCreateRecord`. If `activeSession` is nil, that function calls `fatalError` and the app dies. Replace that with a return. No record is created, no set is logged, and the screen stays as it is. Log set is only on an open workout. If the session has already been cleared, the tap does nothing.
+
+### Tests
+
+- Log set with a live session still appends the set.
+- Log set with no live session does not crash, does not insert a record, and does not insert a set.
 
 ## Rest alert
 
@@ -581,31 +736,41 @@ Not this build. A later watch glance can take a “rest done” event and play a
 
 ## Schema in one step
 
-`RockLogSchemaV1` shipped in source at `eb497bd` and is frozen. Parts **b**, **c**, and **e** add optional fields with defaults in **one** `RockLogSchemaV2` and one lightweight stage. Shipping the screens in a later order is fine. Adding a further stored field after V2 is V3, so the fields we already know about belong in V2 even if the screen comes later.
+`RockLogSchemaV1` shipped in source at `eb497bd` and is frozen. Parts **b**, **c**, **e**, and gyms add optional fields with defaults in **one** `RockLogSchemaV2` and one lightweight stage. Shipping the screens in a later order is fine. Adding a further stored field after V2 is V3, so the fields we already know about belong in V2 even if the screen comes later. The location fields on a gym are in that bump and stay empty.
 
-Part **a** is key-value. Part **d** uses V1 fields. Focus starting weight is key-value, same as Next set default. Previous is a behavior change on the lift screen. Same-weight carry is this session only and adds no field. Learning’s offered weight, learned-or-typed flag, and Clear time belong in V2 with the stack profile.
+Part **a** is key-value. Part **d** uses V1 fields. Focus starting weight is key-value, same as Next set default. Previous is a behavior change on the lift screen. Same-weight carry, the warm-up tag, and the crash fix add no field. `isWarmup` is already on V1. Gyms, stack profiles, the session’s gym id, and the offered weight on a corrected set belong in this same V2. The gym’s location fields are reserved and left empty.
 
 CloudKit will accept this only as a lightweight additive change. There is no custom migration stage.
 
 `PreviewSampleData` gains whatever new fields the models grow, or previews crash. Backup’s nil-vs-empty rule from PR #9 applies to every new array.
 
-## Suggested build order
+## Prioritized build list
 
-1. **Starting weight (Focus).** Settings choice, plan weight always wins, comparison line under the steppers. No migration.
-2. **Previous mirrors Next (Focus).** Done and Resume stay on the bottom row. Back stays at the top. No migration.
-3. **Same-weight carry.** No migration. Editing 145 on the first of two matching sets fills the second. Ramps stay. It can ship before a stack step exists.
-4. **Reorder (d).** No migration. It is the gap he feels on the lift screen. The day-plan editor stays for editing the library.
-5. **Per-lift rest and ±15 (the rest half of e).** Small, and it matches “the last exercise decides the break.” Circuits can follow in the next slice.
-6. **Rest alert.** Pocket buzz, 10-second tap, ducked chime, Live Activity. Uses the timer from today, so it can sit beside per-lift rest and does not wait on circuits. The per-lift length, once it exists, is the duration this alert counts.
-7. **Groups and auto-advance (the rest of e).**
-8. **Body-weight lookup and added-load mode (b).** No new measurement model. Date-based assist math is the part that stops old assisted e1RMs from moving when he updates the scale.
-9. **Pounds / kilograms and plate math (a).**
-10. **Stack steps and learning (c).** 10, 15, 20 lb, and custom. Suggestions snap, and three matching corrections write the step. Needs the unit work so a kilogram stack and a pound stack stay distinct, and needs the shared Epley helper. Sits with the stack profile, after carry.
-11. **Rest learning.** After real timer samples exist. Suggest only.
+Ranked by how often it helps Lee, then by how likely it is to break a workout he already trusts. Effort is scope, not a calendar: **S** is one control or one function, **M** crosses a few screens, **L** adds a model, a file-format bump, or a new extension. One `RockLogSchemaV2` covers every row that needs a schema change. Those rows can ship later. Their fields belong in that single bump so a second migration is not required.
 
-The month-boundary fix is already on `main` (`a877aad`, pull request #10) and is **not on TestFlight yet**. It does not block this list.
+The month-boundary fix is already on `main` (`a877aad`, pull request #10) and is **not on TestFlight yet**. It is not a row below. Editing a finished workout stays as it is and is not a row. Automatic gym detection and an Apple Watch haptic are later, and they are not rows.
 
-One V2 migration can land with the per-lift rest step, containing the optional fields for rest, groups, bodyweight load, and stacks, so later steps do not each mint a schema version. The two Focus items, same-weight carry, and the rest alert do not add SwiftData fields. The rest alert does add a widget extension for the Live Activity. Learning’s extra fields ride in the one V2 with the stack profile. Editing a finished workout is unchanged and is not a build step.
+| | Build | Why this high or low | Risk | Effort | Depends on | Schema |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | **Warm-up tag stops copying onto the next set.** The set is still logged and shown. It stays out of e1RM, progression, suggestions, and same-weight carry. | He logs warm-ups every workout. A stuck tag drops the work set out of his e1RM. | Low. The tag already exists. | S | None | No |
+| 2 | **Logging a set must not crash.** Replace the `fatalError` when there is no live session with a return that logs nothing. | A crash loses the workout he is in. | Low | S | None | No |
+| 3 | **Rest on/off is a separate control from the countdown.** Tapping the time no longer turns rest off. | He uses the timer every set, and the time is the same button as the switch. | Low | S | None | No |
+| 4 | **A line under the steppers shows last time and the suggestion.** The line does not change what gets logged. | He asked to see both without the steppers jumping. | Low | S | None. Until stacks exist, the suggestion is today’s 5 lb snap. | No |
+| 5 | **Previous mirrors Next. Done stays on the bottom row.** | He asked for this, and he moves between lifts all session. | Low | S | None | No |
+| 6 | **The ⋯ menu reorders today’s list.** Edit day plan becomes a separate item. | The item he has now changes the library day, which is the wrong list. | Medium. The session order must not write the day plan. | S | None. Uses `sortOrder` and `followsSessionRoster`, already on V1. | No |
+| 7 | **Same-weight carry, with the changed rows marked and one Undo.** Ramps keep their plan. | This is the 145-then-forget-the-second-set miss. | Medium. A ramp must not flatten. | M | None. The leftover ramp snaps only after a stack step exists. Until then it stays on the plan. | No |
+| 8 | **Starting weight setting.** Last time or Suggested. A prescribed plan weight always wins. | The line in row 4 shows the numbers. This chooses which one fills an unplanned set. | Low | S | Row 4 can ship first. The setting is UserDefaults. | No |
+| 9 | **Drag to reorder on the list and on the lift, plus the two save-back buttons.** | Row 6 fixes the menu. Drag is how he wants to rearrange while standing on a lift. | Medium. Same risk as row 6, on a second gesture. | M | Row 6 | No |
+| 10 | **Per-lift rest and ±15.** | Rest follows the lift he just did. The global timer is what he has today. | Low | M | Row 3 is nicer first and is not required. | Yes. V2, rest seconds on the exercise. |
+| 11 | **Rest alert.** Pocket buzz, optional tap at 10 seconds, chime that ducks, no chime during a call, Live Activity instead of a per-second banner. | The phone is in his pocket, on an audiobook, or on a call. | Medium. Audio session and Live Activities. | L | The timer that already exists. Uses a per-lift duration after row 10. A widget extension, not a SwiftData model. | No |
+| 12 | **Circuits of two to four, with auto-advance.** Warm-ups stay on the current lift. | He does this sometimes, not every session. | Medium. Next and Previous change inside a group. | L | Rows 1 and 10. Warm-ups must not advance the group, and rest should already be per lift. | Yes. V2, group id on the session’s exercise record. |
+| 13 | **Body weight over time, and added load.** Assist keeps using the weigh-in from that date. | Stops old assisted e1RMs from moving when he updates the scale. | Medium. The date lookup is the part that must be right. | M | None | Yes. V2, the load mode and the body weight stored with the set. |
+| 14 | **Kilograms, plate math, and the display snap.** Pounds stay the stored unit. | He asked. It is not what he hits mid-set the way carry and warm-ups are. | Medium. A round trip must not walk the weight. | M | None. Stacks should come after, so a kilogram stack is not stored as a pound step. | No. The choice is key-value. Files may add a unit label. |
+| 15 | **Gyms, stack profiles, and learning the step and offset.** Home is the fallback. The coach file carries the gym id. | This is how a 145 suggestion becomes a pin the machine has. Carry covers the miss until then. | High. Coach schema 2, and progression must compare a gym with itself. | L | Row 14, and row 7 so the ramp can snap. | Yes. V2: Gym, stack profile, session gym id, offered weight. Coach file schema 2. |
+| 16 | **Suggest warm-ups.** About half and about three quarters of the first working weight, snapped to the stack, tagged warm-up, not logged until he taps. | Optional. He already logs warm-ups by hand. | Low | M | Row 1. Snapping uses row 15 when a profile exists, and 5 lb until then. | No |
+| 17 | **Rest learning.** Suggest a new default after real samples. It never edits the default alone. | Optional, and only useful after per-lift rest has something to learn. | Low | M | Row 10 | Yes. V2, optional sample fields on the set. |
+
+Rows 10, 12, 13, 15, and 17 share the one V2 migration. Shipping their screens later is fine. Adding a field after that bump is another version, so the fields go in together. Rows 1 through 9 and row 11 do not add SwiftData fields. Row 11 adds a widget extension.
 
 ## Tests
 
@@ -666,6 +831,12 @@ One V2 migration can land with the per-lift rest step, containing the optional f
 
 **Same-weight carry and the stack step.** Cases are under [Same-weight carry and the stack step](#same-weight-carry-and-the-stack-step).
 
+**Gyms.** Cases are under [Gyms](#gyms). Same V2 bump. Coach files go to schema 2 and still accept schema 1.
+
+**Warm-ups.** Cases are under [Warm-ups](#warm-ups). No schema change. The tag already exists.
+
+**Logging.** A set with no live session does not crash and does not insert anything. A set with a live session still saves.
+
 **Rest alert.** Cases are under [Rest alert](#rest-alert). No SwiftData change.
 
 ## Open questions for Lee
@@ -678,7 +849,7 @@ One V2 migration can land with the per-lift rest step, containing the optional f
 6. Relative strength on the lift screen only, for the first build. A “divide the strength score by body weight” switch can wait. Agree?
 7. Stack policy default is nearest, and an exact halfway tie rounds down. Prefer always down (never more than the target)?
 8. One magnet at a time, or several?
-9. One stack profile per exercise. A “same machine as this other lift” copy can wait. Agree?
+9. A stack profile is per gym and lift. A travel gym with none uses Home, then 5 lb. Agree?
 10. Reorder saves the session always. Extra buttons save the day plan, and the remaining planned days. You do not want a reorder to change next week unless you tap that. Confirm.
 11. From the lift screen, is long-press on the lift number the right drag handle?
 12. Replace −30 / +30 with −15 / +15. Confirm.
@@ -687,43 +858,5 @@ One V2 migration can land with the per-lift rest step, containing the optional f
 15. Rest learning only suggests, and only after you turn it on. It never edits the default alone. Confirm.
 16. A group is not written into the program file until you tap save. The phone can do groups before the program format knows about them. Agree?
 17. The last-5-seconds tick tones go away, so an audiobook dips once at zero instead of five times. The 10-second cue is a haptic only, and its switch starts off. Confirm.
-18. A learned stack step is the largest of 10, 15, and 20 lb that fits the corrected weights, and it is written after three sessions agree. A custom step is the greatest common divisor when it is above 5 lb. Change either rule?
-
-## Crash when a set is logged with no live session
-
-`WorkoutViewModel.findOrCreateRecord` used to call `fatalError` when Focus asked it to log a set and the session was already gone. That happens after a restore replaces the store, after the session is suspended, or when the session row has been deleted while the lift screen is still up.
-
-The finder now returns nil. `addSet`, marking a lift done, and adding a lift to the session return without writing. The screen does not trap. `RockLogTests` covers a log with no live session.
-
-## Warm-up tag
-
-Warm-up is a tag on the set being logged. It is left out of estimated one-rep max, progression, suggestions, and same-weight carry.
-
-Logging a warm-up does not copy the tag onto the next set. The next set opens warm only when that set's own plan says warm. `setLogged` clears the tag. The old bug was `FocusView.apply(prefill:)` copying `isWarmup` from the set just logged, and a no-op clear when the tag was already on.
-
-An optional ramp, off until the lift asks for it, offers 50% × 8, 70% × 5, and 85% × 3 of the first working weight, snapped down to the stack step or to 5 lb. Nothing in that ramp is logged until he taps it. Those sets are warm-ups, so they stay out of the numbers above.
-
-## Where the code moved
-
-The new behavior lives beside the screens, not inside them.
-
-| Path | What it holds |
-| --- | --- |
-| `RockLog/Services/Optimization/` | Units, load, stacks, carry, focus order, circuits, rest policy. Pure functions the tests call without a phone. |
-| `RockLog/Models/Gym.swift`, `MachineStackProfile.swift` | Gyms and the (gym, lift) stack. |
-| `Shared/Algorithm/BackupMigration.swift` | Backup payload v1 → v2, and the unknown-key count. |
-| `Shared/CoachFormat/InterchangeCodec.swift` | The one JSON envelope. |
-| `Shared/RestActivity/RestActivityAttributes.swift` | Live Activity fields compiled into the app. |
-| `RockLogWidget/` | The extension. Its own bundle id, profile, and App Group are in [rest-widget.md](rest-widget.md). |
-| `docs/format/` | JSON Schema, field table, and synthetic samples. |
-| `docs/specs/schema-v2-rollback.md` | How to leave V2, and the rule against promoting the production CloudKit schema. |
-
-`RockLogSchemaV2` is the only new schema stage. It is not V3.
-
-## Interchange file
-
-Import, export, backup, `.rocklogprogram`, split, and coach files share one envelope: `format` `rocklog.interchange`, `formatVersion`, `weightUnit`, `kind`, and `payload`. The field table, the version rules, and the synthetic samples are in [docs/format/README.md](../format/README.md).
-
-The backup payload inside that envelope is version 2. Version 1 still opens. `BackupMigration.promoteToCurrent` is the pure step, and it only changes the version number. Version 0 and any version above 2 are refused. Unknown keys and unknown enum values are counted on the restore prompt. Weights stay full-precision pounds. Stack pins keep `pinUnitRaw`. Ids are not minted again, and a duplicate id in one list is refused.
-
-Coach files moved to `schemaVersion` 2 in the same change as the RockCoach reader. The reader accepts 1 and 2 and refuses 0 and 3. A version 1 coach file still imports.
+18. A learned profile is the largest of 10, 15, and 20 lb that fits the last three sessions’ corrected weights, plus their shared offset. One odd session does not replace it. A custom step is the greatest common divisor when it is above 5 lb. Change either rule?
+19. The coach learns which gym he was in from the session file, not from a live link. Matching a gym by location can wait, and it will ask before switching. Agree?
