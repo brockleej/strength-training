@@ -76,6 +76,10 @@ struct BackupSummary: Equatable {
     var assignedExerciseCount: Int
     var exerciseCount: Int
     var sessionCount: Int
+    /// Exercise logs whose `trainingMode` this build does not understand.
+    var droppedExerciseRecordCount: Int = 0
+    /// Distinct unknown mode strings, file order.
+    var unknownTrainingModes: [String] = []
 
     var hasSplitWithExercises: Bool {
         !splitDayNames.isEmpty && assignedExerciseCount > 0

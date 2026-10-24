@@ -306,6 +306,105 @@ final class BackupRestoreRegressionTests: XCTestCase {
         XCTAssertTrue(restored.isEmpty)
     }
 
+    // MARK: - B4
+
+    func test_b4_unknownTrainingMode_isCountedAndNotInserted() throws {
+        let exerciseID = UUID()
+        let keptRecordID = UUID()
+        let droppedRecordID = UUID()
+        let keptSetID = UUID()
+        let droppedSetID = UUID()
+        let when = Date(timeIntervalSince1970: 1_700_000_000)
+        let backup = AppBackup(
+            version: 1,
+            exportedAt: when,
+            exercises: [
+                ExerciseBackup(
+                    id: exerciseID,
+                    name: "Bench",
+                    dayType: "Push",
+                    muscleGroup: "Chest",
+                    sortOrder: 0,
+                    isCustom: true,
+                    notes: ""
+                ),
+            ],
+            sessions: [
+                WorkoutSessionBackup(
+                    id: UUID(),
+                    date: when,
+                    dayType: "Push",
+                    notes: "",
+                    isCompleted: true,
+                    exerciseRecords: [
+                        ExerciseRecordBackup(
+                            id: keptRecordID,
+                            exerciseID: exerciseID,
+                            trainingMode: "Strength",
+                            sortOrder: 0,
+                            isCompleted: true,
+                            notes: "",
+                            sets: [
+                                SetRecordBackup(
+                                    id: keptSetID,
+                                    setNumber: 1,
+                                    weightLbs: 185,
+                                    reps: 5,
+                                    isWarmup: false,
+                                    completedAt: when
+                                ),
+                            ]
+                        ),
+                        ExerciseRecordBackup(
+                            id: droppedRecordID,
+                            exerciseID: exerciseID,
+                            trainingMode: "bogus",
+                            sortOrder: 1,
+                            isCompleted: true,
+                            notes: "",
+                            sets: [
+                                SetRecordBackup(
+                                    id: droppedSetID,
+                                    setNumber: 1,
+                                    weightLbs: 95,
+                                    reps: 12,
+                                    isWarmup: false,
+                                    completedAt: when
+                                ),
+                            ]
+                        ),
+                    ]
+                ),
+            ]
+        )
+        let data = try encode(backup)
+        let decoded = try BackupService.decode(data)
+        let summary = BackupService.summarize(backup: decoded)
+        XCTAssertEqual(summary.droppedExerciseRecordCount, 1)
+        XCTAssertEqual(summary.unknownTrainingModes, ["bogus"])
+        let prompt = BackupService.restorePrompt(
+            current: BackupSummary(splitDayNames: [], assignedExerciseCount: 0, exerciseCount: 0, sessionCount: 0),
+            incoming: summary
+        )
+        XCTAssertTrue(prompt.message.contains("bogus"))
+        XCTAssertTrue(prompt.message.contains("will be skipped"))
+
+        let container = try inMemoryContainer()
+        let context = container.mainContext
+        let report = try BackupService.restore(from: data, context: context)
+        XCTAssertEqual(report.droppedExerciseRecords, 1)
+        XCTAssertEqual(report.unknownTrainingModes, ["bogus"])
+        XCTAssertTrue(report.userFacingSummary.contains("Skipped 1 exercise log"))
+        XCTAssertTrue(report.userFacingSummary.contains("bogus"))
+
+        let records = try context.fetch(FetchDescriptor<ExerciseRecord>())
+        XCTAssertEqual(records.map(\.id), [keptRecordID])
+        XCTAssertEqual(records.map(\.trainingMode), [.highWeightLowReps])
+        let sets = try context.fetch(FetchDescriptor<SetRecord>())
+        XCTAssertEqual(sets.map(\.id), [keptSetID])
+        XCTAssertFalse(sets.contains { $0.id == droppedSetID })
+    }
+
     // MARK: - Helpers
 
     private func inMemoryContainer() throws -> ModelContainer {

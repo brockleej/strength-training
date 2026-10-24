@@ -1083,8 +1083,8 @@ struct SettingsView: View {
     private func performRestore(data: Data) {
         Task { @MainActor in
             do {
-                try await BackupService.restoreAfterTearingDownUI(from: data, context: modelContext)
-                successMessage = "Backup restored successfully."
+                let report = try await BackupService.restoreAfterTearingDownUI(from: data, context: modelContext)
+                successMessage = report.userFacingSummary
                 showSuccess = true
             } catch {
                 errorMessage = error.localizedDescription

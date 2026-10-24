@@ -28,6 +28,21 @@ enum BackupError: LocalizedError {
     }
 }
 
+/// What restore kept and what it refused to insert.
+struct BackupRestoreReport: Equatable {
+    var droppedExerciseRecords: Int
+    var unknownTrainingModes: [String]
+
+    var userFacingSummary: String {
+        guard droppedExerciseRecords > 0 else {
+            return "Backup restored successfully."
+        }
+        let noun = droppedExerciseRecords == 1 ? "exercise log" : "exercise logs"
+        let modes = unknownTrainingModes.joined(separator: ", ")
+        return "Backup restored. Skipped \(droppedExerciseRecords) \(noun) with an unknown training mode (\(modes))."
+    }
+}
+
 struct BackupService {
     static let currentVersion = 1
 
@@ -191,12 +206,32 @@ struct BackupService {
                 .filter { !$0.isEmpty }
             return !primary.isEmpty || !extras.isEmpty
         }.count
+        let dropped = Self.unknownTrainingModes(in: backup)
         return BackupSummary(
             splitDayNames: splitNames,
             assignedExerciseCount: assigned,
             exerciseCount: backup.exercises.count,
-            sessionCount: backup.sessions.count
+            sessionCount: backup.sessions.count,
+            droppedExerciseRecordCount: dropped.count,
+            unknownTrainingModes: dropped.modes
         )
+    }
+
+    /// Exercise logs this build will skip, in file order. The mode list is distinct.
+    static func unknownTrainingModes(in backup: AppBackup) -> (count: Int, modes: [String]) {
+        var count = 0
+        var modes: [String] = []
+        var seen = Set<String>()
+        for session in backup.sessions {
+            for record in session.exerciseRecords {
+                guard TrainingMode(rawValue: record.trainingMode) == nil else { continue }
+                count += 1
+                if seen.insert(record.trainingMode).inserted {
+                    modes.append(record.trainingMode)
+                }
+            }
+        }
+        return (count, modes)
     }
 
     static func summarizeStore(context: ModelContext) -> BackupSummary {
@@ -221,11 +256,11 @@ struct BackupService {
         if current.hasSplitWithExercises {
             return RestorePrompt(
                 title: "Replace current split?",
-                message: """
+                message: dropWarning(appendedTo: """
                 There is currently a split with exercises in this app (\(current.splitPhrase)). \
                 Restore will replace that split, the lifts on those days, and your workout history \
                 with this backup (\(incoming.splitPhrase)). This cannot be undone.
-                """,
+                """, incoming: incoming),
                 confirmTitle: "Replace split and exercises",
                 cancelTitle: "Don't restore"
             )
@@ -233,32 +268,44 @@ struct BackupService {
         if current.sessionCount > 0 || current.assignedExerciseCount > 0 {
             return RestorePrompt(
                 title: "Restore backup?",
-                message: """
+                message: dropWarning(appendedTo: """
                 This will replace the workout data on this phone with this backup \
                 (\(incoming.splitPhrase)). This cannot be undone.
-                """,
+                """, incoming: incoming),
                 confirmTitle: "Replace all data",
                 cancelTitle: "Don't restore"
             )
         }
         return RestorePrompt(
             title: "Restore backup?",
-            message: "Load this backup onto this phone (\(incoming.splitPhrase))? It becomes your split, exercises, and workout history.",
+            message: dropWarning(
+                appendedTo: "Load this backup onto this phone (\(incoming.splitPhrase))? It becomes your split, exercises, and workout history.",
+                incoming: incoming
+            ),
             confirmTitle: "Restore",
             cancelTitle: "Don't restore"
         )
+    }
+
+    private static func dropWarning(appendedTo message: String, incoming: BackupSummary) -> String {
+        guard incoming.droppedExerciseRecordCount > 0 else { return message }
+        let count = incoming.droppedExerciseRecordCount
+        let noun = count == 1 ? "exercise log" : "exercise logs"
+        let modes = incoming.unknownTrainingModes.joined(separator: ", ")
+        return message + " \(count) \(noun) use an unknown training mode (\(modes)) and will be skipped."
     }
 
     // MARK: - Restore
 
     /// Tear down live workout UI, then replace the store.
     @MainActor
-    static func restoreAfterTearingDownUI(from data: Data, context: ModelContext) async throws {
+    @discardableResult
+    static func restoreAfterTearingDownUI(from data: Data, context: ModelContext) async throws -> BackupRestoreReport {
         NotificationCenter.default.post(name: .rockLogStoreWillReplace, object: nil)
         // Two turns so SwiftUI can unmount TabView / FocusView before deletes.
         await Task.yield()
         try await Task.sleep(for: .milliseconds(200))
-        try restore(from: data, context: context)
+        return try restore(from: data, context: context)
     }
 
     /// Replace the store with `data`.
@@ -272,18 +319,20 @@ struct BackupService {
     /// - Parameter persisting: Replaces `context.save()` for tests that need
     ///   the write to fail. Production passes nil.
     @MainActor
+    @discardableResult
     static func restore(
         from data: Data,
         context: ModelContext,
         persisting: ((ModelContext) throws -> Void)? = nil
-    ) throws {
+    ) throws -> BackupRestoreReport {
         let backup = try decode(data)
         let previousAutosave = context.autosaveEnabled
         context.autosaveEnabled = false
         defer { context.autosaveEnabled = previousAutosave }
 
+        let report: BackupRestoreReport
         do {
-            try writeBackup(backup, into: context)
+            report = try writeBackup(backup, into: context)
             if let persisting {
                 try persisting(context)
             } else {
@@ -299,6 +348,7 @@ struct BackupService {
         // and the CloudKit store tear-down, then fetchCount traps (SIGTRAP).
         DayTypeRegistry.shared.reload(context: context)
         NotificationCenter.default.post(name: .rockLogStoreReplaced, object: nil)
+        return report
     }
 
     /// Mutate `context` to match `backup` without saving.
@@ -306,7 +356,7 @@ struct BackupService {
     /// nullification. `context.delete(model:)` would skip that and leave
     /// inverses pointing at deleted rows.
     @MainActor
-    private static func writeBackup(_ backup: AppBackup, into context: ModelContext) throws {
+    private static func writeBackup(_ backup: AppBackup, into context: ModelContext) throws -> BackupRestoreReport {
         for set in try context.fetch(FetchDescriptor<SetRecord>()) {
             context.delete(set)
         }
@@ -343,6 +393,9 @@ struct BackupService {
         }
 
         var sessionMap: [UUID: WorkoutSession] = [:]
+        var droppedExerciseRecords = 0
+        var unknownModes: [String] = []
+        var seenModes = Set<String>()
         for sb in backup.sessions {
             let dayType = DayType(rawValue: sb.dayType)
             let session = WorkoutSession(
@@ -363,7 +416,13 @@ struct BackupService {
             sessionMap[session.id] = session
 
             for rb in sb.exerciseRecords {
-                guard let trainingMode = TrainingMode(rawValue: rb.trainingMode) else { continue }
+                guard let trainingMode = TrainingMode(rawValue: rb.trainingMode) else {
+                    droppedExerciseRecords += 1
+                    if seenModes.insert(rb.trainingMode).inserted {
+                        unknownModes.append(rb.trainingMode)
+                    }
+                    continue
+                }
                 let record = ExerciseRecord(trainingMode: trainingMode, sortOrder: rb.sortOrder)
                 record.id = rb.id
                 record.isCompleted = rb.isCompleted
@@ -442,6 +501,10 @@ struct BackupService {
         SeedData.migrateExerciseNames(context: context, saves: false)
         restoreSplitDays(from: backup, context: context, saves: false)
         SeedData.restoreDayPlans(from: backup, context: context, saves: false)
+        return BackupRestoreReport(
+            droppedExerciseRecords: droppedExerciseRecords,
+            unknownTrainingModes: unknownModes
+        )
     }
 
     /// UserDefaults / iCloud KVS mirrors. Called only after the store save commits.
