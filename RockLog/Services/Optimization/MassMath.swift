@@ -141,22 +141,22 @@ nonisolated enum MassMath {
     /// snapped onto that unit's readout so the next view matches.
     static func storedPounds(fromEntered value: Double, unit: MassUnit) -> Double {
         let shown = snap(value, quantum: unit.readoutQuantum)
-        return pounds(fromDisplay: shown, unit: unit)
+        return Self.pounds(fromDisplay: shown, unit: unit)
     }
 
     /// Snap an ideal pound target onto the active unit's plate grid, then
     /// convert back to stored pounds. A second snap in the same unit does not walk.
     static func snapProgression(pounds: Double, unit: MassUnit) -> Double {
-        let display = exactDisplay(fromPounds: pounds, unit: unit)
-        let snapped = snap(display, quantum: unit.progressionQuantum)
-        return pounds(fromDisplay: snapped, unit: unit)
+        let shown = exactDisplay(fromPounds: pounds, unit: unit)
+        let snapped = snap(shown, quantum: unit.progressionQuantum)
+        return Self.pounds(fromDisplay: snapped, unit: unit)
     }
 
     /// Switching units and back moves at most one readout step. A second
     /// toggle in the same direction does not walk further.
     static func switched(_ pounds: Double, from: MassUnit, to: MassUnit) -> Double {
         let shown = display(fromPounds: pounds, unit: to)
-        return pounds(fromDisplay: shown, unit: to)
+        return Self.pounds(fromDisplay: shown, unit: to)
     }
 
     static func format(_ pounds: Double, unit: MassUnit) -> String {

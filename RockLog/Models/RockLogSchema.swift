@@ -66,8 +66,8 @@ nonisolated enum RockLogMigrationPlan: SchemaMigrationPlan {
     nonisolated static var stages: [MigrationStage] {
         [
             .lightweight(
-                fromVersion: RockLogSchemaV1.versionIdentifier,
-                toVersion: RockLogSchemaV2.versionIdentifier
+                fromVersion: RockLogSchemaV1.self,
+                toVersion: RockLogSchemaV2.self
             ),
         ]
     }
