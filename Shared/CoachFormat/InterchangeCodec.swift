@@ -172,7 +172,7 @@ nonisolated enum InterchangeCodec {
             issues.append(InterchangeIssue(path: "payload", message: "payload must be an object."))
             return issues
         }
-        walk(payload, path: "payload", issues: &issues)
+        walk(.object(payload), path: "payload", issues: &issues)
         return issues
     }
 
@@ -270,7 +270,7 @@ nonisolated enum InterchangeCodec {
     }
 }
 
-extension JSONValue {
+nonisolated extension JSONValue {
     static func from(_ any: Any) -> JSONValue {
         switch any {
         case is NSNull:
