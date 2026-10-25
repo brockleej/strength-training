@@ -79,7 +79,7 @@ extension ProgressionService {
                             weighIns: weighIns,
                             settingsPounds: BodyWeightPreferences.pounds
                         )
-                    SetSnapshot(
+                    return SetSnapshot(
                         weightLbs: swiftDataSet.effectiveLoadLbs(bodyWeight: body),
                         reps: swiftDataSet.reps,
                         isWarmup: swiftDataSet.isWarmup,
