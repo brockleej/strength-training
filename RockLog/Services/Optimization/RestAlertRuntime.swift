@@ -48,6 +48,7 @@ enum RestAlertRuntime {
 
 enum RestActivityController {
     static var areAvailable: Bool {
+        guard FeatureFlags.liveActivity else { return false }
         #if canImport(ActivityKit)
         if #available(iOS 16.2, *) { return ActivityAuthorizationInfo().areActivitiesEnabled }
         #endif

@@ -19,7 +19,10 @@ enum RestAlertPreferences {
     }
 
     static var learningEnabled: Bool {
-        get { UserDefaults.standard.bool(forKey: learningKey) }
+        get {
+            guard FeatureFlags.restLearningPrompts else { return false }
+            return UserDefaults.standard.bool(forKey: learningKey)
+        }
         set { UserDefaults.standard.set(newValue, forKey: learningKey) }
     }
 }

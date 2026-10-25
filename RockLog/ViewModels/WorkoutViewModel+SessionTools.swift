@@ -366,7 +366,8 @@ extension WorkoutViewModel {
     func applyTypedStack(exercise: Exercise, step: Double?, pins: [Double]) {
         let gymID = GymLibrary.activeID(in: modelContext)
         let profile = StackProfileStore.findOrCreate(gymID: gymID, exerciseID: exercise.id, in: modelContext)
-        profile.applyTyped(step: step, pins: pins, unit: MassUnitPreferences.unit)
+        let storedPins = FeatureFlags.pinListEditor ? pins : []
+        profile.applyTyped(step: step, pins: storedPins, unit: MassUnitPreferences.unit)
         try? modelContext.save()
         setMutationEpoch &+= 1
     }

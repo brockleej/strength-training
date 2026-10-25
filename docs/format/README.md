@@ -23,7 +23,7 @@ One JSON envelope for backups, coach files, program files, and split files.
 
 Older files that are not envelopes (a backup with `version` and `exercises`, a `rocklog.coach.session`, a `rocklog.program`, or a `rocklog.split`) are lifted into this envelope. The original object becomes `payload`.
 
-The JSON Schema is `rocklog.interchange.schema.json`. Templates and synthetic samples, rebuilt from the shapes in git history, are in `samples/`. They are not anyone's training log. `samples/backup-v2.json` is a version 2 backup with a training block, a body-weight row, and a kilogram pin list.
+The JSON Schema is `rocklog.interchange.schema.json`. Templates and synthetic samples, rebuilt from the shapes in git history, are in `samples/`. They are not anyone's training log. `samples/backup-v1.json` is the version 1 `AppBackup` shape: exercises, sessions, split days, day plans, a training block, and a body-weight row, with none of the version 2 gym, stack, or set fields. `samples/backup-v2.json` is a version 2 backup with a training block, a body-weight row, and a kilogram pin list.
 
 ## Backup payload fields
 

@@ -57,7 +57,6 @@
 		HIST010000000000000002 /* HistoricalFormatRoundTripTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = HIST010000000000000001 /* HistoricalFormatRoundTripTests.swift */; };
 		B4C0A0010000000000000002 /* BackupMigration.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4C0A0010000000000000001 /* BackupMigration.swift */; };
 		B4C0A0020000000000000002 /* BackupMigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4C0A0020000000000000001 /* BackupMigrationTests.swift */; };
-		RLWEMB0000000000000002 /* RockLogWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = RLWFILE0000000000000001 /* RockLogWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		C0ACF001D0C0000000000004 /* CoachSessionDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0ACF001D0C0000000000001 /* CoachSessionDocument.swift */; };
 		C0ACF001D0C0000000000007 /* CoachProgression.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0ACF001D0C0000000000006 /* CoachProgression.swift */; };
 		C0ACF001D0C0000000000009 /* CoachProgression.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0ACF001D0C0000000000006 /* CoachProgression.swift */; };
@@ -122,13 +121,6 @@
 			remoteGlobalIDString = A0C0AC02C0AC0200000003;
 			remoteInfo = RockCoachShare;
 		};
-		RLWPRX0000000000000001 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = E18CFB572F4A312400991D60 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = RLWTGT0000000000000001;
-			remoteInfo = RockLogWidget;
-		};
 		A11B00013C0B00000000000B /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = E18CFB572F4A312400991D60 /* Project object */;
@@ -146,17 +138,6 @@
 			dstSubfolderSpec = 13;
 			files = (
 				A0C0AC02C0AC020000000C /* RockCoachShare.appex in Embed Foundation Extensions */,
-			);
-			name = "Embed Foundation Extensions";
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		RLWEMB0000000000000001 /* Embed Foundation Extensions */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = "";
-			dstSubfolderSpec = 13;
-			files = (
-				RLWEMB0000000000000002 /* RockLogWidget.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -760,12 +741,10 @@
 				E18CFB5B2F4A312400991D60 /* Sources */,
 				E18CFB5C2F4A312400991D60 /* Frameworks */,
 				E18CFB5D2F4A312400991D60 /* Resources */,
-				RLWEMB0000000000000001 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
-				RLWDEP0000000000000001 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				E18CFB612F4A312400991D60 /* RockLog */,
@@ -1021,12 +1000,6 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		RLWDEP0000000000000001 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			name = RockLogWidget;
-			target = RLWTGT0000000000000001 /* RockLogWidget */;
-			targetProxy = RLWPRX0000000000000001 /* PBXContainerItemProxy */;
-		};
 		A0C0AC02C0AC020000000E /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			name = RockCoachShare;

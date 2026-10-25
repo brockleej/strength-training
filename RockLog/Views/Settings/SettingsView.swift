@@ -491,10 +491,12 @@ struct SettingsView: View {
                     .tint(Color.uplift.accent)
                     .accessibilityIdentifier(AccessibilityID.settingsTapAtTen)
 
-                    Toggle(isOn: $restLearningEnabled) {
-                        Label("Learn rest from what you take", systemImage: "brain")
+                    if FeatureFlags.restLearningPrompts {
+                        Toggle(isOn: $restLearningEnabled) {
+                            Label("Learn rest from what you take", systemImage: "brain")
+                        }
+                        .tint(Color.uplift.accent)
                     }
-                    .tint(Color.uplift.accent)
 
                         VStack(alignment: .leading, spacing: 10) {
                             HStack {

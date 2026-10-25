@@ -109,9 +109,10 @@ struct SessionComparisonCard: View {
 
     private var baselineCaption: String {
         let date = comparison.previous.date.formatted(.dateTime.month(.abbreviated).day())
-        let vol = TodayStats.formatVolume(SessionMath.volume(of: comparison.previous))
         let sets = SessionMath.setCount(of: comparison.previous)
-        return "Last: \(date) · \(vol) lb · \(sets) sets"
+        let unit = MassUnitPreferences.unit
+        let shown = TodayStats.formatVolume(MassMath.exactDisplay(fromPounds: SessionMath.volume(of: comparison.previous), unit: unit))
+        return "Last: \(date) · \(shown) \(unit.rawValue) · \(sets) sets"
     }
 
     private func tone(for delta: Double) -> Color {

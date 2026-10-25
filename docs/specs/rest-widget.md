@@ -4,7 +4,7 @@ The countdown on the Lock Screen and in the Dynamic Island is a Live Activity. T
 
 ## What the extension needs
 
-The extension target is `RockLogWidget`.
+The extension target is `RockLogWidget`. This build does not embed it. `FeatureFlags.liveActivity` is off, `NSSupportsLiveActivities` is false on the app, and the RockLog target has no dependency on the extension, so its signature is not part of the upload.
 
 | | |
 | --- | --- |
