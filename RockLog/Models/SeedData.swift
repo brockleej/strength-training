@@ -352,7 +352,24 @@ struct SeedData {
         persistSnapshot: Bool
     ) -> [UUID: [UUID]] {
         let fetched = (try? context.fetch(FetchDescriptor<Exercise>())) ?? []
-        let ordered = fetched.sorted(by: duplicateKeepOrder)
+        // Copy the sort fields first. `sorted(by:)` calls its predicate in a
+        // nonisolated context; reading the models there was the main-actor
+        // warning at this line, and a mutating read during the sort traps
+        // as Crash: RockLog. The predicate below closes over these lets only.
+        let keys: [(index: Int, sortOrder: Int, name: String, persistentID: String)] =
+            fetched.enumerated().map { offset, exercise in
+                let sortOrder = exercise.sortOrder
+                let name = exercise.name
+                let persistentID = String(describing: exercise.persistentModelID)
+                return (offset, sortOrder, name, persistentID)
+            }
+        let ranked = keys.sorted { lhs, rhs in
+            if lhs.sortOrder != rhs.sortOrder { return lhs.sortOrder < rhs.sortOrder }
+            let nameOrder = lhs.name.localizedCaseInsensitiveCompare(rhs.name)
+            if nameOrder != .orderedSame { return nameOrder == .orderedAscending }
+            return lhs.persistentID < rhs.persistentID
+        }
+        let ordered = ranked.map { fetched[$0.index] }
         var seen = Set<UUID>()
         var keepers: [UUID: Exercise] = [:]
         var repairs: [UUID: [UUID]] = [:]
@@ -395,15 +412,6 @@ struct SeedData {
             "Reassigned \(pending.count, privacy: .public) duplicate exercise id(s); sample \(sample, privacy: .public)"
         )
         return repairs
-    }
-
-    /// `Exercise` has no creation date. Lowest `sortOrder` wins, then name,
-    /// then the persistent identifier so two identical names stay ordered.
-    private static func duplicateKeepOrder(_ lhs: Exercise, _ rhs: Exercise) -> Bool {
-        if lhs.sortOrder != rhs.sortOrder { return lhs.sortOrder < rhs.sortOrder }
-        let name = lhs.name.localizedCaseInsensitiveCompare(rhs.name)
-        if name != .orderedSame { return name == .orderedAscending }
-        return String(describing: lhs.persistentModelID) < String(describing: rhs.persistentModelID)
     }
 
     private static func copyExerciseReferences(from old: UUID, to fresh: UUID, context: ModelContext) {

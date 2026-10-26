@@ -203,13 +203,14 @@ private struct LongPressReorderModifier: ViewModifier {
     }
 
     private var reorderGesture: some Gesture {
-        // Local space, and do not arm on the long-press alone. Arming there
-        // set draggingID, which disabled swipe-to-delete and locked scrolling
-        // under a horizontal swipe. A global drag plus a GeometryReader in
-        // the row background also ate the tap that opens Focus.
+        // Do not arm on the long-press alone. That set draggingID, disabled
+        // swipe-to-delete, and locked scrolling under a horizontal swipe.
+        // Local translation stays ~0 while the ScrollView follows the finger,
+        // so the "2." label never becomes "1.". Global space is the finger
+        // delta. A GeometryReader in the row still must not come back: it
+        // ate the tap that opens Focus.
         LongPressGesture(minimumDuration: 0.4)
-            // 10pt keeps a tap, and a horizontal swipe, from starting this drag.
-            .sequenced(before: DragGesture(minimumDistance: 10, coordinateSpace: .local))
+            .sequenced(before: DragGesture(minimumDistance: 10, coordinateSpace: .global))
             .updating($isGestureActive) { value, state, _ in
                 switch value {
                 case .first(true), .second(true, _):
@@ -222,7 +223,11 @@ private struct LongPressReorderModifier: ViewModifier {
                 guard case .second(true, let drag?) = value else { return }
                 let horizontal = abs(drag.translation.width)
                 let vertical = abs(drag.translation.height)
-                guard draggingID == id || vertical >= horizontal else { return }
+                // Zero translation still satisfies vertical >= horizontal and
+                // would lock the scroll, which cancels the drag before a row
+                // moves. A horizontal swipe stays under this bar.
+                let started = vertical >= 10 && vertical > horizontal
+                guard draggingID == id || started else { return }
                 if draggingID != id {
                     startIndex = orderedIDs.firstIndex(of: id) ?? 0
                     lastTarget = startIndex

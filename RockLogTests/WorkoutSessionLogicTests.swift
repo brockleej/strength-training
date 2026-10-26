@@ -537,6 +537,39 @@ final class SplitPersistenceTests: RockLogStoreTestCase {
         XCTAssertFalse(pushPlan.exerciseIDs.contains(extra.id))
     }
 
+    /// Crash bisect for `test_applyDayPlanSnapshot_stripsCloudKitStarterExtras`.
+    /// Each step is its own test so a host crash names the step. The assertion
+    /// test still uses the same instances after apply: a fault on a deleted
+    /// or invalidated model shows up there, not inside apply.
+    func test_starterExtras_stepMakeOnly() {
+        _ = starterExtraExercises()
+    }
+
+    func test_starterExtras_stepInsertAndSave() throws {
+        let context = container.mainContext
+        _ = insertStarterExtras(into: context)
+        try context.save()
+    }
+
+    func test_starterExtras_stepFetch() throws {
+        let context = container.mainContext
+        let inserted = insertStarterExtras(into: context)
+        try context.save()
+        let fetched = try context.fetch(FetchDescriptor<Exercise>())
+        XCTAssertEqual(fetched.count, 2)
+        let ids = fetched.map(\.id)
+        XCTAssertEqual(Set(ids).count, 2, "Fetch still returned one shared exercise id")
+        XCTAssertEqual(Set(ids), Set([inserted.keep.id, inserted.extra.id]))
+    }
+
+    func test_starterExtras_stepApplySnapshot() throws {
+        let context = container.mainContext
+        let inserted = insertStarterExtras(into: context)
+        try context.save()
+        let snapshot = [DayPlanBackup(dayName: "Push", exerciseIDs: [inserted.keep.id])]
+        _ = SeedData.applyDayPlanSnapshot(snapshot, context: context)
+    }
+
     func test_applyDayPlanSnapshot_stripsCloudKitStarterExtras() throws {
         let context = container.mainContext
         let keep = Exercise.make(name: "My Bench", dayType: .push, muscleGroup: "Chest", isCustom: true)
@@ -554,6 +587,19 @@ final class SplitPersistenceTests: RockLogStoreTestCase {
         XCTAssertTrue(SeedData.applyDayPlanSnapshot(snapshot, context: context))
         XCTAssertTrue(keep.belongs(to: .push))
         XCTAssertFalse(extra.belongs(to: .push))
+    }
+
+    private func starterExtraExercises() -> (keep: Exercise, extra: Exercise) {
+        let keep = Exercise.make(name: "My Bench", dayType: .push, muscleGroup: "Chest", isCustom: true)
+        let extra = Exercise.make(name: "Lateral Raise", dayType: .push, muscleGroup: "Shoulders")
+        return (keep, extra)
+    }
+
+    private func insertStarterExtras(into context: ModelContext) -> (keep: Exercise, extra: Exercise) {
+        let pair = starterExtraExercises()
+        pair.keep.insertPinned(into: context)
+        pair.extra.insertPinned(into: context)
+        return pair
     }
 
     func test_newExercises_keepDistinctIDsThroughFetch() throws {

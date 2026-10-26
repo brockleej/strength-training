@@ -14,7 +14,11 @@ struct ContentView: View {
     @State private var healthKitService = HealthKitWorkoutService()
     @State private var cloudKitSyncService = CloudKitSyncService()
     @State private var selectedTab = "workout"
-    @State private var awakenedTabs: Set<String> = ["workout"]
+    /// Settings is built with the first frame. Swapping it in from a Color
+    /// placeholder while Today faults a long history drops the tab selection,
+    /// and settings.editSplit never appears. History's "Legs" label is already
+    /// on Today, so that tab opening does not prove the other tabs built.
+    @State private var awakenedTabs: Set<String> = ["workout", "settings"]
     @AppStorage(FirstRunPreferences.completedKey) private var hasCompletedFirstRun = false
     @State private var showFirstUseSplitSetup = false
     /// While true the TabView (including Focus / workout list) is torn down
@@ -418,9 +422,7 @@ struct ContentView: View {
     @ViewBuilder
     private func tab<Content: View>(_ id: String, @ViewBuilder content: () -> Content) -> some View {
         // Build from the selection itself. onChange that only inserts into
-        // awakenedTabs is dropped while Today faults a long history, and the
-        // custom Binding setter was not enough — Settings stayed the blank
-        // placeholder (settings.editSplit never appeared).
+        // awakenedTabs is dropped while Today faults a long history.
         if LazyTabContent.isBuilt(id: id, selectedTab: selectedTab, awakened: awakenedTabs) {
             content()
         } else {
