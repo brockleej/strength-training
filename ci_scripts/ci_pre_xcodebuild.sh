@@ -14,10 +14,18 @@ if [ "${CI_XCODE_SCHEME:-}" = "RockCoach" ]; then
 fi
 
 ROOT="${CI_PRIMARY_REPOSITORY_PATH:-$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)}"
-if [ -f "$ROOT/RockLog.xcodeproj/project.pbxproj" ]; then
-  PBX="$ROOT/RockLog.xcodeproj/project.pbxproj"
+ROCKLOG_PBX="$ROOT/RockLog.xcodeproj/project.pbxproj"
+LEGACY_PBX="$ROOT/strength-training.xcodeproj/project.pbxproj"
+# Build Tests already pinned versions. The later "test-without-building"
+# action does not have the project file, and versions are unused then.
+if [ "${CI_XCODEBUILD_ACTION:-}" = "test-without-building" ] || { [ ! -f "$ROCKLOG_PBX" ] && [ ! -f "$LEGACY_PBX" ]; }; then
+  echo "ci_pre_xcodebuild: skipping version pin (action=${CI_XCODEBUILD_ACTION:-unset}). Not a build or archive."
+  exit 0
+fi
+if [ -f "$ROCKLOG_PBX" ]; then
+  PBX="$ROCKLOG_PBX"
 else
-  PBX="$ROOT/strength-training.xcodeproj/project.pbxproj"
+  PBX="$LEGACY_PBX"
 fi
 MIN=17
 CLOUD="${CI_BUILD_NUMBER:-0}"
