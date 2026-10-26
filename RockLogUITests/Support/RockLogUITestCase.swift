@@ -99,7 +99,9 @@ class RockLogUITestCase: XCTestCase {
     }
 
     /// Same as `scrollUntilExists`, for a control that has a label but no identifier.
-    func scrollUntilExists(_ match: XCUIElement, maxSwipes: Int = 8) {
+    /// The first label is `element` so this does not share an Objective-C selector
+    /// with `scrollUntilExists(_:maxSwipes:)`.
+    func scrollUntilExists(element match: XCUIElement, maxSwipes: Int = 8) {
         if match.waitForExistence(timeout: 2) { return }
         for _ in 0..<maxSwipes {
             if app.tables.firstMatch.exists {

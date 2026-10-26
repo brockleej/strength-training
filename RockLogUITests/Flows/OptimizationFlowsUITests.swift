@@ -26,7 +26,7 @@ final class OptimizationFlowsUITests: RockLogUITestCase {
         // rest timer is on. Turn it on for that row. Logging tests leave it
         // off so a logged set does not start a countdown.
         let restTimer = app.switches["Rest timer"]
-        scrollUntilExists(restTimer)
+        scrollUntilExists(element: restTimer)
         if String(describing: restTimer.value ?? "0") != "1" {
             restTimer.tap()
         }
