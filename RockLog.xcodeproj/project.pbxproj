@@ -53,6 +53,7 @@
 		INTCHG0000000000000003 /* InterchangeCodec.swift in Sources */ = {isa = PBXBuildFile; fileRef = INTCHG0000000000000001 /* InterchangeCodec.swift */; };
 		INTCHG0000000000000004 /* InterchangeCodec.swift in Sources */ = {isa = PBXBuildFile; fileRef = INTCHG0000000000000001 /* InterchangeCodec.swift */; };
 		RESTACT0000000000000002 /* RestActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = RESTACT0000000000000001 /* RestActivityAttributes.swift */; };
+		RESTACT0000000000000004 /* RestActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = RESTACT0000000000000001 /* RestActivityAttributes.swift */; };
 		OPTLOG0000000000000002 /* OptimizationLogicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = OPTLOG0000000000000001 /* OptimizationLogicTests.swift */; };
 		HIST010000000000000002 /* HistoricalFormatRoundTripTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = HIST010000000000000001 /* HistoricalFormatRoundTripTests.swift */; };
 		B4C0A0010000000000000002 /* BackupMigration.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4C0A0010000000000000001 /* BackupMigration.swift */; };
@@ -994,6 +995,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				RESTACT0000000000000004 /* RestActivityAttributes.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1630,6 +1632,8 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.lee.lift2026.restwidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -1655,6 +1659,8 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.lee.lift2026.restwidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";

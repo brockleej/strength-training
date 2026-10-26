@@ -164,9 +164,9 @@ extension WorkoutViewModel {
     /// Drag order for this workout. The day plan stays until he saves it.
     func reorderToday(_ orderedIDs: [UUID], exercises: [Exercise]) {
         guard let session = activeSession, !session.isDeleted else { return }
-        let byID = Dictionary(uniqueKeysWithValues: exercises.map { ($0.id, $0) })
+        let exercisesByID = Dictionary(exercises.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
         for id in orderedIDs {
-            if let exercise = byID[id] {
+            if let exercise = exercisesByID[id] {
                 _ = findOrCreateRecordPublic(for: exercise)
             }
         }
@@ -182,10 +182,10 @@ extension WorkoutViewModel {
             return CircuitSeat(recordID: record.id, exerciseID: exerciseID, groupID: record.groupID, position: record.groupPosition)
         }
         let fixed = CircuitMembership.afterDrag(orderedExerciseIDs: orderedIDs, seats: seats)
-        let byID = Dictionary(uniqueKeysWithValues: session.exerciseRecordsArray.map { ($0.id, $0) })
+        let recordsByID = Dictionary(session.exerciseRecordsArray.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
         for seat in fixed {
-            byID[seat.recordID]?.groupID = seat.groupID
-            byID[seat.recordID]?.groupPosition = seat.position
+            recordsByID[seat.recordID]?.groupID = seat.groupID
+            recordsByID[seat.recordID]?.groupPosition = seat.position
         }
         try? modelContext.save()
         setMutationEpoch &+= 1

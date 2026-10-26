@@ -66,16 +66,14 @@ enum RestActivityController {
             return
         }
         let attributes = RestActivityAttributes(exerciseName: name)
-        Task {
-            do {
-                _ = try Activity.request(
-                    attributes: attributes,
-                    content: ActivityContent(state: state, staleDate: end),
-                    pushType: nil
-                )
-            } catch {
-                // The in-app countdown stays. Do not post a per-second banner.
-            }
+        do {
+            _ = try Activity.request(
+                attributes: attributes,
+                content: ActivityContent(state: state, staleDate: end),
+                pushType: nil
+            )
+        } catch {
+            // The in-app countdown stays. Do not post a per-second banner.
         }
         #endif
     }

@@ -10,20 +10,6 @@ import ActivityKit
 import SwiftUI
 import WidgetKit
 
-struct RestActivityAttributes: ActivityAttributes {
-    struct ContentState: Codable, Hashable {
-        var rangeStart: Date
-        var endDate: Date
-
-        var interval: ClosedRange<Date> {
-            let start = min(rangeStart, endDate)
-            return start...endDate
-        }
-    }
-
-    var exerciseName: String
-}
-
 struct RestLiveActivityWidget: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: RestActivityAttributes.self) { context in

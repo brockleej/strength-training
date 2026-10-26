@@ -8,8 +8,8 @@ import Foundation
 #if canImport(ActivityKit)
 import ActivityKit
 
-struct RestActivityAttributes: ActivityAttributes {
-    struct ContentState: Codable, Hashable {
+nonisolated struct RestActivityAttributes: ActivityAttributes {
+    nonisolated struct ContentState: Codable, Hashable {
         var rangeStart: Date
         var endDate: Date
 

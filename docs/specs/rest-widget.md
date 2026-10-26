@@ -16,6 +16,6 @@ The extension target is `RockLogWidget`. This build does not embed it. `FeatureF
 
 The activity content sets `staleDate` to the rest end. After that instant the system may show the activity as stale.
 
-`Shared/RestActivity/RestActivityAttributes.swift` is compiled into the app. The widget file repeats those fields (`rangeStart`, `endDate`, `interval`) because an app extension does not share the app module. The two declarations have to stay the same.
+`Shared/RestActivity/RestActivityAttributes.swift` is compiled into the app and into the widget target. The attributes type is `nonisolated`, so the Live Activity calls are not tied to the main actor. The widget does not keep a second copy.
 
 This build does not ship an Apple Watch complication.
