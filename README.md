@@ -93,6 +93,7 @@ Layered on the foundation above for a more freeform, physique-aware gym log:
 - **US Navy body-fat → FFMI** muscularity index, bands, trends
 - Height / sex profile wiring for composition math
 - Progress dashboard polish and range/lift presentation (built on the original Progress tab)
+- **This month vs last** — Progress shows each lift’s best set this month compared with last month. Warm-up sets do not count. RockCoach shows the same comparison.
 
 ### Brand, design, ops
 - **RockLog** name (App Store: *RockLog* · subtitle e.g. *Strength training gym log*), icon (Icon Composer), launch screen
@@ -148,6 +149,7 @@ Dark UI from a real log (August 2026, iPhone 17 Pro Max). App Store 6.9" frames 
 ### Progress & body
 - Dashboard, charts, drill-down — **previous distro** (evolved in both)
 - Body metrics + Navy/FFMI — **RockLog**
+- This month vs last month on Progress (warm-ups skipped); RockCoach shows the same — **RockLog**
 
 ### Library & settings
 - Exercise library, backup, HealthKit settings, progression aggressiveness — **previous distro**
