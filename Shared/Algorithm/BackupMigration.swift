@@ -52,45 +52,45 @@ nonisolated struct BackupInspection: Equatable, Sendable {
     )
 
     static func inspect(_ object: [String: JSONValue]) -> BackupInspection {
-        var inspection = BackupInspection.empty
-        walk(object, known: rootKeys, path: "", into: &inspection) { key, value, path in
+        let found = InspectionBox()
+        walk(object, known: rootKeys, path: "", found: found) { key, value, path in
             switch key {
             case "exercises":
-                walkEach(value, path: path, known: exerciseKeys, into: &inspection) { item, itemPath in
-                    noteEnum(item["loadModeRaw"], allowed: loadModes, path: "\(itemPath).loadModeRaw", into: &inspection)
+                walkEach(value, path: path, known: exerciseKeys, found: found) { item, itemPath in
+                    noteEnum(item["loadModeRaw"], allowed: loadModes, path: "\(itemPath).loadModeRaw", found: found)
                 }
             case "sessions":
-                walkEach(value, path: path, known: sessionKeys, into: &inspection) { session, sessionPath in
-                    walkEach(session["exerciseRecords"] ?? .null, path: "\(sessionPath).exerciseRecords", known: recordKeys, into: &inspection) { record, recordPath in
-                        noteEnum(record["trainingMode"], allowed: trainingModes, path: "\(recordPath).trainingMode", into: &inspection, allowEmpty: false)
-                        walkEach(record["sets"] ?? .null, path: "\(recordPath).sets", known: setKeys, into: &inspection) { set, setPath in
-                            noteEnum(set["loadModeRaw"], allowed: loadModes, path: "\(setPath).loadModeRaw", into: &inspection)
+                walkEach(value, path: path, known: sessionKeys, found: found) { session, sessionPath in
+                    walkEach(session["exerciseRecords"] ?? .null, path: "\(sessionPath).exerciseRecords", known: recordKeys, found: found) { record, recordPath in
+                        noteEnum(record["trainingMode"], allowed: trainingModes, path: "\(recordPath).trainingMode", found: found, allowEmpty: false)
+                        walkEach(record["sets"] ?? .null, path: "\(recordPath).sets", known: setKeys, found: found) { set, setPath in
+                            noteEnum(set["loadModeRaw"], allowed: loadModes, path: "\(setPath).loadModeRaw", found: found)
                         }
                     }
                 }
             case "splitDays":
-                walkEach(value, path: path, known: splitDayKeys, into: &inspection) { _, _ in }
+                walkEach(value, path: path, known: splitDayKeys, found: found) { _, _ in }
             case "dayPlans":
-                walkEach(value, path: path, known: dayPlanKeys, into: &inspection) { _, _ in }
+                walkEach(value, path: path, known: dayPlanKeys, found: found) { _, _ in }
             case "trainingBlocks":
-                walkEach(value, path: path, known: blockKeys, into: &inspection) { _, _ in }
+                walkEach(value, path: path, known: blockKeys, found: found) { _, _ in }
             case "bodyMetrics":
-                walkEach(value, path: path, known: metricKeys, into: &inspection) { metric, metricPath in
-                    noteEnum(metric["kindRaw"], allowed: metricKinds, path: "\(metricPath).kindRaw", into: &inspection, allowEmpty: false)
+                walkEach(value, path: path, known: metricKeys, found: found) { metric, metricPath in
+                    noteEnum(metric["kindRaw"], allowed: metricKinds, path: "\(metricPath).kindRaw", found: found, allowEmpty: false)
                 }
             case "gyms":
-                walkEach(value, path: path, known: gymKeys, into: &inspection) { _, _ in }
+                walkEach(value, path: path, known: gymKeys, found: found) { _, _ in }
             case "stackProfiles":
-                walkEach(value, path: path, known: stackKeys, into: &inspection) { profile, profilePath in
-                    noteEnum(profile["pinUnitRaw"], allowed: pinUnits, path: "\(profilePath).pinUnitRaw", into: &inspection, allowEmpty: false)
-                    noteEnum(profile["policyRaw"], allowed: policies, path: "\(profilePath).policyRaw", into: &inspection, allowEmpty: false)
-                    noteEnum(profile["originRaw"], allowed: origins, path: "\(profilePath).originRaw", into: &inspection)
+                walkEach(value, path: path, known: stackKeys, found: found) { profile, profilePath in
+                    noteEnum(profile["pinUnitRaw"], allowed: pinUnits, path: "\(profilePath).pinUnitRaw", found: found, allowEmpty: false)
+                    noteEnum(profile["policyRaw"], allowed: policies, path: "\(profilePath).policyRaw", found: found, allowEmpty: false)
+                    noteEnum(profile["originRaw"], allowed: origins, path: "\(profilePath).originRaw", found: found)
                 }
             default:
                 break
             }
         }
-        return inspection
+        return found.value
     }
 
     var summarySentence: String? {
@@ -155,17 +155,23 @@ private nonisolated let pinUnits: Set<String> = ["lb", "kg"]
 private nonisolated let policies: Set<String> = ["nearest", "down", "up"]
 private nonisolated let origins: Set<String> = ["learned", "typed"]
 
+/// One place the walk can record into. A struct passed `inout` cannot also
+/// be written from the nested closures; those two accesses overlap.
+private nonisolated final class InspectionBox {
+    var value = BackupInspection.empty
+}
+
 private nonisolated func walk(
     _ object: [String: JSONValue],
     known: Set<String>,
     path: String,
-    into inspection: inout BackupInspection,
+    found: InspectionBox,
     nested: (String, JSONValue, String) -> Void
 ) {
     for key in object.keys.sorted() {
         let child = path.isEmpty ? key : "\(path).\(key)"
         guard known.contains(key) else {
-            rememberKey(child, into: &inspection)
+            rememberKey(child, found: found)
             continue
         }
         if let value = object[key] {
@@ -178,14 +184,14 @@ private nonisolated func walkEach(
     _ value: JSONValue,
     path: String,
     known: Set<String>,
-    into inspection: inout BackupInspection,
+    found: InspectionBox,
     nested: ([String: JSONValue], String) -> Void
 ) {
     guard case .array(let items) = value else { return }
     for (index, item) in items.enumerated() {
         guard let object = item.object else { continue }
         let itemPath = "\(path)[\(index)]"
-        walk(object, known: known, path: itemPath, into: &inspection) { _, _, _ in }
+        walk(object, known: known, path: itemPath, found: found) { _, _, _ in }
         nested(object, itemPath)
     }
 }
@@ -194,21 +200,25 @@ private nonisolated func noteEnum(
     _ value: JSONValue?,
     allowed: Set<String>,
     path: String,
-    into inspection: inout BackupInspection,
+    found: InspectionBox,
     allowEmpty: Bool = true
 ) {
     guard case .string(let raw) = value else { return }
     if raw.isEmpty, allowEmpty { return }
     guard !allowed.contains(raw) else { return }
-    inspection.unknownEnumCount += 1
-    if inspection.unknownEnums.count < pathCap {
-        inspection.unknownEnums.append("\(path)=\(raw)")
+    var next = found.value
+    next.unknownEnumCount += 1
+    if next.unknownEnums.count < pathCap {
+        next.unknownEnums.append("\(path)=\(raw)")
     }
+    found.value = next
 }
 
-private nonisolated func rememberKey(_ path: String, into inspection: inout BackupInspection) {
-    inspection.unknownKeyCount += 1
-    if inspection.unknownKeyPaths.count < pathCap {
-        inspection.unknownKeyPaths.append(path)
+private nonisolated func rememberKey(_ path: String, found: InspectionBox) {
+    var next = found.value
+    next.unknownKeyCount += 1
+    if next.unknownKeyPaths.count < pathCap {
+        next.unknownKeyPaths.append(path)
     }
+    found.value = next
 }
