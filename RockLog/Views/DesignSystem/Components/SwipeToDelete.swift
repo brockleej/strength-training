@@ -98,7 +98,9 @@ struct SwipeToDeleteModifier: ViewModifier {
         } action: { _, width in
             rowWidth = width
         }
-        .simultaneousGesture(dragGesture)
+        // Mask instead of adding and removing the gesture. Branching on
+        // isEnabled rebuilds the row when a long-press sets draggingID.
+        .simultaneousGesture(dragGesture, including: isEnabled ? .all : .subviews)
         .modifier(SwipeRowTap(
             isEnabled: isEnabled && (isRevealed || onTap != nil),
             onTap: { location in
@@ -195,15 +197,14 @@ private struct SwipeRowTap: ViewModifier {
     let onTap: (CGPoint) -> Void
 
     func body(content: Content) -> some View {
-        if isEnabled {
-            content.highPriorityGesture(
-                SpatialTapGesture().onEnded { value in
-                    onTap(value.location)
-                }
-            )
-        } else {
-            content
-        }
+        // Always the same view. An if/else on isEnabled changes identity
+        // mid long-press once draggingID disables the swipe.
+        content.highPriorityGesture(
+            SpatialTapGesture().onEnded { value in
+                onTap(value.location)
+            },
+            including: isEnabled ? .all : .subviews
+        )
     }
 }
 

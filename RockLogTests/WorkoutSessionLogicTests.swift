@@ -538,9 +538,7 @@ final class SplitPersistenceTests: RockLogStoreTestCase {
     }
 
     /// Crash bisect for `test_applyDayPlanSnapshot_stripsCloudKitStarterExtras`.
-    /// Each step is its own test so a host crash names the step. The assertion
-    /// test still uses the same instances after apply: a fault on a deleted
-    /// or invalidated model shows up there, not inside apply.
+    /// Each step is its own test so a host crash names the step.
     func test_starterExtras_stepMakeOnly() {
         _ = starterExtraExercises()
     }
@@ -574,19 +572,25 @@ final class SplitPersistenceTests: RockLogStoreTestCase {
         let context = container.mainContext
         let keep = Exercise.make(name: "My Bench", dayType: .push, muscleGroup: "Chest", isCustom: true)
         let extra = Exercise.make(name: "Lateral Raise", dayType: .push, muscleGroup: "Shoulders")
+        let keepID = keep.id
+        let extraID = extra.id
         keep.insertPinned(into: context)
         extra.insertPinned(into: context)
         try context.save()
         XCTAssertNotEqual(
-            keep.id,
-            extra.id,
+            keepID,
+            extraID,
             "Shared schema-default ids crash applyDayPlanSnapshot in DEBUG"
         )
 
-        let snapshot = [DayPlanBackup(dayName: "Push", exerciseIDs: [keep.id])]
+        let snapshot = [DayPlanBackup(dayName: "Push", exerciseIDs: [keepID])]
         XCTAssertTrue(SeedData.applyDayPlanSnapshot(snapshot, context: context))
-        XCTAssertTrue(keep.belongs(to: .push))
-        XCTAssertFalse(extra.belongs(to: .push))
+
+        let fetched = try context.fetch(FetchDescriptor<Exercise>())
+        let kept = try XCTUnwrap(fetched.first { $0.id == keepID })
+        let stripped = try XCTUnwrap(fetched.first { $0.id == extraID })
+        XCTAssertTrue(kept.belongs(to: .push))
+        XCTAssertFalse(stripped.belongs(to: .push))
     }
 
     private func starterExtraExercises() -> (keep: Exercise, extra: Exercise) {
@@ -1070,6 +1074,44 @@ final class ReorderScrollLockTests: XCTestCase {
             ReorderDragStep.targetIndex(start: 1, translation: 140, rowHeight: 68, count: 4),
             3
         )
+    }
+}
+
+final class SplitOrderLogicTests: XCTestCase {
+    func test_moveShiftsARowUpAndDown() {
+        let first = UUID()
+        let middle = UUID()
+        let last = UUID()
+        let ids = [first, middle, last]
+        XCTAssertEqual(SplitOrderLogic.move(ids: ids, id: middle, by: -1), [middle, first, last])
+        XCTAssertEqual(SplitOrderLogic.move(ids: ids, id: middle, by: 1), [first, last, middle])
+    }
+
+    func test_firstRowUpIsANoOp() {
+        let first = UUID()
+        let second = UUID()
+        let ids = [first, second]
+        XCTAssertEqual(SplitOrderLogic.move(ids: ids, id: first, by: -1), ids)
+    }
+
+    func test_lastRowDownIsANoOp() {
+        let first = UUID()
+        let second = UUID()
+        let ids = [first, second]
+        XCTAssertEqual(SplitOrderLogic.move(ids: ids, id: second, by: 1), ids)
+    }
+
+    func test_singleRowDoesNotMove() {
+        let only = UUID()
+        XCTAssertEqual(SplitOrderLogic.move(ids: [only], id: only, by: -1), [only])
+        XCTAssertEqual(SplitOrderLogic.move(ids: [only], id: only, by: 1), [only])
+    }
+
+    func test_unknownIDLeavesTheList() {
+        let first = UUID()
+        let second = UUID()
+        let ids = [first, second]
+        XCTAssertEqual(SplitOrderLogic.move(ids: ids, id: UUID(), by: -1), ids)
     }
 }
 

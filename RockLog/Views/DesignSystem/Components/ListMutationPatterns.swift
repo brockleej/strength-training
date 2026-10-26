@@ -159,6 +159,22 @@ struct ReorderScrollLock: Equatable {
     }
 }
 
+/// One-step reorder for an id list. Out-of-range and unknown ids return the
+/// same ids, so a first row cannot move up and a last row cannot move down.
+enum SplitOrderLogic {
+    static func move(ids: [UUID], id: UUID, by delta: Int) -> [UUID] {
+        guard let index = ids.firstIndex(of: id) else { return ids }
+        let target = index + delta
+        guard ids.indices.contains(target) else { return ids }
+        var next = ids
+        next.move(
+            fromOffsets: IndexSet(integer: index),
+            toOffset: target > index ? target + 1 : target
+        )
+        return next
+    }
+}
+
 enum ReorderDragStep {
     /// Rows of travel. A zero height means layout has not measured the row yet.
     static func delta(translation: CGFloat, rowHeight: CGFloat) -> Int {

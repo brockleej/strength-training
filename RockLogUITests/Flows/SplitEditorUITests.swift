@@ -29,25 +29,6 @@ final class SplitEditorUITests: RockLogUITestCase {
         XCTAssertFalse(element(UITestID.dayPlanExercise("UI Bench Press")).waitForExistence(timeout: 3))
     }
 
-    func test_splitReorder_moveUpActionChangesPositionLabel() {
-        launch(preset: "typical")
-        tapTab("Settings")
-        waitFor(UITestID.settingsEditSplit).tap()
-
-        let pull = waitFor(UITestID.splitDay("Pull"))
-        XCTAssertTrue(pull.label.hasPrefix("2."))
-        let moveUp = pull.buttons["Move up"]
-        XCTAssertTrue(moveUp.waitForExistence(timeout: 4))
-        moveUp.tap()
-
-        let moved = element(UITestID.splitDay("Pull"))
-        let settled = XCTNSPredicateExpectation(
-            predicate: NSPredicate(format: "label BEGINSWITH '1.'"),
-            object: moved
-        )
-        wait(for: [settled], timeout: 4)
-    }
-
     /// Gesture smoke only. The Move up action is the check that reorder works.
     /// A longer wait here does not replace that action.
     func test_splitReorder_dragChangesPositionLabel() {

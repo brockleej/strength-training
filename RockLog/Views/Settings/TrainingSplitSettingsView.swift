@@ -265,13 +265,8 @@ struct TrainingSplitSettingsView: View {
         }
         // The row is one accessibility element (the position label). The
         // long-press has to live on that element, not only the number, or a
-        // press on the row never reorders.
-        .longPressReorder(
-            id: day.id,
-            orderedIDs: $orderedIDs,
-            draggingID: $draggingID,
-            onReorder: persistOrder
-        )
+        // press on the row never reorders. It stays outside swipe-to-delete
+        // so disabling the swipe when draggingID is set does not rebuild it.
         .swipeToDelete(fullSwipeDeletes: false, isEnabled: draggingID == nil, onDelete: {
             // Soft reveal only; hard delete requires confirm (T2/T3).
             if DayTypeRegistry.shared.canDelete(id: day.id, from: splitDays) {
@@ -282,6 +277,12 @@ struct TrainingSplitSettingsView: View {
         }, onTap: {
             editingDay = day
         })
+        .longPressReorder(
+            id: day.id,
+            orderedIDs: $orderedIDs,
+            draggingID: $draggingID,
+            onReorder: persistOrder
+        )
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(weekPosition). \(day.name)")
         .accessibilityIdentifier(AccessibilityID.splitDay(day.name))
@@ -291,13 +292,9 @@ struct TrainingSplitSettingsView: View {
     }
 
     private func moveDay(_ id: UUID, by delta: Int) {
-        guard let index = orderedIDs.firstIndex(of: id) else { return }
-        let target = index + delta
-        guard orderedIDs.indices.contains(target) else { return }
-        orderedIDs.move(
-            fromOffsets: IndexSet(integer: index),
-            toOffset: target > index ? target + 1 : target
-        )
+        let next = SplitOrderLogic.move(ids: orderedIDs, id: id, by: delta)
+        guard next != orderedIDs else { return }
+        orderedIDs = next
         persistOrder()
     }
 
