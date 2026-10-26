@@ -27,7 +27,16 @@ enum UITestLaunch {
     static let relaunchStoreArgument = "-RockLogRelaunchStore"
     static let relaunchKeepArgument = "-RockLogRelaunchKeep"
     static let dynamicTypeArgument = "-RockLogDynamicType"
+    /// Empty-library settings checks the rest-timer rows. Logging presets omit this
+    /// and stay off so a logged set does not start a countdown.
+    static let restTimerArgument = "-RockLogRestTimer"
     static let injectEnvironmentKey = "ROCKLOG_INJECT_FILE_B64"
+
+    static func restTimerEnabled(arguments: [String]) -> Bool {
+        guard let index = arguments.firstIndex(of: restTimerArgument),
+              index + 1 < arguments.count else { return false }
+        return arguments[index + 1] == "on"
+    }
 
     /// Stashed when a UI test injects a backup. Settings presents the
     /// restore confirm so Cancel can be tapped without the Files picker.
@@ -120,7 +129,10 @@ enum UITestLaunch {
     /// publish a split into the signed-in tester's account.
     static func prepareDefaults() {
         let defaults = UserDefaults.standard
-        defaults.set(false, forKey: RestTimerPreferences.enabledKey)
+        defaults.set(
+            restTimerEnabled(arguments: ProcessInfo.processInfo.arguments),
+            forKey: RestTimerPreferences.enabledKey
+        )
         defaults.set(false, forKey: RestTimerPreferences.soundEnabledKey)
         defaults.set(false, forKey: CoachAthletePreferences.shareAfterFinishKey)
         defaults.set(false, forKey: CoachAthletePreferences.enabledKey)

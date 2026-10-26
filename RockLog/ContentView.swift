@@ -246,16 +246,7 @@ struct ContentView: View {
     /// Classic TabView (iOS 17+). The iOS 18 `Tab { }` API is not used so we keep
     /// the minimum deployment at 17.0 for broader TestFlight reach.
     private func appTabs(viewModel vm: WorkoutViewModel) -> some View {
-        TabView(selection: Binding(
-            get: { selectedTab },
-            set: { newValue in
-                // Insert in the same update as the selection. A follow-up
-                // onChange is dropped when Today is still faulting a long
-                // history, and the tab stays the blank placeholder.
-                awakenedTabs.insert(newValue)
-                selectedTab = newValue
-            }
-        )) {
+        TabView(selection: $selectedTab) {
             WorkoutTabView(viewModel: vm)
                 .tabItem { Label("Workout", systemImage: "dumbbell") }
                 .tag("workout")
@@ -426,11 +417,23 @@ struct ContentView: View {
 
     @ViewBuilder
     private func tab<Content: View>(_ id: String, @ViewBuilder content: () -> Content) -> some View {
-        if awakenedTabs.contains(id) {
+        // Build from the selection itself. onChange that only inserts into
+        // awakenedTabs is dropped while Today faults a long history, and the
+        // custom Binding setter was not enough — Settings stayed the blank
+        // placeholder (settings.editSplit never appeared).
+        if LazyTabContent.isBuilt(id: id, selectedTab: selectedTab, awakened: awakenedTabs) {
             content()
         } else {
             Color.uplift.bgElev.ignoresSafeArea()
         }
+    }
+}
+
+/// Which lazy tabs have a real view. The selected tab is built even when
+/// the awakening set has not caught up.
+enum LazyTabContent {
+    static func isBuilt(id: String, selectedTab: String, awakened: Set<String>) -> Bool {
+        id == selectedTab || awakened.contains(id)
     }
 }
 

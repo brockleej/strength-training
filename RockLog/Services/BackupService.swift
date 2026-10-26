@@ -619,7 +619,6 @@ struct BackupService {
                 isCustom: eb.isCustom,
                 rotationTrack: RotationTrack(storage: eb.rotationTrack)
             )
-            exercise.id = eb.id
             exercise.notes = eb.notes
             exercise.extraDayTypes = eb.extraDayTypes ?? ""
             exercise.daySortOrdersRaw = eb.daySortOrdersRaw ?? ""
@@ -634,7 +633,9 @@ struct BackupService {
             }
             exercise.loadModeRaw = eb.loadModeRaw ?? ""
             exercise.suggestWarmupRamp = eb.suggestWarmupRamp ?? false
-            context.insert(exercise)
+            ExplicitPersistentID.pin(eb.id, assign: { exercise.id = $0 }) {
+                context.insert(exercise)
+            }
             exerciseMap[eb.id] = exercise
         }
 
@@ -649,7 +650,6 @@ struct BackupService {
                 date: sb.date,
                 rotationTrack: RotationTrack(storage: sb.rotationTrack ?? RotationTrack.a.rawValue)
             )
-            session.id = sb.id
             session.notes = sb.notes
             session.isCompleted = sb.isCompleted
             session.planState = sb.planState ?? ""
@@ -660,8 +660,10 @@ struct BackupService {
             if let duration = sb.durationSeconds, duration > 0 {
                 session.durationSeconds = duration
             }
-            context.insert(session)
-            sessionMap[session.id] = session
+            ExplicitPersistentID.pin(sb.id, assign: { session.id = $0 }) {
+                context.insert(session)
+            }
+            sessionMap[sb.id] = session
 
             for rb in sb.exerciseRecords {
                 guard let trainingMode = TrainingMode(rawValue: rb.trainingMode) else {
@@ -672,7 +674,6 @@ struct BackupService {
                     continue
                 }
                 let record = ExerciseRecord(trainingMode: trainingMode, sortOrder: rb.sortOrder)
-                record.id = rb.id
                 record.isCompleted = rb.isCompleted
                 record.notes = rb.notes
                 record.groupID = rb.groupID
@@ -683,7 +684,9 @@ struct BackupService {
                 }
                 if session.exerciseRecords == nil { session.exerciseRecords = [] }
                 session.exerciseRecords?.append(record)
-                context.insert(record)
+                ExplicitPersistentID.pin(rb.id, assign: { record.id = $0 }) {
+                    context.insert(record)
+                }
 
                 for setb in rb.sets {
                     let set = SetRecord(
@@ -695,7 +698,6 @@ struct BackupService {
                         isAssisted: setb.resolvedAssisted,
                         isTarget: setb.resolvedTarget
                     )
-                    set.id = setb.id
                     set.completedAt = setb.completedAt
                     set.offeredWeightLbs = setb.offeredWeightLbs
                     set.loadModeRaw = setb.loadModeRaw ?? ""
@@ -705,7 +707,9 @@ struct BackupService {
                     set.exerciseRecord = record
                     if record.sets == nil { record.sets = [] }
                     record.sets?.append(set)
-                    context.insert(set)
+                    ExplicitPersistentID.pin(setb.id, assign: { set.id = $0 }) {
+                        context.insert(set)
+                    }
                 }
             }
         }
@@ -723,10 +727,11 @@ struct BackupService {
                 startDate: snapshot.startDate,
                 notes: snapshot.notes
             )
-            block.id = snapshot.id
             block.importedAt = snapshot.importedAt
             block.sessions = []
-            context.insert(block)
+            ExplicitPersistentID.pin(snapshot.id, assign: { block.id = $0 }) {
+                context.insert(block)
+            }
             for sessionID in snapshot.sessionIDs {
                 sessionMap[sessionID]?.trainingBlock = block
             }
@@ -746,12 +751,13 @@ struct BackupService {
         if context.container.schema.entities.contains(where: { $0.name == "Gym" }) {
             for snapshot in backup.gyms ?? [] {
                 let gym = Gym(name: snapshot.name, isHome: snapshot.isHome, sortOrder: snapshot.sortOrder)
-                gym.id = snapshot.id
                 gym.createdAt = snapshot.createdAt
                 gym.latitude = snapshot.latitude
                 gym.longitude = snapshot.longitude
                 gym.radiusMeters = snapshot.radiusMeters
-                context.insert(gym)
+                ExplicitPersistentID.pin(snapshot.id, assign: { gym.id = $0 }) {
+                    context.insert(gym)
+                }
             }
         }
 
@@ -763,7 +769,6 @@ struct BackupService {
         if context.container.schema.entities.contains(where: { $0.name == "MachineStackProfile" }) {
         for snapshot in backup.stackProfiles ?? [] {
             let profile = MachineStackProfile(gymID: snapshot.gymID, exerciseID: snapshot.exerciseID)
-            profile.id = snapshot.id
             profile.stepPounds = snapshot.stepPounds
             profile.offsetPounds = snapshot.offsetPounds ?? 0
             profile.pinsRaw = snapshot.pinsRaw
@@ -777,7 +782,11 @@ struct BackupService {
             profile.rangeMin = snapshot.rangeMin
             profile.rangeMax = snapshot.rangeMax
             profile.updatedAt = snapshot.updatedAt
-            context.insert(profile)
+            ExplicitPersistentID.pin(snapshot.id, assign: { profile.id = $0 }) {
+                context.insert(profile)
+            }
+            profile.gymID = snapshot.gymID
+            profile.exerciseID = snapshot.exerciseID
         }
         }
 
@@ -789,9 +798,10 @@ struct BackupService {
                 date: snapshot.date,
                 note: snapshot.note
             )
-            entry.id = snapshot.id
             entry.kindRaw = snapshot.kindRaw
-            context.insert(entry)
+            ExplicitPersistentID.pin(snapshot.id, assign: { entry.id = $0 }) {
+                context.insert(entry)
+            }
         }
 
         // Renames, split days, and day-plan membership stay unsaved so they

@@ -137,11 +137,54 @@ extension View {
     }
 }
 
+/// Whether the parent scroll view is locked, and how a measured row height
+/// turns a drag into a slot. Unit tests cover cancel and Dynamic Type height.
+struct ReorderScrollLock: Equatable {
+    private(set) var draggingID: UUID?
+
+    init(draggingID: UUID? = nil) {
+        self.draggingID = draggingID
+    }
+
+    var scrollDisabled: Bool { draggingID != nil }
+
+    mutating func arm(_ id: UUID) {
+        draggingID = id
+    }
+
+    /// Finger up, the gesture cancelled, or the row left the screen.
+    mutating func release(_ id: UUID) {
+        guard draggingID == id else { return }
+        draggingID = nil
+    }
+}
+
+enum ReorderDragStep {
+    /// Rows of travel. A zero height means layout has not measured the row yet.
+    static func delta(translation: CGFloat, rowHeight: CGFloat) -> Int {
+        guard rowHeight > 0 else { return 0 }
+        return Int((translation / rowHeight).rounded())
+    }
+
+    static func targetIndex(start: Int, translation: CGFloat, rowHeight: CGFloat, count: Int) -> Int {
+        guard count > 0 else { return 0 }
+        let next = start + delta(translation: translation, rowHeight: rowHeight)
+        return max(0, min(count - 1, next))
+    }
+}
+
+private struct ReorderRowHeightKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        let next = nextValue()
+        if next > 0 { value = next }
+    }
+}
+
 /// Reorder without `onDrag`, which on iOS also captures horizontal swipes.
 ///
-/// Long-press alone must not lock the row. The old sequence set `draggingID`
-/// when the press fired; lifting without a drag cancelled the sequence and
-/// never cleared that lock — the row (and swipe-to-remove) stayed frozen.
+/// Long-press alone must not lock the row. The scroll lock clears when the
+/// drag ends, the gesture cancels, or the row disappears.
 private struct LongPressReorderModifier: ViewModifier {
     let id: UUID
     @Binding var orderedIDs: [UUID]
@@ -152,20 +195,35 @@ private struct LongPressReorderModifier: ViewModifier {
     @GestureState private var isGestureActive = false
     @State private var startIndex = 0
     @State private var lastTarget = 0
+    @State private var rowHeight: CGFloat = 0
 
     func body(content: Content) -> some View {
         content
+            .background {
+                GeometryReader { proxy in
+                    Color.clear.preference(key: ReorderRowHeightKey.self, value: proxy.size.height)
+                }
+            }
+            .onPreferenceChange(ReorderRowHeightKey.self) { height in
+                if height > 0, height != rowHeight {
+                    rowHeight = height
+                }
+            }
             .scaleEffect(draggingID == id ? 1.03 : 1)
             .zIndex(draggingID == id ? 1 : 0)
             .simultaneousGesture(reorderGesture)
             .onChange(of: isGestureActive) { _, active in
+                // GestureState falls back to false when the gesture cancels.
                 if !active { finishDragIfNeeded() }
+            }
+            .onDisappear {
+                finishDragIfNeeded()
             }
     }
 
     private var reorderGesture: some Gesture {
         LongPressGesture(minimumDuration: 0.4)
-            .sequenced(before: DragGesture(minimumDistance: 6, coordinateSpace: .local))
+            .sequenced(before: DragGesture(minimumDistance: 6, coordinateSpace: .global))
             .updating($isGestureActive) { value, state, _ in
                 switch value {
                 case .first(true), .second(true, _):
@@ -175,32 +233,36 @@ private struct LongPressReorderModifier: ViewModifier {
                 }
             }
             .onChanged { value in
-                guard case .second(true, let drag?) = value else { return }
-                // Wait for a vertical-dominant drag. A long-press then release,
-                // or a horizontal swipe, must not arm the row.
-                let horizontal = abs(drag.translation.width)
-                let vertical = abs(drag.translation.height)
-                guard draggingID == id || vertical >= horizontal else { return }
-
-                if draggingID != id {
-                    startIndex = orderedIDs.firstIndex(of: id) ?? 0
-                    lastTarget = startIndex
-                    draggingID = id
-                    HapticService.stepperTick()
-                }
-
-                let rowHeight: CGFloat = 68
-                let delta = Int((drag.translation.height / rowHeight).rounded())
-                let target = max(0, min(orderedIDs.count - 1, startIndex + delta))
-                guard target != lastTarget,
-                      let current = orderedIDs.firstIndex(of: id)
-                else { return }
-                lastTarget = target
-                withAnimation(.easeInOut(duration: 0.15)) {
-                    orderedIDs.move(
-                        fromOffsets: IndexSet(integer: current),
-                        toOffset: target > current ? target + 1 : target
+                switch value {
+                case .first(true):
+                    // Arm before the finger moves so the parent ScrollView
+                    // locks. Otherwise the scroll eats the drag and the
+                    // local translation stays ~0 (the "2." label never
+                    // becomes "1.").
+                    armDrag()
+                case .second(true, let drag?):
+                    armDrag()
+                    let horizontal = abs(drag.translation.width)
+                    let vertical = abs(drag.translation.height)
+                    guard vertical >= horizontal else { return }
+                    let target = ReorderDragStep.targetIndex(
+                        start: startIndex,
+                        translation: drag.translation.height,
+                        rowHeight: rowHeight,
+                        count: orderedIDs.count
                     )
+                    guard target != lastTarget,
+                          let current = orderedIDs.firstIndex(of: id)
+                    else { return }
+                    lastTarget = target
+                    withAnimation(.easeInOut(duration: 0.15)) {
+                        orderedIDs.move(
+                            fromOffsets: IndexSet(integer: current),
+                            toOffset: target > current ? target + 1 : target
+                        )
+                    }
+                default:
+                    break
                 }
             }
             .onEnded { _ in
@@ -208,10 +270,22 @@ private struct LongPressReorderModifier: ViewModifier {
             }
     }
 
+    private func armDrag() {
+        var lock = ReorderScrollLock(draggingID: draggingID)
+        guard lock.draggingID != id else { return }
+        startIndex = orderedIDs.firstIndex(of: id) ?? 0
+        lastTarget = startIndex
+        lock.arm(id)
+        draggingID = lock.draggingID
+        HapticService.stepperTick()
+    }
+
     private func finishDragIfNeeded() {
-        guard draggingID == id else { return }
-        draggingID = nil
-        onReorder()
+        var lock = ReorderScrollLock(draggingID: draggingID)
+        let wasDragging = lock.draggingID == id
+        lock.release(id)
+        draggingID = lock.draggingID
+        if wasDragging { onReorder() }
     }
 }
 

@@ -275,7 +275,15 @@ final class Exercise {
         set { rotationTrack = newValue.rawValue }
     }
 
-    init(
+    /// `var id: UUID = UUID()` is one schema default, applied when backing
+    /// data is created at the end of the designated init. A write inside that
+    /// init is discarded, so every `Exercise()` shared one id and
+    /// `applyDayPlanSnapshot` trapped (DEBUG `assertionFailure`, reported as
+    /// Crash: RockLog). Assign a fresh id after that init returns. Callers
+    /// that already chose an id pin it again after `insert` (`ExplicitPersistentID`).
+    /// Leave `records` nil; `recordsArray` nil-coalesces. Do not add a unique
+    /// constraint — CloudKit V2 has none.
+    convenience init(
         name: String,
         dayType: DayType? = nil,
         muscleGroup: String = "",
@@ -284,24 +292,49 @@ final class Exercise {
         rotationTrack: RotationTrack = .every,
         additionalDayTypes: [DayType] = []
     ) {
-        self.name = name
-        let primary = dayType?.rawValue ?? ""
+        self.init(
+            storedName: name,
+            storedDayType: dayType,
+            storedMuscleGroup: muscleGroup,
+            storedSortOrder: sortOrder,
+            storedIsCustom: isCustom,
+            storedRotationTrack: rotationTrack,
+            storedAdditionalDayTypes: additionalDayTypes
+        )
+        self.id = UUID()
+    }
+
+    init(
+        storedName: String,
+        storedDayType: DayType? = nil,
+        storedMuscleGroup: String = "",
+        storedSortOrder: Int = 0,
+        storedIsCustom: Bool = false,
+        storedRotationTrack: RotationTrack = .every,
+        storedAdditionalDayTypes: [DayType] = []
+    ) {
+        self.name = storedName
+        let primary = storedDayType?.rawValue ?? ""
         self.dayType = primary
-        self.extraDayTypes = additionalDayTypes
+        self.extraDayTypes = storedAdditionalDayTypes
             .map(\.rawValue)
             .filter { !$0.isEmpty && $0 != primary }
             .joined(separator: ",")
-        self.muscleGroup = muscleGroup
-        self.sortOrder = sortOrder
-        self.isCustom = isCustom
+        self.muscleGroup = storedMuscleGroup
+        self.sortOrder = storedSortOrder
+        self.isCustom = storedIsCustom
         self.notes = ""
-        self.rotationTrack = rotationTrack.rawValue
+        self.rotationTrack = storedRotationTrack.rawValue
         self.daySortOrdersRaw = ""
-        // `var id: UUID = UUID()` is a single schema default. Assigning the
-        // `records` to-many inside init rematerializes the row onto that
-        // shared id, so the next Exercise() repeats it and a dictionary
-        // built with uniqueKeysWithValues traps. Leave records nil;
-        // recordsArray already nil-coalesces. Set id last so it wins.
-        self.id = UUID()
+    }
+}
+
+/// Snapshot apply, backup restore, and program import already know the row's id.
+/// The schema default can replace an id written before `insert`, so pin again after.
+enum ExplicitPersistentID {
+    static func pin(_ id: UUID, assign: (UUID) -> Void, insert: () -> Void) {
+        assign(id)
+        insert()
+        assign(id)
     }
 }

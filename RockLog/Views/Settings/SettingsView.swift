@@ -488,6 +488,7 @@ struct SettingsView: View {
 
                     Toggle(isOn: $tapAtTen) {
                         Label("Tap at 10 seconds", systemImage: "hand.tap")
+                            .accessibilityIdentifier(AccessibilityID.settingsTapAtTen)
                     }
                     .tint(Color.uplift.accent)
                     .accessibilityIdentifier(AccessibilityID.settingsTapAtTen)

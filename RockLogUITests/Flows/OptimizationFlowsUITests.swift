@@ -11,7 +11,9 @@ import XCTest
 final class OptimizationFlowsUITests: RockLogUITestCase {
 
     func test_emptyLibrary_settingsShowUnitGymAndStartingWeight() {
-        launch(preset: "empty")
+        // Rest timer is on before Settings appears. Logging presets do not
+        // pass this argument, so a logged set still does not count down.
+        launch(preset: "empty", extra: ["-RockLogRestTimer", "on"])
         // Empty is a first launch. Leave the library empty, then Settings is reachable.
         element(UITestID.firstRunChoice("Push / Pull / Legs")).tap()
         waitFor(UITestID.firstRunContinue).tap()
@@ -22,14 +24,8 @@ final class OptimizationFlowsUITests: RockLogUITestCase {
         scrollUntilExists(UITestID.settingsStartingWeight)
         scrollUntilExists(UITestID.settingsMassUnit)
         scrollUntilExists(UITestID.settingsGym)
-        // This test asserts settings.tapAtTen, which is drawn only while the
-        // rest timer is on. Turn it on for that row. Logging tests leave it
-        // off so a logged set does not start a countdown.
-        let restTimer = app.switches["Rest timer"]
-        scrollUntilExists(element: restTimer)
-        if String(describing: restTimer.value ?? "0") != "1" {
-            restTimer.tap()
-        }
+        // settings.tapAtTen is on the "Tap at 10 seconds" toggle, which
+        // is in the list because setup turned the rest timer on.
         scrollUntilExists(UITestID.settingsTapAtTen)
     }
 

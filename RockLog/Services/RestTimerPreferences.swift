@@ -67,4 +67,16 @@ enum RestTimerPreferences {
     static func setEnabled(_ enabled: Bool, forExercise id: UUID) {
         UserDefaults.standard.set(enabled, forKey: exerciseEnabledKey(for: id))
     }
+
+    /// The later row of a duplicate exercise id keeps the per-lift switch.
+    /// The original key stays so the first row does too.
+    static func copyExerciseSetting(from old: UUID, to new: UUID) {
+        let oldKey = exerciseEnabledKey(for: old)
+        guard UserDefaults.standard.object(forKey: oldKey) != nil else { return }
+        setEnabled(UserDefaults.standard.bool(forKey: oldKey), forExercise: new)
+    }
+
+    static func discardExerciseSetting(_ id: UUID) {
+        UserDefaults.standard.removeObject(forKey: exerciseEnabledKey(for: id))
+    }
 }

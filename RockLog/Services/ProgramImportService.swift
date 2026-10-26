@@ -320,8 +320,9 @@ enum ProgramImportService {
             startDate: startDate,
             notes: document.block.notes ?? ""
         )
-        block.id = document.block.id
-        context.insert(block)
+        ExplicitPersistentID.pin(document.block.id, assign: { block.id = $0 }) {
+            context.insert(block)
+        }
 
         var createdExercises = 0
         var imported = 0
@@ -340,14 +341,15 @@ enum ProgramImportService {
                 date: payload.date,
                 rotationTrack: RotationTrack(storage: payload.rotationTrack)
             )
-            session.id = payload.id
             session.notes = payload.notes ?? ""
             session.isCompleted = false
             session.planStatus = .planned
             session.planOrder = index
             session.followsSessionRoster = true
             session.trainingBlock = block
-            context.insert(session)
+            ExplicitPersistentID.pin(payload.id, assign: { session.id = $0 }) {
+                context.insert(session)
+            }
             if block.sessions == nil { block.sessions = [] }
             block.sessions?.append(session)
 
@@ -432,8 +434,9 @@ enum ProgramImportService {
             muscleGroup: payload.muscleGroup ?? "",
             isCustom: true
         )
-        exercise.id = payload.id
-        context.insert(exercise)
+        ExplicitPersistentID.pin(payload.id, assign: { exercise.id = $0 }) {
+            context.insert(exercise)
+        }
         byID[payload.id] = exercise
         byName[key] = exercise
         return (exercise, true)

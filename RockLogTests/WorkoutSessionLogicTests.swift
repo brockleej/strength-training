@@ -544,6 +544,11 @@ final class SplitPersistenceTests: RockLogStoreTestCase {
         context.insert(keep)
         context.insert(extra)
         try context.save()
+        XCTAssertNotEqual(
+            keep.id,
+            extra.id,
+            "Shared schema-default ids crash applyDayPlanSnapshot in DEBUG"
+        )
 
         let snapshot = [DayPlanBackup(dayName: "Push", exerciseIDs: [keep.id])]
         XCTAssertTrue(SeedData.applyDayPlanSnapshot(snapshot, context: context))
@@ -591,6 +596,37 @@ final class SplitPersistenceTests: RockLogStoreTestCase {
             0,
             "Deleting every exercise must not bring the starter catalog back"
         )
+    }
+
+    func test_applyOrder_movesPullAheadOfPush() throws {
+        let context = container.mainContext
+        let names = ["Push", "Pull", "Legs"]
+        var days: [SplitDay] = []
+        for (index, name) in names.enumerated() {
+            let def = DayTypePalette.fallback(for: name)
+            let day = SplitDay(
+                name: def.name,
+                systemImage: def.systemImage,
+                subtitle: def.subtitle,
+                colorHex: def.colorHex,
+                includesAllExercises: def.includesAllExercises,
+                sortOrder: index
+            )
+            context.insert(day)
+            days.append(day)
+        }
+        try context.save()
+
+        let pull = try XCTUnwrap(days.first { $0.name == "Pull" })
+        let push = try XCTUnwrap(days.first { $0.name == "Push" })
+        let legs = try XCTUnwrap(days.first { $0.name == "Legs" })
+        DayTypeRegistry.shared.applyOrder(ids: [pull.id, push.id, legs.id], context: context)
+
+        let ordered = try context.fetch(
+            FetchDescriptor<SplitDay>(sortBy: [SortDescriptor(\SplitDay.sortOrder)])
+        )
+        XCTAssertEqual(ordered.map(\.name), ["Pull", "Push", "Legs"])
+        XCTAssertEqual(pull.sortOrder, 0, "Position label becomes \"1. Pull\"")
     }
 
     func test_resetExerciseCatalogSeed_isIgnoredOutsideTheEmptyUITestPreset() {
@@ -767,5 +803,180 @@ final class SplitPersistenceTests: RockLogStoreTestCase {
             .sorted { $0.sortIndex(for: .push) < $1.sortIndex(for: .push) }
         XCTAssertEqual(restored.map(\.name), ["My Bench", "My Fly"])
         XCTAssertEqual(restored.map { $0.sortIndex(for: .push) }, [0, 1])
+    }
+
+    func test_explicitExerciseID_survivesInsertSaveFetchAndRestore() throws {
+        let context = container.mainContext
+        let explicit = UUID(uuidString: "E1000000-0000-4000-8000-0000000000AA")!
+        let exercise = Exercise(name: "UI Explicit Id", dayType: .push, muscleGroup: "Chest", isCustom: true)
+        ExplicitPersistentID.pin(explicit, assign: { exercise.id = $0 }) {
+            context.insert(exercise)
+        }
+        try context.save()
+
+        let fetched = try context.fetch(FetchDescriptor<Exercise>())
+        XCTAssertEqual(fetched.map(\.id), [explicit])
+
+        let data = try BackupService.export(context: context)
+        try BackupService.restore(from: data, context: context)
+        let restored = try context.fetch(FetchDescriptor<Exercise>())
+        XCTAssertEqual(restored.map(\.id), [explicit])
+        XCTAssertEqual(restored.map(\.name), ["UI Explicit Id"])
+    }
+
+    func test_applySplitSnapshot_keepsExplicitDayID() throws {
+        let context = container.mainContext
+        let explicit = UUID(uuidString: "E1000000-0000-4000-8000-0000000000BB")!
+        let snap = SplitDayBackup(
+            id: explicit,
+            name: "Push",
+            systemImage: "dumbbell.fill",
+            subtitle: "",
+            colorHex: 0,
+            includesAllExercises: false,
+            sortOrder: 0
+        )
+        XCTAssertTrue(SeedData.applySplitSnapshot([snap], context: context))
+        let days = try context.fetch(FetchDescriptor<SplitDay>())
+        XCTAssertEqual(days.map(\.id), [explicit])
+    }
+
+    func test_duplicateExerciseIDs_areReassignedAndReferencesFollow() throws {
+        let context = container.mainContext
+        let shared = UUID(uuidString: "E2000000-0000-4000-8000-000000000002")!
+        let gym = UUID(uuidString: "E2000000-0000-4000-8000-000000000003")!
+        defer {
+            UserDefaults.standard.removeObject(forKey: SeedData.dayPlanSnapshotKey)
+            RestTimerPreferences.discardExerciseSetting(shared)
+            RestSampleStore.discard(exerciseID: shared)
+        }
+
+        let first = Exercise(name: "UI First Duplicate", dayType: .push, muscleGroup: "Chest", isCustom: true)
+        let later = Exercise(name: "UI Later Duplicate", dayType: .push, muscleGroup: "Chest", isCustom: true)
+        context.insert(first)
+        context.insert(later)
+
+        let session = WorkoutSession(dayType: .push)
+        let record = ExerciseRecord(trainingMode: .highWeightLowReps, sortOrder: 0)
+        record.exercise = later
+        record.session = session
+        session.exerciseRecords = [record]
+        later.records = [record]
+        context.insert(session)
+        context.insert(record)
+
+        let profile = MachineStackProfile(gymID: gym, exerciseID: shared)
+        context.insert(profile)
+        profile.exerciseID = shared
+        profile.gymID = gym
+        profile.stepPounds = 12.5
+
+        // Pin after relationships. An id write inside init is discarded, and
+        // assigning `records` can rematerialize the schema default.
+        first.id = shared
+        later.id = shared
+        session.suppressExercise(id: shared)
+
+        RestTimerPreferences.setEnabled(false, forExercise: shared)
+        RestSampleStore.record(90, for: shared)
+        try context.save()
+        defer {
+            RestTimerPreferences.discardExerciseSetting(later.id)
+            RestSampleStore.discard(exerciseID: later.id)
+        }
+
+        let backup = AppBackup(
+            version: 1,
+            exportedAt: Date(timeIntervalSince1970: 1_700_000_000),
+            exercises: [],
+            sessions: [],
+            dayPlans: [DayPlanBackup(dayName: "Push", exerciseIDs: [shared])]
+        )
+        SeedData.restoreDayPlans(from: backup, context: context)
+
+        let fetched = try context.fetch(FetchDescriptor<Exercise>())
+        let fetchedFirst = try XCTUnwrap(fetched.first { $0.name == "UI First Duplicate" })
+        let fetchedLater = try XCTUnwrap(fetched.first { $0.name == "UI Later Duplicate" })
+        XCTAssertEqual(fetchedFirst.id, shared)
+        XCTAssertNotEqual(fetchedLater.id, shared)
+        XCTAssertNotEqual(fetchedFirst.id, fetchedLater.id)
+
+        let fetchedRecord = try XCTUnwrap(try context.fetch(FetchDescriptor<ExerciseRecord>()).first)
+        XCTAssertEqual(fetchedRecord.exercise?.name, "UI Later Duplicate")
+        XCTAssertEqual(fetchedRecord.exercise?.id, fetchedLater.id)
+
+        XCTAssertTrue(fetchedFirst.belongs(to: .push))
+        XCTAssertTrue(fetchedLater.belongs(to: .push))
+
+        let fetchedSession = try XCTUnwrap(try context.fetch(FetchDescriptor<WorkoutSession>()).first)
+        XCTAssertTrue(fetchedSession.suppressedExerciseIDs.contains(shared))
+        XCTAssertTrue(fetchedSession.suppressedExerciseIDs.contains(fetchedLater.id))
+
+        let profiles = try context.fetch(FetchDescriptor<MachineStackProfile>())
+        XCTAssertEqual(profiles.first { $0.exerciseID == shared }?.stepPounds, 12.5)
+        XCTAssertEqual(profiles.first { $0.exerciseID == fetchedLater.id }?.stepPounds, 12.5)
+
+        XCTAssertFalse(RestTimerPreferences.isEnabled(forExercise: shared))
+        XCTAssertFalse(RestTimerPreferences.isEnabled(forExercise: fetchedLater.id))
+        XCTAssertEqual(RestSampleStore.samples(for: fetchedLater.id), [90])
+    }
+
+    func test_emptyLibraryRestTimer_isOnOnlyWhenLaunchAsks() {
+        XCTAssertTrue(
+            UITestLaunch.restTimerEnabled(arguments: ["-RockLogRestTimer", "on"])
+        )
+        XCTAssertFalse(UITestLaunch.restTimerEnabled(arguments: ["-RockLogRestTimer", "off"]))
+        XCTAssertFalse(UITestLaunch.restTimerEnabled(arguments: []))
+    }
+}
+
+@MainActor
+final class ReorderScrollLockTests: XCTestCase {
+    func test_cancelledDragReleasesScrollLock() {
+        var lock = ReorderScrollLock()
+        let id = UUID()
+        lock.arm(id)
+        XCTAssertTrue(lock.scrollDisabled)
+        XCTAssertEqual(lock.draggingID, id)
+
+        lock.release(id)
+        XCTAssertFalse(lock.scrollDisabled)
+        XCTAssertNil(lock.draggingID)
+
+        lock.arm(id)
+        lock.release(UUID())
+        XCTAssertTrue(lock.scrollDisabled, "A different row leaving must not clear this drag")
+        lock.release(id)
+        XCTAssertFalse(lock.scrollDisabled)
+    }
+
+    func test_reorderStepUsesMeasuredRowHeight() {
+        // 30pt of travel on a 68pt Dynamic Type row stays put.
+        // Dividing by a hard-coded 48pt would round that drag to the next slot.
+        XCTAssertEqual(ReorderDragStep.delta(translation: 30, rowHeight: 68), 0)
+        XCTAssertEqual(ReorderDragStep.delta(translation: 30, rowHeight: 48), 1)
+        XCTAssertEqual(ReorderDragStep.delta(translation: 40, rowHeight: 0), 0)
+        XCTAssertEqual(
+            ReorderDragStep.targetIndex(start: 1, translation: -68, rowHeight: 68, count: 4),
+            0
+        )
+        XCTAssertEqual(
+            ReorderDragStep.targetIndex(start: 1, translation: 140, rowHeight: 68, count: 4),
+            3
+        )
+    }
+}
+
+final class LazyTabContentTests: XCTestCase {
+    func test_selectedTabIsBuiltWhenAwakeningWasDropped() {
+        XCTAssertTrue(
+            LazyTabContent.isBuilt(id: "settings", selectedTab: "settings", awakened: ["workout"])
+        )
+        XCTAssertTrue(
+            LazyTabContent.isBuilt(id: "workout", selectedTab: "settings", awakened: ["workout"])
+        )
+        XCTAssertFalse(
+            LazyTabContent.isBuilt(id: "history", selectedTab: "settings", awakened: ["workout"])
+        )
     }
 }

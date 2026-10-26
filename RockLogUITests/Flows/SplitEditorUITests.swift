@@ -37,7 +37,12 @@ final class SplitEditorUITests: RockLogUITestCase {
         let pull = waitFor(UITestID.splitDay("Pull"))
         let push = waitFor(UITestID.splitDay("Push"))
         XCTAssertTrue(pull.label.hasPrefix("2."))
-        pull.press(forDuration: 0.8, thenDragTo: push)
+        // Presets sit above the day list. Off-screen rows exist in the
+        // tree; the drag has to start on a hittable row or the ScrollView
+        // takes it. Hold long enough for the long-press to lock scrolling.
+        scrollUntilHittable(pull)
+        XCTAssertTrue(push.isHittable)
+        pull.press(forDuration: 1.0, thenDragTo: push, withVelocity: .slow, thenHoldForDuration: 0.4)
 
         let moved = element(UITestID.splitDay("Pull"))
         XCTAssertTrue(moved.waitForExistence(timeout: 4))

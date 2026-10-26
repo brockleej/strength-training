@@ -52,6 +52,7 @@ struct TrainingSplitSettingsView: View {
             .padding(.top, 12)
             .padding(.bottom, 28)
         }
+        .scrollDisabled(draggingID != nil)
         .background(Color.uplift.bgElev)
         .navigationTitle("Training Split")
         .navigationBarTitleDisplayMode(.inline)

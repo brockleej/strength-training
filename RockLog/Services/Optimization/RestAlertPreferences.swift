@@ -41,6 +41,17 @@ enum RestSampleStore {
         if next.count > 24 { next.removeFirst(next.count - 24) }
         UserDefaults.standard.set(next.map(String.init).joined(separator: ","), forKey: key(exerciseID))
     }
+
+    /// Duplicate-id repair: the later row keeps the samples gathered under the shared id.
+    static func copySamples(from old: UUID, to new: UUID) {
+        let existing = samples(for: old)
+        guard !existing.isEmpty else { return }
+        UserDefaults.standard.set(existing.map(String.init).joined(separator: ","), forKey: key(new))
+    }
+
+    static func discard(exerciseID: UUID) {
+        UserDefaults.standard.removeObject(forKey: key(exerciseID))
+    }
 }
 
 /// Copies the old per-lift UserDefaults switch onto the exercise once.

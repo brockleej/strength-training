@@ -82,17 +82,14 @@ class RockLogUITestCase: XCTestCase {
         wait(for: [dropped], timeout: 4)
     }
 
-    /// Settings is a lazy List. Rows below the first screen are not in the
-    /// tree until scrolled into view.
+    /// Settings is a lazy List. On iOS 26 that List is often a collection
+    /// view, so a swipe on `tables.firstMatch` can hit an empty table and
+    /// never move the list. Slow swipes so a short row is not skipped.
     func scrollUntilExists(_ identifier: String, maxSwipes: Int = 8) {
         let match = element(identifier)
         if match.waitForExistence(timeout: 2) { return }
         for _ in 0..<maxSwipes {
-            if app.tables.firstMatch.exists {
-                app.tables.firstMatch.swipeUp()
-            } else {
-                app.swipeUp()
-            }
+            swipeUpInScrollable()
             if match.waitForExistence(timeout: 1) { return }
         }
         XCTAssertTrue(match.waitForExistence(timeout: 2), "Timed out scrolling to \(identifier)")
@@ -104,14 +101,35 @@ class RockLogUITestCase: XCTestCase {
     func scrollUntilExists(element match: XCUIElement, maxSwipes: Int = 8) {
         if match.waitForExistence(timeout: 2) { return }
         for _ in 0..<maxSwipes {
-            if app.tables.firstMatch.exists {
-                app.tables.firstMatch.swipeUp()
-            } else {
-                app.swipeUp()
-            }
+            swipeUpInScrollable()
             if match.waitForExistence(timeout: 1) { return }
         }
         XCTAssertTrue(match.waitForExistence(timeout: 2), "Timed out scrolling to \(match)")
+    }
+
+    /// Scroll until the element is on screen. Existence is not enough: a
+    /// VStack inside a ScrollView keeps off-screen rows in the tree, and a
+    /// drag from there scrolls the page instead of reordering.
+    func scrollUntilHittable(_ match: XCUIElement, maxSwipes: Int = 8) {
+        if match.waitForExistence(timeout: 4), match.isHittable { return }
+        for _ in 0..<maxSwipes {
+            swipeUpInScrollable()
+            if match.isHittable { return }
+        }
+        XCTAssertTrue(match.isHittable, "Not hittable after scrolling: \(match)")
+    }
+
+    private func swipeUpInScrollable() {
+        let candidates = [
+            app.collectionViews.firstMatch,
+            app.tables.firstMatch,
+            app.scrollViews.firstMatch,
+        ].filter(\.exists)
+        if let target = candidates.max(by: { $0.frame.height < $1.frame.height }) {
+            target.swipeUp(velocity: .slow)
+        } else {
+            app.swipeUp(velocity: .slow)
+        }
     }
 
     /// Finish confirmation shares its label with the bar button. Prefer the sheet.

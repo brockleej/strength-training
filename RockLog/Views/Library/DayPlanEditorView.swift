@@ -117,6 +117,7 @@ struct DayPlanEditorView: View {
                 .padding(.top, 12)
                 .padding(.bottom, 28)
             }
+            .scrollDisabled(draggingID != nil)
             .background(Color.uplift.bgElev)
             .navigationTitle("Edit \(dayType.rawValue)")
             .navigationBarTitleDisplayMode(.inline)

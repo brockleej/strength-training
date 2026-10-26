@@ -144,6 +144,8 @@ struct SeedData {
 
     /// Post-import hygiene after CloudKit merges remote rows with a local seed.
     static func reconcileAfterCloudKitImport(context: ModelContext) {
+        // A merge can deliver two exercise rows that still share the schema-default id.
+        reassignDuplicateExerciseIDs(context: context, persistSnapshot: true)
         migrateExerciseNames(context: context)
         migrateCompoundMuscleGroups(context: context)
         deduplicateExercises(context: context)
@@ -324,11 +326,118 @@ struct SeedData {
             if saves {
                 storeDayPlanSnapshot(plans)
             }
+            // applyDayPlanSnapshot repairs duplicate exercise ids, then pins membership.
             _ = applyDayPlanSnapshot(plans, context: context, saves: saves)
             return
         }
+        // No roster in the file. Repair ids already stored from the schema-default
+        // bug before a rebuilt snapshot is captured.
+        reassignDuplicateExerciseIDs(context: context, persistSnapshot: saves)
         if saves {
             persistDayPlanSnapshot(context: context)
+        }
+    }
+
+    private static let dayPlanLog = Logger(subsystem: "com.lee.lift2026", category: "DayPlan")
+
+    /// First row for an id (name, then sort order, then fetch order) keeps it.
+    /// Each later row gets a new id. Records stay on the row they already
+    /// point at. UUID-keyed references are copied onto the new id so the later
+    /// row does not lose them; the original id still names the first row.
+    /// Existing stores can already contain these duplicates, so this logs and
+    /// repairs instead of trapping in DEBUG.
+    @discardableResult
+    static func reassignDuplicateExerciseIDs(
+        context: ModelContext,
+        persistSnapshot: Bool
+    ) -> [UUID: [UUID]] {
+        let fetched = (try? context.fetch(FetchDescriptor<Exercise>())) ?? []
+        let ordered = fetched.enumerated().sorted { lhs, rhs in
+            let name = lhs.element.name.localizedCaseInsensitiveCompare(rhs.element.name)
+            if name != .orderedSame { return name == .orderedAscending }
+            if lhs.element.sortOrder != rhs.element.sortOrder {
+                return lhs.element.sortOrder < rhs.element.sortOrder
+            }
+            return lhs.offset < rhs.offset
+        }.map(\.element)
+
+        var seen = Set<UUID>()
+        var repairs: [UUID: [UUID]] = [:]
+        var pending: [(exercise: Exercise, fresh: UUID, old: UUID)] = []
+        for exercise in ordered {
+            let old = exercise.id
+            if !seen.insert(old).inserted {
+                let fresh = UUID()
+                pending.append((exercise, fresh, old))
+                repairs[old, default: []].append(fresh)
+            }
+        }
+        guard !pending.isEmpty else { return [:] }
+
+        let records = (try? context.fetch(FetchDescriptor<ExerciseRecord>())) ?? []
+        for item in pending {
+            var attached = item.exercise.recordsArray
+            for record in records {
+                guard let owner = record.exercise, owner === item.exercise else { continue }
+                if !attached.contains(where: { $0 === record }) {
+                    attached.append(record)
+                }
+            }
+            item.exercise.id = item.fresh
+            for record in attached {
+                record.exercise = item.exercise
+            }
+            copyExerciseReferences(from: item.old, to: item.fresh, context: context)
+        }
+
+        if persistSnapshot, let stored = loadDayPlanSnapshot(), !stored.isEmpty {
+            storeDayPlanSnapshot(expandDayPlans(stored, repairs: repairs))
+        }
+        let sample = pending[0].old.uuidString
+        dayPlanLog.error(
+            "Reassigned \(pending.count, privacy: .public) duplicate exercise id(s); sample \(sample, privacy: .public)"
+        )
+        return repairs
+    }
+
+    private static func copyExerciseReferences(from old: UUID, to fresh: UUID, context: ModelContext) {
+        let sessions = (try? context.fetch(FetchDescriptor<WorkoutSession>())) ?? []
+        for session in sessions where session.suppressedExerciseIDs.contains(old) {
+            session.suppressExercise(id: fresh)
+        }
+        if context.container.schema.entities.contains(where: { $0.name == "MachineStackProfile" }) {
+            let profiles = (try? context.fetch(FetchDescriptor<MachineStackProfile>())) ?? []
+            for profile in profiles where profile.exerciseID == old {
+                let copy = MachineStackProfile(gymID: profile.gymID, exerciseID: fresh)
+                ExplicitPersistentID.pin(UUID(), assign: { copy.id = $0 }) {
+                    context.insert(copy)
+                }
+                copy.gymID = profile.gymID
+                copy.exerciseID = fresh
+                copy.definition = profile.definition
+                copy.updatedAt = profile.updatedAt
+            }
+        }
+        RestTimerPreferences.copyExerciseSetting(from: old, to: fresh)
+        RestSampleStore.copySamples(from: old, to: fresh)
+    }
+
+    static func expandDayPlans(_ plans: [DayPlanBackup], repairs: [UUID: [UUID]]) -> [DayPlanBackup] {
+        guard !repairs.isEmpty else { return plans }
+        return plans.map { plan in
+            var ids: [UUID] = []
+            var seen = Set<UUID>()
+            for id in plan.exerciseIDs {
+                if seen.insert(id).inserted {
+                    ids.append(id)
+                }
+                for fresh in repairs[id] ?? [] {
+                    if seen.insert(fresh).inserted {
+                        ids.append(fresh)
+                    }
+                }
+            }
+            return DayPlanBackup(dayName: plan.dayName, exerciseIDs: ids)
         }
     }
 
@@ -337,8 +446,6 @@ struct SeedData {
     /// - Parameter replaceAllMembership: When true, lifts not in the snapshot
     ///   become unassigned (library only). Used when a planned block replaces
     ///   the whole split — not a backup restore.
-    private static let dayPlanLog = Logger(subsystem: "com.lee.lift2026", category: "DayPlan")
-
     @discardableResult
     static func applyDayPlanSnapshot(
         _ snapshot: [DayPlanBackup],
@@ -347,36 +454,23 @@ struct SeedData {
         saves: Bool = true
     ) -> Bool {
         guard !snapshot.isEmpty else { return false }
+        let repairs = reassignDuplicateExerciseIDs(context: context, persistSnapshot: saves)
+        let roster = expandDayPlans(snapshot, repairs: repairs)
         let exercises = (try? context.fetch(FetchDescriptor<Exercise>())) ?? []
-        guard !exercises.isEmpty else { return false }
-        // A CloudKit merge can hand back the same id twice. uniqueKeysWithValues
-        // traps the process; the first row is enough to place sort indexes.
+        guard !exercises.isEmpty else {
+            return !repairs.isEmpty
+        }
+        // Ids are unique after the repair above. A leftover collision still
+        // keeps the first row and does not trap.
         var byID: [UUID: Exercise] = [:]
         byID.reserveCapacity(exercises.count)
-        var duplicateCount = 0
-        var sampleID = ""
-        for exercise in exercises {
-            if byID[exercise.id] != nil {
-                duplicateCount += 1
-                if sampleID.isEmpty {
-                    sampleID = exercise.id.uuidString
-                }
-                continue
-            }
+        for exercise in exercises where byID[exercise.id] == nil {
             byID[exercise.id] = exercise
         }
-        if duplicateCount > 0 {
-            dayPlanLog.error(
-                "Day plan kept the first row for \(duplicateCount, privacy: .public) duplicate exercise id(s); sample \(sampleID, privacy: .public)"
-            )
-            #if DEBUG
-            assertionFailure("Day plan saw \(duplicateCount) duplicate exercise id(s); kept the first row")
-            #endif
-        }
-        let snapshotDays = Set(snapshot.map { $0.dayName.lowercased() })
+        let snapshotDays = Set(roster.map { $0.dayName.lowercased() })
 
         var intended: [UUID: [DayType]] = [:]
-        for plan in snapshot {
+        for plan in roster {
             let day = DayType(rawValue: plan.dayName)
             for (index, id) in plan.exerciseIDs.enumerated() {
                 intended[id, default: []].append(day)
@@ -384,7 +478,7 @@ struct SeedData {
             }
         }
 
-        var changed = false
+        var changed = !repairs.isEmpty
         for exercise in exercises {
             let current = exercise.days
             let keepOutsideSnapshot = replaceAllMembership
@@ -469,8 +563,9 @@ struct SeedData {
                     includesAllExercises: snap.includesAllExercises,
                     sortOrder: index
                 )
-                day.id = snap.id
-                context.insert(day)
+                ExplicitPersistentID.pin(snap.id, assign: { day.id = $0 }) {
+                    context.insert(day)
+                }
                 changed = true
             }
         }

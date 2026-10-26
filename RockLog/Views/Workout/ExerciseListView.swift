@@ -185,6 +185,7 @@ struct ExerciseListView: View {
                     }
                     .padding(.bottom, 110)   // pill bar clearance
                 }
+                .scrollDisabled(draggingID != nil)
                 .background(Color.uplift.bgElev)
                 .scrollIndicators(.hidden)
 
