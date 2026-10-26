@@ -22,8 +22,9 @@ final class OptimizationFlowsUITests: RockLogUITestCase {
         scrollUntilExists(UITestID.settingsStartingWeight)
         scrollUntilExists(UITestID.settingsMassUnit)
         scrollUntilExists(UITestID.settingsGym)
-        // Tap at ten is inside the rest-timer block, which UI tests leave off
-        // so a logged set does not start a countdown.
+        // This test asserts settings.tapAtTen, which is drawn only while the
+        // rest timer is on. Turn it on for that row. Logging tests leave it
+        // off so a logged set does not start a countdown.
         let restTimer = app.switches["Rest timer"]
         scrollUntilExists(restTimer)
         if String(describing: restTimer.value ?? "0") != "1" {

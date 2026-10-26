@@ -136,6 +136,7 @@ enum UITestLaunch {
             // A prior typical/longHistory launch leaves the catalog marked
             // seeded. The empty preset is a first launch and must insert it
             // so starter plans have Dumbbell Bench Press to pin.
+            // resetExerciseCatalogSeed itself no-ops for every other launch.
             SeedData.resetExerciseCatalogSeed()
         case .typical, .longHistory, .planWaiting:
             defaults.set(true, forKey: FirstRunPreferences.completedKey)

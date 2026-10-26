@@ -551,6 +551,61 @@ final class SplitPersistenceTests: RockLogStoreTestCase {
         XCTAssertFalse(extra.belongs(to: .push))
     }
 
+    func test_newExercises_keepDistinctIDsThroughFetch() throws {
+        let context = container.mainContext
+        let lifts = [
+            Exercise(name: "UI Distinct One", isCustom: true),
+            Exercise(name: "UI Distinct Two", isCustom: true),
+            Exercise(name: "UI Distinct Three", isCustom: true),
+        ]
+        let ids = lifts.map(\.id)
+        XCTAssertEqual(Set(ids).count, ids.count)
+        for lift in lifts {
+            context.insert(lift)
+        }
+        try context.save()
+
+        let fetched = try context.fetch(FetchDescriptor<Exercise>())
+        let fetchedIDs = fetched.map(\.id)
+        XCTAssertEqual(fetchedIDs.count, 3)
+        XCTAssertEqual(Set(fetchedIDs).count, fetchedIDs.count)
+        XCTAssertEqual(Set(fetchedIDs), Set(ids))
+    }
+
+    func test_seedIfNeeded_doesNotRestoreCatalogAfterUserDeletesEveryExercise() throws {
+        let context = container.mainContext
+        SeedData.seedIfNeeded(context: context)
+        let seeded = try context.fetch(FetchDescriptor<Exercise>())
+        XCTAssertFalse(seeded.isEmpty)
+        XCTAssertTrue(UserDefaults.standard.bool(forKey: SeedData.hasSeededExercisesKey))
+
+        for exercise in seeded {
+            context.delete(exercise)
+        }
+        try context.save()
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<Exercise>()), 0)
+
+        SeedData.seedIfNeeded(context: context)
+        XCTAssertEqual(
+            try context.fetchCount(FetchDescriptor<Exercise>()),
+            0,
+            "Deleting every exercise must not bring the starter catalog back"
+        )
+    }
+
+    func test_resetExerciseCatalogSeed_isIgnoredOutsideTheEmptyUITestPreset() {
+        let defaults = UserDefaults.standard
+        defaults.set(true, forKey: SeedData.hasSeededExercisesKey)
+        defaults.set(2, forKey: "exerciseCatalogVersion")
+        defaults.set(true, forKey: SeedData.strippedUnusedStarterExtrasKey)
+
+        SeedData.resetExerciseCatalogSeed()
+
+        XCTAssertTrue(defaults.bool(forKey: SeedData.hasSeededExercisesKey))
+        XCTAssertEqual(defaults.integer(forKey: "exerciseCatalogVersion"), 2)
+        XCTAssertTrue(defaults.bool(forKey: SeedData.strippedUnusedStarterExtrasKey))
+    }
+
     func test_deduplicateExercises_collapsesSeedAndUserCopyByName() throws {
         let context = container.mainContext
         let seeded = Exercise(name: "Dumbbell Bench Press", dayType: .push, muscleGroup: "Chest")

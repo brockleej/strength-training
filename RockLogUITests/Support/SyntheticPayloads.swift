@@ -178,6 +178,85 @@ enum SyntheticPayloads {
         """
     }
 
+    /// Week-A-only lift plus a completed A session. The next start is week B,
+    /// which hides this lift until the week control is switched back to A.
+    static func backupRestoredWeekALift() -> String {
+        """
+        {
+          "version": 1,
+          "exportedAt": "2026-01-15T12:00:00Z",
+          "exercises": [
+            {
+              "id": "D4000000-0000-4000-8000-000000000001",
+              "name": "UI A Week Lift",
+              "dayType": "UI Day",
+              "muscleGroup": "Chest",
+              "sortOrder": 0,
+              "isCustom": true,
+              "notes": "",
+              "rotationTrack": "A",
+              "extraDayTypes": "",
+              "daySortOrdersRaw": ""
+            }
+          ],
+          "sessions": [
+            {
+              "id": "D4000000-0000-4000-8000-000000000002",
+              "date": "2026-01-15T12:00:00Z",
+              "dayType": "UI Day",
+              "notes": "",
+              "isCompleted": true,
+              "rotationTrack": "A",
+              "durationSeconds": 2400,
+              "planState": "",
+              "followsSessionRoster": false,
+              "planOrder": 0,
+              "exerciseRecords": [
+                {
+                  "id": "D4000000-0000-4000-8000-000000000003",
+                  "exerciseID": "D4000000-0000-4000-8000-000000000001",
+                  "trainingMode": "Strength",
+                  "sortOrder": 0,
+                  "isCompleted": true,
+                  "notes": "",
+                  "sets": [
+                    {
+                      "id": "D4000000-0000-4000-8000-000000000004",
+                      "setNumber": 1,
+                      "weightLbs": 95,
+                      "reps": 8,
+                      "isWarmup": false,
+                      "isEachSide": false,
+                      "isAssisted": false,
+                      "completedAt": "2026-01-15T12:10:00Z",
+                      "isTarget": false
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "splitDays": [
+            {
+              "id": "D4000000-0000-4000-8000-000000000005",
+              "name": "UI Day",
+              "systemImage": "dumbbell.fill",
+              "subtitle": "Synthetic",
+              "colorHex": 4169983,
+              "includesAllExercises": false,
+              "sortOrder": 0
+            }
+          ],
+          "dayPlans": [
+            {
+              "dayName": "UI Day",
+              "exerciseIDs": ["D4000000-0000-4000-8000-000000000001"]
+            }
+          ]
+        }
+        """
+    }
+
     static func environment(json: String) -> [String: String] {
         let data = Data(json.utf8)
         return ["ROCKLOG_INJECT_FILE_B64": data.base64EncodedString()]

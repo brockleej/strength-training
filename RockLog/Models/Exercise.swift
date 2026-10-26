@@ -37,8 +37,10 @@ final class Exercise {
     /// When on, the lift screen can offer a warm-up ramp. Logging it is still his tap.
     var suggestWarmupRamp: Bool = false
 
+    /// Nil until a session logs this lift. Do not assign it inside `init`:
+    /// that write rematerializes the shared schema-default id. See init.
     @Relationship(deleteRule: .cascade, inverse: \ExerciseRecord.exercise)
-    var records: [ExerciseRecord]?
+    var records: [ExerciseRecord]? = nil
 
     var recordsArray: [ExerciseRecord] { records ?? [] }
 
@@ -282,7 +284,6 @@ final class Exercise {
         rotationTrack: RotationTrack = .every,
         additionalDayTypes: [DayType] = []
     ) {
-        self.id = UUID()
         self.name = name
         let primary = dayType?.rawValue ?? ""
         self.dayType = primary
@@ -296,6 +297,11 @@ final class Exercise {
         self.notes = ""
         self.rotationTrack = rotationTrack.rawValue
         self.daySortOrdersRaw = ""
-        self.records = []
+        // `var id: UUID = UUID()` is a single schema default. Assigning the
+        // `records` to-many inside init rematerializes the row onto that
+        // shared id, so the next Exercise() repeats it and a dictionary
+        // built with uniqueKeysWithValues traps. Leave records nil;
+        // recordsArray already nil-coalesces. Set id last so it wins.
+        self.id = UUID()
     }
 }

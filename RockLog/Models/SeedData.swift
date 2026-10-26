@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import os
 import SwiftData
 
 struct SeedData {
@@ -336,6 +337,8 @@ struct SeedData {
     /// - Parameter replaceAllMembership: When true, lifts not in the snapshot
     ///   become unassigned (library only). Used when a planned block replaces
     ///   the whole split — not a backup restore.
+    private static let dayPlanLog = Logger(subsystem: "com.lee.lift2026", category: "DayPlan")
+
     @discardableResult
     static func applyDayPlanSnapshot(
         _ snapshot: [DayPlanBackup],
@@ -348,7 +351,28 @@ struct SeedData {
         guard !exercises.isEmpty else { return false }
         // A CloudKit merge can hand back the same id twice. uniqueKeysWithValues
         // traps the process; the first row is enough to place sort indexes.
-        let byID = Dictionary(exercises.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        var byID: [UUID: Exercise] = [:]
+        byID.reserveCapacity(exercises.count)
+        var duplicateCount = 0
+        var sampleID = ""
+        for exercise in exercises {
+            if byID[exercise.id] != nil {
+                duplicateCount += 1
+                if sampleID.isEmpty {
+                    sampleID = exercise.id.uuidString
+                }
+                continue
+            }
+            byID[exercise.id] = exercise
+        }
+        if duplicateCount > 0 {
+            dayPlanLog.error(
+                "Day plan kept the first row for \(duplicateCount, privacy: .public) duplicate exercise id(s); sample \(sampleID, privacy: .public)"
+            )
+            #if DEBUG
+            assertionFailure("Day plan saw \(duplicateCount) duplicate exercise id(s); kept the first row")
+            #endif
+        }
         let snapshotDays = Set(snapshot.map { $0.dayName.lowercased() })
 
         var intended: [UUID: [DayType]] = [:]
@@ -879,10 +903,17 @@ struct SeedData {
     /// Empty UI-test launches share the simulator's UserDefaults with earlier
     /// presets. Those presets mark the catalog seeded, which would skip the
     /// stock library and leave starter day plans with nothing to pin.
+    ///
+    /// This clears that flag only for the UI-test `empty` preset. A normal
+    /// launch must not: someone who deleted every exercise would get the
+    /// starter catalog seeded again.
     static func resetExerciseCatalogSeed() {
+        #if DEBUG
+        guard UITestLaunch.isEnabled, UITestLaunch.preset == .empty else { return }
         UserDefaults.standard.set(false, forKey: hasSeededExercisesKey)
         UserDefaults.standard.removeObject(forKey: catalogVersionKey)
         UserDefaults.standard.removeObject(forKey: strippedUnusedStarterExtrasKey)
+        #endif
     }
 
     /// Skip the unused-starter cleanup (restored backup or first-run templates).

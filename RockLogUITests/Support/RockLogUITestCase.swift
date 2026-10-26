@@ -50,18 +50,36 @@ class RockLogUITestCase: XCTestCase {
 
     /// Soft remove: swipe, then tap the trailing trash strip.
     /// Set rows allow a full swipe to delete; split rows must not.
-    /// A full swipe already removes the row, so the trailing tap is skipped
-    /// when the element is gone.
+    /// A disappeared row counts only when the matching identifier count
+    /// drops by exactly 1. "Delete day" leaves the split row in place.
     func swipeToRemove(_ row: XCUIElement) {
         XCTAssertTrue(row.waitForExistence(timeout: 6))
+        let identifier = row.identifier
+        let query = app.descendants(matching: .any).matching(identifier: identifier)
+        let before = query.count
+        XCTAssertGreaterThan(before, 0, "No row for \(identifier)")
         row.swipeLeft()
-        let trash = element(UITestID.swipeTrash)
-        if trash.waitForExistence(timeout: 2), trash.isHittable {
-            trash.tap()
+
+        if query.count >= before {
+            let trash = element(UITestID.swipeTrash)
+            if trash.waitForExistence(timeout: 2), trash.isHittable {
+                trash.tap()
+            } else if row.exists {
+                row.coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.5)).tap()
+            }
+        }
+
+        if query.count == before, app.buttons["Delete day"].waitForExistence(timeout: 2) {
+            XCTAssertEqual(query.count, before, "Delete day must leave \(identifier) until the confirm is tapped")
             return
         }
-        guard row.exists else { return }
-        row.coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.5)).tap()
+
+        let dropped = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "count == %d", before - 1),
+            object: query
+        )
+        dropped.expectationDescription = "\(identifier) count should drop from \(before) to \(before - 1)"
+        wait(for: [dropped], timeout: 4)
     }
 
     /// Settings is a lazy List. Rows below the first screen are not in the

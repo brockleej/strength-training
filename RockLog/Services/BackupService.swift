@@ -349,6 +349,9 @@ struct BackupService {
         if let metrics = backup.bodyMetrics {
             try rejectDuplicateIDs(metrics.map(\.id), noun: "body measurement")
             for metric in metrics {
+                // test_b5: rejecting an unknown kind, with "nothing was changed",
+                // is intended. Skipping the row would apply the rest of the file
+                // and leave the user's data partly restored.
                 guard BodyMetricKind(rawValue: metric.kindRaw) != nil else {
                     throw BackupError.invalidBackup(
                         "Body measurement \(metric.id.uuidString) has unknown kind \(metric.kindRaw). Restore was cancelled and nothing was changed."

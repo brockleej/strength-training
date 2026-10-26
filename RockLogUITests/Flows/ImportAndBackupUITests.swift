@@ -100,4 +100,27 @@ final class ImportAndBackupUITests: RockLogUITestCase {
         XCTAssertTrue(element(UITestID.workoutExercise("UI Restored Lift")).waitForExistence(timeout: 8))
         XCTAssertFalse(element(UITestID.workoutExercise("UI Bench Press")).exists)
     }
+
+    func test_restoreConfirm_weekALift_isHiddenWhenNextSessionIsWeekB() {
+        launch(
+            preset: "typical",
+            environment: SyntheticPayloads.environment(json: SyntheticPayloads.backupRestoredWeekALift())
+        )
+        tapTab("Settings")
+        dismissAlert(button: "Replace split and exercises")
+        let restored = app.alerts["Success"].buttons["OK"]
+        if restored.waitForExistence(timeout: 12) {
+            restored.tap()
+        }
+        XCTAssertTrue(element(UITestID.todayDay("UI Day")).waitForExistence(timeout: 8))
+        let start = waitFor(UITestID.todayStart)
+        XCTAssertTrue(start.label.contains("B week"), start.label)
+        start.tap()
+        XCTAssertTrue(element(UITestID.workoutFinish).waitForExistence(timeout: 8))
+        let aWeek = app.buttons["A week"]
+        XCTAssertTrue(aWeek.waitForExistence(timeout: 6))
+        XCTAssertFalse(element(UITestID.workoutExercise("UI A Week Lift")).exists)
+        aWeek.tap()
+        XCTAssertTrue(element(UITestID.workoutExercise("UI A Week Lift")).waitForExistence(timeout: 6))
+    }
 }
