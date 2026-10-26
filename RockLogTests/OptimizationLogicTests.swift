@@ -250,7 +250,7 @@ final class OptimizationLogicTests: XCTestCase {
             StackCandidate(id: UUID(uuidString: "00000000-0000-0000-0000-00000000000B")!, gymID: gym, exerciseID: lift, updatedAt: newer, stack: learned),
         ]
         XCTAssertEqual(StackConflict.winner(tie)?.id.uuidString, "00000000-0000-0000-0000-00000000000B")
-        var samples = [
+        let samples = [
             StackSessionSample(id: UUID(), date: older, correctedPounds: [140, 160]),
             StackSessionSample(id: UUID(), date: newer, correctedPounds: [140, 160]),
             StackSessionSample(id: UUID(), date: Date(timeIntervalSince1970: 30), correctedPounds: [140, 160]),

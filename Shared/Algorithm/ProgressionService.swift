@@ -124,7 +124,7 @@ struct ProgressionService {
     }
 
     /// Round to the nearest 5 lbs.
-    static func snap5(_ value: Double) -> Double {
+    nonisolated static func snap5(_ value: Double) -> Double {
         (value / 5).rounded() * 5
     }
 }
