@@ -611,7 +611,7 @@ struct BackupService {
         var exerciseMap: [UUID: Exercise] = [:]
         for eb in backup.exercises {
             let dayType = DayType(rawValue: eb.dayType)
-            let exercise = Exercise(
+            let exercise = Exercise.make(
                 name: eb.name,
                 dayType: dayType,
                 muscleGroup: eb.muscleGroup,
@@ -619,6 +619,9 @@ struct BackupService {
                 isCustom: eb.isCustom,
                 rotationTrack: RotationTrack(storage: eb.rotationTrack)
             )
+            // Legacy per-lift rest is keyed by this id. Pin before the copy,
+            // then again after insert so the schema default cannot replace it.
+            exercise.id = eb.id
             exercise.notes = eb.notes
             exercise.extraDayTypes = eb.extraDayTypes ?? ""
             exercise.daySortOrdersRaw = eb.daySortOrdersRaw ?? ""

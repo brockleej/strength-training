@@ -428,7 +428,7 @@ enum ProgramImportService {
             return (existing, false)
         }
 
-        let exercise = Exercise(
+        let exercise = Exercise.make(
             name: payload.name,
             dayType: nil,
             muscleGroup: payload.muscleGroup ?? "",

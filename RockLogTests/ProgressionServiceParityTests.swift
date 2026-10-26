@@ -13,7 +13,7 @@ final class ProgressionServiceParityTests: RockLogStoreTestCase {
     /// Insert a small synthetic dataset: one Exercise with 6 completed sessions in
     /// Strength mode and 4 completed sessions in Endurance mode, plus one incomplete.
     private func seed(_ context: ModelContext) {
-        let exercise = Exercise(name: "TestEx", dayType: .arms, muscleGroup: "Test")
+        let exercise = Exercise.make(name: "TestEx", dayType: .arms, muscleGroup: "Test")
         context.insert(exercise)
 
         let baseDate = Date()
@@ -142,7 +142,7 @@ final class ProgressionServiceParityTests: RockLogStoreTestCase {
     /// so the recent pair is 1 rep and 10 reps and the suggestion stays on reps.
     func test_b9_sameDateSessions_orderBySessionID() throws {
         let context = ModelContext(container)
-        let exercise = Exercise(name: "Squat", dayType: .legs, muscleGroup: "Quads")
+        let exercise = Exercise.make(name: "Squat", dayType: .legs, muscleGroup: "Quads")
         context.insert(exercise)
         let when = Date(timeIntervalSince1970: 1_700_000_000)
 

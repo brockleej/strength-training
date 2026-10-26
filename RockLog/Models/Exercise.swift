@@ -277,13 +277,12 @@ final class Exercise {
 
     /// `var id: UUID = UUID()` is one schema default, applied when backing
     /// data is created at the end of the designated init. A write inside that
-    /// init is discarded, so every `Exercise()` shared one id and
-    /// `applyDayPlanSnapshot` trapped (DEBUG `assertionFailure`, reported as
-    /// Crash: RockLog). Assign a fresh id after that init returns. Callers
-    /// that already chose an id pin it again after `insert` (`ExplicitPersistentID`).
-    /// Leave `records` nil; `recordsArray` nil-coalesces. Do not add a unique
-    /// constraint — CloudKit V2 has none.
-    convenience init(
+    /// init is discarded, so every plain `init` shared one id and
+    /// `applyDayPlanSnapshot` trapped. `make` stamps a fresh id after that
+    /// init returns. Callers that already chose an id pin it again after
+    /// `insert` (`ExplicitPersistentID`). Leave `records` nil. Do not add a
+    /// unique constraint — CloudKit V2 has none.
+    static func make(
         name: String,
         dayType: DayType? = nil,
         muscleGroup: String = "",
@@ -291,8 +290,8 @@ final class Exercise {
         isCustom: Bool = false,
         rotationTrack: RotationTrack = .every,
         additionalDayTypes: [DayType] = []
-    ) {
-        self.init(
+    ) -> Exercise {
+        let exercise = Exercise(
             storedName: name,
             storedDayType: dayType,
             storedMuscleGroup: muscleGroup,
@@ -301,7 +300,16 @@ final class Exercise {
             storedRotationTrack: rotationTrack,
             storedAdditionalDayTypes: additionalDayTypes
         )
-        self.id = UUID()
+        exercise.id = UUID()
+        return exercise
+    }
+
+    /// `insert` can put the schema-default id back. Keep the id `make` or the
+    /// caller already chose.
+    func insertPinned(into context: ModelContext) {
+        let chosen = id
+        context.insert(self)
+        id = chosen
     }
 
     init(

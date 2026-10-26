@@ -217,7 +217,7 @@ struct AddExerciseView: View {
             .map(\.sortOrder)
             .max() ?? -1
 
-        let exercise = Exercise(
+        let exercise = Exercise.make(
             name: trimmedName,
             dayType: primary,
             muscleGroup: muscleGroup.trimmingCharacters(in: .whitespaces),
@@ -226,7 +226,7 @@ struct AddExerciseView: View {
             rotationTrack: rotationTrack,
             additionalDayTypes: extras
         )
-        modelContext.insert(exercise)
+        exercise.insertPinned(into: modelContext)
         try? modelContext.save()
         SeedData.persistUserPlan(context: modelContext)
         onCreated?(exercise)

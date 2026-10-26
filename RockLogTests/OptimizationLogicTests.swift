@@ -471,7 +471,7 @@ final class OptimizationLogicTests: RockLogStoreTestCase {
         let context = container.mainContext
         let viewModel = WorkoutViewModel(modelContext: context, healthKitService: HealthKitWorkoutService())
         viewModel.resetAfterStoreReplace()
-        let exercise = Exercise(name: "Bench", dayType: .push, muscleGroup: "Chest", sortOrder: 0)
+        let exercise = Exercise.make(name: "Bench", dayType: .push, muscleGroup: "Chest", sortOrder: 0)
         context.insert(exercise)
         viewModel.addSet(exercise: exercise, weight: 135, reps: 5)
         XCTAssertNil(viewModel.activeSession)
@@ -483,7 +483,7 @@ final class OptimizationLogicTests: RockLogStoreTestCase {
     func test_warmupFlag_isNotCopiedOntoTheNextLoggedSet() throws {
         let context = container.mainContext
         let viewModel = WorkoutViewModel(modelContext: context, healthKitService: HealthKitWorkoutService())
-        let exercise = Exercise(name: "Squat", dayType: .legs, muscleGroup: "Quads", sortOrder: 0)
+        let exercise = Exercise.make(name: "Squat", dayType: .legs, muscleGroup: "Quads", sortOrder: 0)
         context.insert(exercise)
         viewModel.startSession(dayType: .legs, rotationTrack: .every)
         viewModel.addSet(exercise: exercise, weight: 135, reps: 5, isWarmup: true)

@@ -173,14 +173,6 @@ enum ReorderDragStep {
     }
 }
 
-private struct ReorderRowHeightKey: PreferenceKey {
-    static var defaultValue: CGFloat = 0
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        let next = nextValue()
-        if next > 0 { value = next }
-    }
-}
-
 /// Reorder without `onDrag`, which on iOS also captures horizontal swipes.
 ///
 /// Long-press alone must not lock the row. The scroll lock clears when the
@@ -195,20 +187,9 @@ private struct LongPressReorderModifier: ViewModifier {
     @GestureState private var isGestureActive = false
     @State private var startIndex = 0
     @State private var lastTarget = 0
-    @State private var rowHeight: CGFloat = 0
 
     func body(content: Content) -> some View {
         content
-            .background {
-                GeometryReader { proxy in
-                    Color.clear.preference(key: ReorderRowHeightKey.self, value: proxy.size.height)
-                }
-            }
-            .onPreferenceChange(ReorderRowHeightKey.self) { height in
-                if height > 0, height != rowHeight {
-                    rowHeight = height
-                }
-            }
             .scaleEffect(draggingID == id ? 1.03 : 1)
             .zIndex(draggingID == id ? 1 : 0)
             .simultaneousGesture(reorderGesture)
@@ -222,8 +203,13 @@ private struct LongPressReorderModifier: ViewModifier {
     }
 
     private var reorderGesture: some Gesture {
+        // Local space, and do not arm on the long-press alone. Arming there
+        // set draggingID, which disabled swipe-to-delete and locked scrolling
+        // under a horizontal swipe. A global drag plus a GeometryReader in
+        // the row background also ate the tap that opens Focus.
         LongPressGesture(minimumDuration: 0.4)
-            .sequenced(before: DragGesture(minimumDistance: 6, coordinateSpace: .global))
+            // 10pt keeps a tap, and a horizontal swipe, from starting this drag.
+            .sequenced(before: DragGesture(minimumDistance: 10, coordinateSpace: .local))
             .updating($isGestureActive) { value, state, _ in
                 switch value {
                 case .first(true), .second(true, _):
@@ -233,51 +219,40 @@ private struct LongPressReorderModifier: ViewModifier {
                 }
             }
             .onChanged { value in
-                switch value {
-                case .first(true):
-                    // Arm before the finger moves so the parent ScrollView
-                    // locks. Otherwise the scroll eats the drag and the
-                    // local translation stays ~0 (the "2." label never
-                    // becomes "1.").
-                    armDrag()
-                case .second(true, let drag?):
-                    armDrag()
-                    let horizontal = abs(drag.translation.width)
-                    let vertical = abs(drag.translation.height)
-                    guard vertical >= horizontal else { return }
-                    let target = ReorderDragStep.targetIndex(
-                        start: startIndex,
-                        translation: drag.translation.height,
-                        rowHeight: rowHeight,
-                        count: orderedIDs.count
+                guard case .second(true, let drag?) = value else { return }
+                let horizontal = abs(drag.translation.width)
+                let vertical = abs(drag.translation.height)
+                guard draggingID == id || vertical >= horizontal else { return }
+                if draggingID != id {
+                    startIndex = orderedIDs.firstIndex(of: id) ?? 0
+                    lastTarget = startIndex
+                    var lock = ReorderScrollLock(draggingID: draggingID)
+                    lock.arm(id)
+                    draggingID = lock.draggingID
+                    HapticService.stepperTick()
+                }
+                // 68pt is one row at the default text size. A measured
+                // GeometryReader in this row intercepted taps and swipes.
+                let target = ReorderDragStep.targetIndex(
+                    start: startIndex,
+                    translation: drag.translation.height,
+                    rowHeight: 68,
+                    count: orderedIDs.count
+                )
+                guard target != lastTarget,
+                      let current = orderedIDs.firstIndex(of: id)
+                else { return }
+                lastTarget = target
+                withAnimation(.easeInOut(duration: 0.15)) {
+                    orderedIDs.move(
+                        fromOffsets: IndexSet(integer: current),
+                        toOffset: target > current ? target + 1 : target
                     )
-                    guard target != lastTarget,
-                          let current = orderedIDs.firstIndex(of: id)
-                    else { return }
-                    lastTarget = target
-                    withAnimation(.easeInOut(duration: 0.15)) {
-                        orderedIDs.move(
-                            fromOffsets: IndexSet(integer: current),
-                            toOffset: target > current ? target + 1 : target
-                        )
-                    }
-                default:
-                    break
                 }
             }
             .onEnded { _ in
                 finishDragIfNeeded()
             }
-    }
-
-    private func armDrag() {
-        var lock = ReorderScrollLock(draggingID: draggingID)
-        guard lock.draggingID != id else { return }
-        startIndex = orderedIDs.firstIndex(of: id) ?? 0
-        lastTarget = startIndex
-        lock.arm(id)
-        draggingID = lock.draggingID
-        HapticService.stepperTick()
     }
 
     private func finishDragIfNeeded() {

@@ -59,7 +59,7 @@ final class PlannedBlockQueueTests: RockLogStoreTestCase {
     func test_hasAthleteLoggedSets_ignoresTargets() throws {
         let context = container.mainContext
         let session = makeSession(day: .push, order: 0, dateOffset: 0, status: .planned, context: context)
-        let exercise = Exercise(name: "UI Queue Lift", dayType: .push, isCustom: true)
+        let exercise = Exercise.make(name: "UI Queue Lift", dayType: .push, isCustom: true)
         let record = ExerciseRecord(trainingMode: .highWeightLowReps, sortOrder: 0)
         record.exercise = exercise
         record.session = session

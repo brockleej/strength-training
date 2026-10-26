@@ -35,7 +35,7 @@ final class BackupRestoreRegressionTests: RockLogStoreTestCase {
     /// A save failure after the deletes are staged must not commit them.
     func test_b3_restoreSaveFailure_rollsBackToOriginalRows() throws {
         let context = container.mainContext
-        let originalExercise = Exercise(
+        let originalExercise = Exercise.make(
             name: "Keep Me",
             dayType: .push,
             muscleGroup: "Chest",
@@ -101,7 +101,7 @@ final class BackupRestoreRegressionTests: RockLogStoreTestCase {
         XCTAssertEqual(days.map(\.name), ["Original Day"])
         XCTAssertFalse(days.contains { $0.name == "Incoming Day" })
 
-        let after = Exercise(name: "After Rollback", dayType: .push, muscleGroup: "Chest", isCustom: true)
+        let after = Exercise.make(name: "After Rollback", dayType: .push, muscleGroup: "Chest", isCustom: true)
         context.insert(after)
         try context.save()
         let names = try context.fetch(FetchDescriptor<Exercise>()).map(\.name).sorted()
@@ -156,7 +156,7 @@ final class BackupRestoreRegressionTests: RockLogStoreTestCase {
             notes: "pre-field"
         )
         context.insert(block)
-        context.insert(Exercise(name: "Old Lift", dayType: .push, muscleGroup: "Chest", isCustom: true))
+        context.insert(Exercise.make(name: "Old Lift", dayType: .push, muscleGroup: "Chest", isCustom: true))
         try context.save()
         let blockID = block.id
 
@@ -528,7 +528,7 @@ final class BackupRestoreRegressionTests: RockLogStoreTestCase {
 
     func test_b5_rejectedBackup_leavesExistingRows() throws {
         let context = container.mainContext
-        let exercise = Exercise(name: "Keep Me", dayType: .push, muscleGroup: "Chest", isCustom: true)
+        let exercise = Exercise.make(name: "Keep Me", dayType: .push, muscleGroup: "Chest", isCustom: true)
         context.insert(exercise)
         context.insert(BodyMetricEntry(kind: .weight, value: 180, date: Date(timeIntervalSince1970: 1_600_000_000)))
         try context.save()

@@ -340,33 +340,28 @@ struct SeedData {
 
     private static let dayPlanLog = Logger(subsystem: "com.lee.lift2026", category: "DayPlan")
 
-    /// First row for an id (name, then sort order, then fetch order) keeps it.
-    /// Each later row gets a new id. Records stay on the row they already
-    /// point at. UUID-keyed references are copied onto the new id so the later
-    /// row does not lose them; the original id still names the first row.
-    /// Existing stores can already contain these duplicates, so this logs and
-    /// repairs instead of trapping in DEBUG.
+    /// The row that sorts first for an id keeps it. Each later row gets a new
+    /// id. `Exercise` has no creation date, so the order is `sortOrder`, then
+    /// name, then `persistentModelID`. Logs move onto the kept row before the
+    /// id change so the cascade on `records` cannot drop them. Other
+    /// UUID-keyed references are copied onto the new id. Existing stores can
+    /// already contain these duplicates, so this logs and repairs.
     @discardableResult
     static func reassignDuplicateExerciseIDs(
         context: ModelContext,
         persistSnapshot: Bool
     ) -> [UUID: [UUID]] {
         let fetched = (try? context.fetch(FetchDescriptor<Exercise>())) ?? []
-        let ordered = fetched.enumerated().sorted { lhs, rhs in
-            let name = lhs.element.name.localizedCaseInsensitiveCompare(rhs.element.name)
-            if name != .orderedSame { return name == .orderedAscending }
-            if lhs.element.sortOrder != rhs.element.sortOrder {
-                return lhs.element.sortOrder < rhs.element.sortOrder
-            }
-            return lhs.offset < rhs.offset
-        }.map(\.element)
-
+        let ordered = fetched.sorted(by: duplicateKeepOrder)
         var seen = Set<UUID>()
+        var keepers: [UUID: Exercise] = [:]
         var repairs: [UUID: [UUID]] = [:]
         var pending: [(exercise: Exercise, fresh: UUID, old: UUID)] = []
         for exercise in ordered {
             let old = exercise.id
-            if !seen.insert(old).inserted {
+            if seen.insert(old).inserted {
+                keepers[old] = exercise
+            } else {
                 let fresh = UUID()
                 pending.append((exercise, fresh, old))
                 repairs[old, default: []].append(fresh)
@@ -374,19 +369,21 @@ struct SeedData {
         }
         guard !pending.isEmpty else { return [:] }
 
+        // Do not read `exercise.records` here. Faulting that to-many while two
+        // rows still share an id traps SwiftData (Crash: RockLog). Fetch logs
+        // and point them at the kept row before the duplicate's id changes.
         let records = (try? context.fetch(FetchDescriptor<ExerciseRecord>())) ?? []
         for item in pending {
-            var attached = item.exercise.recordsArray
-            for record in records {
-                guard let owner = record.exercise, owner === item.exercise else { continue }
-                if !attached.contains(where: { $0 === record }) {
-                    attached.append(record)
+            let attached = records.filter { record in
+                guard let owner = record.exercise else { return false }
+                return owner === item.exercise
+            }
+            if let keeper = keepers[item.old] {
+                for record in attached {
+                    record.exercise = keeper
                 }
             }
             item.exercise.id = item.fresh
-            for record in attached {
-                record.exercise = item.exercise
-            }
             copyExerciseReferences(from: item.old, to: item.fresh, context: context)
         }
 
@@ -398,6 +395,15 @@ struct SeedData {
             "Reassigned \(pending.count, privacy: .public) duplicate exercise id(s); sample \(sample, privacy: .public)"
         )
         return repairs
+    }
+
+    /// `Exercise` has no creation date. Lowest `sortOrder` wins, then name,
+    /// then the persistent identifier so two identical names stay ordered.
+    private static func duplicateKeepOrder(_ lhs: Exercise, _ rhs: Exercise) -> Bool {
+        if lhs.sortOrder != rhs.sortOrder { return lhs.sortOrder < rhs.sortOrder }
+        let name = lhs.name.localizedCaseInsensitiveCompare(rhs.name)
+        if name != .orderedSame { return name == .orderedAscending }
+        return String(describing: lhs.persistentModelID) < String(describing: rhs.persistentModelID)
     }
 
     private static func copyExerciseReferences(from old: UUID, to fresh: UUID, context: ModelContext) {
@@ -1141,15 +1147,13 @@ struct SeedData {
         var order = sortOrderBase
         for item in source {
             if existingNames.contains(item.name.lowercased()) { continue }
-            context.insert(
-                Exercise(
-                    name: item.name,
-                    dayType: assignCatalogDays ? item.day : nil,
-                    muscleGroup: item.muscle,
-                    sortOrder: order,
-                    isCustom: false
-                )
-            )
+            Exercise.make(
+                name: item.name,
+                dayType: assignCatalogDays ? item.day : nil,
+                muscleGroup: item.muscle,
+                sortOrder: order,
+                isCustom: false
+            ).insertPinned(into: context)
             order += 1
         }
     }

@@ -64,12 +64,12 @@ enum UITestFixture {
     }
 
     private static func seedLifts(context: ModelContext) -> Lifts {
-        let bench = Exercise(name: benchName, dayType: .push, muscleGroup: "Chest", sortOrder: 0, isCustom: true)
-        let fresh = Exercise(name: freshName, dayType: .push, muscleGroup: "Chest", sortOrder: 1, isCustom: true)
-        let row = Exercise(name: rowName, dayType: .pull, muscleGroup: "Back", sortOrder: 2, isCustom: true)
-        let squat = Exercise(name: squatName, dayType: .legs, muscleGroup: "Quads", sortOrder: 3, isCustom: true)
+        let bench = Exercise.make(name: benchName, dayType: .push, muscleGroup: "Chest", sortOrder: 0, isCustom: true)
+        let fresh = Exercise.make(name: freshName, dayType: .push, muscleGroup: "Chest", sortOrder: 1, isCustom: true)
+        let row = Exercise.make(name: rowName, dayType: .pull, muscleGroup: "Back", sortOrder: 2, isCustom: true)
+        let squat = Exercise.make(name: squatName, dayType: .legs, muscleGroup: "Quads", sortOrder: 3, isCustom: true)
         for exercise in [bench, fresh, row, squat] {
-            context.insert(exercise)
+            exercise.insertPinned(into: context)
         }
         return Lifts(bench: bench, fresh: fresh, row: row, squat: squat)
     }

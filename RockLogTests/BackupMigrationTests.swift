@@ -88,7 +88,7 @@ final class BackupMigrationTests: RockLogStoreTestCase {
     }
 
     func test_restCopy_isSafeToRunTwice_andRollsBackWithTheSave() throws {
-        let exercise = Exercise(name: "Curl", dayType: .push, muscleGroup: "Biceps", isCustom: true)
+        let exercise = Exercise.make(name: "Curl", dayType: .push, muscleGroup: "Biceps", isCustom: true)
         let key = RestPreferenceMigration.legacyKey(for: exercise.id)
         UserDefaults.standard.set(false, forKey: key)
         defer { UserDefaults.standard.removeObject(forKey: key) }
@@ -99,7 +99,7 @@ final class BackupMigrationTests: RockLogStoreTestCase {
         XCTAssertTrue(exercise.autoRestEnabled)
 
         let context = container.mainContext
-        let keeper = Exercise(name: "Keep Me", dayType: .push, muscleGroup: "Chest", isCustom: true)
+        let keeper = Exercise.make(name: "Keep Me", dayType: .push, muscleGroup: "Chest", isCustom: true)
         context.insert(keeper)
         try context.save()
         let incomingID = UUID(uuidString: "99999999-9999-4999-8999-999999999999")!
@@ -151,7 +151,7 @@ final class BackupMigrationTests: RockLogStoreTestCase {
     func test_exportRestoreExport_matchesApartFromExportedAt() throws {
         let context = container.mainContext
         let stamp = Date(timeIntervalSince1970: 1_700_000_000)
-        let exercise = Exercise(name: "Synthetic Press", dayType: .push, muscleGroup: "Chest", isCustom: true)
+        let exercise = Exercise.make(name: "Synthetic Press", dayType: .push, muscleGroup: "Chest", isCustom: true)
         exercise.notes = "keep"
         exercise.defaultRestSeconds = 90
         let session = WorkoutSession(dayType: .push, date: stamp)

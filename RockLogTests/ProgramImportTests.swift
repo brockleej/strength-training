@@ -251,7 +251,7 @@ final class ProgramImportTests: RockLogStoreTestCase {
     func test_merge_doesNotDeleteExistingCompletedSession() throws {
         let context = container.mainContext
 
-        let squat = Exercise(name: "Barbell Back Squat", dayType: .legs, muscleGroup: "Quads")
+        let squat = Exercise.make(name: "Barbell Back Squat", dayType: .legs, muscleGroup: "Quads")
         let historyID = UUID()
         let history = WorkoutSession(dayType: .legs, date: Date(timeIntervalSince1970: 1_700_000_000))
         history.id = historyID
@@ -283,7 +283,7 @@ final class ProgramImportTests: RockLogStoreTestCase {
         let context = container.mainContext
 
         let existingID = UUID()
-        let bench = Exercise(name: "Barbell Bench Press", dayType: .push, muscleGroup: "Chest")
+        let bench = Exercise.make(name: "Barbell Bench Press", dayType: .push, muscleGroup: "Chest")
         bench.id = existingID
         bench.rotationTrack = RotationTrack.a.rawValue
         context.insert(bench)
@@ -430,8 +430,8 @@ final class ProgramImportTests: RockLogStoreTestCase {
         let context = container.mainContext
         let today = Calendar.current.startOfDay(for: .now)
 
-        let conv = Exercise(name: "Conventional Deadlift", dayType: .lower, muscleGroup: "Hamstrings")
-        let rdl = Exercise(name: "Romanian Deadlift", dayType: .lower, muscleGroup: "Hamstrings")
+        let conv = Exercise.make(name: "Conventional Deadlift", dayType: .lower, muscleGroup: "Hamstrings")
+        let rdl = Exercise.make(name: "Romanian Deadlift", dayType: .lower, muscleGroup: "Hamstrings")
         context.insert(conv)
         context.insert(rdl)
         try context.save()
@@ -686,7 +686,7 @@ final class ProgramImportTests: RockLogStoreTestCase {
     func test_import_withoutReplace_leavesExistingSplit() throws {
         let context = container.mainContext
         insertSplit(names: ["Arms", "Legs"], context: context)
-        let curl = Exercise(name: "Barbell Curl", dayType: .arms, muscleGroup: "Biceps")
+        let curl = Exercise.make(name: "Barbell Curl", dayType: .arms, muscleGroup: "Biceps")
         context.insert(curl)
         try context.save()
 
@@ -708,7 +708,7 @@ final class ProgramImportTests: RockLogStoreTestCase {
         let context = container.mainContext
         insertSplit(names: ["Arms", "Legs"], context: context)
 
-        let curl = Exercise(name: "Barbell Curl", dayType: .arms, muscleGroup: "Biceps")
+        let curl = Exercise.make(name: "Barbell Curl", dayType: .arms, muscleGroup: "Biceps")
         let historyID = UUID()
         let history = WorkoutSession(dayType: .arms, date: Date(timeIntervalSince1970: 1_700_000_000))
         history.id = historyID

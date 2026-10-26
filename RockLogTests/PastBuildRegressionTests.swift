@@ -89,7 +89,7 @@ final class PastBuildRegressionTests: RockLogStoreTestCase {
     func test_build13_restorePromptCancelLeavesRowsUntouched() throws {
         let context = container.mainContext
         context.insert(SplitDay(name: "Push", systemImage: "dumbbell.fill", colorHex: 0xFF8C42, sortOrder: 0))
-        let kept = Exercise(name: "UI Kept Lift", dayType: .push, isCustom: true)
+        let kept = Exercise.make(name: "UI Kept Lift", dayType: .push, isCustom: true)
         context.insert(kept)
         try context.save()
 
@@ -112,12 +112,12 @@ final class PastBuildRegressionTests: RockLogStoreTestCase {
     func test_build13_restoreReplacesWhenConfirmIsCalled() throws {
         let sourceContext = container.mainContext
         sourceContext.insert(SplitDay(name: "UI Day", systemImage: "dumbbell.fill", colorHex: 0x3F9CFF, sortOrder: 0))
-        sourceContext.insert(Exercise(name: "UI Restored Lift", dayType: DayType(rawValue: "UI Day"), isCustom: true))
+        sourceContext.insert(Exercise.make(name: "UI Restored Lift", dayType: DayType(rawValue: "UI Day"), isCustom: true))
         let backup = try BackupService.export(context: sourceContext)
 
         try openSecondaryContainer()
         let context = secondaryContainer!.mainContext
-        context.insert(Exercise(name: "UI Kept Lift", dayType: .push, isCustom: true))
+        context.insert(Exercise.make(name: "UI Kept Lift", dayType: .push, isCustom: true))
         try context.save()
 
         try BackupService.restore(from: backup, context: context)
@@ -214,7 +214,7 @@ final class PastBuildRegressionTests: RockLogStoreTestCase {
         start: Date,
         setDates: [Date]
     ) throws -> WorkoutSession {
-        let exercise = Exercise(name: "UI Duration Lift", dayType: .push, isCustom: true)
+        let exercise = Exercise.make(name: "UI Duration Lift", dayType: .push, isCustom: true)
         let session = WorkoutSession(dayType: .push, date: start)
         let record = ExerciseRecord(trainingMode: .highWeightLowReps, sortOrder: 0)
         record.exercise = exercise

@@ -35,7 +35,7 @@ final class WorkoutEdgeCaseTests: RockLogStoreTestCase {
 
     func test_addSet_allowsZeroAndTenThousand() throws {
         let context = container.mainContext
-        let exercise = Exercise(name: "UI Load Lift", dayType: .push, isCustom: true)
+        let exercise = Exercise.make(name: "UI Load Lift", dayType: .push, isCustom: true)
         let session = WorkoutSession(dayType: .push, date: Date())
         context.insert(exercise)
         context.insert(session)
@@ -56,7 +56,7 @@ final class WorkoutEdgeCaseTests: RockLogStoreTestCase {
 
     func test_updateSet_clampsZeroRepsToOne() throws {
         let context = container.mainContext
-        let exercise = Exercise(name: "UI Edit Lift", dayType: .push, isCustom: true)
+        let exercise = Exercise.make(name: "UI Edit Lift", dayType: .push, isCustom: true)
         let session = WorkoutSession(dayType: .push, date: Date())
         context.insert(exercise)
         context.insert(session)

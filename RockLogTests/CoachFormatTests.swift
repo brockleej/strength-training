@@ -55,8 +55,8 @@ final class CoachFormatTests: RockLogStoreTestCase {
     func test_export_mapsSetsAndSkipsEmptyLifts() throws {
         let context = container.mainContext
 
-        let bench = Exercise(name: "Bench", dayType: .push, muscleGroup: "Chest", sortOrder: 0)
-        let empty = Exercise(name: "Skipped Flye", dayType: .push, muscleGroup: "Chest", sortOrder: 1)
+        let bench = Exercise.make(name: "Bench", dayType: .push, muscleGroup: "Chest", sortOrder: 0)
+        let empty = Exercise.make(name: "Skipped Flye", dayType: .push, muscleGroup: "Chest", sortOrder: 1)
         let session = WorkoutSession(dayType: .push, date: Date(timeIntervalSince1970: 1_786_435_200))
         session.notes = "Felt strong"
         session.effortRating = 7
@@ -302,7 +302,7 @@ final class CoachFormatTests: RockLogStoreTestCase {
         weight: Double,
         in context: ModelContext
     ) throws -> WorkoutSession {
-        let exercise = Exercise(name: "Lift", dayType: day, muscleGroup: "Chest", sortOrder: 0)
+        let exercise = Exercise.make(name: "Lift", dayType: day, muscleGroup: "Chest", sortOrder: 0)
         let session = WorkoutSession(dayType: day, date: date)
         session.isCompleted = true
         let record = ExerciseRecord(trainingMode: .highWeightLowReps, sortOrder: 0)

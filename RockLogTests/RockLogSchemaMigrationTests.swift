@@ -87,7 +87,7 @@ final class RockLogSchemaMigrationTests: XCTestCase {
     private func writeVersionedV1(url: URL, exerciseID: UUID) throws {
         let schema = Schema(versionedSchema: RockLogSchemaV1.self)
         try open(schema: schema, url: url, migrationPlan: false)
-        let exercise = Exercise(name: "Version One Press", dayType: .push, muscleGroup: "Chest", isCustom: true)
+        let exercise = Exercise.make(name: "Version One Press", dayType: .push, muscleGroup: "Chest", isCustom: true)
         exercise.id = exerciseID
         container!.mainContext.insert(exercise)
         try container!.mainContext.save()
@@ -105,7 +105,7 @@ final class RockLogSchemaMigrationTests: XCTestCase {
         try open(schema: schema, url: url, migrationPlan: false)
         let context = container!.mainContext
 
-        let exercise = Exercise(name: "Legacy Squat", dayType: .legs, muscleGroup: "Quads", isCustom: true)
+        let exercise = Exercise.make(name: "Legacy Squat", dayType: .legs, muscleGroup: "Quads", isCustom: true)
         exercise.id = exerciseID
         let block = TrainingBlock(
             name: "Legacy Block",

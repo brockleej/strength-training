@@ -1063,7 +1063,7 @@ struct FocusView: View {
             exercise: {
                 let descriptor = FetchDescriptor<Exercise>(sortBy: [SortDescriptor(\.sortOrder)])
                 return (try? previewContainer.mainContext.fetch(descriptor))?.first
-                    ?? Exercise(name: "Back Squat", dayType: .legs, muscleGroup: "Quads", sortOrder: 0)
+                    ?? Exercise.make(name: "Back Squat", dayType: .legs, muscleGroup: "Quads", sortOrder: 0)
             }(),
             liftIndex: 1,
             totalLifts: 6

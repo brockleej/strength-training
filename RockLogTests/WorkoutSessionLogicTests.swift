@@ -125,7 +125,7 @@ final class WorkoutSessionLogicTests: RockLogStoreTestCase {
     func test_deleteSet_removesAndRenumbers() throws {
         let context = container.mainContext
 
-        let exercise = Exercise(name: "Bench", dayType: .push, muscleGroup: "Chest", sortOrder: 0)
+        let exercise = Exercise.make(name: "Bench", dayType: .push, muscleGroup: "Chest", sortOrder: 0)
         let session = WorkoutSession(dayType: .push)
         let record = ExerciseRecord(trainingMode: .highWeightLowReps, sortOrder: 0)
         record.exercise = exercise
@@ -157,7 +157,7 @@ final class WorkoutSessionLogicTests: RockLogStoreTestCase {
     @MainActor
     func test_volumeAndSetCount_ignorePlannedTargets() throws {
         let context = container.mainContext
-        let exercise = Exercise(name: "Squat", dayType: .legs, muscleGroup: "Legs", sortOrder: 0)
+        let exercise = Exercise.make(name: "Squat", dayType: .legs, muscleGroup: "Legs", sortOrder: 0)
         let session = WorkoutSession(dayType: .legs)
         session.isCompleted = true
         let record = ExerciseRecord(trainingMode: .highWeightLowReps, sortOrder: 0)
@@ -185,7 +185,7 @@ final class WorkoutSessionLogicTests: RockLogStoreTestCase {
     @MainActor
     func test_deleteLoggedSet_doesNotRenumberPlannedTargets() throws {
         let context = container.mainContext
-        let exercise = Exercise(name: "Bench", dayType: .push, muscleGroup: "Chest", sortOrder: 0)
+        let exercise = Exercise.make(name: "Bench", dayType: .push, muscleGroup: "Chest", sortOrder: 0)
         let session = WorkoutSession(dayType: .push)
         let record = ExerciseRecord(trainingMode: .highWeightLowReps, sortOrder: 0)
         record.exercise = exercise
@@ -214,7 +214,7 @@ final class WorkoutSessionLogicTests: RockLogStoreTestCase {
     func test_deleteOnlySet_leavesEmptyRecord() throws {
         let context = container.mainContext
 
-        let exercise = Exercise(name: "Curl", dayType: .arms, muscleGroup: "Biceps", sortOrder: 0)
+        let exercise = Exercise.make(name: "Curl", dayType: .arms, muscleGroup: "Biceps", sortOrder: 0)
         let session = WorkoutSession(dayType: .arms)
         let record = ExerciseRecord(trainingMode: .highWeightLowReps, sortOrder: 0)
         record.exercise = exercise
@@ -468,8 +468,8 @@ final class SplitPersistenceTests: RockLogStoreTestCase {
 
     func test_stripUnusedStarterExtras_removesSeededDefaultsFromMixedDay() throws {
         let context = container.mainContext
-        let starter = Exercise(name: "Lateral Raise", dayType: .push, muscleGroup: "Shoulders")
-        let custom = Exercise(name: "My Bench", dayType: .push, muscleGroup: "Chest", isCustom: true)
+        let starter = Exercise.make(name: "Lateral Raise", dayType: .push, muscleGroup: "Shoulders")
+        let custom = Exercise.make(name: "My Bench", dayType: .push, muscleGroup: "Chest", isCustom: true)
         context.insert(starter)
         context.insert(custom)
         try context.save()
@@ -481,8 +481,8 @@ final class SplitPersistenceTests: RockLogStoreTestCase {
 
     func test_stripUnusedStarterExtras_keepsStartersWithHistory() throws {
         let context = container.mainContext
-        let starter = Exercise(name: "Lateral Raise", dayType: .push, muscleGroup: "Shoulders")
-        let custom = Exercise(name: "My Bench", dayType: .push, muscleGroup: "Chest", isCustom: true)
+        let starter = Exercise.make(name: "Lateral Raise", dayType: .push, muscleGroup: "Shoulders")
+        let custom = Exercise.make(name: "My Bench", dayType: .push, muscleGroup: "Chest", isCustom: true)
         let session = WorkoutSession(dayType: .push)
         session.isCompleted = true
         let record = ExerciseRecord(trainingMode: .highWeightLowReps, sortOrder: 0)
@@ -517,8 +517,8 @@ final class SplitPersistenceTests: RockLogStoreTestCase {
                 sortOrder: 0
             )
         )
-        let bench = Exercise(name: "Barbell Bench Press", dayType: .push, muscleGroup: "Chest")
-        let extra = Exercise(name: "Lateral Raise", dayType: .push, muscleGroup: "Shoulders")
+        let bench = Exercise.make(name: "Barbell Bench Press", dayType: .push, muscleGroup: "Chest")
+        let extra = Exercise.make(name: "Lateral Raise", dayType: .push, muscleGroup: "Shoulders")
         context.insert(bench)
         context.insert(extra)
         try context.save()
@@ -539,10 +539,10 @@ final class SplitPersistenceTests: RockLogStoreTestCase {
 
     func test_applyDayPlanSnapshot_stripsCloudKitStarterExtras() throws {
         let context = container.mainContext
-        let keep = Exercise(name: "My Bench", dayType: .push, muscleGroup: "Chest", isCustom: true)
-        let extra = Exercise(name: "Lateral Raise", dayType: .push, muscleGroup: "Shoulders")
-        context.insert(keep)
-        context.insert(extra)
+        let keep = Exercise.make(name: "My Bench", dayType: .push, muscleGroup: "Chest", isCustom: true)
+        let extra = Exercise.make(name: "Lateral Raise", dayType: .push, muscleGroup: "Shoulders")
+        keep.insertPinned(into: context)
+        extra.insertPinned(into: context)
         try context.save()
         XCTAssertNotEqual(
             keep.id,
@@ -559,14 +559,14 @@ final class SplitPersistenceTests: RockLogStoreTestCase {
     func test_newExercises_keepDistinctIDsThroughFetch() throws {
         let context = container.mainContext
         let lifts = [
-            Exercise(name: "UI Distinct One", isCustom: true),
-            Exercise(name: "UI Distinct Two", isCustom: true),
-            Exercise(name: "UI Distinct Three", isCustom: true),
+            Exercise.make(name: "UI Distinct One", isCustom: true),
+            Exercise.make(name: "UI Distinct Two", isCustom: true),
+            Exercise.make(name: "UI Distinct Three", isCustom: true),
         ]
         let ids = lifts.map(\.id)
         XCTAssertEqual(Set(ids).count, ids.count)
         for lift in lifts {
-            context.insert(lift)
+            lift.insertPinned(into: context)
         }
         try context.save()
 
@@ -644,8 +644,8 @@ final class SplitPersistenceTests: RockLogStoreTestCase {
 
     func test_deduplicateExercises_collapsesSeedAndUserCopyByName() throws {
         let context = container.mainContext
-        let seeded = Exercise(name: "Dumbbell Bench Press", dayType: .push, muscleGroup: "Chest")
-        let user = Exercise(name: "Dumbbell Bench Press", dayType: nil, muscleGroup: "Chest", isCustom: true)
+        let seeded = Exercise.make(name: "Dumbbell Bench Press", dayType: .push, muscleGroup: "Chest")
+        let user = Exercise.make(name: "Dumbbell Bench Press", dayType: nil, muscleGroup: "Chest", isCustom: true)
         let session = WorkoutSession(dayType: .push)
         session.isCompleted = true
         let record = ExerciseRecord(trainingMode: .highWeightLowReps, sortOrder: 0)
@@ -783,8 +783,8 @@ final class SplitPersistenceTests: RockLogStoreTestCase {
                 sortOrder: 0
             )
         )
-        let first = Exercise(name: "My Bench", dayType: .push, muscleGroup: "Chest", sortOrder: 0, isCustom: true)
-        let second = Exercise(name: "My Fly", dayType: .push, muscleGroup: "Chest", sortOrder: 1, isCustom: true)
+        let first = Exercise.make(name: "My Bench", dayType: .push, muscleGroup: "Chest", sortOrder: 0, isCustom: true)
+        let second = Exercise.make(name: "My Fly", dayType: .push, muscleGroup: "Chest", sortOrder: 1, isCustom: true)
         first.setSortIndex(0, for: .push)
         second.setSortIndex(1, for: .push)
         context.insert(first)
@@ -808,7 +808,7 @@ final class SplitPersistenceTests: RockLogStoreTestCase {
     func test_explicitExerciseID_survivesInsertSaveFetchAndRestore() throws {
         let context = container.mainContext
         let explicit = UUID(uuidString: "E1000000-0000-4000-8000-0000000000AA")!
-        let exercise = Exercise(name: "UI Explicit Id", dayType: .push, muscleGroup: "Chest", isCustom: true)
+        let exercise = Exercise.make(name: "UI Explicit Id", dayType: .push, muscleGroup: "Chest", isCustom: true)
         ExplicitPersistentID.pin(explicit, assign: { exercise.id = $0 }) {
             context.insert(exercise)
         }
@@ -822,6 +822,21 @@ final class SplitPersistenceTests: RockLogStoreTestCase {
         let restored = try context.fetch(FetchDescriptor<Exercise>())
         XCTAssertEqual(restored.map(\.id), [explicit])
         XCTAssertEqual(restored.map(\.name), ["UI Explicit Id"])
+    }
+
+    func test_explicitExerciseID_survivesFetchInANewContext() throws {
+        let context = container.mainContext
+        let explicit = UUID(uuidString: "E1000000-0000-4000-8000-0000000000CC")!
+        let exercise = Exercise.make(name: "UI New Context Id", dayType: .push, muscleGroup: "Chest", isCustom: true)
+        ExplicitPersistentID.pin(explicit, assign: { exercise.id = $0 }) {
+            context.insert(exercise)
+        }
+        try context.save()
+
+        let other = ModelContext(container)
+        let fetched = try other.fetch(FetchDescriptor<Exercise>())
+        XCTAssertEqual(fetched.map(\.id), [explicit])
+        XCTAssertEqual(fetched.map(\.name), ["UI New Context Id"])
     }
 
     func test_applySplitSnapshot_keepsExplicitDayID() throws {
@@ -851,8 +866,8 @@ final class SplitPersistenceTests: RockLogStoreTestCase {
             RestSampleStore.discard(exerciseID: shared)
         }
 
-        let first = Exercise(name: "UI First Duplicate", dayType: .push, muscleGroup: "Chest", isCustom: true)
-        let later = Exercise(name: "UI Later Duplicate", dayType: .push, muscleGroup: "Chest", isCustom: true)
+        let first = Exercise.make(name: "UI First Duplicate", dayType: .push, muscleGroup: "Chest", isCustom: true)
+        let later = Exercise.make(name: "UI Later Duplicate", dayType: .push, muscleGroup: "Chest", isCustom: true)
         context.insert(first)
         context.insert(later)
 
@@ -901,9 +916,10 @@ final class SplitPersistenceTests: RockLogStoreTestCase {
         XCTAssertNotEqual(fetchedLater.id, shared)
         XCTAssertNotEqual(fetchedFirst.id, fetchedLater.id)
 
-        let fetchedRecord = try XCTUnwrap(try context.fetch(FetchDescriptor<ExerciseRecord>()).first)
-        XCTAssertEqual(fetchedRecord.exercise?.name, "UI Later Duplicate")
-        XCTAssertEqual(fetchedRecord.exercise?.id, fetchedLater.id)
+        let fetchedRecords = try context.fetch(FetchDescriptor<ExerciseRecord>())
+        XCTAssertEqual(fetchedRecords.count, 1)
+        XCTAssertEqual(fetchedRecords.first?.exercise?.name, "UI First Duplicate")
+        XCTAssertEqual(fetchedRecords.first?.exercise?.id, shared)
 
         XCTAssertTrue(fetchedFirst.belongs(to: .push))
         XCTAssertTrue(fetchedLater.belongs(to: .push))
@@ -919,6 +935,50 @@ final class SplitPersistenceTests: RockLogStoreTestCase {
         XCTAssertFalse(RestTimerPreferences.isEnabled(forExercise: shared))
         XCTAssertFalse(RestTimerPreferences.isEnabled(forExercise: fetchedLater.id))
         XCTAssertEqual(RestSampleStore.samples(for: fetchedLater.id), [90])
+    }
+
+    func test_reassignDuplicateExerciseIDs_keepsEveryExerciseRecord() throws {
+        let context = container.mainContext
+        let shared = UUID(uuidString: "E2000000-0000-4000-8000-0000000000C1")!
+        let keeper = Exercise.make(
+            name: "UI Record Keeper",
+            dayType: .push,
+            muscleGroup: "Chest",
+            sortOrder: 0,
+            isCustom: true
+        )
+        let duplicate = Exercise.make(
+            name: "UI Record Duplicate",
+            dayType: .push,
+            muscleGroup: "Chest",
+            sortOrder: 1,
+            isCustom: true
+        )
+        context.insert(keeper)
+        context.insert(duplicate)
+
+        let onKeeper = ExerciseRecord(trainingMode: .highWeightLowReps, sortOrder: 0)
+        let onDuplicate = ExerciseRecord(trainingMode: .highWeightLowReps, sortOrder: 1)
+        onKeeper.exercise = keeper
+        onDuplicate.exercise = duplicate
+        context.insert(onKeeper)
+        context.insert(onDuplicate)
+        keeper.id = shared
+        duplicate.id = shared
+        try context.save()
+
+        let before = try context.fetchCount(FetchDescriptor<ExerciseRecord>())
+        XCTAssertEqual(before, 2)
+        _ = SeedData.reassignDuplicateExerciseIDs(context: context, persistSnapshot: false)
+        try context.save()
+
+        let after = try context.fetch(FetchDescriptor<ExerciseRecord>())
+        XCTAssertEqual(after.count, before)
+        XCTAssertEqual(
+            after.compactMap { $0.exercise?.name }.sorted(),
+            ["UI Record Keeper", "UI Record Keeper"]
+        )
+        XCTAssertEqual(Set(after.compactMap { $0.exercise?.id }), [shared])
     }
 
     func test_emptyLibraryRestTimer_isOnOnlyWhenLaunchAsks() {
