@@ -51,6 +51,40 @@ struct AppBackup: Codable {
         self.gyms = gyms
         self.stackProfiles = stackProfiles
     }
+
+    private enum CodingKeys: String, CodingKey {
+        case version, exportedAt, exercises, sessions, splitDays, dayPlans
+        case trainingBlocks, bodyMetrics, gyms, stackProfiles
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        // Backups written before the field existed are version 1.
+        version = try container.decodeIfPresent(Int.self, forKey: .version) ?? 1
+        exportedAt = try container.decode(Date.self, forKey: .exportedAt)
+        exercises = try container.decode([ExerciseBackup].self, forKey: .exercises)
+        sessions = try container.decode([WorkoutSessionBackup].self, forKey: .sessions)
+        splitDays = try container.decodeIfPresent([SplitDayBackup].self, forKey: .splitDays)
+        dayPlans = try container.decodeIfPresent([DayPlanBackup].self, forKey: .dayPlans)
+        trainingBlocks = try container.decodeIfPresent([TrainingBlockBackup].self, forKey: .trainingBlocks)
+        bodyMetrics = try container.decodeIfPresent([BodyMetricBackup].self, forKey: .bodyMetrics)
+        gyms = try container.decodeIfPresent([GymBackup].self, forKey: .gyms)
+        stackProfiles = try container.decodeIfPresent([StackProfileBackup].self, forKey: .stackProfiles)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(version, forKey: .version)
+        try container.encode(exportedAt, forKey: .exportedAt)
+        try container.encode(exercises, forKey: .exercises)
+        try container.encode(sessions, forKey: .sessions)
+        try container.encodeIfPresent(splitDays, forKey: .splitDays)
+        try container.encodeIfPresent(dayPlans, forKey: .dayPlans)
+        try container.encodeIfPresent(trainingBlocks, forKey: .trainingBlocks)
+        try container.encodeIfPresent(bodyMetrics, forKey: .bodyMetrics)
+        try container.encodeIfPresent(gyms, forKey: .gyms)
+        try container.encodeIfPresent(stackProfiles, forKey: .stackProfiles)
+    }
 }
 
 struct GymBackup: Codable, Equatable {

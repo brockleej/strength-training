@@ -10,7 +10,7 @@ import SwiftData
 @testable import RockLog
 
 @MainActor
-final class WorkoutEdgeCaseTests: XCTestCase {
+final class WorkoutEdgeCaseTests: RockLogStoreTestCase {
 
     func test_effectiveLoad_clampsZeroAndNegative_hugeVolumeStaysFinite() {
         let zero = SetRecord(setNumber: 1, weightLbs: 0, reps: 10)
@@ -34,7 +34,6 @@ final class WorkoutEdgeCaseTests: XCTestCase {
     }
 
     func test_addSet_allowsZeroAndTenThousand() throws {
-        let container = try InMemoryRockLogStore.make()
         let context = container.mainContext
         let exercise = Exercise(name: "UI Load Lift", dayType: .push, isCustom: true)
         let session = WorkoutSession(dayType: .push, date: Date())
@@ -56,7 +55,6 @@ final class WorkoutEdgeCaseTests: XCTestCase {
     }
 
     func test_updateSet_clampsZeroRepsToOne() throws {
-        let container = try InMemoryRockLogStore.make()
         let context = container.mainContext
         let exercise = Exercise(name: "UI Edit Lift", dayType: .push, isCustom: true)
         let session = WorkoutSession(dayType: .push, date: Date())

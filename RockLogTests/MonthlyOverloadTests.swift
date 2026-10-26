@@ -15,20 +15,31 @@ import XCTest
 @MainActor
 final class MonthlyOverloadTests: XCTestCase {
 
+    private let timeZone = TimeZone(identifier: "America/Denver")!
+
     private var calendar: Calendar {
         var cal = Calendar(identifier: .gregorian)
-        cal.timeZone = TimeZone(identifier: "America/Denver")!
+        cal.timeZone = timeZone
         cal.locale = Locale(identifier: "en_US")
         return cal
     }
 
     /// Wednesday 2026-08-12 12:00 America/Denver
     private var now: Date {
-        calendar.date(from: DateComponents(year: 2026, month: 8, day: 12, hour: 12))!
+        date(2026, 8, 12, hour: 12)
     }
 
     private func date(_ year: Int, _ month: Int, _ day: Int, hour: Int = 18) -> Date {
-        calendar.date(from: DateComponents(year: year, month: month, day: day, hour: hour))!
+        var parts = DateComponents()
+        parts.calendar = calendar
+        parts.timeZone = timeZone
+        parts.year = year
+        parts.month = month
+        parts.day = day
+        parts.hour = hour
+        parts.minute = 0
+        parts.second = 0
+        return calendar.date(from: parts)!
     }
 
     private func set(_ weight: Double, _ reps: Int, warmup: Bool = false) -> MonthlyOverload.SetInput {
@@ -64,6 +75,7 @@ final class MonthlyOverloadTests: XCTestCase {
             sessions: sessions,
             now: now ?? self.now,
             calendar: calendar,
+            timeZone: timeZone,
             dayOrder: dayOrder
         )
     }
@@ -71,7 +83,7 @@ final class MonthlyOverloadTests: XCTestCase {
     // MARK: - Month windows
 
     func test_monthInterval_isLocalCalendarMonth() {
-        let interval = MonthlyOverload.monthInterval(containing: now, calendar: calendar)!
+        let interval = MonthlyOverload.monthInterval(containing: now, calendar: calendar, timeZone: timeZone)!
         XCTAssertEqual(calendar.component(.year, from: interval.start), 2026)
         XCTAssertEqual(calendar.component(.month, from: interval.start), 8)
         XCTAssertEqual(calendar.component(.day, from: interval.start), 1)
@@ -83,8 +95,8 @@ final class MonthlyOverloadTests: XCTestCase {
     }
 
     func test_previousMonth_isJulyWhenNowIsAugust() {
-        let thisMonth = MonthlyOverload.monthInterval(containing: now, calendar: calendar)!
-        let last = MonthlyOverload.previousMonthInterval(before: thisMonth, calendar: calendar)!
+        let thisMonth = MonthlyOverload.monthInterval(containing: now, calendar: calendar, timeZone: timeZone)!
+        let last = MonthlyOverload.previousMonthInterval(before: thisMonth, calendar: calendar, timeZone: timeZone)!
         XCTAssertEqual(calendar.component(.month, from: last.start), 7)
         XCTAssertEqual(calendar.component(.year, from: last.start), 2026)
         XCTAssertEqual(calendar.component(.day, from: last.start), 1)
@@ -92,28 +104,28 @@ final class MonthlyOverloadTests: XCTestCase {
 
     func test_previousMonth_wrapsYearBoundary() {
         let january = date(2026, 1, 15)
-        let thisMonth = MonthlyOverload.monthInterval(containing: january, calendar: calendar)!
-        let last = MonthlyOverload.previousMonthInterval(before: thisMonth, calendar: calendar)!
+        let thisMonth = MonthlyOverload.monthInterval(containing: january, calendar: calendar, timeZone: timeZone)!
+        let last = MonthlyOverload.previousMonthInterval(before: thisMonth, calendar: calendar, timeZone: timeZone)!
         XCTAssertEqual(calendar.component(.year, from: last.start), 2025)
         XCTAssertEqual(calendar.component(.month, from: last.start), 12)
-        XCTAssertTrue(last.contains(date(2025, 12, 31, hour: 23)))
-        XCTAssertFalse(last.contains(date(2026, 1, 1, hour: 0)))
+        XCTAssertTrue(MonthlyOverload.contains(date(2025, 12, 31, hour: 23), in: last))
+        XCTAssertFalse(MonthlyOverload.contains(date(2026, 1, 1, hour: 0), in: last))
     }
 
     func test_windows_includeLastInstantOfMonth_excludeNextMonthStart() {
-        let windows = MonthlyOverload.monthWindows(now: now, calendar: calendar)!
-        XCTAssertTrue(windows.this.contains(date(2026, 8, 31, hour: 23)))
-        XCTAssertFalse(windows.this.contains(date(2026, 9, 1, hour: 0)))
-        XCTAssertTrue(windows.last.contains(date(2026, 7, 31, hour: 23)))
-        XCTAssertFalse(windows.last.contains(date(2026, 8, 1, hour: 0)))
+        let windows = MonthlyOverload.monthWindows(now: now, calendar: calendar, timeZone: timeZone)!
+        XCTAssertTrue(MonthlyOverload.contains(date(2026, 8, 31, hour: 23), in: windows.this))
+        XCTAssertFalse(MonthlyOverload.contains(date(2026, 9, 1, hour: 0), in: windows.this))
+        XCTAssertTrue(MonthlyOverload.contains(date(2026, 7, 31, hour: 23), in: windows.last))
+        XCTAssertFalse(MonthlyOverload.contains(date(2026, 8, 1, hour: 0), in: windows.last))
     }
 
     func test_february_nonLeapLength() {
         let march = date(2026, 3, 10)
-        let thisMonth = MonthlyOverload.monthInterval(containing: march, calendar: calendar)!
-        let feb = MonthlyOverload.previousMonthInterval(before: thisMonth, calendar: calendar)!
-        XCTAssertTrue(feb.contains(date(2026, 2, 28, hour: 23)))
-        XCTAssertFalse(feb.contains(date(2026, 3, 1, hour: 0)))
+        let thisMonth = MonthlyOverload.monthInterval(containing: march, calendar: calendar, timeZone: timeZone)!
+        let feb = MonthlyOverload.previousMonthInterval(before: thisMonth, calendar: calendar, timeZone: timeZone)!
+        XCTAssertTrue(MonthlyOverload.contains(date(2026, 2, 28, hour: 23), in: feb))
+        XCTAssertFalse(MonthlyOverload.contains(date(2026, 3, 1, hour: 0), in: feb))
         XCTAssertEqual(calendar.dateComponents([.day], from: feb.start, to: feb.end).day, 28)
     }
 
@@ -443,7 +455,7 @@ final class MonthlyOverloadTests: XCTestCase {
             dayType: "Push",
             lifts: [("bench", 230, 5, false)]
         )
-        let result = MonthlyOverload.review(documents: [july, august], now: now, calendar: calendar)
+        let result = MonthlyOverload.review(documents: [july, august], now: now, calendar: calendar, timeZone: timeZone)
         XCTAssertEqual(result.rows.count, 2)
         let bench = result.rows.first { $0.exerciseName.caseInsensitiveCompare("Bench") == .orderedSame }
         XCTAssertEqual(bench?.lastMonth, MonthlyOverload.WorkingSet(weightLbs: 225, reps: 5))
@@ -463,7 +475,7 @@ final class MonthlyOverloadTests: XCTestCase {
             dayType: "Legs",
             lifts: [("Squat", 315, 5, false)]
         )
-        let result = MonthlyOverload.review(documents: [pull, legs], now: now, calendar: calendar)
+        let result = MonthlyOverload.review(documents: [pull, legs], now: now, calendar: calendar, timeZone: timeZone)
         XCTAssertEqual(result.groups.map(\.dayTypeName), ["Pull", "Legs"])
         let row = result.rows.first { $0.exerciseName == "Row" }
         XCTAssertEqual(row?.thisMonth, MonthlyOverload.WorkingSet(weightLbs: 185, reps: 8))

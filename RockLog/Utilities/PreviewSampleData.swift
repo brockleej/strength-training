@@ -9,7 +9,15 @@ import SwiftData
 
 @MainActor
 let previewContainer: ModelContainer = {
-    let config = ModelConfiguration(isStoredInMemoryOnly: true)
+    precondition(
+        !RockLogTestHost.isUnitTestHost,
+        "The preview store must not be created while the app is the unit-test host."
+    )
+    let config = ModelConfiguration(
+        "RockLogPreviews",
+        isStoredInMemoryOnly: true,
+        cloudKitDatabase: .none
+    )
     let container = try! ModelContainer(
         for: Exercise.self,
         WorkoutSession.self,

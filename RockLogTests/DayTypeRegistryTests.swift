@@ -11,14 +11,7 @@ import SwiftData
 @testable import RockLog
 
 @MainActor
-final class DayTypeRegistryTests: XCTestCase {
-
-    override func tearDown() async throws {
-        if let container = try? inMemoryContainer() {
-            DayTypeRegistry.shared.reload(context: container.mainContext)
-        }
-        try await super.tearDown()
-    }
+final class DayTypeRegistryTests: RockLogStoreTestCase {
 
     func test_uniquedDefinitions_keepsFirstName_caseInsensitive() {
         let defs = [
@@ -53,7 +46,6 @@ final class DayTypeRegistryTests: XCTestCase {
     }
 
     func test_reload_duplicateSplitDayNames_doesNotCrashAndKeepsOne() throws {
-        let container = try inMemoryContainer()
         let context = container.mainContext
         context.insert(SplitDay(
             name: "Push",
@@ -90,19 +82,5 @@ final class DayTypeRegistryTests: XCTestCase {
         XCTAssertFalse(DayTypeRegistry.allowsDeletingDay(includesAllExercises: false, homeDayCount: 1))
         XCTAssertTrue(DayTypeRegistry.allowsDeletingDay(includesAllExercises: false, homeDayCount: 2))
         XCTAssertTrue(DayTypeRegistry.allowsDeletingDay(includesAllExercises: true, homeDayCount: 1))
-    }
-
-    private func inMemoryContainer() throws -> ModelContainer {
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        return try ModelContainer(
-            for: Exercise.self,
-            WorkoutSession.self,
-            ExerciseRecord.self,
-            SetRecord.self,
-            SplitDay.self,
-            BodyMetricEntry.self,
-            TrainingBlock.self,
-            configurations: config
-        )
     }
 }

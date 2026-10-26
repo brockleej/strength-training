@@ -12,17 +12,9 @@ import SwiftData
 @testable import RockLog
 
 @MainActor
-final class SplitImportEdgeTests: XCTestCase {
-
-    override func tearDown() {
-        if let container = try? InMemoryRockLogStore.make() {
-            DayTypeRegistry.shared.reload(context: container.mainContext)
-        }
-        super.tearDown()
-    }
+final class SplitImportEdgeTests: RockLogStoreTestCase {
 
     func test_importSplit_rejectsEmptyWrongFormat() throws {
-        let container = try InMemoryRockLogStore.make()
         let empty = makeDocument(format: ProgramFormat.splitFormatName, sessions: [])
         XCTAssertThrowsError(try ProgramImportService.importSplit(empty, context: container.mainContext)) { error in
             guard let programError = error as? ProgramDocument.ProgramFormatError,
@@ -71,7 +63,6 @@ final class SplitImportEdgeTests: XCTestCase {
     }
 
     func test_importDocument_createsUnknownLift_andStoresZeroAndHugeTargets() throws {
-        let container = try InMemoryRockLogStore.make()
         let context = container.mainContext
         let mystery = ProgramExercisePayload(
             id: UUID(),
@@ -108,7 +99,6 @@ final class SplitImportEdgeTests: XCTestCase {
     }
 
     func test_importSplit_collapsesDuplicateDayNames_andDoesNotQueueSessions() throws {
-        let container = try InMemoryRockLogStore.make()
         let context = container.mainContext
         let first = pushSession(name: "UI Alpha Lift", day: "Push")
         let second = pushSession(name: "UI Beta Lift", day: " push ")
@@ -125,7 +115,6 @@ final class SplitImportEdgeTests: XCTestCase {
     }
 
     func test_importSplit_removeUnusedPlanFalse_keepsWaitingQueue() throws {
-        let container = try InMemoryRockLogStore.make()
         let context = container.mainContext
         let waiting = WorkoutSession(dayType: .push, date: Date().addingTimeInterval(-86_400))
         waiting.planStatus = .planned

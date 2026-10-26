@@ -11,7 +11,7 @@ import SwiftData
 @testable import RockLog
 
 @MainActor
-final class BackupRestoreRegressionTests: XCTestCase {
+final class BackupRestoreRegressionTests: RockLogStoreTestCase {
 
     override func setUp() async throws {
         try await super.setUp()
@@ -34,7 +34,6 @@ final class BackupRestoreRegressionTests: XCTestCase {
 
     /// A save failure after the deletes are staged must not commit them.
     func test_b3_restoreSaveFailure_rollsBackToOriginalRows() throws {
-        let container = try inMemoryContainer()
         let context = container.mainContext
         let originalExercise = Exercise(
             name: "Keep Me",
@@ -112,7 +111,6 @@ final class BackupRestoreRegressionTests: XCTestCase {
     // MARK: - B1
 
     func test_b1_trainingBlock_survivesExportRestore() throws {
-        let container = try inMemoryContainer()
         let context = container.mainContext
         let start = Date(timeIntervalSince1970: 1_700_000_000)
         let imported = Date(timeIntervalSince1970: 1_700_086_400)
@@ -151,7 +149,6 @@ final class BackupRestoreRegressionTests: XCTestCase {
     }
 
     func test_b1_backupWithoutTrainingBlocks_stillLoadsAndKeepsExistingProgram() throws {
-        let container = try inMemoryContainer()
         let context = container.mainContext
         let block = TrainingBlock(
             name: "Keep Program",
@@ -197,7 +194,6 @@ final class BackupRestoreRegressionTests: XCTestCase {
     }
 
     func test_b1_emptyTrainingBlockArray_replacesExistingProgram() throws {
-        let container = try inMemoryContainer()
         let context = container.mainContext
         context.insert(TrainingBlock(name: "Going Away", startDate: Date(timeIntervalSince1970: 1_600_000_000)))
         try context.save()
@@ -219,7 +215,6 @@ final class BackupRestoreRegressionTests: XCTestCase {
     // MARK: - B2
 
     func test_b2_bodyMetrics_surviveExportRestore() throws {
-        let container = try inMemoryContainer()
         let context = container.mainContext
         let morning = Date(timeIntervalSince1970: 1_700_200_000)
         let evening = Date(timeIntervalSince1970: 1_700_230_000)
@@ -254,7 +249,6 @@ final class BackupRestoreRegressionTests: XCTestCase {
     }
 
     func test_b2_backupWithoutBodyMetrics_stillLoadsAndKeepsExistingMeasurements() throws {
-        let container = try inMemoryContainer()
         let context = container.mainContext
         let entry = BodyMetricEntry(
             kind: .neck,
@@ -287,7 +281,6 @@ final class BackupRestoreRegressionTests: XCTestCase {
     }
 
     func test_b2_emptyBodyMetricArray_replacesExistingMeasurements() throws {
-        let container = try inMemoryContainer()
         let context = container.mainContext
         context.insert(BodyMetricEntry(kind: .weight, value: 200, date: Date(timeIntervalSince1970: 1_600_000_000)))
         try context.save()
@@ -389,7 +382,6 @@ final class BackupRestoreRegressionTests: XCTestCase {
         XCTAssertTrue(prompt.message.contains("bogus"))
         XCTAssertTrue(prompt.message.contains("will be skipped"))
 
-        let container = try inMemoryContainer()
         let context = container.mainContext
         let report = try BackupService.restore(from: data, context: context)
         XCTAssertEqual(report.droppedExerciseRecords, 1)
@@ -535,7 +527,6 @@ final class BackupRestoreRegressionTests: XCTestCase {
     }
 
     func test_b5_rejectedBackup_leavesExistingRows() throws {
-        let container = try inMemoryContainer()
         let context = container.mainContext
         let exercise = Exercise(name: "Keep Me", dayType: .push, muscleGroup: "Chest", isCustom: true)
         context.insert(exercise)
@@ -604,20 +595,6 @@ final class BackupRestoreRegressionTests: XCTestCase {
                     ]
                 ),
             ]
-        )
-    }
-
-    private func inMemoryContainer() throws -> ModelContainer {
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        return try ModelContainer(
-            for: Exercise.self,
-            WorkoutSession.self,
-            ExerciseRecord.self,
-            SetRecord.self,
-            SplitDay.self,
-            BodyMetricEntry.self,
-            TrainingBlock.self,
-            configurations: config
         )
     }
 

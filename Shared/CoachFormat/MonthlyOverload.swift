@@ -94,24 +94,38 @@ nonisolated enum MonthlyOverload {
 
     // MARK: - Calendar windows
 
+    /// Half-open `[start, end)`. `DateInterval.contains` is closed on some
+    /// SDKs, so the first instant of the next month would land in both windows.
+    static func contains(_ date: Date, in interval: DateInterval) -> Bool {
+        date >= interval.start && date < interval.end
+    }
+
     /// `[start, end)` of the calendar month containing `date`.
-    static func monthInterval(containing date: Date, calendar: Calendar) -> DateInterval? {
-        calendar.dateInterval(of: .month, for: date)
+    static func monthInterval(containing date: Date, calendar: Calendar, timeZone: TimeZone) -> DateInterval? {
+        let resolved = resolvedCalendar(calendar, timeZone: timeZone)
+        return resolved.dateInterval(of: .month, for: date)
     }
 
     /// Calendar month immediately before `interval` (handles year wrap).
-    static func previousMonthInterval(before interval: DateInterval, calendar: Calendar) -> DateInterval? {
-        guard let lastStart = calendar.date(byAdding: .month, value: -1, to: interval.start) else {
+    static func previousMonthInterval(before interval: DateInterval, calendar: Calendar, timeZone: TimeZone) -> DateInterval? {
+        let resolved = resolvedCalendar(calendar, timeZone: timeZone)
+        guard let lastStart = resolved.date(byAdding: .month, value: -1, to: interval.start) else {
             return nil
         }
-        return calendar.dateInterval(of: .month, for: lastStart)
+        return resolved.dateInterval(of: .month, for: lastStart)
     }
 
-    static func monthWindows(now: Date, calendar: Calendar) -> (this: DateInterval, last: DateInterval)? {
-        guard let thisMonth = monthInterval(containing: now, calendar: calendar),
-              let lastMonth = previousMonthInterval(before: thisMonth, calendar: calendar)
+    static func monthWindows(now: Date, calendar: Calendar, timeZone: TimeZone) -> (this: DateInterval, last: DateInterval)? {
+        guard let thisMonth = monthInterval(containing: now, calendar: calendar, timeZone: timeZone),
+              let lastMonth = previousMonthInterval(before: thisMonth, calendar: calendar, timeZone: timeZone)
         else { return nil }
         return (thisMonth, lastMonth)
+    }
+
+    private static func resolvedCalendar(_ calendar: Calendar, timeZone: TimeZone) -> Calendar {
+        var copy = calendar
+        copy.timeZone = timeZone
+        return copy
     }
 
     // MARK: - Best-set rule
@@ -174,9 +188,11 @@ nonisolated enum MonthlyOverload {
         sessions: [SessionInput],
         now: Date,
         calendar: Calendar,
+        timeZone: TimeZone,
         dayOrder: [String] = []
     ) -> Review {
-        guard let windows = monthWindows(now: now, calendar: calendar) else {
+        let resolved = resolvedCalendar(calendar, timeZone: timeZone)
+        guard let windows = monthWindows(now: now, calendar: resolved, timeZone: timeZone) else {
             return Review(
                 thisMonthLabel: "",
                 lastMonthLabel: "",
@@ -186,8 +202,8 @@ nonisolated enum MonthlyOverload {
             )
         }
 
-        let thisSessions = sessions.filter { windows.this.contains($0.date) }
-        let lastSessions = sessions.filter { windows.last.contains($0.date) }
+        let thisSessions = sessions.filter { contains($0.date, in: windows.this) }
+        let lastSessions = sessions.filter { contains($0.date, in: windows.last) }
 
         let thisByExercise = bestSetsByExercise(in: thisSessions)
         let lastByExercise = bestSetsByExercise(in: lastSessions)
@@ -236,8 +252,8 @@ nonisolated enum MonthlyOverload {
             }
 
         return Review(
-            thisMonthLabel: monthLabel(windows.this, calendar: calendar),
-            lastMonthLabel: monthLabel(windows.last, calendar: calendar),
+            thisMonthLabel: monthLabel(windows.this, calendar: resolved),
+            lastMonthLabel: monthLabel(windows.last, calendar: resolved),
             thisMonthWorkoutCount: thisSessions.count,
             lastMonthWorkoutCount: lastSessions.count,
             groups: groups
@@ -252,7 +268,8 @@ nonisolated enum MonthlyOverload {
     static func review(
         documents: [CoachSessionDocument],
         now: Date,
-        calendar: Calendar
+        calendar: Calendar,
+        timeZone: TimeZone
     ) -> Review {
         var idsByName: [String: UUID] = [:]
         func identity(for name: String) -> UUID {
@@ -293,7 +310,7 @@ nonisolated enum MonthlyOverload {
             )
         }
 
-        return review(sessions: sessions, now: now, calendar: calendar, dayOrder: dayOrder)
+        return review(sessions: sessions, now: now, calendar: calendar, timeZone: timeZone, dayOrder: dayOrder)
     }
 
     // MARK: - Private

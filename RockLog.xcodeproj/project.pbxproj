@@ -1618,7 +1618,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = RockLogWidget/RockLogWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 17;
 				DEVELOPMENT_TEAM = 53AH938CUW;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = RockLogWidget/Info.plist;
@@ -1645,7 +1645,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = RockLogWidget/RockLogWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 17;
 				DEVELOPMENT_TEAM = 53AH938CUW;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = RockLogWidget/Info.plist;

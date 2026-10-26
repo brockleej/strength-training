@@ -175,7 +175,7 @@ enum UITestLaunch {
             )
         } else {
             configuration = ModelConfiguration(
-                "RockLogUITestMemory",
+                "RockLogUITestMemory-\(UUID().uuidString)",
                 schema: schema,
                 isStoredInMemoryOnly: true,
                 cloudKitDatabase: .none

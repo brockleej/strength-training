@@ -309,6 +309,7 @@ final class ProgressDashboardViewModel {
                 sessions: overloadInputs,
                 now: now,
                 calendar: calendar,
+                timeZone: calendar.timeZone,
                 dayOrder: DayTypeRegistry.shared.exerciseHomeDays.map(\.rawValue)
             ),
             muscleGroupSetCounts: muscles,

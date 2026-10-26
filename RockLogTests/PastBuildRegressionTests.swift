@@ -13,14 +13,7 @@ import SwiftData
 @testable import RockLog
 
 @MainActor
-final class PastBuildRegressionTests: XCTestCase {
-
-    override func tearDown() {
-        if let container = try? InMemoryRockLogStore.make() {
-            DayTypeRegistry.shared.reload(context: container.mainContext)
-        }
-        super.tearDown()
-    }
+final class PastBuildRegressionTests: RockLogStoreTestCase {
 
     // MARK: - Build 17 duration
 
@@ -48,7 +41,6 @@ final class PastBuildRegressionTests: XCTestCase {
         )
         XCTAssertEqual(resolved, 10 * 60)
 
-        let container = try InMemoryRockLogStore.make()
         let session = try loggedSession(
             context: container.mainContext,
             start: start,
@@ -62,7 +54,6 @@ final class PastBuildRegressionTests: XCTestCase {
     // MARK: - Build 14 effort
 
     func test_build14_finishAsksForEffortWithoutHealthKit() throws {
-        let container = try InMemoryRockLogStore.make()
         let context = container.mainContext
         let session = try loggedSession(context: context, start: Date(), setDates: [Date()])
         let viewModel = WorkoutViewModel(modelContext: context, healthKitService: HealthKitWorkoutService())
@@ -78,7 +69,6 @@ final class PastBuildRegressionTests: XCTestCase {
     }
 
     func test_build14_saveEffortWritesRating_reopenDoesNotAskAgain() throws {
-        let container = try InMemoryRockLogStore.make()
         let context = container.mainContext
         let session = try loggedSession(context: context, start: Date(), setDates: [Date()])
         let viewModel = WorkoutViewModel(modelContext: context, healthKitService: HealthKitWorkoutService())
@@ -97,7 +87,6 @@ final class PastBuildRegressionTests: XCTestCase {
     // MARK: - Build 13 restore cancel
 
     func test_build13_restorePromptCancelLeavesRowsUntouched() throws {
-        let container = try InMemoryRockLogStore.make()
         let context = container.mainContext
         context.insert(SplitDay(name: "Push", systemImage: "dumbbell.fill", colorHex: 0xFF8C42, sortOrder: 0))
         let kept = Exercise(name: "UI Kept Lift", dayType: .push, isCustom: true)
@@ -121,14 +110,13 @@ final class PastBuildRegressionTests: XCTestCase {
     }
 
     func test_build13_restoreReplacesWhenConfirmIsCalled() throws {
-        let source = try InMemoryRockLogStore.make()
-        let sourceContext = source.mainContext
+        let sourceContext = container.mainContext
         sourceContext.insert(SplitDay(name: "UI Day", systemImage: "dumbbell.fill", colorHex: 0x3F9CFF, sortOrder: 0))
         sourceContext.insert(Exercise(name: "UI Restored Lift", dayType: DayType(rawValue: "UI Day"), isCustom: true))
         let backup = try BackupService.export(context: sourceContext)
 
-        let destination = try InMemoryRockLogStore.make()
-        let context = destination.mainContext
+        try openSecondaryContainer()
+        let context = secondaryContainer!.mainContext
         context.insert(Exercise(name: "UI Kept Lift", dayType: .push, isCustom: true))
         try context.save()
 
@@ -163,7 +151,6 @@ final class PastBuildRegressionTests: XCTestCase {
         ]
         XCTAssertEqual(DayTypeRegistry.uniquedDefinitions(defs).map(\.name), [" Push "])
 
-        let container = try InMemoryRockLogStore.make()
         let context = container.mainContext
         context.insert(SplitDay(name: " Push ", systemImage: "dumbbell.fill", colorHex: 0xFF8C42, sortOrder: 0))
         context.insert(SplitDay(name: "Push", systemImage: "dumbbell.fill", colorHex: 0x34C759, sortOrder: 1))
@@ -174,7 +161,6 @@ final class PastBuildRegressionTests: XCTestCase {
     }
 
     func test_applyOrder_persists_andLastHomeDayCannotBeDeleted() throws {
-        let container = try InMemoryRockLogStore.make()
         let context = container.mainContext
         let push = SplitDay(name: "Push", systemImage: "dumbbell.fill", colorHex: 0xFF8C42, sortOrder: 0)
         let pull = SplitDay(name: "Pull", systemImage: "dumbbell.fill", colorHex: 0x3F9CFF, sortOrder: 1)
@@ -197,7 +183,6 @@ final class PastBuildRegressionTests: XCTestCase {
     // MARK: - Relaunch
 
     func test_relaunch_resumesTodaysLiveSession_andLeavesPlannedQueued() throws {
-        let container = try InMemoryRockLogStore.make()
         let context = container.mainContext
         let live = try loggedSession(context: context, start: Date(), setDates: [Date()])
         let planned = WorkoutSession(dayType: .pull, date: Date())
@@ -212,7 +197,6 @@ final class PastBuildRegressionTests: XCTestCase {
     }
 
     func test_relaunch_completesYesterdaysLiveSessionWithSets() throws {
-        let container = try InMemoryRockLogStore.make()
         let context = container.mainContext
         let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: Date()) ?? Date().addingTimeInterval(-86_400)
         let session = try loggedSession(context: context, start: yesterday, setDates: [yesterday])

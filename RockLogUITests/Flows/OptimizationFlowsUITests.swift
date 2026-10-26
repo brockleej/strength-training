@@ -12,6 +12,12 @@ final class OptimizationFlowsUITests: RockLogUITestCase {
 
     func test_emptyLibrary_settingsShowUnitGymAndStartingWeight() {
         launch(preset: "empty")
+        // Empty is a first launch. Leave the library empty, then Settings is reachable.
+        element(UITestID.firstRunChoice("Push / Pull / Legs")).tap()
+        waitFor(UITestID.firstRunContinue).tap()
+        waitFor(UITestID.firstRunLeaveEmpty).tap()
+        waitFor(UITestID.firstRunContinue).tap()
+        waitFor(UITestID.firstRunSkip).tap()
         tapTab("Settings")
         XCTAssertTrue(element(UITestID.settingsMassUnit).waitForExistence(timeout: 8))
         XCTAssertTrue(element(UITestID.settingsStartingWeight).exists)

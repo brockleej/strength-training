@@ -21,10 +21,15 @@ nonisolated enum BackupMigration {
     /// Pure v1 → v2. A v2 object is returned unchanged. Unknown keys stay.
     /// Missing gyms, blocks, and measurements stay missing.
     static func promoteToCurrent(_ object: [String: JSONValue]) throws -> [String: JSONValue] {
-        guard let number = object["version"]?.number, number.isFinite, number == number.rounded() else {
+        let version: Int
+        if object["version"] == nil {
+            // Files written before the version field are v1.
+            version = 1
+        } else if let number = object["version"]?.number, number.isFinite, number == number.rounded() {
+            version = Int(number)
+        } else {
             throw BackupMigrationError.malformed
         }
-        let version = Int(number)
         if version < minimumVersion || version > currentVersion {
             throw BackupMigrationError.unsupportedVersion(version)
         }

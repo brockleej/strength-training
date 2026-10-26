@@ -52,9 +52,21 @@ final class DayTypeRegistry {
 
     // MARK: - Load / seed
 
+    /// In-memory catalog only. Tests use this so tearDown does not open another store.
+    func resetToFallback() {
+        definitions = Self.uniquedDefinitions(SplitPreset.broSplit.definitions)
+        reindex()
+    }
+
     /// Load SplitDay rows (or seed the bro-split default) and refresh the catalog.
-    func reload(context: ModelContext) {
-        SeedData.seedSplitDaysIfNeeded(context: context)
+    ///
+    /// - Parameter seedIfEmpty: Pass false after a restore. An explicit empty
+    ///   split must stay empty; seeding here would invent days the file did
+    ///   not contain and the next export would not match.
+    func reload(context: ModelContext, seedIfEmpty: Bool = true) {
+        if seedIfEmpty {
+            SeedData.seedSplitDaysIfNeeded(context: context)
+        }
         SeedData.migrateDayTypeIcons(context: context)
         // Persist-dedupe before mapping. Leftover sim / CloudKit rows with the
         // same name used to crash reindex via uniqueKeysWithValues.

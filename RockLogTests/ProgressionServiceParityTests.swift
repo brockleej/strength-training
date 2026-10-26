@@ -8,16 +8,7 @@ import SwiftData
 @testable import RockLog
 
 @MainActor
-final class ProgressionServiceParityTests: XCTestCase {
-
-    /// Build a temporary in-memory SwiftData container for testing.
-    private func makeContainer() throws -> ModelContainer {
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        return try ModelContainer(
-            for: Exercise.self, WorkoutSession.self, ExerciseRecord.self, SetRecord.self,
-            configurations: config
-        )
-    }
+final class ProgressionServiceParityTests: RockLogStoreTestCase {
 
     /// Insert a small synthetic dataset: one Exercise with 6 completed sessions in
     /// Strength mode and 4 completed sessions in Endurance mode, plus one incomplete.
@@ -70,7 +61,6 @@ final class ProgressionServiceParityTests: XCTestCase {
     }
 
     func test_wrapperAndPureFunctionAgree_acrossAllModesAndAggressiveness() throws {
-        let container = try makeContainer()
         let context = ModelContext(container)
         seed(context)
 
@@ -120,7 +110,6 @@ final class ProgressionServiceParityTests: XCTestCase {
     }
 
     func test_recentAverageWrapperParity() throws {
-        let container = try makeContainer()
         let context = ModelContext(container)
         seed(context)
 
@@ -152,7 +141,6 @@ final class ProgressionServiceParityTests: XCTestCase {
     /// Descending session id is the tie-break: the FFFF session is newest,
     /// so the recent pair is 1 rep and 10 reps and the suggestion stays on reps.
     func test_b9_sameDateSessions_orderBySessionID() throws {
-        let container = try makeContainer()
         let context = ModelContext(container)
         let exercise = Exercise(name: "Squat", dayType: .legs, muscleGroup: "Quads")
         context.insert(exercise)

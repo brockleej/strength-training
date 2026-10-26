@@ -148,10 +148,13 @@ struct ClientDetailView: View {
     }
 
     private func refreshMonthly() {
+        let now = Date.now
+        let calendar = Calendar.current
         monthly = MonthlyOverload.review(
             documents: client.sortedSessions.compactMap(\.document),
-            now: .now,
-            calendar: .current
+            now: now,
+            calendar: calendar,
+            timeZone: calendar.timeZone
         )
     }
 

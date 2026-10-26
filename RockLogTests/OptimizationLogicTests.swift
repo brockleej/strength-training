@@ -10,7 +10,7 @@ import XCTest
 import SwiftData
 @testable import RockLog
 
-final class OptimizationLogicTests: XCTestCase {
+final class OptimizationLogicTests: RockLogStoreTestCase {
 
     func test_massRoundTrip_doesNotWalk() {
         let pounds = 225.0
@@ -468,7 +468,6 @@ final class OptimizationLogicTests: XCTestCase {
 
     @MainActor
     func test_addSet_withNoLiveSession_doesNotCrash() throws {
-        let container = try InMemoryRockLogStore.make()
         let context = container.mainContext
         let viewModel = WorkoutViewModel(modelContext: context, healthKitService: HealthKitWorkoutService())
         viewModel.resetAfterStoreReplace()
@@ -482,7 +481,6 @@ final class OptimizationLogicTests: XCTestCase {
 
     @MainActor
     func test_warmupFlag_isNotCopiedOntoTheNextLoggedSet() throws {
-        let container = try InMemoryRockLogStore.make()
         let context = container.mainContext
         let viewModel = WorkoutViewModel(modelContext: context, healthKitService: HealthKitWorkoutService())
         let exercise = Exercise(name: "Squat", dayType: .legs, muscleGroup: "Quads", sortOrder: 0)

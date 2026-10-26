@@ -11,7 +11,7 @@ import SwiftData
 @testable import RockLog
 
 @MainActor
-final class BackupMigrationTests: XCTestCase {
+final class BackupMigrationTests: RockLogStoreTestCase {
 
     func test_v1PromotesToV2_withoutInventingRowsOrDroppingKeys() throws {
         let raw = try InterchangeCodec.parseObject(v1Sample)
@@ -98,7 +98,6 @@ final class BackupMigrationTests: XCTestCase {
         XCTAssertFalse(RestPreferenceMigration.copyIfNeeded(exercise))
         XCTAssertTrue(exercise.autoRestEnabled)
 
-        let container = try store()
         let context = container.mainContext
         let keeper = Exercise(name: "Keep Me", dayType: .push, muscleGroup: "Chest", isCustom: true)
         context.insert(keeper)
@@ -129,7 +128,6 @@ final class BackupMigrationTests: XCTestCase {
     }
 
     func test_orphanedGroup_isClearedOnRestore() throws {
-        let container = try store()
         let context = container.mainContext
         let json = Data("""
         {"version":2,"exportedAt":"2026-01-01T00:00:00Z","exercises":[
@@ -151,7 +149,6 @@ final class BackupMigrationTests: XCTestCase {
     }
 
     func test_exportRestoreExport_matchesApartFromExportedAt() throws {
-        let container = try store()
         let context = container.mainContext
         let stamp = Date(timeIntervalSince1970: 1_700_000_000)
         let exercise = Exercise(name: "Synthetic Press", dayType: .push, muscleGroup: "Chest", isCustom: true)
@@ -217,20 +214,18 @@ final class BackupMigrationTests: XCTestCase {
         return String(decoding: encoded, as: UTF8.self)
     }
 
-    private func store() throws -> ModelContainer {
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        return try ModelContainer(
-            for: Exercise.self,
-            WorkoutSession.self,
-            ExerciseRecord.self,
-            SetRecord.self,
-            SplitDay.self,
-            BodyMetricEntry.self,
-            TrainingBlock.self,
-            Gym.self,
-            MachineStackProfile.self,
-            configurations: config
-        )
+    func test_missingVersion_decodesAsVersionOne() throws {
+        let fixture = Data("""
+        {"exportedAt":"2026-01-01T00:00:00Z","exercises":[],"sessions":[],"labNote":"synthetic-old"}
+        """.utf8)
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let decoded = try decoder.decode(AppBackup.self, from: fixture)
+        XCTAssertEqual(decoded.version, 1)
+        let opened = try BackupService.open(fixture)
+        XCTAssertEqual(opened.backup.version, BackupMigration.currentVersion)
+        XCTAssertTrue(opened.backup.exercises.isEmpty)
+        XCTAssertTrue(opened.backup.sessions.isEmpty)
     }
 
     private func versionJSON(_ version: Int) -> Data {

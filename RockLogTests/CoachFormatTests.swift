@@ -8,7 +8,7 @@ import SwiftData
 @testable import RockLog
 
 @MainActor
-final class CoachFormatTests: XCTestCase {
+final class CoachFormatTests: RockLogStoreTestCase {
 
     func test_codec_roundTrip() throws {
         let doc = sampleDocument()
@@ -53,7 +53,6 @@ final class CoachFormatTests: XCTestCase {
 
     @MainActor
     func test_export_mapsSetsAndSkipsEmptyLifts() throws {
-        let container = try inMemoryContainer()
         let context = container.mainContext
 
         let bench = Exercise(name: "Bench", dayType: .push, muscleGroup: "Chest", sortOrder: 0)
@@ -191,7 +190,6 @@ final class CoachFormatTests: XCTestCase {
 
     @MainActor
     func test_export_oneSessionStaysSessionFormat_twoBecomeBatch() throws {
-        let container = try inMemoryContainer()
         let context = container.mainContext
         let athlete = CoachAthlete(
             id: UUID(uuidString: "AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE")!,
@@ -320,19 +318,5 @@ final class CoachFormatTests: XCTestCase {
         context.insert(set)
         try context.save()
         return session
-    }
-
-    @MainActor
-    private func inMemoryContainer() throws -> ModelContainer {
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        return try ModelContainer(
-            for: Exercise.self,
-            WorkoutSession.self,
-            ExerciseRecord.self,
-            SetRecord.self,
-            SplitDay.self,
-            BodyMetricEntry.self,
-            configurations: config
-        )
     }
 }

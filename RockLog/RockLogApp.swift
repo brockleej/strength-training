@@ -22,7 +22,10 @@ struct RockLogApp: App {
 
     var body: some Scene {
         WindowGroup {
-            if let container {
+            if RockLogTestHost.isUnitTestHost {
+                // No model container and no CloudKit. Unit tests open their own stores.
+                Color.clear
+            } else if let container {
                 ContentView()
                     .modelContainer(container)
             } else if let storeError {
@@ -53,6 +56,7 @@ struct RockLogApp: App {
     /// with `.automatic` can take tens of seconds on a brand-new install.
     @MainActor
     private func openStore() async {
+        if RockLogTestHost.isUnitTestHost { return }
         await Task.yield()
         #if DEBUG
         if UITestLaunch.isEnabled {

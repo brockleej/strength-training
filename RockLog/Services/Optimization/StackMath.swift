@@ -231,16 +231,26 @@ nonisolated enum StackLearning {
         return abs(shifted - nearest)
     }
 
-    /// Largest of 20 / 15 / 10 whose pooled weights share one remainder.
+    /// Largest of 20 / 15 / 10 that divides every weight (offset 0).
+    /// If none do, the largest of those steps that share one remainder.
     /// Otherwise the greatest common divisor when it is above 5 lb.
+    ///
+    /// 150 is a multiple of 15, so the pair is 15 / 0, not 20 / 10.
+    /// 145, 185, and 225 share remainder 5, so the pair is 20 / 5.
     static func pair(correctedPounds: [Double]) -> (step: Double, offset: Double)? {
         let weights = correctedPounds.filter { $0 > 0 && $0.isFinite }
         guard !weights.isEmpty else { return nil }
+        var sharedRemainder: (step: Double, offset: Double)?
         for step in candidates {
-            if let offset = sharedOffset(weights, step: step) {
+            guard let offset = sharedOffset(weights, step: step) else { continue }
+            if abs(offset) <= 0.001 {
                 return (step, offset)
             }
+            if sharedRemainder == nil {
+                sharedRemainder = (step, offset)
+            }
         }
+        if let sharedRemainder { return sharedRemainder }
         let divisor = greatestCommonDivisor(weights)
         guard divisor > 5.001, let offset = sharedOffset(weights, step: divisor) else { return nil }
         return (divisor, offset)

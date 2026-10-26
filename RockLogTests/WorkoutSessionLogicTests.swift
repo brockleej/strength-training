@@ -8,7 +8,7 @@ import SwiftData
 @testable import RockLog
 
 @MainActor
-final class WorkoutSessionLogicTests: XCTestCase {
+final class WorkoutSessionLogicTests: RockLogStoreTestCase {
 
     // MARK: - Finish prompt
 
@@ -123,7 +123,6 @@ final class WorkoutSessionLogicTests: XCTestCase {
 
     @MainActor
     func test_deleteSet_removesAndRenumbers() throws {
-        let container = try inMemoryContainer()
         let context = container.mainContext
 
         let exercise = Exercise(name: "Bench", dayType: .push, muscleGroup: "Chest", sortOrder: 0)
@@ -157,7 +156,6 @@ final class WorkoutSessionLogicTests: XCTestCase {
 
     @MainActor
     func test_volumeAndSetCount_ignorePlannedTargets() throws {
-        let container = try inMemoryContainer()
         let context = container.mainContext
         let exercise = Exercise(name: "Squat", dayType: .legs, muscleGroup: "Legs", sortOrder: 0)
         let session = WorkoutSession(dayType: .legs)
@@ -186,7 +184,6 @@ final class WorkoutSessionLogicTests: XCTestCase {
 
     @MainActor
     func test_deleteLoggedSet_doesNotRenumberPlannedTargets() throws {
-        let container = try inMemoryContainer()
         let context = container.mainContext
         let exercise = Exercise(name: "Bench", dayType: .push, muscleGroup: "Chest", sortOrder: 0)
         let session = WorkoutSession(dayType: .push)
@@ -215,7 +212,6 @@ final class WorkoutSessionLogicTests: XCTestCase {
 
     @MainActor
     func test_deleteOnlySet_leavesEmptyRecord() throws {
-        let container = try inMemoryContainer()
         let context = container.mainContext
 
         let exercise = Exercise(name: "Curl", dayType: .arms, muscleGroup: "Biceps", sortOrder: 0)
@@ -238,24 +234,10 @@ final class WorkoutSessionLogicTests: XCTestCase {
 
         XCTAssertTrue(record.setsArray.isEmpty)
     }
-
-    @MainActor
-    private func inMemoryContainer() throws -> ModelContainer {
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        return try ModelContainer(
-            for: Exercise.self,
-            WorkoutSession.self,
-            ExerciseRecord.self,
-            SetRecord.self,
-            SplitDay.self,
-            BodyMetricEntry.self,
-            configurations: config
-        )
-    }
 }
 
 @MainActor
-final class SplitPersistenceTests: XCTestCase {
+final class SplitPersistenceTests: RockLogStoreTestCase {
 
     override func setUp() async throws {
         try await super.setUp()
@@ -332,7 +314,6 @@ final class SplitPersistenceTests: XCTestCase {
     }
 
     func test_applySnapshot_removesBroExtrasAndKeepsOrder() throws {
-        let container = try inMemoryContainer()
         let context = container.mainContext
         for (index, name) in ["Arms", "Push", "Legs", "Full Body", "Pull", "Posterior Chain"].enumerated() {
             let def = DayTypePalette.fallback(for: name)
@@ -369,7 +350,6 @@ final class SplitPersistenceTests: XCTestCase {
     }
 
     func test_backupRoundTrip_includesSplitOrder() throws {
-        let container = try inMemoryContainer()
         let context = container.mainContext
         for (index, name) in ["Pull", "Push", "Legs"].enumerated() {
             let def = DayTypePalette.fallback(for: name)
@@ -387,14 +367,11 @@ final class SplitPersistenceTests: XCTestCase {
         try context.save()
 
         let data = try BackupService.export(context: context)
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        let decoded = try decoder.decode(AppBackup.self, from: data)
+        let decoded = try BackupService.decode(data)
         XCTAssertEqual(decoded.splitDays?.map(\.name), ["Pull", "Push", "Legs"])
     }
 
     func test_seedIfNeeded_skipsStartersWhenSplitAlreadyConfigured() throws {
-        let container = try inMemoryContainer()
         let context = container.mainContext
         for (index, name) in ["Push", "Pull", "Legs", "Posterior Chain"].enumerated() {
             let def = DayTypePalette.fallback(for: name)
@@ -420,7 +397,6 @@ final class SplitPersistenceTests: XCTestCase {
     }
 
     func test_seedIfNeeded_doesNotApplyStartersUntilUserChooses() throws {
-        let container = try inMemoryContainer()
         let context = container.mainContext
 
         SeedData.seedIfNeeded(context: context)
@@ -434,7 +410,6 @@ final class SplitPersistenceTests: XCTestCase {
     }
 
     func test_applyPreset_withStartersPinsTemplateLifts() throws {
-        let container = try inMemoryContainer()
         let context = container.mainContext
         SeedData.seedIfNeeded(context: context)
         DayTypeRegistry.shared.applyPreset(
@@ -451,7 +426,6 @@ final class SplitPersistenceTests: XCTestCase {
     }
 
     func test_applyPreset_broSplitStartersIncludeFullBody() throws {
-        let container = try inMemoryContainer()
         let context = container.mainContext
         SeedData.seedIfNeeded(context: context)
         DayTypeRegistry.shared.applyPreset(
@@ -476,7 +450,6 @@ final class SplitPersistenceTests: XCTestCase {
     }
 
     func test_applyPreset_withoutStartersLeavesDaysEmpty() throws {
-        let container = try inMemoryContainer()
         let context = container.mainContext
         SeedData.seedIfNeeded(context: context)
         DayTypeRegistry.shared.applyPreset(
@@ -494,7 +467,6 @@ final class SplitPersistenceTests: XCTestCase {
     }
 
     func test_stripUnusedStarterExtras_removesSeededDefaultsFromMixedDay() throws {
-        let container = try inMemoryContainer()
         let context = container.mainContext
         let starter = Exercise(name: "Lateral Raise", dayType: .push, muscleGroup: "Shoulders")
         let custom = Exercise(name: "My Bench", dayType: .push, muscleGroup: "Chest", isCustom: true)
@@ -508,7 +480,6 @@ final class SplitPersistenceTests: XCTestCase {
     }
 
     func test_stripUnusedStarterExtras_keepsStartersWithHistory() throws {
-        let container = try inMemoryContainer()
         let context = container.mainContext
         let starter = Exercise(name: "Lateral Raise", dayType: .push, muscleGroup: "Shoulders")
         let custom = Exercise(name: "My Bench", dayType: .push, muscleGroup: "Chest", isCustom: true)
@@ -534,7 +505,6 @@ final class SplitPersistenceTests: XCTestCase {
     }
 
     func test_removeDayType_dropsLiftFromDayPlanAndKeepsLibrary() throws {
-        let container = try inMemoryContainer()
         let context = container.mainContext
         let def = DayTypePalette.fallback(for: "Push")
         context.insert(
@@ -568,7 +538,6 @@ final class SplitPersistenceTests: XCTestCase {
     }
 
     func test_applyDayPlanSnapshot_stripsCloudKitStarterExtras() throws {
-        let container = try inMemoryContainer()
         let context = container.mainContext
         let keep = Exercise(name: "My Bench", dayType: .push, muscleGroup: "Chest", isCustom: true)
         let extra = Exercise(name: "Lateral Raise", dayType: .push, muscleGroup: "Shoulders")
@@ -583,7 +552,6 @@ final class SplitPersistenceTests: XCTestCase {
     }
 
     func test_deduplicateExercises_collapsesSeedAndUserCopyByName() throws {
-        let container = try inMemoryContainer()
         let context = container.mainContext
         let seeded = Exercise(name: "Dumbbell Bench Press", dayType: .push, muscleGroup: "Chest")
         let user = Exercise(name: "Dumbbell Bench Press", dayType: nil, muscleGroup: "Chest", isCustom: true)
@@ -712,7 +680,6 @@ final class SplitPersistenceTests: XCTestCase {
     }
 
     func test_backupRoundTrip_preservesDayMembershipAndOrder() throws {
-        let container = try inMemoryContainer()
         let context = container.mainContext
         let push = DayTypePalette.fallback(for: "Push")
         context.insert(
@@ -734,9 +701,7 @@ final class SplitPersistenceTests: XCTestCase {
         try context.save()
 
         let data = try BackupService.export(context: context)
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        let decoded = try decoder.decode(AppBackup.self, from: data)
+        let decoded = try BackupService.decode(data)
         XCTAssertEqual(decoded.dayPlans?.first?.dayName, "Push")
         XCTAssertEqual(decoded.dayPlans?.first?.exerciseIDs, [first.id, second.id])
         XCTAssertEqual(decoded.exercises.first { $0.id == first.id }?.daySortOrdersRaw, "Push:0")
@@ -747,19 +712,5 @@ final class SplitPersistenceTests: XCTestCase {
             .sorted { $0.sortIndex(for: .push) < $1.sortIndex(for: .push) }
         XCTAssertEqual(restored.map(\.name), ["My Bench", "My Fly"])
         XCTAssertEqual(restored.map { $0.sortIndex(for: .push) }, [0, 1])
-    }
-
-    private func inMemoryContainer() throws -> ModelContainer {
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        return try ModelContainer(
-            for: Exercise.self,
-            WorkoutSession.self,
-            ExerciseRecord.self,
-            SetRecord.self,
-            SplitDay.self,
-            BodyMetricEntry.self,
-            TrainingBlock.self,
-            configurations: config
-        )
     }
 }

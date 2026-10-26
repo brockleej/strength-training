@@ -567,7 +567,10 @@ struct BackupService {
         commitRestorePreferences(from: backup, context: context)
         // Reload on this call — a detached Task outlives test containers
         // and the CloudKit store tear-down, then fetchCount traps (SIGTRAP).
-        DayTypeRegistry.shared.reload(context: context)
+        // Do not seed. writeBackup already applied the file's split, including
+        // an explicit empty list. Seeding from a leftover preset or snapshot
+        // would add days the next export would not have had.
+        DayTypeRegistry.shared.reload(context: context, seedIfEmpty: false)
         NotificationCenter.default.post(name: .rockLogStoreReplaced, object: nil)
         return report
     }

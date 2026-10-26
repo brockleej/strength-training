@@ -12,6 +12,14 @@ import SwiftData
 
 @MainActor
 final class RockLogSchemaMigrationTests: XCTestCase {
+    /// The store currently open. Cleared in tearDown. The writer is released
+    /// before the reader opens the same file, so SQLite is not left locked.
+    private var container: ModelContainer?
+
+    override func tearDown() {
+        container = nil
+        super.tearDown()
+    }
 
     func test_b6_unversionedStore_opensThroughMigrationPlan() throws {
         let directory = FileManager.default.temporaryDirectory
@@ -31,17 +39,8 @@ final class RockLogSchemaMigrationTests: XCTestCase {
         )
 
         let schema = Schema(versionedSchema: RockLogSchemaV1.self)
-        let config = ModelConfiguration(
-            schema: schema,
-            url: storeURL,
-            cloudKitDatabase: ModelConfiguration.CloudKitDatabase.none
-        )
-        let container = try ModelContainer(
-            for: schema,
-            migrationPlan: RockLogMigrationPlan.self,
-            configurations: [config]
-        )
-        let context = container.mainContext
+        try open(schema: schema, url: storeURL, migrationPlan: true)
+        let context = container!.mainContext
 
         let exercises = try context.fetch(FetchDescriptor<Exercise>())
         XCTAssertEqual(exercises.map(\.id), [exerciseID])
@@ -70,17 +69,8 @@ final class RockLogSchemaMigrationTests: XCTestCase {
         try writeVersionedV1(url: storeURL, exerciseID: exerciseID)
 
         let schema = Schema(versionedSchema: RockLogSchemaV2.self)
-        let config = ModelConfiguration(
-            schema: schema,
-            url: storeURL,
-            cloudKitDatabase: ModelConfiguration.CloudKitDatabase.none
-        )
-        let container = try ModelContainer(
-            for: schema,
-            migrationPlan: RockLogMigrationPlan.self,
-            configurations: [config]
-        )
-        let context = container.mainContext
+        try open(schema: schema, url: storeURL, migrationPlan: true)
+        let context = container!.mainContext
         let exercises = try context.fetch(FetchDescriptor<Exercise>())
         XCTAssertEqual(exercises.map(\.id), [exerciseID])
         XCTAssertEqual(exercises.first?.defaultRestSeconds, 0)
@@ -96,16 +86,12 @@ final class RockLogSchemaMigrationTests: XCTestCase {
 
     private func writeVersionedV1(url: URL, exerciseID: UUID) throws {
         let schema = Schema(versionedSchema: RockLogSchemaV1.self)
-        let config = ModelConfiguration(
-            schema: schema,
-            url: url,
-            cloudKitDatabase: ModelConfiguration.CloudKitDatabase.none
-        )
-        let container = try ModelContainer(for: schema, configurations: [config])
+        try open(schema: schema, url: url, migrationPlan: false)
         let exercise = Exercise(name: "Version One Press", dayType: .push, muscleGroup: "Chest", isCustom: true)
         exercise.id = exerciseID
-        container.mainContext.insert(exercise)
-        try container.mainContext.save()
+        container!.mainContext.insert(exercise)
+        try container!.mainContext.save()
+        container = nil
     }
 
     /// The pre-versioning container: `Schema([...])` and no migration plan.
@@ -116,13 +102,8 @@ final class RockLogSchemaMigrationTests: XCTestCase {
         metricID: UUID
     ) throws {
         let schema = Schema(RockLogSchemaV1.models)
-        let config = ModelConfiguration(
-            schema: schema,
-            url: url,
-            cloudKitDatabase: ModelConfiguration.CloudKitDatabase.none
-        )
-        let container = try ModelContainer(for: schema, configurations: [config])
-        let context = container.mainContext
+        try open(schema: schema, url: url, migrationPlan: false)
+        let context = container!.mainContext
 
         let exercise = Exercise(name: "Legacy Squat", dayType: .legs, muscleGroup: "Quads", isCustom: true)
         exercise.id = exerciseID
@@ -142,5 +123,24 @@ final class RockLogSchemaMigrationTests: XCTestCase {
         context.insert(block)
         context.insert(metric)
         try context.save()
+        container = nil
+    }
+
+    private func open(schema: Schema, url: URL, migrationPlan: Bool) throws {
+        let config = ModelConfiguration(
+            "RockLogSchema-\(UUID().uuidString)",
+            schema: schema,
+            url: url,
+            cloudKitDatabase: .none
+        )
+        if migrationPlan {
+            container = try ModelContainer(
+                for: schema,
+                migrationPlan: RockLogMigrationPlan.self,
+                configurations: [config]
+            )
+        } else {
+            container = try ModelContainer(for: schema, configurations: [config])
+        }
     }
 }

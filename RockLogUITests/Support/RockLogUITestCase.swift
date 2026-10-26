@@ -14,6 +14,7 @@ class RockLogUITestCase: XCTestCase {
     }
 
     /// Replaces launch arguments. Do not append across launches.
+    /// `-RockLogUITesting` opens a fresh in-memory store with CloudKit off.
     func launch(
         preset: String,
         extra: [String] = [],

@@ -10,7 +10,7 @@ import SwiftData
 @testable import RockLog
 
 @MainActor
-final class ProgramImportTests: XCTestCase {
+final class ProgramImportTests: RockLogStoreTestCase {
 
     func test_authoringGuide_coversRequiredFields() {
         let text = ProgramAuthoringGuide.markdown
@@ -26,7 +26,6 @@ final class ProgramImportTests: XCTestCase {
     }
 
     func test_importSplit_replacesDaysWithoutCreatingPlannedQueue() throws {
-        let container = try inMemoryContainer()
         let context = container.mainContext
         DayTypeRegistry.shared.replaceDays(names: ["Arms"], context: context)
         var document = sampleDocument(firstSession: .now)
@@ -51,7 +50,6 @@ final class ProgramImportTests: XCTestCase {
     }
 
     func test_importSplit_keepLeavesQueue_removeClearsUnused() throws {
-        let container = try inMemoryContainer()
         let context = container.mainContext
         let program = sampleDocument(firstSession: .now)
         _ = try ProgramImportService.importDocument(program, context: context)
@@ -251,7 +249,6 @@ final class ProgramImportTests: XCTestCase {
     }
 
     func test_merge_doesNotDeleteExistingCompletedSession() throws {
-        let container = try inMemoryContainer()
         let context = container.mainContext
 
         let squat = Exercise(name: "Barbell Back Squat", dayType: .legs, muscleGroup: "Quads")
@@ -283,7 +280,6 @@ final class ProgramImportTests: XCTestCase {
     }
 
     func test_import_matchesExistingExerciseByName_withoutDuplicating() throws {
-        let container = try inMemoryContainer()
         let context = container.mainContext
 
         let existingID = UUID()
@@ -305,7 +301,6 @@ final class ProgramImportTests: XCTestCase {
     }
 
     func test_staleAutoComplete_doesNotMarkPlannedSessionAsTrained() throws {
-        let container = try inMemoryContainer()
         let context = container.mainContext
         let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: .now)!
 
@@ -335,7 +330,6 @@ final class ProgramImportTests: XCTestCase {
     }
 
     func test_startToday_loadsTodaysPlanTargetsIncludingWarmups() throws {
-        let container = try inMemoryContainer()
         let context = container.mainContext
         let today = Calendar.current.startOfDay(for: .now)
 
@@ -368,7 +362,6 @@ final class ProgramImportTests: XCTestCase {
     }
 
     func test_startDifferentDayType_doesNotStealPlan() throws {
-        let container = try inMemoryContainer()
         let context = container.mainContext
         let today = Calendar.current.startOfDay(for: .now)
 
@@ -395,7 +388,6 @@ final class ProgramImportTests: XCTestCase {
     }
 
     func test_import_sameDayTypeTwiceInOneWeek_keepsDifferentRosters() throws {
-        let container = try inMemoryContainer()
         let context = container.mainContext
         let monday = Date(timeIntervalSince1970: 1_767_571_200)
         let thursday = monday.addingTimeInterval(3 * 86_400)
@@ -415,7 +407,6 @@ final class ProgramImportTests: XCTestCase {
     }
 
     func test_import_runningSplit_doesNotResetOrMergeByMonday() throws {
-        let container = try inMemoryContainer()
         let context = container.mainContext
         let start = Date(timeIntervalSince1970: 1_767_571_200)
         let document = runningThreeDayDocument(start: start)
@@ -436,7 +427,6 @@ final class ProgramImportTests: XCTestCase {
     }
 
     func test_start_usesDatedRoster_notDayPlanUnion() throws {
-        let container = try inMemoryContainer()
         let context = container.mainContext
         let today = Calendar.current.startOfDay(for: .now)
 
@@ -463,7 +453,6 @@ final class ProgramImportTests: XCTestCase {
     }
 
     func test_startLower_usesFirstUnused_notLaterDatedLower() throws {
-        let container = try inMemoryContainer()
         let context = container.mainContext
         let today = Calendar.current.startOfDay(for: .now)
         let earlier = Calendar.current.date(byAdding: .day, value: -3, to: today)!
@@ -486,7 +475,6 @@ final class ProgramImportTests: XCTestCase {
     }
 
     func test_wednesdayStart_loadsFirstUnusedThenSecond_noFakeHistory() throws {
-        let container = try inMemoryContainer()
         let context = container.mainContext
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
@@ -544,7 +532,6 @@ final class ProgramImportTests: XCTestCase {
     }
 
     func test_queue_followsFileOrder_notEarlierCalendarDate() throws {
-        let container = try inMemoryContainer()
         let context = container.mainContext
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
@@ -571,7 +558,6 @@ final class ProgramImportTests: XCTestCase {
     }
 
     func test_replaceUnusedPlan_keepsCompletedAndReloadsLeftover() throws {
-        let container = try inMemoryContainer()
         let context = container.mainContext
         let document = rotatingLowerDocument(
             dlDate: .now,
@@ -605,7 +591,6 @@ final class ProgramImportTests: XCTestCase {
     }
 
     func test_historicalPush_doesNotRemovePlannedPushFromQueue() throws {
-        let container = try inMemoryContainer()
         let context = container.mainContext
         let document = sampleDocument(firstSession: .now)
         _ = try ProgramImportService.importDocument(document, context: context)
@@ -631,7 +616,6 @@ final class ProgramImportTests: XCTestCase {
     }
 
     func test_legacySkippedSession_staysInQueue() throws {
-        let container = try inMemoryContainer()
         let context = container.mainContext
         let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: .now)!
         let document = sampleDocument(firstSession: yesterday)
@@ -658,7 +642,6 @@ final class ProgramImportTests: XCTestCase {
     }
 
     func test_import_keepsFileCalendarDatesByDefault() throws {
-        let container = try inMemoryContainer()
         let context = container.mainContext
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
@@ -678,7 +661,6 @@ final class ProgramImportTests: XCTestCase {
     }
 
     func test_import_shiftStartToToday_isOptIn() throws {
-        let container = try inMemoryContainer()
         let context = container.mainContext
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
@@ -702,7 +684,6 @@ final class ProgramImportTests: XCTestCase {
     }
 
     func test_import_withoutReplace_leavesExistingSplit() throws {
-        let container = try inMemoryContainer()
         let context = container.mainContext
         insertSplit(names: ["Arms", "Legs"], context: context)
         let curl = Exercise(name: "Barbell Curl", dayType: .arms, muscleGroup: "Biceps")
@@ -724,7 +705,6 @@ final class ProgramImportTests: XCTestCase {
     }
 
     func test_replaceSplit_replacesDaysAndLifts_keepsHistory() throws {
-        let container = try inMemoryContainer()
         let context = container.mainContext
         insertSplit(names: ["Arms", "Legs"], context: context)
 
@@ -778,7 +758,6 @@ final class ProgramImportTests: XCTestCase {
     }
 
     func test_delete_refusesLastHomeDay() throws {
-        let container = try inMemoryContainer()
         let context = container.mainContext
         insertSplit(names: ["Push"], context: context)
         try context.save()
@@ -795,7 +774,6 @@ final class ProgramImportTests: XCTestCase {
     }
 
     func test_replaceSplit_fromImportedSessions_matchesFile() throws {
-        let container = try inMemoryContainer()
         let context = container.mainContext
         insertSplit(names: ["Arms"], context: context)
         let start = Date(timeIntervalSince1970: 1_767_571_200)
@@ -1027,20 +1005,6 @@ final class ProgramImportTests: XCTestCase {
                     ]
                 )
             ]
-        )
-    }
-
-    private func inMemoryContainer() throws -> ModelContainer {
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        return try ModelContainer(
-            for: Exercise.self,
-            WorkoutSession.self,
-            ExerciseRecord.self,
-            SetRecord.self,
-            SplitDay.self,
-            BodyMetricEntry.self,
-            TrainingBlock.self,
-            configurations: config
         )
     }
 }

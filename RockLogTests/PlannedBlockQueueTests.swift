@@ -10,7 +10,7 @@ import SwiftData
 @testable import RockLog
 
 @MainActor
-final class PlannedBlockQueueTests: XCTestCase {
+final class PlannedBlockQueueTests: RockLogStoreTestCase {
 
     func test_nextUpLabel_namesTheDayWithoutAMiss() {
         XCTAssertEqual(PlannedBlockQueue.nextUpLabel(dayName: "Push"), "Next up: Push")
@@ -29,7 +29,6 @@ final class PlannedBlockQueueTests: XCTestCase {
     }
 
     func test_queueOrder_isPlanOrderThenDate() throws {
-        let container = try InMemoryRockLogStore.make()
         let context = container.mainContext
         let laterOrder = makeSession(day: .pull, order: 2, dateOffset: -2, status: .planned, context: context)
         let earlierOrder = makeSession(day: .push, order: 0, dateOffset: 0, status: .planned, context: context)
@@ -44,7 +43,6 @@ final class PlannedBlockQueueTests: XCTestCase {
     }
 
     func test_skippedStaysUnused_completedAndStartedDoNot() throws {
-        let container = try InMemoryRockLogStore.make()
         let context = container.mainContext
         let skipped = makeSession(day: .push, order: 0, dateOffset: -1, status: .skipped, context: context)
         let completed = makeSession(day: .pull, order: 1, dateOffset: -1, status: .planned, context: context)
@@ -59,7 +57,6 @@ final class PlannedBlockQueueTests: XCTestCase {
     }
 
     func test_hasAthleteLoggedSets_ignoresTargets() throws {
-        let container = try InMemoryRockLogStore.make()
         let context = container.mainContext
         let session = makeSession(day: .push, order: 0, dateOffset: 0, status: .planned, context: context)
         let exercise = Exercise(name: "UI Queue Lift", dayType: .push, isCustom: true)
