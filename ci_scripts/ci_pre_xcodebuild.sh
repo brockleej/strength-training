@@ -8,24 +8,43 @@
 # RockCoach is in this GitHub repo for local Xcode; it is not a TestFlight product.
 set -eu
 
+ROOT="${CI_PRIMARY_REPOSITORY_PATH:-$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)}"
+PBX=""
+if [ -f "$ROOT/RockLog.xcodeproj/project.pbxproj" ]; then
+  PBX="$ROOT/RockLog.xcodeproj/project.pbxproj"
+else
+  # The repo project is RockLog.xcodeproj. Do not use the old
+  # strength-training.xcodeproj name; it is only a symlink.
+  for proj in "$ROOT"/*.xcodeproj; do
+    [ -d "$proj" ] || continue
+    name=$(basename "$proj")
+    if [ "$name" = "strength-training.xcodeproj" ]; then
+      continue
+    fi
+    if [ -f "$proj/project.pbxproj" ]; then
+      PBX="$proj/project.pbxproj"
+      break
+    fi
+  done
+fi
+
+echo "ci_pre_xcodebuild: CI_XCODEBUILD_ACTION=${CI_XCODEBUILD_ACTION:-unset}"
+echo "ci_pre_xcodebuild: pbxproj=${PBX:-not found}"
+
 if [ "${CI_XCODE_SCHEME:-}" = "RockCoach" ]; then
   echo "ci_pre_xcodebuild: scheme RockCoach is GitHub/local only — not TestFlight. Failing this Cloud job."
   exit 1
 fi
 
-ROOT="${CI_PRIMARY_REPOSITORY_PATH:-$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)}"
-ROCKLOG_PBX="$ROOT/RockLog.xcodeproj/project.pbxproj"
-LEGACY_PBX="$ROOT/strength-training.xcodeproj/project.pbxproj"
-# Build Tests already pinned versions. The later "test-without-building"
-# action does not have the project file, and versions are unused then.
-if [ "${CI_XCODEBUILD_ACTION:-}" = "test-without-building" ] || { [ ! -f "$ROCKLOG_PBX" ] && [ ! -f "$LEGACY_PBX" ]; }; then
-  echo "ci_pre_xcodebuild: skipping version pin (action=${CI_XCODEBUILD_ACTION:-unset}). Not a build or archive."
+# Build Tests already pinned versions. This later action does not need them.
+if [ "${CI_XCODEBUILD_ACTION:-}" = "test-without-building" ]; then
+  echo "ci_pre_xcodebuild: skipping version pin for test-without-building."
   exit 0
 fi
-if [ -f "$ROCKLOG_PBX" ]; then
-  PBX="$ROCKLOG_PBX"
-else
-  PBX="$LEGACY_PBX"
+
+if [ -z "${PBX:-}" ] || [ ! -f "$PBX" ]; then
+  echo "ci_pre_xcodebuild: project.pbxproj not found under $ROOT. Looked for RockLog.xcodeproj, then other *.xcodeproj. Refusing to skip the version pin."
+  exit 1
 fi
 MIN=17
 CLOUD="${CI_BUILD_NUMBER:-0}"
