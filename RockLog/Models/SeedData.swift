@@ -47,7 +47,8 @@ struct SeedData {
     /// single legacy primary that matches the old catalog single-group tag.
     static func migrateCompoundMuscleGroups(context: ModelContext) {
         let byName = Dictionary(
-            uniqueKeysWithValues: exerciseCatalog.map { ($0.name.lowercased(), $0.muscle) }
+            exerciseCatalog.map { ($0.name.lowercased(), $0.muscle) },
+            uniquingKeysWith: { first, _ in first }
         )
         let all = (try? context.fetch(FetchDescriptor<Exercise>())) ?? []
         var changed = false
@@ -363,12 +364,18 @@ struct SeedData {
                 let persistentID = String(describing: exercise.persistentModelID)
                 return (offset, sortOrder, name, persistentID)
             }
-        let ranked = keys.sorted { lhs, rhs in
+        // A let. The predicate does not close over a var, and it does not
+        // read the exercise rows while `sorted` is running.
+        let keepBefore: (
+            (index: Int, sortOrder: Int, name: String, persistentID: String),
+            (index: Int, sortOrder: Int, name: String, persistentID: String)
+        ) -> Bool = { lhs, rhs in
             if lhs.sortOrder != rhs.sortOrder { return lhs.sortOrder < rhs.sortOrder }
             let nameOrder = lhs.name.localizedCaseInsensitiveCompare(rhs.name)
             if nameOrder != .orderedSame { return nameOrder == .orderedAscending }
             return lhs.persistentID < rhs.persistentID
         }
+        let ranked = keys.sorted(by: keepBefore)
         let ordered = ranked.map { fetched[$0.index] }
         var seen = Set<UUID>()
         var keepers: [UUID: Exercise] = [:]

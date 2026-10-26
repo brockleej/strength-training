@@ -26,7 +26,7 @@ enum CircuitStore {
             return CircuitSeat(recordID: record.id, exerciseID: id, groupID: record.groupID, position: record.groupPosition)
         }
         let next = CircuitMembership.removing(exerciseID: exerciseID, from: seats)
-        let byID = Dictionary(uniqueKeysWithValues: records.map { ($0.id, $0) })
+        let byID = Dictionary(records.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         for seat in next {
             guard let record = byID[seat.recordID] else { continue }
             record.groupID = seat.groupID

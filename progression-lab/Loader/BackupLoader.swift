@@ -59,7 +59,10 @@ struct BackupLoader {
 
     /// Build a `LoadedDataset` from a decoded `AppBackup`. Public for tests.
     static func adapt(backup: AppBackup, sourceURL: URL) -> LoadedDataset {
-        let exerciseByID = Dictionary(uniqueKeysWithValues: backup.exercises.map { ($0.id, $0) })
+        let exerciseByID = Dictionary(
+            backup.exercises.map { ($0.id, $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
 
         var skipCounts: [LoadedDatasetSummary.SkipReason: Int] = [:]
         var snapshotsByExerciseID: [UUID: [ExerciseRecordSnapshot]] = [:]

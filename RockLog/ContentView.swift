@@ -14,11 +14,10 @@ struct ContentView: View {
     @State private var healthKitService = HealthKitWorkoutService()
     @State private var cloudKitSyncService = CloudKitSyncService()
     @State private var selectedTab = "workout"
-    /// Settings is built with the first frame. Swapping it in from a Color
-    /// placeholder while Today faults a long history drops the tab selection,
-    /// and settings.editSplit never appears. History's "Legs" label is already
-    /// on Today, so that tab opening does not prove the other tabs built.
-    @State private var awakenedTabs: Set<String> = ["workout", "settings"]
+    /// Tabs that already have a real view. The set only grows, so leaving a
+    /// tab keeps its scroll position and navigation stack. Store replacement
+    /// resets it because that tears the TabView down.
+    @State private var builtTabs = BuiltTabMemory(["workout"])
     @AppStorage(FirstRunPreferences.completedKey) private var hasCompletedFirstRun = false
     @State private var showFirstUseSplitSetup = false
     /// While true the TabView (including Focus / workout list) is torn down
@@ -214,7 +213,7 @@ struct ContentView: View {
             workoutViewModel?.resetAfterStoreReplace()
             storeReplaceInProgress = true
             selectedTab = "settings"
-            awakenedTabs = ["settings"]
+            builtTabs.reset(keeping: "settings")
         }
         .onReceive(NotificationCenter.default.publisher(for: .rockLogStoreReplaced)) { _ in
             if let hk = workoutViewModel?.healthKitService {
@@ -227,7 +226,7 @@ struct ContentView: View {
             }
             storeReplaceInProgress = false
             selectedTab = "workout"
-            awakenedTabs = ["workout"]
+            builtTabs.reset(keeping: "workout")
         }
         .onOpenURL { url in
             handleIncomingURL(url)
@@ -250,34 +249,35 @@ struct ContentView: View {
     /// Classic TabView (iOS 17+). The iOS 18 `Tab { }` API is not used so we keep
     /// the minimum deployment at 17.0 for broader TestFlight reach.
     private func appTabs(viewModel vm: WorkoutViewModel) -> some View {
-        TabView(selection: $selectedTab) {
+        // Record the selection in this pass. onChange runs later and is
+        // dropped while Today faults a long history, which left Settings
+        // as an empty placeholder.
+        let shown = builtTabs.including(selectedTab)
+        return TabView(selection: $selectedTab) {
             WorkoutTabView(viewModel: vm)
                 .tabItem { Label("Workout", systemImage: "dumbbell") }
                 .tag("workout")
                 .accessibilityIdentifier(AccessibilityID.appRoot)
-            tab("history") {
+            tab("history", built: shown) {
                 HistoryListView(workoutVM: vm)
             }
             .tabItem { Label("History", systemImage: "clock") }
             .tag("history")
-            tab("progress") {
+            tab("progress", built: shown) {
                 ProgressDashboardView()
             }
             .tabItem { Label("Progress", systemImage: "chart.line.uptrend.xyaxis") }
             .tag("progress")
-            tab("exercises") {
+            tab("exercises", built: shown) {
                 ExerciseLibraryView()
             }
             .tabItem { Label("Exercises", systemImage: "list.bullet") }
             .tag("exercises")
-            tab("settings") {
+            tab("settings", built: shown) {
                 SettingsView(healthKitService: healthKitService, cloudKitSyncService: cloudKitSyncService)
             }
             .tabItem { Label("Settings", systemImage: "gear") }
             .tag("settings")
-        }
-        .onChange(of: selectedTab) { _, tab in
-            awakenedTabs.insert(tab)
         }
     }
 
@@ -420,10 +420,12 @@ struct ContentView: View {
     }
 
     @ViewBuilder
-    private func tab<Content: View>(_ id: String, @ViewBuilder content: () -> Content) -> some View {
-        // Build from the selection itself. onChange that only inserts into
-        // awakenedTabs is dropped while Today faults a long history.
-        if LazyTabContent.isBuilt(id: id, selectedTab: selectedTab, awakened: awakenedTabs) {
+    private func tab<Content: View>(
+        _ id: String,
+        built: Set<String>,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        if LazyTabContent.isBuilt(id: id, in: built) {
             content()
         } else {
             Color.uplift.bgElev.ignoresSafeArea()
@@ -431,11 +433,37 @@ struct ContentView: View {
     }
 }
 
-/// Which lazy tabs have a real view. The selected tab is built even when
-/// the awakening set has not caught up.
+/// Which lazy tabs have a real view. The selected tab is included in this
+/// pass, and every tab that was already built stays so its scroll position
+/// and navigation stack survive switching away.
 enum LazyTabContent {
-    static func isBuilt(id: String, selectedTab: String, awakened: Set<String>) -> Bool {
-        id == selectedTab || awakened.contains(id)
+    static func builtIDs(selected: String, already: Set<String>) -> Set<String> {
+        var next = already
+        next.insert(selected)
+        return next
+    }
+
+    static func isBuilt(id: String, in built: Set<String>) -> Bool {
+        built.contains(id)
+    }
+}
+
+/// Grows during the body that selects a tab. Assigning @State from body is
+/// a later update, and that update is dropped while Today faults a long history.
+final class BuiltTabMemory {
+    private var ids: Set<String>
+
+    init(_ ids: Set<String>) {
+        self.ids = ids
+    }
+
+    func including(_ selected: String) -> Set<String> {
+        ids = LazyTabContent.builtIDs(selected: selected, already: ids)
+        return ids
+    }
+
+    func reset(keeping id: String) {
+        ids = [id]
     }
 }
 

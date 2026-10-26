@@ -1074,15 +1074,28 @@ final class ReorderScrollLockTests: XCTestCase {
 }
 
 final class LazyTabContentTests: XCTestCase {
-    func test_selectedTabIsBuiltWhenAwakeningWasDropped() {
-        XCTAssertTrue(
-            LazyTabContent.isBuilt(id: "settings", selectedTab: "settings", awakened: ["workout"])
-        )
-        XCTAssertTrue(
-            LazyTabContent.isBuilt(id: "workout", selectedTab: "settings", awakened: ["workout"])
-        )
-        XCTAssertFalse(
-            LazyTabContent.isBuilt(id: "history", selectedTab: "settings", awakened: ["workout"])
-        )
+    func test_selectedTabIsBuiltThisPassAndPreviousTabsStay() {
+        let workout = LazyTabContent.builtIDs(selected: "workout", already: [])
+        XCTAssertTrue(LazyTabContent.isBuilt(id: "workout", in: workout))
+        XCTAssertFalse(LazyTabContent.isBuilt(id: "settings", in: workout))
+        XCTAssertFalse(LazyTabContent.isBuilt(id: "history", in: workout))
+
+        let settings = LazyTabContent.builtIDs(selected: "settings", already: workout)
+        XCTAssertTrue(LazyTabContent.isBuilt(id: "settings", in: settings))
+        XCTAssertTrue(LazyTabContent.isBuilt(id: "workout", in: settings))
+        XCTAssertFalse(LazyTabContent.isBuilt(id: "history", in: settings))
+
+        let back = LazyTabContent.builtIDs(selected: "workout", already: settings)
+        XCTAssertEqual(back, settings)
+        XCTAssertTrue(LazyTabContent.isBuilt(id: "settings", in: back))
+    }
+
+    func test_builtTabMemoryGrowsInPlaceAndResetReplaces() {
+        let memory = BuiltTabMemory(["workout"])
+        XCTAssertTrue(memory.including("settings").contains("settings"))
+        XCTAssertTrue(memory.including("workout").contains("settings"))
+        memory.reset(keeping: "workout")
+        let afterReset = memory.including("workout")
+        XCTAssertEqual(afterReset, ["workout"])
     }
 }

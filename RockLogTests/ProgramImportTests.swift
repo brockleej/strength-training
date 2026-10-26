@@ -736,7 +736,7 @@ final class ProgramImportTests: RockLogStoreTestCase {
         XCTAssertFalse(days.contains { $0.name == "Arms" || $0.name == "Legs" })
 
         let exercises = try context.fetch(FetchDescriptor<Exercise>())
-        let byName = Dictionary(uniqueKeysWithValues: exercises.map { ($0.name, $0) })
+        let byName = Dictionary(exercises.map { ($0.name, $0) }, uniquingKeysWith: { first, _ in first })
         XCTAssertTrue(byName["Conventional Deadlift"]?.belongs(to: .lower) == true)
         XCTAssertTrue(byName["Romanian Deadlift"]?.belongs(to: .lower) == true)
         XCTAssertTrue(byName["Barbell Bench Press"]?.belongs(to: .push) == true)

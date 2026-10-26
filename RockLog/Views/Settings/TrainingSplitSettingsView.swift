@@ -286,6 +286,19 @@ struct TrainingSplitSettingsView: View {
         .accessibilityLabel("\(weekPosition). \(day.name)")
         .accessibilityIdentifier(AccessibilityID.splitDay(day.name))
         .accessibilityHint("Long press the number and drag to reorder, swipe left to delete, double tap to edit")
+        .accessibilityAction(named: "Move up") { moveDay(day.id, by: -1) }
+        .accessibilityAction(named: "Move down") { moveDay(day.id, by: 1) }
+    }
+
+    private func moveDay(_ id: UUID, by delta: Int) {
+        guard let index = orderedIDs.firstIndex(of: id) else { return }
+        let target = index + delta
+        guard orderedIDs.indices.contains(target) else { return }
+        orderedIDs.move(
+            fromOffsets: IndexSet(integer: index),
+            toOffset: target > index ? target + 1 : target
+        )
+        persistOrder()
     }
 
     private func applyPreset(_ preset: SplitPreset, includeStarters: Bool) {

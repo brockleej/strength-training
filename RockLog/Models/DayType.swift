@@ -226,7 +226,7 @@ enum DayTypePalette {
                   subtitle: "Quads, Hamstrings, Glutes, Calves",
                   colorHex: 0x3F9CFF, includesAllExercises: false, sortOrder: 1),
         ]
-        return Dictionary(uniqueKeysWithValues: list.map { ($0.name, $0) })
+        return Dictionary(list.map { ($0.name, $0) }, uniquingKeysWith: { first, _ in first })
     }()
 
     /// Curated icon set for the day editor — grouped by how they read at a glance.
