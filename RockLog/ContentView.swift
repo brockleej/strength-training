@@ -246,7 +246,16 @@ struct ContentView: View {
     /// Classic TabView (iOS 17+). The iOS 18 `Tab { }` API is not used so we keep
     /// the minimum deployment at 17.0 for broader TestFlight reach.
     private func appTabs(viewModel vm: WorkoutViewModel) -> some View {
-        TabView(selection: $selectedTab) {
+        TabView(selection: Binding(
+            get: { selectedTab },
+            set: { newValue in
+                // Insert in the same update as the selection. A follow-up
+                // onChange is dropped when Today is still faulting a long
+                // history, and the tab stays the blank placeholder.
+                awakenedTabs.insert(newValue)
+                selectedTab = newValue
+            }
+        )) {
             WorkoutTabView(viewModel: vm)
                 .tabItem { Label("Workout", systemImage: "dumbbell") }
                 .tag("workout")

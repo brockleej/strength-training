@@ -346,7 +346,9 @@ struct SeedData {
         guard !snapshot.isEmpty else { return false }
         let exercises = (try? context.fetch(FetchDescriptor<Exercise>())) ?? []
         guard !exercises.isEmpty else { return false }
-        let byID = Dictionary(uniqueKeysWithValues: exercises.map { ($0.id, $0) })
+        // A CloudKit merge can hand back the same id twice. uniqueKeysWithValues
+        // traps the process; the first row is enough to place sort indexes.
+        let byID = Dictionary(exercises.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         let snapshotDays = Set(snapshot.map { $0.dayName.lowercased() })
 
         var intended: [UUID: [DayType]] = [:]
@@ -872,6 +874,15 @@ struct SeedData {
 
     static func markCatalogSeeded() {
         UserDefaults.standard.set(true, forKey: hasSeededExercisesKey)
+    }
+
+    /// Empty UI-test launches share the simulator's UserDefaults with earlier
+    /// presets. Those presets mark the catalog seeded, which would skip the
+    /// stock library and leave starter day plans with nothing to pin.
+    static func resetExerciseCatalogSeed() {
+        UserDefaults.standard.set(false, forKey: hasSeededExercisesKey)
+        UserDefaults.standard.removeObject(forKey: catalogVersionKey)
+        UserDefaults.standard.removeObject(forKey: strippedUnusedStarterExtrasKey)
     }
 
     /// Skip the unused-starter cleanup (restored backup or first-run templates).

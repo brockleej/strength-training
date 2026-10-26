@@ -349,7 +349,11 @@ struct BackupService {
         if let metrics = backup.bodyMetrics {
             try rejectDuplicateIDs(metrics.map(\.id), noun: "body measurement")
             for metric in metrics {
-                guard BodyMetricKind(rawValue: metric.kindRaw) != nil else { continue }
+                guard BodyMetricKind(rawValue: metric.kindRaw) != nil else {
+                    throw BackupError.invalidBackup(
+                        "Body measurement \(metric.id.uuidString) has unknown kind \(metric.kindRaw). Restore was cancelled and nothing was changed."
+                    )
+                }
                 if !metric.value.isFinite || metric.value < 0 || metric.value > maximumMeasurement {
                     throw BackupError.invalidBackup(
                         "Body measurement \(metric.id.uuidString) has value \(metric.value). Value must be a finite number from 0 through \(Int(maximumMeasurement)). Restore was cancelled and nothing was changed."

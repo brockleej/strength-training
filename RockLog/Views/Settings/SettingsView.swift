@@ -426,12 +426,14 @@ struct SettingsView: View {
                     if gyms.isEmpty {
                         Text("Home")
                             .foregroundStyle(Color.uplift.fgMuted)
+                            .accessibilityIdentifier(AccessibilityID.settingsGym)
                     }
                     ForEach(gyms) { gym in
                         Button(gym.isHome ? "\(gym.name) · default" : gym.name) {
                             GymLibrary.select(gym)
                         }
                         .foregroundStyle(Color.uplift.fg)
+                        .accessibilityIdentifier(gym.isHome ? AccessibilityID.settingsGym : "settings.gym.\(gym.name)")
                         .contextMenu {
                             if !gym.isHome {
                                 Button("Make default") { GymLibrary.makeHome(gym, in: modelContext) }
@@ -454,7 +456,6 @@ struct SettingsView: View {
                 } footer: {
                     sectionFooter("Home is the default. A lift uses this gym's stack, then Home, then 5 lb.")
                 }
-                .accessibilityIdentifier(AccessibilityID.settingsGym)
                 .listRowBackground(Color.uplift.surface1)
 
                 Section {

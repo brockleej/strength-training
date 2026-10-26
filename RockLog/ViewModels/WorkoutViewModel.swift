@@ -678,6 +678,12 @@ final class WorkoutViewModel {
     func reopenSessionForEditing(_ session: WorkoutSession) -> Bool {
         if activeSession?.id == session.id {
             wantsFocusOnWorkoutTab = true
+            // Finish leaves the completed session active under the effort sheet.
+            // Re-opening that same row is a history edit: the next finish must
+            // not ask for effort again. A still-live session stays unprotected.
+            if session.isCompleted {
+                revisitingSessionID = session.id
+            }
             return true
         }
 

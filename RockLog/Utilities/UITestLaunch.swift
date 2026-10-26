@@ -133,6 +133,10 @@ enum UITestLaunch {
             defaults.set(false, forKey: FirstRunPreferences.completedKey)
             defaults.set(false, forKey: SeedData.hasConfiguredSplitKey)
             defaults.removeObject(forKey: SeedData.preferredSplitPresetKey)
+            // A prior typical/longHistory launch leaves the catalog marked
+            // seeded. The empty preset is a first launch and must insert it
+            // so starter plans have Dumbbell Bench Press to pin.
+            SeedData.resetExerciseCatalogSeed()
         case .typical, .longHistory, .planWaiting:
             defaults.set(true, forKey: FirstRunPreferences.completedKey)
             defaults.set(true, forKey: SeedData.hasConfiguredSplitKey)

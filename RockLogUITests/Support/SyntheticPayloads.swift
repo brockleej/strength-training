@@ -115,7 +115,7 @@ enum SyntheticPayloads {
               "sortOrder": 0,
               "isCustom": true,
               "notes": "",
-              "rotationTrack": "A",
+              "rotationTrack": "",
               "extraDayTypes": "",
               "daySortOrdersRaw": ""
             }

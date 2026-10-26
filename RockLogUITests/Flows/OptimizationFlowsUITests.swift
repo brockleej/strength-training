@@ -19,10 +19,17 @@ final class OptimizationFlowsUITests: RockLogUITestCase {
         waitFor(UITestID.firstRunContinue).tap()
         waitFor(UITestID.firstRunSkip).tap()
         tapTab("Settings")
-        XCTAssertTrue(element(UITestID.settingsMassUnit).waitForExistence(timeout: 8))
-        XCTAssertTrue(element(UITestID.settingsStartingWeight).exists)
-        XCTAssertTrue(element(UITestID.settingsGym).exists)
-        XCTAssertTrue(element(UITestID.settingsTapAtTen).exists)
+        scrollUntilExists(UITestID.settingsStartingWeight)
+        scrollUntilExists(UITestID.settingsMassUnit)
+        scrollUntilExists(UITestID.settingsGym)
+        // Tap at ten is inside the rest-timer block, which UI tests leave off
+        // so a logged set does not start a countdown.
+        let restTimer = app.switches["Rest timer"]
+        scrollUntilExists(restTimer)
+        if String(describing: restTimer.value ?? "0") != "1" {
+            restTimer.tap()
+        }
+        scrollUntilExists(UITestID.settingsTapAtTen)
     }
 
     func test_focus_showsWarmupDoneComparisonAndPlates() {

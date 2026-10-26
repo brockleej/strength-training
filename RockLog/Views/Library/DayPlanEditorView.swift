@@ -225,7 +225,6 @@ struct DayPlanEditorView: View {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .fill(draggingID == exercise.id ? Color.uplift.surface2 : Color.uplift.surface1)
         }
-        .accessibilityIdentifier(AccessibilityID.dayPlanExercise(exercise.name))
         .swipeToDelete(fullSwipeDeletes: false, isEnabled: draggingID == nil, onDelete: {
             removeExercise(exercise)
         }, onTap: {
@@ -233,6 +232,10 @@ struct DayPlanEditorView: View {
         })
         .accessibilityElement(children: .combine)
         .accessibilityLabel(planAccessibility(index: index, exercise: exercise, personalBest: personalBest, hasHistory: hasHistory))
+        // Identifier on the combined row, same as split days. An identifier
+        // inside the swipe container is a different hit target, so a swipe
+        // or trailing tap never reaches Remove.
+        .accessibilityIdentifier(AccessibilityID.dayPlanExercise(exercise.name))
         .accessibilityHint("Long press the number and drag to reorder, swipe left to remove, double tap to edit")
     }
 

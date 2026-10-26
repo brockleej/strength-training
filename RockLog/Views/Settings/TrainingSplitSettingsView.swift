@@ -229,12 +229,6 @@ struct TrainingSplitSettingsView: View {
                 .foregroundStyle(Color.uplift.fgDim)
                 .frame(width: 28, height: 36)
                 .contentShape(Rectangle())
-                .longPressReorder(
-                    id: day.id,
-                    orderedIDs: $orderedIDs,
-                    draggingID: $draggingID,
-                    onReorder: persistOrder
-                )
                 .accessibilityLabel("Reorder \(day.name)")
 
             DayChip(dayType: day.asDayType, size: .sm)
@@ -268,6 +262,15 @@ struct TrainingSplitSettingsView: View {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .fill(draggingID == day.id ? Color.uplift.surface2 : Color.uplift.surface1)
         }
+        // The row is one accessibility element (the position label). The
+        // long-press has to live on that element, not only the number, or a
+        // press on the row never reorders.
+        .longPressReorder(
+            id: day.id,
+            orderedIDs: $orderedIDs,
+            draggingID: $draggingID,
+            onReorder: persistOrder
+        )
         .swipeToDelete(fullSwipeDeletes: false, isEnabled: draggingID == nil, onDelete: {
             // Soft reveal only; hard delete requires confirm (T2/T3).
             if DayTypeRegistry.shared.canDelete(id: day.id, from: splitDays) {
