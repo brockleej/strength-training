@@ -81,6 +81,16 @@ private struct DrillDownContent: View {
                     .font(.uplift.display(22, weight: .bold))
                     .kerning(-0.5)
                     .foregroundStyle(Color.uplift.fg)
+                if let best = viewModel.personalBestSet,
+                   let relative = LoadMath.relativeStrength(
+                    e1RM: E1RM.estimate(weightLbs: best.weight, reps: best.reps),
+                    bodyWeight: viewModel.bodyWeight(on: best.date)
+                   ) {
+                    Text(String(format: "Relative %.2f× body weight that day", relative))
+                        .font(.uplift.text(12, weight: .medium))
+                        .foregroundStyle(Color.uplift.fgMuted)
+                        .accessibilityIdentifier(AccessibilityID.progressRelative)
+                }
                 HStack(spacing: 6) {
                     if !exercise.muscleGroupsDisplay.isEmpty {
                         Text(exercise.muscleGroupsDisplay)

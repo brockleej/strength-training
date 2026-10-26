@@ -10,6 +10,8 @@ status: draft
 
 # Feature Ideas — Apr 16, 2026
 
+> **Feature 1 is partly overtaken.** Body weight over time already exists as `BodyMetricEntry` (Progress → Body), with Navy body fat and FFMI in `BodyCompositionMath`. Do not add a second `WeightEntry` model. Relative strength, bodyweight-plus-added load, and the gap between the Settings weight and the dated log are specified in [docs/specs/units-bodyweight-machine-stacks.md](../specs/units-bodyweight-machine-stacks.md). The Hall of Fame and the session-summary header below are still open ideas.
+
 Two new feature concepts and one UI improvement. These are fully distinct from all prior batches (Recovery Tracker, RPE Suggestions, Liquid Glass, Rest Timer ×3, Plate Calculator, 3D Charts, Templates, SF Symbols Draw Animations, Superset Grouping, WidgetKit, Shareable Summary Card, Exercise Notes Tooltip/Rich Text, Muscle Balance Radar, Session Intensity Micro-Journal, Progressive Overload Suggestions, WidgetKit Widgets, Goal Setting & Milestone Tracker, Retroactive Rest Time Analysis, Training Consistency Heatmap).
 
 ---

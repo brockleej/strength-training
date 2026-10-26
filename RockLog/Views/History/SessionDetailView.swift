@@ -178,6 +178,8 @@ struct SessionDetailView: View {
         .padding(.bottom, 16)
     }
 
+    private var massUnit: MassUnit { MassUnitPreferences.unit }
+
     private var statsCard: some View {
         HStack(spacing: 14) {
             Stat(label: "Duration",
@@ -185,7 +187,7 @@ struct SessionDetailView: View {
                     ?? healthStats.map { "\(max(1, Int(($0.duration / 60).rounded())))" }
                     ?? "—",
                  unit: (SessionMath.durationSeconds(of: session) > 0 || healthStats != nil) ? "min" : nil)
-            Stat(label: "Volume", value: TodayStats.formatVolume(SessionMath.volume(of: session)), unit: "lb")
+            Stat(label: "Volume", value: TodayStats.formatVolume(MassMath.exactDisplay(fromPounds: SessionMath.volume(of: session), unit: massUnit)), unit: massUnit.rawValue)
             Stat(label: "Sets", value: "\(SessionMath.setCount(of: session))")
             Stat(label: "PRs", value: "\(prNames.count)", tone: prNames.isEmpty ? .uplift.fg : .uplift.pr)
         }
@@ -299,6 +301,8 @@ private struct LiftCard: View {
     let sessionDate: Date
     let modelContext: ModelContext
 
+    private var massUnit: MassUnit { MassUnitPreferences.unit }
+
     private var sortedSets: [SetRecord] {
         record.loggedSetsArray.sorted { $0.setNumber < $1.setNumber }
     }
@@ -355,7 +359,7 @@ private struct LiftCard: View {
             }
             Spacer()
             VStack(alignment: .trailing, spacing: 2) {
-                Text("\(StepperLogic.format(topWeight)) lb")
+                Text(MassMath.format(topWeight, unit: massUnit))
                     .font(.uplift.mono(14, weight: .semibold))
                     .foregroundStyle(Color.uplift.weightTint)
                 trendLine
@@ -412,11 +416,16 @@ private struct LiftCard: View {
             Spacer()
             // Assisted sets store assistance in weightLbs; show −N so History matches Focus.
             if set.isAssisted {
-                Text("\(set.weightDisplay) × \(set.reps)")
+                Text("−\(MassMath.format(set.weightLbs, unit: massUnit)) × \(set.reps)")
                     .font(.uplift.mono(13, weight: .semibold))
                     .foregroundStyle(Color.uplift.weightTint)
             } else {
-                PairText.pair(weight: set.weightLbs, reps: set.reps, font: .uplift.mono(13, weight: .semibold))
+                HStack(spacing: 4) {
+                    PairText.pair(weight: MassMath.display(fromPounds: set.weightLbs, unit: massUnit), reps: set.reps, font: .uplift.mono(13, weight: .semibold))
+                    Text(massUnit.rawValue)
+                        .font(.uplift.text(11, weight: .semibold))
+                        .foregroundStyle(Color.uplift.fgMuted)
+                }
             }
             if set.isEachSide {
                 Text("ea")
@@ -427,7 +436,7 @@ private struct LiftCard: View {
         .padding(.vertical, 9)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(
-            "Set \(set.setNumber)\(set.isWarmup ? ", warmup" : "")\(set.isAssisted ? ", assisted" : "")\(set.isEachSide ? ", each side" : ""), \(set.weightDisplay) pounds, \(set.reps) reps"
+            "Set \(set.setNumber)\(set.isWarmup ? ", warmup" : "")\(set.isAssisted ? ", assisted" : "")\(set.isEachSide ? ", each side" : ""), \(MassMath.format(set.weightLbs, unit: massUnit)), \(set.reps) reps"
         )
     }
 

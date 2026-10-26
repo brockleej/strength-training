@@ -1,0 +1,164 @@
+//
+//  MachineStackProfile.swift
+//  RockLog
+//
+//  One stack for a (gym, lift) pair. Empty means the normal stepper.
+//  Learning writes here. A step he typed is not replaced by learning.
+//
+
+import Foundation
+import SwiftData
+
+@Model
+final class MachineStackProfile {
+    var id: UUID = UUID()
+    var gymID: UUID = UUID()
+    var exerciseID: UUID = UUID()
+    /// 0 means "no fixed step" (a pin list, or no profile).
+    var stepPounds: Double = 0
+    /// Remainder after whole steps, in pounds. 0 is 140, 150, 160 on a 10 lb step.
+    var offsetPounds: Double = 0
+    /// Comma-separated pin weights in `pinUnitRaw`.
+    var pinsRaw: String = ""
+    var pinUnitRaw: String = "lb"
+    /// Comma-separated add-on plates, one at a time, in the pin unit.
+    var addOnsRaw: String = ""
+    var policyRaw: String = "nearest"
+    /// "learned", "typed", or "" when the row is unused.
+    var originRaw: String = ""
+    var learnedSessionIDsRaw: String = ""
+    var clearedAt: Date? = nil
+    var learningEnabled: Bool = true
+    var rangeMin: Double = 0
+    var rangeMax: Double = 0
+    /// Last time a person or learning wrote this row. Nil until then.
+    /// Two devices keep both rows. The reader prefers a typed step, then the later time.
+    var updatedAt: Date? = nil
+
+    init(gymID: UUID, exerciseID: UUID) {
+        self.id = UUID()
+        self.gymID = gymID
+        self.exerciseID = exerciseID
+    }
+
+    var definition: StackDefinition {
+        get {
+            StackDefinition(
+                step: stepPounds > 0 ? stepPounds : nil,
+                offset: offsetPounds,
+                pins: Self.numbers(pinsRaw),
+                pinUnit: MassUnit(rawValue: pinUnitRaw) ?? .pounds,
+                addOns: Self.numbers(addOnsRaw),
+                rangeMin: rangeMin,
+                rangeMax: rangeMax,
+                policy: StackPolicy(rawValue: policyRaw) ?? .nearest,
+                origin: StackOrigin(rawValue: originRaw),
+                learningEnabled: learningEnabled,
+                clearedAt: clearedAt,
+                learnedSessionIDs: learnedSessionIDsRaw.split(separator: ",").compactMap { UUID(uuidString: String($0)) }
+            )
+        }
+        set {
+            stepPounds = newValue.step ?? 0
+            offsetPounds = newValue.step == nil ? 0 : newValue.offset
+            pinsRaw = Self.joined(newValue.pins)
+            pinUnitRaw = newValue.pinUnit.rawValue
+            addOnsRaw = Self.joined(newValue.addOns)
+            rangeMin = newValue.rangeMin
+            rangeMax = newValue.rangeMax
+            policyRaw = newValue.policy.rawValue
+            originRaw = newValue.origin?.rawValue ?? ""
+            learningEnabled = newValue.learningEnabled
+            clearedAt = newValue.clearedAt
+            learnedSessionIDsRaw = newValue.learnedSessionIDs.map(\.uuidString).joined(separator: ",")
+        }
+    }
+
+    func applyTyped(step: Double?, pins: [Double], unit: MassUnit) {
+        var next = definition
+        next.step = step.map { MassMath.clampedStackStep($0, unit: unit) }
+        next.offset = 0
+        next.pins = pins
+        next.pinUnit = unit
+        next.origin = .typed
+        next.learnedSessionIDs = []
+        if let step, pins.isEmpty {
+            next.rangeMin = step
+            next.rangeMax = max(step * 40, 200)
+        }
+        definition = next
+        updatedAt = Date()
+    }
+
+    func clearLearned(at date: Date = .now) {
+        var next = definition
+        guard next.origin == .learned || next.origin == nil else { return }
+        next.step = nil
+        next.offset = 0
+        next.pins = []
+        next.origin = nil
+        next.learnedSessionIDs = []
+        next.clearedAt = date
+        definition = next
+        updatedAt = date
+    }
+
+    private static func numbers(_ raw: String) -> [Double] {
+        raw.split(separator: ",").compactMap { Double($0.trimmingCharacters(in: .whitespaces)) }
+    }
+
+    /// Pin numbers stay in `pinUnitRaw`. Full precision, not a display rounding.
+    private static func joined(_ values: [Double]) -> String {
+        values.map { value in
+            let negative = value < 0
+            let scaled = (abs(value) * 100_000_000).rounded() / 100_000_000
+            let text = String(scaled)
+            return negative ? "-" + text : text
+        }.joined(separator: ",")
+    }
+}
+
+enum StackProfileStore {
+    @MainActor
+    static func profile(gymID: UUID, exerciseID: UUID, in context: ModelContext) -> MachineStackProfile? {
+        let gym = gymID
+        let exercise = exerciseID
+        let descriptor = FetchDescriptor<MachineStackProfile>(
+            predicate: #Predicate { $0.gymID == gym && $0.exerciseID == exercise }
+        )
+        let rows = (try? context.fetch(descriptor)) ?? []
+        let candidates = rows.map {
+            StackCandidate(id: $0.id, gymID: $0.gymID, exerciseID: $0.exerciseID, updatedAt: $0.updatedAt, stack: $0.definition)
+        }
+        guard let winner = StackConflict.winner(candidates) else { return nil }
+        return rows.first { $0.id == winner.id }
+    }
+
+    @MainActor
+    static func findOrCreate(gymID: UUID, exerciseID: UUID, in context: ModelContext) -> MachineStackProfile {
+        if let existing = profile(gymID: gymID, exerciseID: exerciseID, in: context) {
+            return existing
+        }
+        let created = MachineStackProfile(gymID: gymID, exerciseID: exerciseID)
+        context.insert(created)
+        return created
+    }
+
+    /// Current gym, then Home, then nil (callers snap 5 lb / 2.5 kg).
+    @MainActor
+    static func resolved(exerciseID: UUID, in context: ModelContext) -> StackDefinition? {
+        guard GymLibrary.storeHasGyms(context) else { return nil }
+        let gyms = (try? context.fetch(FetchDescriptor<Gym>())) ?? []
+        let home = gyms.first(where: \.isHome)?.id
+        let active = GymLibrary.activeID(in: context)
+        let profiles = ((try? context.fetch(FetchDescriptor<MachineStackProfile>())) ?? []).map {
+            StackCandidate(id: $0.id, gymID: $0.gymID, exerciseID: $0.exerciseID, updatedAt: $0.updatedAt, stack: $0.definition)
+        }
+        return GymStackLookup.resolve(
+            exerciseID: exerciseID,
+            gymID: active,
+            homeGymID: home,
+            profiles: profiles
+        )
+    }
+}

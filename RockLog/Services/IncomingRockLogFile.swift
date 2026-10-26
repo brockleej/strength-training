@@ -21,6 +21,18 @@ enum IncomingRockLogFile {
     }
 
     static func parse(_ data: Data) throws -> IncomingRockLogFile {
+        if InterchangeCodec.isInterchange(data) {
+            switch try InterchangeCodec.kind(of: data) {
+            case .program:
+                return .program(try ProgramCodec.decode(data))
+            case .split:
+                return .split(try ProgramCodec.decode(data))
+            case .backup:
+                return .backup(data)
+            case .coachSession, .coachBatch:
+                throw IncomingFileError.unrecognized
+            }
+        }
         let format = ProgramCodec.peekFormat(data)
         if format == ProgramFormat.formatName {
             return .program(try ProgramCodec.decode(data))

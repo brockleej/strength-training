@@ -23,6 +23,14 @@ final class SetRecord {
     var completedAt: Date = Date.now
     /// Imported plan target, not yet logged. Default false so existing sets stay trained work.
     var isTarget: Bool = false
+    /// The weight this working set was going to open on, stored only when he logged something else.
+    var offeredWeightLbs: Double? = nil
+    /// "" means legacy: assist when `isAssisted` is set, otherwise bar.
+    var loadModeRaw: String = ""
+    /// Body weight used for assist / added on the day he logged. 0 means "look it up".
+    var bodyWeightUsedLbs: Double = 0
+    var plannedRestSeconds: Int = 0
+    var actualRestSeconds: Int = 0
 
     var exerciseRecord: ExerciseRecord?
 
@@ -46,13 +54,14 @@ final class SetRecord {
         self.isTarget = isTarget
     }
 
-    /// Load used for tonnage / e1RM. Assisted: max(0, bodyWeight − assistance). Never negative.
+    var resolvedLoadMode: LoadMode {
+        LoadMode(stored: loadModeRaw, isAssisted: isAssisted)
+    }
+
+    /// Load used for tonnage / e1RM. Assist and added use body weight. Never negative.
     func effectiveLoadLbs(bodyWeight: Double = BodyWeightPreferences.pounds) -> Double {
-        if isAssisted {
-            guard bodyWeight > 0 else { return 0 }
-            return max(0, bodyWeight - weightLbs)
-        }
-        return max(0, weightLbs)
+        let weight = bodyWeightUsedLbs > 0 ? bodyWeightUsedLbs : bodyWeight
+        return LoadMath.effective(mode: resolvedLoadMode, entered: weightLbs, bodyWeight: weight)
     }
 
     /// Effective load × reps × (2 if each side). Assisted with no body weight set contributes 0.

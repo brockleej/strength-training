@@ -8,8 +8,14 @@ import Foundation
 nonisolated enum CoachFormat {
     static let formatName = "rocklog.coach.session"
     static let batchFormatName = "rocklog.coach.batch"
-    static let schemaVersion = 1
-    static let batchSchemaVersion = 1
+    static let schemaVersion = 2
+    static let minimumSchemaVersion = 1
+    static let batchSchemaVersion = 2
+    static let minimumBatchSchemaVersion = 1
+
+    static func accepts(_ version: Int, current: Int = schemaVersion, minimum: Int = minimumSchemaVersion) -> Bool {
+        version >= minimum && version <= current
+    }
     static let utTypeIdentifier = "com.lee.rocklog.coach.session"
     static let pathExtension = "rocklogcoach"
 }
@@ -72,7 +78,7 @@ nonisolated struct CoachSessionDocument: Codable, Hashable, Identifiable, Sendab
             case .wrongFormat(let name):
                 return "Not a RockCoach file (format \(name))."
             case .unsupportedVersion(let v):
-                return "RockCoach file version \(v) is newer than this app."
+                return "RockCoach file version \(v) is not supported by this app."
             }
         }
     }
@@ -91,6 +97,10 @@ nonisolated struct CoachSessionPayload: Codable, Hashable, Identifiable, Sendabl
     var notes: String?
     var effortRating: Int?
     var exercises: [CoachExercisePayload]
+    /// Gym the athlete trained in. Missing on files from before the gym selector.
+    var gymID: UUID? = nil
+    /// Name at export time. History can still show it after the gym row is gone.
+    var gymName: String? = nil
 }
 
 nonisolated struct CoachExercisePayload: Codable, Hashable, Identifiable, Sendable {
@@ -100,6 +110,15 @@ nonisolated struct CoachExercisePayload: Codable, Hashable, Identifiable, Sendab
     var trainingMode: String?
     var notes: String?
     var sets: [CoachSetPayload]
+    var groupID: UUID? = nil
+    var groupPosition: Int? = nil
+    var restSeconds: Int? = nil
+    /// Learned or typed stack step, in pounds, when the phone sent one.
+    var stackStepPounds: Double? = nil
+    /// Shared remainder, in pounds. Missing means there was no profile.
+    var stackOffsetLbs: Double? = nil
+    /// Explicit pins, converted to pounds. Missing means a step, or the 5 lb snap.
+    var stackPinsLbs: [Double]? = nil
 }
 
 nonisolated struct CoachSetPayload: Codable, Hashable, Sendable {
@@ -110,8 +129,28 @@ nonisolated struct CoachSetPayload: Codable, Hashable, Sendable {
     var isEachSide: Bool?
     var isAssisted: Bool?
     var completedAt: Date?
+    /// "bar", "assist", or "added". Missing means bar, or assist when `isAssisted` is true.
+    var loadMode: String? = nil
+    /// Body weight used that day, in pounds. Required for a fair assist / added comparison.
+    var bodyWeightLbs: Double? = nil
 
     var resolvedWarmup: Bool { isWarmup ?? false }
+
+    /// Effective load. Less assistance is a heavier load. Missing body weight contributes nothing for assist and added.
+    var effectiveLoadLbs: Double {
+        let mode = loadMode ?? (resolvedAssisted ? "assist" : "bar")
+        let body = bodyWeightLbs ?? 0
+        switch mode {
+        case "assist":
+            guard body > 0 else { return 0 }
+            return max(0, body - weightLbs)
+        case "added":
+            guard body > 0 else { return 0 }
+            return max(0, body + weightLbs)
+        default:
+            return max(0, weightLbs)
+        }
+    }
     var resolvedEachSide: Bool { isEachSide ?? false }
     var resolvedAssisted: Bool { isAssisted ?? false }
 }
@@ -151,7 +190,7 @@ nonisolated enum CoachSessionCodec {
         guard doc.format == CoachFormat.formatName else {
             throw CoachSessionDocument.CoachFormatError.wrongFormat(doc.format)
         }
-        guard doc.schemaVersion == CoachFormat.schemaVersion else {
+        guard CoachFormat.accepts(doc.schemaVersion) else {
             throw CoachSessionDocument.CoachFormatError.unsupportedVersion(doc.schemaVersion)
         }
         return doc
@@ -162,7 +201,7 @@ nonisolated enum CoachSessionCodec {
         guard doc.format == CoachFormat.batchFormatName else {
             throw CoachSessionDocument.CoachFormatError.wrongFormat(doc.format)
         }
-        guard doc.schemaVersion == CoachFormat.batchSchemaVersion else {
+        guard CoachFormat.accepts(doc.schemaVersion, current: CoachFormat.batchSchemaVersion, minimum: CoachFormat.minimumBatchSchemaVersion) else {
             throw CoachSessionDocument.CoachFormatError.unsupportedVersion(doc.schemaVersion)
         }
         guard doc.sessions.count >= 2 else {
@@ -172,7 +211,7 @@ nonisolated enum CoachSessionCodec {
     }
 
     static func decodeFile(_ data: Data) throws -> CoachFile {
-        let data = stripBOM(data)
+        let data = try legacyBytes(stripBOM(data))
         let peek = try decoder.decode(FormatPeek.self, from: data)
         switch peek.format {
         case CoachFormat.formatName:
@@ -212,6 +251,30 @@ nonisolated enum CoachSessionCodec {
 
     private static func sanitized(_ name: String) -> String {
         name.replacingOccurrences(of: " ", with: "-")
+    }
+
+    /// Interchange coach files unwrap to the legacy document. Older files pass through.
+    static func legacyBytes(_ data: Data) throws -> Data {
+        guard InterchangeCodec.isInterchange(data) else { return data }
+        let kind = try InterchangeCodec.kind(of: data)
+        guard kind == .coachSession || kind == .coachBatch else {
+            throw CoachSessionDocument.CoachFormatError.wrongFormat(kind.rawValue)
+        }
+        return try InterchangeCodec.downgradeToLegacy(data)
+    }
+
+    static func interchangeData(for document: CoachSessionDocument) throws -> Data {
+        try interchangeEnvelope(encode(document), kind: .coachSession, exportedAt: document.exportedAt)
+    }
+
+    static func interchangeData(for document: CoachBatchDocument) throws -> Data {
+        try interchangeEnvelope(encode(document), kind: .coachBatch, exportedAt: document.exportedAt)
+    }
+
+    private static func interchangeEnvelope(_ payload: Data, kind: InterchangeKind, exportedAt: Date) throws -> Data {
+        let object = try InterchangeCodec.parseObject(payload)
+        let stamp = ISO8601DateFormatter().string(from: exportedAt)
+        return try InterchangeCodec.encode(InterchangeCodec.wrap(kind: kind, payload: object, exportedAt: stamp))
     }
 
     private static func stripBOM(_ data: Data) -> Data {

@@ -36,6 +36,14 @@ final class ExerciseDrillDownViewModel {
         }
     }
 
+    func bodyWeight(on date: Date) -> Double {
+        let entries = (try? modelContext.fetch(FetchDescriptor<BodyMetricEntry>())) ?? []
+        let weighIns = entries.filter { $0.kind == .weight }.map {
+            LoadMath.WeighIn(date: $0.date, pounds: $0.value)
+        }
+        return LoadMath.bodyWeight(asOf: date, weighIns: weighIns, settingsPounds: BodyWeightPreferences.pounds)
+    }
+
     init(modelContext: ModelContext, exercise: Exercise) {
         self.modelContext = modelContext
         self.exercise = exercise

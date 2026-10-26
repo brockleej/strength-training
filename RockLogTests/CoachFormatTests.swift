@@ -32,10 +32,10 @@ final class CoachFormatTests: XCTestCase {
 
     func test_codec_rejectsNewerVersion() throws {
         var doc = sampleDocument()
-        doc.schemaVersion = 2
+        doc.schemaVersion = 3
         let data = try CoachSessionCodec.encode(doc)
         XCTAssertThrowsError(try CoachSessionCodec.decode(data)) { error in
-            guard case CoachSessionDocument.CoachFormatError.unsupportedVersion(2) = error else {
+            guard case CoachSessionDocument.CoachFormatError.unsupportedVersion(3) = error else {
                 return XCTFail("expected unsupportedVersion, got \(error)")
             }
         }
@@ -92,7 +92,7 @@ final class CoachFormatTests: XCTestCase {
         let doc = try CoachExportService.document(from: session, athlete: athlete)
 
         XCTAssertEqual(doc.format, "rocklog.coach.session")
-        XCTAssertEqual(doc.schemaVersion, 1)
+        XCTAssertEqual(doc.schemaVersion, 2)
         XCTAssertEqual(doc.athlete.displayName, "Lee")
         XCTAssertEqual(doc.session.dayType, "Push")
         XCTAssertEqual(doc.session.rotationTrack, "A")
@@ -229,6 +229,27 @@ final class CoachFormatTests: XCTestCase {
         let best = CoachProgression.bestWorkingSet(in: exercise)
         XCTAssertEqual(best?.weightLbs, 155)
         XCTAssertEqual(best?.reps, 10)
+        let tied = CoachExercisePayload(
+            id: UUID(),
+            name: "Row",
+            muscleGroup: "Back",
+            trainingMode: "Strength",
+            notes: nil,
+            sets: [
+                CoachSetPayload(setNumber: 1, weightLbs: 155, reps: 10, isWarmup: false, isEachSide: false, isAssisted: false, completedAt: nil),
+                CoachSetPayload(setNumber: 3, weightLbs: 155, reps: 10, isWarmup: false, isEachSide: false, isAssisted: false, completedAt: nil),
+            ]
+        )
+        XCTAssertEqual(CoachProgression.bestWorkingSet(in: tied)?.setNumber, 3)
+    }
+
+    func test_reader_acceptsSchema1_andRefusesZero() throws {
+        var current = sampleDocument()
+        current.schemaVersion = 1
+        let data = try CoachSessionCodec.encode(current)
+        XCTAssertEqual(try CoachSessionCodec.decode(data).schemaVersion, 1)
+        current.schemaVersion = 0
+        XCTAssertThrowsError(try CoachSessionCodec.decode(try CoachSessionCodec.encode(current)))
     }
 
     private func sampleDocument(

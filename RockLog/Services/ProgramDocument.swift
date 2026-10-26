@@ -119,7 +119,7 @@ nonisolated enum ProgramCodec {
     }()
 
     static func decode(_ data: Data) throws -> ProgramDocument {
-        let data = stripBOM(data)
+        let data = try legacyProgramData(stripBOM(data))
         let doc = try decoder.decode(ProgramDocument.self, from: data)
         guard doc.format == ProgramFormat.formatName
             || doc.format == ProgramFormat.splitFormatName
@@ -142,6 +142,15 @@ nonisolated enum ProgramCodec {
     static func peekFormat(_ data: Data) -> String? {
         struct FormatPeek: Decodable { var format: String? }
         return try? decoder.decode(FormatPeek.self, from: stripBOM(data)).format
+    }
+
+    static func legacyProgramData(_ data: Data) throws -> Data {
+        guard InterchangeCodec.isInterchange(data) else { return data }
+        let kind = try InterchangeCodec.kind(of: data)
+        guard kind == .program || kind == .split else {
+            throw ProgramDocument.ProgramFormatError.wrongFormat(kind.rawValue)
+        }
+        return try InterchangeCodec.downgradeToLegacy(data)
     }
 
     private static func stripBOM(_ data: Data) -> Data {

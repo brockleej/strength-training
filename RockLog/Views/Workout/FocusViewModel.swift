@@ -27,6 +27,10 @@ final class FocusViewModel {
 
     /// When non-nil, steppers edit this set and the primary button is "Update set".
     private(set) var editingSetID: UUID?
+    /// Last time vs suggestion. Stepper edits do not rewrite it.
+    var openingLineText: String = ""
+    /// Weight the steppers opened on. Logging this exact number is not a carry.
+    var offeredWeight: Double = 0
 
     var isEditingSet: Bool { editingSetID != nil }
 
@@ -39,6 +43,7 @@ final class FocusViewModel {
         isWarmup = prefill.isWarmup
         isEachSide = prefill.isEachSide
         isAssisted = prefill.isAssisted || prefersAssist
+        offeredWeight = prefill.weight
     }
 
     /// Any manual +/− clears BOTH target dresses (spec §6.1).
@@ -79,15 +84,17 @@ final class FocusViewModel {
     }
 
     /// Mode switch re-prefills values and dress from the new mode's suggestion.
-    func apply(prefill: FocusTargetLogic.Prefill) {
+    func apply(prefill: FocusTargetLogic.Prefill, openingLine: String? = nil) {
         editingSetID = nil
         weight = prefill.weight
         reps = Double(prefill.reps)
-        isWarmup = prefill.isWarmup
+        isWarmup = WarmupPolicy.nextTag(planSaysWarmup: prefill.isWarmup)
         isEachSide = prefill.isEachSide
         isAssisted = prefill.isAssisted
         weightDelta = prefill.weightDelta
         repsDelta = prefill.repsDelta
+        offeredWeight = prefill.weight
+        if let openingLine { openingLineText = openingLine }
     }
 
     // MARK: - Edit logged set
@@ -131,9 +138,7 @@ final class FocusViewModel {
     func setLogged() {
         weightDelta = nil
         repsDelta = nil
-        if !isWarmup {
-            isWarmup = false
-        }
-        // Assist + each-side stay on for consecutive sets of the same pattern.
+        // The tag belongs to the set just logged. It does not travel forward.
+        isWarmup = false
     }
 }

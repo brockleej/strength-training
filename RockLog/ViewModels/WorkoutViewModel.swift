@@ -59,11 +59,7 @@ final class WorkoutViewModel {
     var targetRestSeconds: Double = Double(RestTimerPreferences.targetSeconds)
     /// Absolute end of the current countdown; nil when not resting.
     var restEndDate: Date? = nil {
-        didSet {
-            syncRestCountdownMonitor()
-            // Clear any legacy rest-timer local notifications (ticks are audio-only now).
-            RestTimerNotificationScheduler.reschedule(endDate: restEndDate)
-        }
+        didSet { syncRestCountdownMonitor() }
     }
     /// Bumped when a per-exercise rest on/off changes so Focus re-renders.
     var restTimerPreferenceEpoch: Int = 0
@@ -81,9 +77,14 @@ final class WorkoutViewModel {
     /// ContentView flips to the Workout tab when this becomes true.
     var wantsFocusOnWorkoutTab: Bool = false
 
-    /// Whole seconds already announced (5…1) so we don’t double-beep.
-    private var announcedRestSeconds: Set<Int> = []
-    private var restDoneAnnounced = false
+    var restExerciseName: String = "Rest"
+    private var restAlert: RestAlertState?
+    private var restStartedAt: Date?
+    private var restExerciseID: UUID?
+    /// The workout list asks for the reorder sheet. Focus and the list share it.
+    var presentSessionReorder = false
+    /// Same-weight carry for the live session. Not stored. A finished-workout edit leaves this empty.
+    var carryByExercise: [UUID: SessionCarryState] = [:]
     private var restMonitorTask: Task<Void, Never>?
     /// GCD timer survives better than Task.sleep when the app is backgrounded with audio.
     private var restDispatchTimer: DispatchSourceTimer?
@@ -98,63 +99,104 @@ final class WorkoutViewModel {
         return max(0, end.timeIntervalSinceNow)
     }
 
-    /// Per-exercise preference (persists across sessions for that lift).
+    /// Per-exercise auto-start. The countdown length is a different control.
     func isRestTimerEnabled(for exercise: Exercise) -> Bool {
-        RestTimerPreferences.isEnabled(forExercise: exercise.id)
+        if RestPreferenceMigration.copyIfNeeded(exercise) {
+            try? modelContext.save()
+        }
+        return exercise.autoRestEnabled
     }
 
-    /// After logging a set on `exercise` — only starts rest if that lift has timer on.
+    func restSeconds(for exercise: Exercise) -> Int {
+        exercise.resolvedRestSeconds(settingsFallback: RestTimerPreferences.targetSeconds)
+    }
+
+    /// After logging a set. A master switch that is off, or this lift's switch, skips the start.
+    /// A countdown already running for another lift is left alone.
     func startRestAfterSet(for exercise: Exercise) {
-        if isRestTimerEnabled(for: exercise) {
-            RestTimerSoundService.prepareIfNeeded()
-            RestTimerSoundService.startBackgroundKeepAlive()
-            restEndDate = Date.now.addingTimeInterval(targetRestSeconds)
-        }
-        // Timer off for this exercise: leave any active countdown running
-        // (e.g. you hopped to a mid-superset lift while still resting from the last group).
+        guard RestTimerPreferences.isEnabled, isRestTimerEnabled(for: exercise) else { return }
+        beginRest(seconds: Double(restSeconds(for: exercise)), exercise: exercise)
     }
 
-    /// Toggle rest auto-start for this exercise only; remembers the choice next time.
+    /// Toggle auto-start for this lift. Does not change how long the countdown is.
     func toggleRestTimer(for exercise: Exercise) {
-        let next = !isRestTimerEnabled(for: exercise)
-        RestTimerPreferences.setEnabled(next, forExercise: exercise.id)
+        setRestTimerEnabled(!isRestTimerEnabled(for: exercise), for: exercise)
+    }
+
+    /// The switch is its own control. The countdown, −15, +15, and Skip do not call this.
+    func setRestTimerEnabled(_ enabled: Bool, for exercise: Exercise) {
+        _ = RestPreferenceMigration.copyIfNeeded(exercise)
+        guard exercise.autoRestEnabled != enabled else { return }
+        exercise.autoRestEnabled = enabled
+        try? modelContext.save()
         restTimerPreferenceEpoch &+= 1
-        // Turning off on this lift cancels a running countdown (you’re not resting).
-        if !next {
+        if !enabled {
+            skipRest()
+        }
+    }
+
+    /// ±15 by default. Shortening past zero clears the countdown.
+    func addRestTime(_ seconds: Double = 15) {
+        guard var state = restAlert else {
+            if seconds > 0 { startRest(seconds: seconds) }
+            return
+        }
+        let effects = RestAlertPolicy.onNudge(&state, seconds: seconds, now: .now)
+        restAlert = state
+        if state.endDate.timeIntervalSinceNow <= 0 {
             restEndDate = nil
+            restAlert = nil
+        } else {
+            restEndDate = state.endDate
         }
+        RestAlertRuntime.apply(effects, exerciseName: restExerciseName)
     }
 
-    /// Adjust a running countdown, or start one when idle and `seconds` is positive.
-    /// Negative deltas shorten rest; if the end would be in the past, rest clears.
-    func addRestTime(_ seconds: Double = 30) {
-        if let current = restEndDate {
-            // Extending/shortening — allow the countdown window to fire again later.
-            announcedRestSeconds = []
-            restDoneAnnounced = false
-            let newEnd = current.addingTimeInterval(seconds)
-            if newEnd <= .now {
-                restEndDate = nil
-            } else {
-                restEndDate = newEnd
-            }
-        } else if seconds > 0 {
-            startRest(seconds: seconds)
-        }
-    }
-
-    /// Manual start (or restart) of the session rest countdown.
-    func startRest(seconds: Double? = nil) {
+    /// Manual start. Works when auto-rest for this lift is off.
+    func startRest(seconds: Double? = nil, exercise: Exercise? = nil) {
         let duration = max(1, seconds ?? targetRestSeconds)
-        RestTimerSoundService.prepareIfNeeded()
-        RestTimerSoundService.startBackgroundKeepAlive()
-        announcedRestSeconds = []
-        restDoneAnnounced = false
-        restEndDate = Date.now.addingTimeInterval(duration)
+        beginRest(seconds: duration, exercise: exercise)
     }
 
     func skipRest() {
+        recordRestSampleIfNeeded(endedAt: .now)
+        if var state = restAlert {
+            let effects = RestAlertPolicy.onSkip(&state)
+            restAlert = nil
+            RestAlertRuntime.apply(effects, exerciseName: restExerciseName)
+        } else {
+            RestTimerNotificationScheduler.cancelBackup()
+            RestActivityController.endAll()
+        }
         restEndDate = nil
+    }
+
+    private func beginRest(seconds: Double, exercise: Exercise?) {
+        let now = Date()
+        restExerciseName = exercise?.name ?? "Rest"
+        restExerciseID = exercise?.id
+        restStartedAt = now
+        let state = RestAlertState.started(now: now, duration: max(1, seconds))
+        restAlert = state
+        RestTimerSoundService.prepareIfNeeded()
+        restEndDate = state.endDate
+        targetRestSeconds = max(1, seconds)
+        RestAlertRuntime.apply(RestAlertPolicy.onStart(state, tick: RestAlertRuntime.tickContext(now: now)), exerciseName: restExerciseName)
+    }
+
+    private func silenceRestIfCallConnected() {
+        guard RestCallMonitor.shared.hasConnectedCall, let state = restAlert else { return }
+        RestAlertRuntime.apply(RestAlertPolicy.onCallBegan(state), exerciseName: restExerciseName)
+    }
+
+    private func recordRestSampleIfNeeded(endedAt: Date) {
+        guard RestAlertPreferences.learningEnabled,
+              let started = restStartedAt,
+              let id = restExerciseID
+        else { return }
+        let elapsed = Int(endedAt.timeIntervalSince(started).rounded())
+        RestSampleStore.record(elapsed, for: id)
+        restStartedAt = nil
     }
 
     // MARK: - Rest countdown audio monitor
@@ -164,17 +206,10 @@ final class WorkoutViewModel {
         restMonitorTask = nil
         restDispatchTimer?.cancel()
         restDispatchTimer = nil
-        announcedRestSeconds = []
-        restDoneAnnounced = false
 
-        guard restEndDate != nil else {
-            RestTimerSoundService.stopBackgroundKeepAlive()
-            return
-        }
+        guard restEndDate != nil else { return }
 
-        // Keep the process eligible to run while the screen is locked.
         RestTimerSoundService.prepareIfNeeded()
-        RestTimerSoundService.startBackgroundKeepAlive()
 
         let timer = DispatchSource.makeTimerSource(queue: DispatchQueue.global(qos: .userInitiated))
         timer.schedule(deadline: .now(), repeating: .milliseconds(150), leeway: .milliseconds(50))
@@ -188,30 +223,18 @@ final class WorkoutViewModel {
     }
 
     private func pollRestCountdownAudio() {
-        guard let end = restEndDate else { return }
-        let remaining = end.timeIntervalSinceNow
-
-        if remaining <= 0 {
-            if !restDoneAnnounced {
-                restDoneAnnounced = true
-                RestTimerSoundService.playComplete()
-                // Clear so UI stops “resting”; keep a beat so the long chirp isn’t cut.
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
-                    if let end = self?.restEndDate, end.timeIntervalSinceNow <= 0 {
-                        self?.restEndDate = nil
-                    }
-                }
-            }
-            return
+        guard restEndDate != nil, var state = restAlert else { return }
+        let effects = RestAlertPolicy.onTick(&state, tick: RestAlertRuntime.tickContext(now: .now))
+        restAlert = state
+        RestAlertRuntime.apply(effects, exerciseName: restExerciseName)
+        guard effects.endActivity else { return }
+        recordRestSampleIfNeeded(endedAt: .now)
+        // Leave the end date up long enough for the chirp to start, then clear the card.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) { [weak self] in
+            guard let self, let end = self.restEndDate, end.timeIntervalSinceNow <= 0 else { return }
+            self.restAlert = nil
+            self.restEndDate = nil
         }
-
-        // Ceiling whole seconds still left: 5.01 → 6 until drop below 5.0… we want
-        // tick when we *enter* each second band 5…1 (first time remaining ≤ N).
-        let whole = Int(ceil(remaining - 0.001))
-        guard whole >= 1, whole <= RestTimerSoundService.tickWindow else { return }
-        guard !announcedRestSeconds.contains(whole) else { return }
-        announcedRestSeconds.insert(whole)
-        RestTimerSoundService.playCountdownTick(remainingWholeSeconds: whole)
     }
 
     // MARK: - Cancel / Abandon Workout State
@@ -231,6 +254,11 @@ final class WorkoutViewModel {
         self.healthKitService = healthKitService
         healthKitService.checkAuthorization()
         healthKitService.cleanUpOrphanedState()
+        _ = GymLibrary.ensureHome(in: modelContext)
+        RestCallMonitor.shared.start()
+        RestCallMonitor.shared.onChange = { [weak self] in
+            self?.silenceRestIfCallConnected()
+        }
         resolveSessionState()
         if let session = activeSession, !isProtectedHistorySession(session) {
             Task { await healthKitService.recoverOrStartIfNeeded() }
@@ -596,6 +624,7 @@ final class WorkoutViewModel {
     func finishSession() {
         guard let session = activeSession else { return }
         let wasRevisit = isProtectedHistorySession(session)
+        if !wasRevisit { learnStacks(from: session) }
         // History edits stay completed the whole time; live sessions complete here.
         if !session.isCompleted {
             session.isCompleted = true
@@ -769,6 +798,7 @@ final class WorkoutViewModel {
     /// appears in the exercise list before any set is logged (used by the
     /// add-exercise picker for cross-day-type additions).
     func addExerciseToSession(_ exercise: Exercise) {
+        guard activeSession != nil else { return }
         activeSession?.unsuppressExercise(id: exercise.id)
         _ = findOrCreateRecord(for: exercise)
         try? modelContext.save()
@@ -778,6 +808,7 @@ final class WorkoutViewModel {
     /// Hides auto-listed day exercises and deletes this session's sets/record.
     func removeExerciseFromSession(_ exercise: Exercise) {
         guard let session = activeSession else { return }
+        detachFromCircuits(exercise)
         let records = session.exerciseRecordsArray.filter { $0.exercise?.id == exercise.id }
         for record in records {
             for set in record.setsArray {
@@ -889,7 +920,7 @@ final class WorkoutViewModel {
 
     /// Mark the lift finished (any set count, including zero to skip). Next skips done lifts.
     func markExerciseDone(_ exercise: Exercise) {
-        let record = findOrCreateRecord(for: exercise)
+        guard let record = findOrCreateRecord(for: exercise) else { return }
         record.isCompleted = true
         try? modelContext.save()
     }
@@ -945,9 +976,11 @@ final class WorkoutViewModel {
         reps: Int,
         isWarmup: Bool = false,
         isEachSide: Bool = false,
-        isAssisted: Bool = false
+        isAssisted: Bool = false,
+        offeredWeight: Double? = nil,
+        loadMode: LoadMode? = nil
     ) {
-        let record = findOrCreateRecord(for: exercise)
+        guard let record = findOrCreateRecord(for: exercise) else { return }
         // Logging again means the lift is no longer marked done.
         record.isCompleted = false
         let setNumber = record.loggedSetsArray.count + 1
@@ -960,6 +993,16 @@ final class WorkoutViewModel {
             isAssisted: isAssisted
         )
         set.exerciseRecord = record
+        let mode = loadMode ?? exercise.loadMode
+        if mode != .bar || isAssisted {
+            set.loadModeRaw = (isAssisted && mode == .bar) ? LoadMode.assist.rawValue : mode.rawValue
+        }
+        if isAssisted { set.isAssisted = true }
+        if !isWarmup, let offeredWeight, !MassMath.sameStoredPounds(offeredWeight, weight) {
+            set.offeredWeightLbs = offeredWeight
+        }
+        let body = bodyWeightForLogging(exercise: exercise)
+        if body > 0 { set.bodyWeightUsedLbs = body }
         if record.sets == nil { record.sets = [] }
         record.sets?.append(set)
         modelContext.insert(set)
@@ -1043,6 +1086,7 @@ final class WorkoutViewModel {
         }
         let session = WorkoutSession(dayType: dayType, date: now, rotationTrack: rotationTrack)
         modelContext.insert(session)
+        assignCurrentGym(to: session)
         try? modelContext.save()
         activeSession = session
         celebratedExerciseIDsThisSession = []
@@ -1058,6 +1102,7 @@ final class WorkoutViewModel {
         session.track = rotationTrack
         session.isCompleted = false
         session.date = now
+        assignCurrentGym(to: session)
         suppressUnplannedDayLifts(on: session)
         try? modelContext.save()
         activeSession = session
@@ -1094,13 +1139,15 @@ final class WorkoutViewModel {
         }
     }
 
-    private func findOrCreateRecord(for exercise: Exercise) -> ExerciseRecord {
+    /// Nil when the live session is gone (restore, cancel, or a deleted row).
+    /// Logging must not crash in that state.
+    private func findOrCreateRecord(for exercise: Exercise) -> ExerciseRecord? {
         if let existing = currentRecord(for: exercise) {
             return existing
         }
 
-        guard let session = activeSession else {
-            fatalError("No active session when trying to create ExerciseRecord")
+        guard let session = activeSession, !session.isDeleted else {
+            return nil
         }
 
         let record = ExerciseRecord(
@@ -1114,5 +1161,13 @@ final class WorkoutViewModel {
         modelContext.insert(record)
         try? modelContext.save()
         return record
+    }
+
+    private func bodyWeightForLogging(exercise: Exercise) -> Double {
+        let entries = (try? modelContext.fetch(FetchDescriptor<BodyMetricEntry>())) ?? []
+        let weighIns = entries.filter { $0.kind == .weight }.map {
+            LoadMath.WeighIn(date: $0.date, pounds: $0.value)
+        }
+        return LoadMath.bodyWeight(asOf: .now, weighIns: weighIns, settingsPounds: BodyWeightPreferences.pounds)
     }
 }

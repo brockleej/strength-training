@@ -1,0 +1,14 @@
+{
+  "format": "rocklog.interchange",
+  "formatVersion": 1,
+  "weightUnit": "lb",
+  "exportedAt": "2026-01-01T00:00:00Z",
+  "kind": "backup",
+  "payload": {
+    "version": 1,
+    "exportedAt": "2026-01-01T00:00:00Z",
+    "labNote": "synthetic template",
+    "exercises": [],
+    "sessions": []
+  }
+}

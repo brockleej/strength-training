@@ -32,6 +32,8 @@ struct EffortRatingView: View {
                         .background(.ultraThinMaterial)
                         .clipShape(Circle())
                 }
+                .accessibilityLabel("Skip effort")
+                .accessibilityIdentifier(AccessibilityID.effortDismiss)
 
                 Spacer()
 
@@ -54,6 +56,8 @@ struct EffortRatingView: View {
                         .clipShape(Circle())
                 }
                 .disabled(selectedRating == nil)
+                .accessibilityLabel("Save effort")
+                .accessibilityIdentifier(AccessibilityID.effortSave)
             }
             .padding(.horizontal, 20)
             .padding(.top, 8)
@@ -77,16 +81,24 @@ struct EffortRatingView: View {
                         let height = barHeight(for: index)
                         let isSelected = selectedRating == index
 
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(isSelected ? EffortScale.color(for: index) : Color.uplift.surface2)
-                            .frame(width: barWidth, height: height)
-                            .overlay(alignment: .center) {
-                                if isSelected {
-                                    Capsule()
-                                        .fill(.white.opacity(0.9))
-                                        .frame(width: 4, height: min(height * 0.4, 30))
+                        Button {
+                            selectedRating = index
+                        } label: {
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(isSelected ? EffortScale.color(for: index) : Color.uplift.surface2)
+                                .frame(width: barWidth, height: height)
+                                .overlay(alignment: .center) {
+                                    if isSelected {
+                                        Capsule()
+                                            .fill(.white.opacity(0.9))
+                                            .frame(width: 4, height: min(height * 0.4, 30))
+                                    }
                                 }
-                            }
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Effort \(index)")
+                        .accessibilityIdentifier(AccessibilityID.effortRating(index))
+                        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
 
                         if sectionBreaks.contains(index) {
                             Circle()
@@ -134,6 +146,7 @@ struct EffortRatingView: View {
             Button("Skip") {
                 onSkip()
             }
+            .accessibilityIdentifier(AccessibilityID.effortSkip)
             .font(.uplift.text(14, weight: .medium))
             .foregroundStyle(Color.uplift.fgMuted)
             .padding(.bottom, 12)

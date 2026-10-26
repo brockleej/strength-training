@@ -1,0 +1,14 @@
+{
+  "format": "rocklog.interchange",
+  "formatVersion": 1,
+  "weightUnit": "lb",
+  "exportedAt": "2026-01-01T00:00:00Z",
+  "kind": "coach.session",
+  "payload": {
+    "format": "rocklog.coach.session",
+    "schemaVersion": 1,
+    "labNote": "synthetic",
+    "id": "22222222-2222-4222-8222-222222222222",
+    "exercises": []
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "format": "rocklog.interchange",
+  "formatVersion": 1,
+  "weightUnit": "lb",
+  "exportedAt": "2026-01-01T00:00:00Z",
+  "kind": "program",
+  "payload": {
+    "format": "rocklog.program",
+    "version": 1,
+    "labNote": "synthetic",
+    "blocks": []
+  }
+}

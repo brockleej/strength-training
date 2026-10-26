@@ -12,7 +12,10 @@ The file is an ordered queue. Missed days stay waiting — they are not skipped 
 
 - Sample (fake lifts only): [fixtures/sample-8-week-block.rocklog.program.json](fixtures/sample-8-week-block.rocklog.program.json)
 - Formal schema: [rocklog.program.v1.schema.json](rocklog.program.v1.schema.json)
-- This is not a backup. Restore still replaces everything. This is not a RockCoach file.
+- This is not a backup. This is not a RockCoach file.
+- A **split** file is the same family with `"format": "rocklog.split"`. Settings → Import training split replaces days and lifts and does not add a planned list. Settings → Instructions for AI shares one file that covers both formats.
+- **Restore on TestFlight before `eb497bd`:** a backup restore replaces the log and also deletes planned programs, even when the backup file has no program in it.
+- **Restore on `main`, not on TestFlight yet (`eb497bd`):** a new backup includes planned programs and body measurements. An older file that omits them leaves those rows on the phone. An empty list in the file clears them. A failed restore leaves the phone as it was.
 
 ## What import does
 

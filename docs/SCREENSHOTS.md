@@ -1,6 +1,6 @@
 # Screenshots — README + App Store
 
-**Status:** current as of 2026-08-26. Captured on iPhone 17 Pro Max simulator (1320×2868), dark mode, ice accent, 9:41 status bar. Source log: `RockLog-backup-2026-08-26.json`. Uploaded to App Store Connect 1.0 (en-US, iPhone 6.7/6.9" set).
+**Status:** frames are from 2026-08-26. They were current for that App Store set. They do **not** show the planned next-up list on Today, the last / plan / this session columns, or the this-month vs last-month card. Recapture before the next listing update. Captured on iPhone 17 Pro Max simulator (1320×2868), dark mode, ice accent, 9:41 status bar. Source log: `RockLog-backup-2026-08-26.json`. Uploaded to App Store Connect 1.0 (en-US, iPhone 6.7/6.9" set).
 
 To recapture: simulator or device, dark mode, no debug banners. Prefer a real session (named lifts, last-vs-this, rest idle or running). Don’t letterbox.
 

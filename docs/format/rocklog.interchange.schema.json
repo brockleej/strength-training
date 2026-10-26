@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rocklog.local/rocklog.interchange.schema.json",
+  "title": "RockLog interchange",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["format", "formatVersion", "weightUnit", "kind", "payload"],
+  "properties": {
+    "format": { "const": "rocklog.interchange" },
+    "formatVersion": { "type": "integer", "enum": [1, 2] },
+    "weightUnit": { "enum": ["lb", "kg"], "description": "Display unit. Numbers in the payload stay pounds." },
+    "unitSystem": { "enum": ["lb", "kg"], "description": "Present on formatVersion 2. A copy of weightUnit." },
+    "exportedAt": { "type": "string" },
+    "kind": { "enum": ["backup", "coach.session", "coach.batch", "program", "split"] },
+    "payload": { "type": "object", "additionalProperties": true }
+  }
+}

@@ -15,6 +15,10 @@ final class ExerciseRecord {
     var sortOrder: Int = 0
     var isCompleted: Bool = false
     var notes: String = ""
+    /// Shared by the other lifts in this session's circuit. Nil means straight sets.
+    var groupID: UUID? = nil
+    /// 1...4 inside the circuit. 0 means not in a group.
+    var groupPosition: Int = 0
 
     var exercise: Exercise?
     var session: WorkoutSession?

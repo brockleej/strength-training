@@ -1,30 +1,39 @@
 # RockLog — session handoff
 
-**Shipping:** 2026-09-13 night. Merge `cursor/planned-owns-today-9fdc` to `main` for Xcode Cloud → TestFlight. Tester copy is in `docs/TESTFLIGHT-WHAT-TO-TEST.md` (plain language). Set App Store Connect What to Test after the new build is VALID. Do not push a follow-up docs commit to `main` (that would start another Cloud job).
+**Status (2026-10-24):** The 2026-09-13 planned-workout work below is on `main` (merge `a4179c1` and the commits it names). It is no longer an unpushed local branch.
 
-**Project (only checkout):** `~/Projects/RockLog`  
-**App:** RockLog · bundle `com.lee.lift2026` (unchanged — same TestFlight app)  
-**Branch:** `cursor/planned-owns-today-9fdc` → `main`
+**On `main`, not on TestFlight yet:**
 
-> Resume: *“Continue from ~/Projects/RockLog — load docs/SESSION.md. Confirm TestFlight What to Test is on the new build.”*  
-> HA parked: `~/Documents/Hobbies/Home Automation/docs/HA-SESSION.md`.
+- `eb497bd` (pull request #9) — backup includes body measurements and planned programs, restore rolls back on failure, schema `RockLogSchemaV1`, 5 lb rounding after one session, stable same-date order.
+- `a877aad` (pull request #10) — this-month / last-month table counts midnight on the 1st only in the month that is starting.
+
+Tester text for both is in `docs/TESTFLIGHT-WHAT-TO-TEST.md` under “do not paste.”
+
+**Spec, not built:** [docs/specs/units-bodyweight-machine-stacks.md](specs/units-bodyweight-machine-stacks.md).
+
+**App:** RockLog · bundle `com.lee.lift2026`  
+GitHub remote is still `brockleej/strength-training`.
+
+The machine path `~/Projects/RockLog` below was Lee’s checkout in September 2026. This file does not claim that path is the only copy.
 
 ---
 
-## One folder
+## One folder (September 2026 note)
+
+Lee’s machine that night:
 
 `~/Projects/RockLog`  
-(`~/RockLog` and `~/strength-training` both symlink here.)
+(`~/RockLog` and `~/strength-training` both symlinked there.)
 
-Open: `~/Projects/RockLog/RockLog.xcodeproj` · scheme **RockLog**
+Open: `RockLog.xcodeproj` · scheme **RockLog**
 
-GitHub remote is still `brockleej/strength-training` until that repo is renamed.
+GitHub remote is still `brockleej/strength-training`.
 
 ---
 
-## This session (2026-09-13)
+## Shipped on main (2026-09-13 session)
 
-Local commits (not pushed):
+These commits are on `main`. The “not pushed” note from that night is out of date.
 
 - `b578c52` Import a training split from the same program JSON.
 - `e37280a` Ask whether to keep leftover planned days after a split import.
@@ -57,9 +66,7 @@ Local commits (not pushed):
 
 ---
 
-## Phone test (before push)
-
-Rebuild from Xcode on the device (`RockLog.xcodeproj`, scheme **RockLog**).
+## Phone check that went with that drop
 
 - Import a `rocklog.split` file; days/lifts update; no new planned queue.
 - If a plan is waiting, confirm Keep vs Remove leftover plan.
@@ -67,6 +74,4 @@ Rebuild from Xcode on the device (`RockLog.xcodeproj`, scheme **RockLog**).
 
 If Push/Pull are still missing from an old queue, re-add the same plan file (Add, or Replace unused plan).
 
----
-
-**Do not push until Lee asks after phone use.**
+The “do not push until Lee asks” line from that night applied to the September branch. It does not describe `main` now.

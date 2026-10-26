@@ -56,11 +56,9 @@ final class BodyMetricsViewModel {
         let entry = BodyMetricEntry(kind: kind, value: value, date: date, note: note)
         modelContext.insert(entry)
         // Keep assisted-lift body weight in sync.
-        if kind == .weight {
-            BodyWeightPreferences.pounds = value
-        }
         try? modelContext.save()
         reload()
+        syncSettingsWeight()
         return entry
     }
 
@@ -69,12 +67,21 @@ final class BodyMetricsViewModel {
         for (kind, value) in values where value > 0 {
             let entry = BodyMetricEntry(kind: kind, value: value, date: date)
             modelContext.insert(entry)
-            if kind == .weight {
-                BodyWeightPreferences.pounds = value
-            }
         }
         try? modelContext.save()
         reload()
+        syncSettingsWeight()
+    }
+
+    /// Settings follows the newest weigh-in by date. A backdated log does not replace a newer one.
+    private func syncSettingsWeight() {
+        let weighIns = entries.filter { $0.kind == .weight }.map {
+            LoadMath.WeighIn(date: $0.date, pounds: $0.value)
+        }
+        BodyWeightPreferences.pounds = LoadMath.settingsPounds(
+            afterLogging: weighIns,
+            previousSettings: BodyWeightPreferences.pounds
+        )
     }
 
     func delete(_ entry: BodyMetricEntry) {

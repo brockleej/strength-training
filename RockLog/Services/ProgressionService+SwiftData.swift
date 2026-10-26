@@ -31,7 +31,10 @@ extension ProgressionService {
         excludingSessionID: UUID? = nil
     ) -> ProgressionSuggestion? {
         let snapshots = snapshotsFromCompletedRecords(of: exercise, excludingSessionID: excludingSessionID)
-        return suggestion(records: snapshots, mode: mode, params: aggressiveness.parameters)
+        let unit = MassUnitPreferences.unit
+        return suggestion(records: snapshots, mode: mode, params: aggressiveness.parameters) {
+            MassMath.snapProgression(pounds: $0, unit: unit)
+        }
     }
 
     /// Newest session date first. Equal timestamps break ties by session id,
@@ -54,19 +57,30 @@ extension ProgressionService {
         of exercise: Exercise,
         excludingSessionID: UUID? = nil
     ) -> [ExerciseRecordSnapshot] {
-        exercise.recordsArray
+        let completed = exercise.recordsArray
             .filter {
                 $0.session?.isCompleted == true
                     && $0.session?.id != excludingSessionID
             }
+        let kept = recordsForActiveGym(completed, exercise: exercise)
+        return kept
             .sorted { isNewerForProgression($0, than: $1) }
             .compactMap { record in
                 guard let sessionDate = record.session?.date else { return nil }
+                let weighIns = (try? exercise.modelContext?.fetch(FetchDescriptor<BodyMetricEntry>()))?
+                    .filter { $0.kind == .weight }
+                    .map { LoadMath.WeighIn(date: $0.date, pounds: $0.value) } ?? []
                 let sets = record.setsArray.map { swiftDataSet in
-                    // Assisted: feed effective load (BW − assist) so progression
-                    // tracks harder work as assistance drops — never negative.
-                    SetSnapshot(
-                        weightLbs: swiftDataSet.effectiveLoadLbs(),
+                    let asOf = swiftDataSet.completedAt
+                    let body = swiftDataSet.bodyWeightUsedLbs > 0
+                        ? swiftDataSet.bodyWeightUsedLbs
+                        : LoadMath.bodyWeight(
+                            asOf: asOf,
+                            weighIns: weighIns,
+                            settingsPounds: BodyWeightPreferences.pounds
+                        )
+                    return SetSnapshot(
+                        weightLbs: swiftDataSet.effectiveLoadLbs(bodyWeight: body),
                         reps: swiftDataSet.reps,
                         isWarmup: swiftDataSet.isWarmup,
                         completedAt: swiftDataSet.completedAt
@@ -78,5 +92,18 @@ extension ProgressionService {
                     sets: sets
                 )
             }
+    }
+
+    /// Travel gyms with fewer than two completed sessions still compare against Home.
+    private static func recordsForActiveGym(_ records: [ExerciseRecord], exercise: Exercise) -> [ExerciseRecord] {
+        guard let context = exercise.modelContext, GymLibrary.storeHasGyms(context) else { return records }
+        let home = GymLibrary.ensureHome(in: context)
+        let active = GymLibrary.activeID(in: context)
+        let selection = GymHistory.select(
+            rows: records.map { GymHistory.Row(id: $0.id, gymID: $0.session?.gymID) },
+            activeGymID: active,
+            homeGymID: home.id
+        )
+        return records.filter { selection.ids.contains($0.id) }
     }
 }

@@ -87,6 +87,7 @@ private struct HistoryContent: View {
                     systemImage: "dumbbell",
                     description: "Complete a workout to see it here."
                 )
+                .accessibilityIdentifier(AccessibilityID.historyEmpty)
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
             } else {
@@ -152,6 +153,8 @@ private struct HistoryContent: View {
 
     // MARK: - Summary strip (current calendar month, unfiltered)
 
+    private var massUnit: MassUnit { MassUnitPreferences.unit }
+
     private func summaryStrip(allTimeBests: [UUID: Double]) -> some View {
         let cal = Calendar.current
         let monthSessions = sessions.filter { cal.isDate($0.date, equalTo: .now, toGranularity: .month) }
@@ -161,7 +164,7 @@ private struct HistoryContent: View {
         return HStack(spacing: 12) {
             SummaryStat(label: "This month", value: "\(monthSessions.count)", unit: "sessions")
             Rectangle().fill(Color.uplift.hairline).frame(width: 1)
-            SummaryStat(label: "Volume", value: TodayStats.formatCompactVolume(monthVolume), unit: "lb")
+            SummaryStat(label: "Volume", value: TodayStats.formatCompactVolume(MassMath.exactDisplay(fromPounds: monthVolume, unit: massUnit)), unit: massUnit.rawValue)
             Rectangle().fill(Color.uplift.hairline).frame(width: 1)
             SummaryStat(label: "PRs", value: "\(monthPRs)", tone: .uplift.pr)
         }
@@ -192,6 +195,8 @@ private struct HistorySessionRow: View {
     let session: WorkoutSession
     let prCount: Int
 
+    private var massUnit: MassUnit { MassUnitPreferences.unit }
+
     var body: some View {
         HStack(spacing: 12) {
             DayChip(dayType: session.day, size: .sm)
@@ -218,7 +223,7 @@ private struct HistorySessionRow: View {
                         .font(.uplift.text(12, weight: .medium))
                     Text(" · ")
                         .font(.uplift.text(12, weight: .medium))
-                    Text("\(TodayStats.formatVolume(SessionMath.volume(of: session))) lb")
+                    Text("\(TodayStats.formatVolume(MassMath.exactDisplay(fromPounds: SessionMath.volume(of: session), unit: massUnit))) \(massUnit.rawValue)")
                         .font(.uplift.mono(12, weight: .medium))
                     Text(" · ")
                         .font(.uplift.text(12, weight: .medium))
@@ -235,7 +240,7 @@ private struct HistorySessionRow: View {
 
     private var rowAccessibilityLabel: String {
         var label = "\(session.day.rawValue), \(session.date.formatted(.dateTime.weekday(.wide).month(.wide).day()))"
-        label += ", \(TodayStats.formatVolume(SessionMath.volume(of: session))) pounds, \(SessionMath.setCount(of: session)) sets"
+        label += ", \(TodayStats.formatVolume(MassMath.exactDisplay(fromPounds: SessionMath.volume(of: session), unit: massUnit))) \(massUnit == .kilograms ? "kilograms" : "pounds"), \(SessionMath.setCount(of: session)) sets"
         if prCount > 0 {
             label += ", \(prCount) personal record\(prCount == 1 ? "" : "s")"
         }

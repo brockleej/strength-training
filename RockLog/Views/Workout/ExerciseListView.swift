@@ -22,6 +22,11 @@ struct ExerciseListView: View {
     @State private var editingExercise: Exercise?
     @State private var exercisePendingRemoval: Exercise?
     @State private var showDayPlanEditor = false
+    @State private var reorderIDs: [UUID] = []
+    @State private var draggingID: UUID?
+    @State private var circuitSelection: Set<UUID> = []
+    @Environment(\.scenePhase) private var scenePhase
+    @Query(sort: \Gym.sortOrder) private var gyms: [Gym]
     @State private var focusLaunch: FocusLaunch?
     /// Shared secondary line for all rows: last recipe (default) or progression target.
     @AppStorage("exerciseListSecondaryMode") private var secondaryModeRaw: String =
@@ -203,6 +208,7 @@ struct ExerciseListView: View {
                     .buttonStyle(.plain)
                     .frame(minHeight: 44)
                     .contentShape(Rectangle())
+                    .accessibilityIdentifier(AccessibilityID.workoutHome)
                     .accessibilityLabel("Home")
                     .accessibilityHint("Leave the workout list and return to Today. Your session stays available to resume.")
 
@@ -271,6 +277,20 @@ struct ExerciseListView: View {
             }
             .sheet(isPresented: $showDayPlanEditor) {
                 DayPlanEditorView(dayType: dayType)
+            }
+            .sheet(isPresented: $workoutVM.presentSessionReorder) {
+                sessionReorderSheet
+            }
+            .onChange(of: workoutVM.presentSessionReorder) { _, open in
+                if open {
+                    reorderIDs = flatExercises.map(\.id)
+                    circuitSelection = []
+                }
+            }
+            .onChange(of: scenePhase) { _, phase in
+                if phase != .active, workoutVM.isResting {
+                    RestTimerNotificationScheduler.requestAuthorizationIfLeavingDuringRest()
+                }
             }
             .confirmationDialog(
                 "Remove \(exercisePendingRemoval?.name ?? "exercise")?",
@@ -454,6 +474,7 @@ struct ExerciseListView: View {
                         onToggleSecondary: toggleSecondaryMode
                     )
                     .contentShape(Rectangle())
+                    .accessibilityIdentifier(AccessibilityID.workoutExercise(exercise.name))
                     .swipeToDelete {
                         exercisePendingRemoval = exercise
                     } onTap: {
@@ -487,7 +508,15 @@ struct ExerciseListView: View {
                             }
                         }
                     }
-                    .accessibilityHint("Swipe left to remove from this workout or day plan")
+                    .accessibilityHint("Swipe left to remove from this workout or day plan. Long-press and drag to reorder today's list.")
+                    .longPressReorder(
+                        id: exercise.id,
+                        orderedIDs: $reorderIDs,
+                        draggingID: $draggingID,
+                        onReorder: {
+                            workoutVM.reorderToday(reorderIDs, exercises: flatExercises)
+                        }
+                    )
                 }
             }
         }
@@ -553,6 +582,59 @@ struct ExerciseListView: View {
         .padding(.top, 8)
     }
 
+    private var sessionReorderSheet: some View {
+        NavigationStack {
+            List {
+                ForEach(reorderIDs, id: \.self) { id in
+                    if let exercise = flatExercises.first(where: { $0.id == id }) ?? allExercises.first(where: { $0.id == id }) {
+                        HStack {
+                            Text(exercise.name)
+                            Spacer()
+                            Button(circuitSelection.contains(id) ? "In circuit" : "Add") {
+                                if circuitSelection.contains(id) { circuitSelection.remove(id) }
+                                else if circuitSelection.count < CircuitAdvance.maximumCount { circuitSelection.insert(id) }
+                            }
+                            .font(.uplift.text(13, weight: .semibold))
+                        }
+                        .longPressReorder(id: id, orderedIDs: $reorderIDs, draggingID: $draggingID) {
+                            workoutVM.reorderToday(reorderIDs, exercises: flatExercises)
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Today's list")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Done") { workoutVM.presentSessionReorder = false }
+                }
+            }
+            .safeAreaInset(edge: .bottom) {
+                VStack(spacing: 8) {
+                    Button("Save order to this day") {
+                        workoutVM.reorderToday(reorderIDs, exercises: flatExercises)
+                        workoutVM.saveTodayOrderToThisDay(exercises: flatExercises)
+                    }
+                    .accessibilityIdentifier(AccessibilityID.workoutSaveOrderDay)
+                    Button("Save order to remaining planned days") {
+                        workoutVM.reorderToday(reorderIDs, exercises: flatExercises)
+                        workoutVM.saveTodayOrderToRemainingPlanned(exercises: flatExercises)
+                    }
+                    .accessibilityIdentifier(AccessibilityID.workoutSaveOrderRemaining)
+                    Button("Make a circuit") {
+                        let ordered = reorderIDs.filter { circuitSelection.contains($0) }
+                        workoutVM.createCircuit(exerciseIDs: ordered)
+                    }
+                    .disabled(!CircuitAdvance.canCreate(count: circuitSelection.count))
+                    .accessibilityIdentifier(AccessibilityID.workoutCircuit)
+                }
+                .font(.uplift.text(15, weight: .semibold))
+                .padding()
+            }
+        }
+        .preferredColorScheme(.dark)
+    }
+
     private var finishBar: some View {
         PillBottomBar {
             Button {
@@ -570,6 +652,7 @@ struct ExerciseListView: View {
                 .foregroundStyle(Color.uplift.onAccent)
             }
             .buttonStyle(.plain)
+            .accessibilityIdentifier(AccessibilityID.workoutFinish)
         }
         .padding(.bottom, 12)
     }
@@ -577,10 +660,24 @@ struct ExerciseListView: View {
     private var overflowMenu: some View {
         Menu {
             Button {
+                reorderIDs = flatExercises.map(\.id)
+                workoutVM.presentSessionReorder = true
+            } label: {
+                Label("Reorder today's list", systemImage: "arrow.up.arrow.down")
+            }
+            .accessibilityIdentifier(AccessibilityID.workoutReorder)
+            Button {
                 showDayPlanEditor = true
             } label: {
-                Label("Reorder / edit day plan", systemImage: "arrow.up.arrow.down")
+                Label("Edit day plan", systemImage: "list.bullet")
             }
+            .accessibilityIdentifier(AccessibilityID.workoutEditDayPlan)
+            Menu("Gym") {
+                ForEach(gyms) { gym in
+                    Button(gym.name) { workoutVM.selectGym(gym) }
+                }
+            }
+            .accessibilityIdentifier(AccessibilityID.settingsGym)
             Button(role: .destructive) {
                 // Live workouts: park first so the confirm can discard them.
                 // History edit: leave active — confirm re-completes (never deletes).

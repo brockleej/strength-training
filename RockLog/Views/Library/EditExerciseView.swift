@@ -24,6 +24,9 @@ struct EditExerciseView: View {
     @State private var dayCatalog = DayTypeRegistry.shared
     @State private var showDeleteConfirm = false
     @State private var showRemoveDayConfirm = false
+    @State private var restSeconds: Int = 0
+    @State private var autoRest: Bool = true
+    @State private var warmupRamp: Bool = false
 
     private var trimmedName: String {
         name.trimmingCharacters(in: .whitespaces)
@@ -156,6 +159,12 @@ struct EditExerciseView: View {
                     }
                     .buttonStyle(.plain)
                     .padding(.top, 4)
+
+                    Toggle("Auto-rest after sets", isOn: $autoRest)
+                        .tint(Color.uplift.accent)
+                    Stepper("Rest \(restSeconds == 0 ? "seed" : "\(restSeconds)s")", value: $restSeconds, in: 0...600, step: 15)
+                    Toggle("Suggest a warm-up ramp", isOn: $warmupRamp)
+                        .tint(Color.uplift.accent)
                 }
                 .padding(.horizontal, 20)
                 .padding(.bottom, 24)
@@ -170,6 +179,9 @@ struct EditExerciseView: View {
             muscleGroup = exercise.muscleGroup
             notes = exercise.notes
             rotationTrack = exercise.track
+            restSeconds = exercise.defaultRestSeconds
+            autoRest = exercise.autoRestEnabled
+            warmupRamp = exercise.suggestWarmupRamp
         }
         .confirmationDialog(
             "Delete \(exercise.name)?",
@@ -177,6 +189,7 @@ struct EditExerciseView: View {
             titleVisibility: .visible
         ) {
             Button(ListMutationCopy.deleteFromLibrary, role: .destructive) {
+                CircuitStore.detach(exerciseID: exercise.id, in: modelContext)
                 modelContext.delete(exercise)
                 try? modelContext.save()
                 dismiss()
@@ -287,6 +300,9 @@ struct EditExerciseView: View {
         exercise.muscleGroup = muscleGroup.trimmingCharacters(in: .whitespaces)
         exercise.notes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
         exercise.track = rotationTrack
+        exercise.defaultRestSeconds = restSeconds
+        exercise.autoRestEnabled = autoRest
+        exercise.suggestWarmupRamp = warmupRamp
         try? modelContext.save()
         SeedData.persistUserPlan(context: modelContext)
         dismiss()

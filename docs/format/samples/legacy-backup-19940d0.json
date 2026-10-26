@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "exportedAt": "2026-01-01T00:00:00Z",
+  "labNote": "synthetic shape of commit 19940d0",
+  "exercises": [
+    {
+      "id": "11111111-1111-4111-8111-111111111111",
+      "name": "Back Squat",
+      "dayType": "Legs",
+      "muscleGroup": "Quads",
+      "sortOrder": 0,
+      "isCustom": false,
+      "notes": ""
+    }
+  ],
+  "sessions": []
+}
