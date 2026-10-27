@@ -94,8 +94,8 @@ final class WorkoutViewModel {
     private var deferredReplaceTask: Task<Void, Never>?
     private var healthKitFollowUpTask: Task<Void, Never>?
     private static var liveInstances: [LiveInstance] = []
-    /// Fix 18. Tests can set this to false to let a deferred save run after tearDown.
-    nonisolated(unsafe) static var cancelsDeferredSaves = true
+    /// Diagnostic run. Off so a deferred save can outlive the test store.
+    nonisolated(unsafe) static var cancelsDeferredSaves = false
     #if DEBUG
     /// Set by the test observer. "-" outside a test.
     nonisolated(unsafe) static var diagnosticTestName = "-"

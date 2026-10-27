@@ -33,9 +33,9 @@ final class RockLogTestObservation: NSObject, XCTestObservation {
 
     func testCaseWillStart(_ testCase: XCTestCase) {
         #if DEBUG
-        let name = testCase.name
-        WorkoutViewModel.diagnosticTestName = name
-        print("[RLDIAG] test start \(name)")
+        let label = Self.rlDiagLabel(testCase)
+        WorkoutViewModel.diagnosticTestName = label
+        print("[RLDIAG] test start \(label)")
         #else
         _ = testCase
         #endif
@@ -43,9 +43,29 @@ final class RockLogTestObservation: NSObject, XCTestObservation {
 
     func testCaseDidFinish(_ testCase: XCTestCase) {
         #if DEBUG
-        print("[RLDIAG] test end \(testCase.name)")
+        print("[RLDIAG] test end \(Self.rlDiagLabel(testCase))")
         #else
         _ = testCase
         #endif
     }
+
+    #if DEBUG
+    /// `XCTestCase.name` is `-[WorkoutSessionLogicTests test_starterExtras_stepApplySnapshot]`.
+    /// The method token is repeated so a log search shows whether that test ran.
+    private static func rlDiagLabel(_ testCase: XCTestCase) -> String {
+        let reported = testCase.name
+        let method = rlDiagMethod(from: reported)
+        guard !method.isEmpty, method != reported else { return reported }
+        return "\(reported) method=\(method)"
+    }
+
+    private static func rlDiagMethod(from reported: String) -> String {
+        guard let space = reported.lastIndex(of: " ") else { return "" }
+        var method = String(reported[reported.index(after: space)...])
+        if method.hasSuffix("]") {
+            method.removeLast()
+        }
+        return method
+    }
+    #endif
 }
