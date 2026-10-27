@@ -62,6 +62,7 @@ final class ProgressionServiceParityTests: RockLogStoreTestCase {
 
     func test_wrapperAndPureFunctionAgree_acrossAllModesAndAggressiveness() throws {
         let context = ModelContext(container)
+        context.autosaveEnabled = false
         seed(context)
 
         let exercises = try context.fetch(FetchDescriptor<Exercise>())
@@ -111,6 +112,7 @@ final class ProgressionServiceParityTests: RockLogStoreTestCase {
 
     func test_recentAverageWrapperParity() throws {
         let context = ModelContext(container)
+        context.autosaveEnabled = false
         seed(context)
 
         let exercise = try context.fetch(FetchDescriptor<Exercise>())[0]
@@ -142,6 +144,7 @@ final class ProgressionServiceParityTests: RockLogStoreTestCase {
     /// so the recent pair is 1 rep and 10 reps and the suggestion stays on reps.
     func test_b9_sameDateSessions_orderBySessionID() throws {
         let context = ModelContext(container)
+        context.autosaveEnabled = false
         let exercise = Exercise.make(name: "Squat", dayType: .legs, muscleGroup: "Quads")
         context.insert(exercise)
         let when = Date(timeIntervalSince1970: 1_700_000_000)

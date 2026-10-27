@@ -49,16 +49,21 @@ class RockLogStoreTestCase: XCTestCase {
     override func setUpWithError() throws {
         try super.setUpWithError()
         container = try InMemoryRockLogStore.make()
+        container.mainContext.autosaveEnabled = false
     }
 
     override func tearDown() {
         DayTypeRegistry.shared.resetToFallback()
+        secondaryContainer?.mainContext.rollback()
+        container?.mainContext.rollback()
         secondaryContainer = nil
         container = nil
         super.tearDown()
     }
 
     func openSecondaryContainer() throws {
-        secondaryContainer = try InMemoryRockLogStore.make()
+        let opened = try InMemoryRockLogStore.make()
+        opened.mainContext.autosaveEnabled = false
+        secondaryContainer = opened
     }
 }

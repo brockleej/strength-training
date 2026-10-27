@@ -884,6 +884,7 @@ final class SplitPersistenceTests: RockLogStoreTestCase {
         try context.save()
 
         let other = ModelContext(container)
+        other.autosaveEnabled = false
         let fetched = try other.fetch(FetchDescriptor<Exercise>())
         XCTAssertEqual(fetched.map(\.id), [explicit])
         XCTAssertEqual(fetched.map(\.name), ["UI New Context Id"])
