@@ -94,6 +94,32 @@ final class WorkoutViewModel {
     private var deferredReplaceTask: Task<Void, Never>?
     private var healthKitFollowUpTask: Task<Void, Never>?
     private static var liveInstances: [LiveInstance] = []
+    /// Fix 18. Tests can set this to false to let a deferred save run after tearDown.
+    nonisolated(unsafe) static var cancelsDeferredSaves = true
+    #if DEBUG
+    /// Set by the test observer. "-" outside a test.
+    nonisolated(unsafe) static var diagnosticTestName = "-"
+
+    nonisolated static func rlDiag(_ event: String, vm: ObjectIdentifier) {
+        print("[RLDIAG] \(event) vm=\(vm) test=\(diagnosticTestName)")
+    }
+    #endif
+
+    /// `Task.isCancelled` only stops the save while `cancelsDeferredSaves` is on.
+    private nonisolated static func deferredSaveProceeds(
+        cancelled: Bool,
+        alive: Bool,
+        event: String,
+        vm: ObjectIdentifier
+    ) -> Bool {
+        let proceed = (!cancelsDeferredSaves || !cancelled) && alive
+        #if DEBUG
+        rlDiag("\(event) proceed=\(proceed) cancelled=\(cancelled) alive=\(alive)", vm: vm)
+        #else
+        _ = (event, vm)
+        #endif
+        return proceed
+    }
 
     private struct LiveInstance {
         weak var viewModel: WorkoutViewModel?
@@ -430,10 +456,19 @@ final class WorkoutViewModel {
             suspendedSession = nil
         }
         clearRevisiting()
-        deferredPlannedStartTask?.cancel()
+        let vmID = ObjectIdentifier(self)
+        if Self.cancelsDeferredSaves {
+            deferredPlannedStartTask?.cancel()
+        }
         deferredPlannedStartTask = Task { @MainActor [weak self] in
             try? await Task.sleep(for: .milliseconds(350))
-            guard !Task.isCancelled, let self else { return }
+            let cancelled = Task.isCancelled
+            guard Self.deferredSaveProceeds(
+                cancelled: cancelled,
+                alive: self != nil,
+                event: "activatePlannedSession",
+                vm: vmID
+            ), let self else { return }
             self.activatePlannedSession(session, rotationTrack: rotationTrack, now: .now)
         }
     }
@@ -500,10 +535,19 @@ final class WorkoutViewModel {
         }
         clearRevisiting()
         // Delay to let the first confirmation dialog dismiss before potentially showing the HealthKit one.
-        deferredReplaceTask?.cancel()
+        let vmID = ObjectIdentifier(self)
+        if Self.cancelsDeferredSaves {
+            deferredReplaceTask?.cancel()
+        }
         deferredReplaceTask = Task { @MainActor [weak self] in
             try? await Task.sleep(for: .milliseconds(350))
-            guard !Task.isCancelled, let self else { return }
+            let cancelled = Task.isCancelled
+            guard Self.deferredSaveProceeds(
+                cancelled: cancelled,
+                alive: self != nil,
+                event: "resolveHealthKitDisposal",
+                vm: vmID
+            ), let self else { return }
             self.resolveHealthKitDisposal(.replaceWith(dayType, rotationTrack))
         }
     }
@@ -588,10 +632,19 @@ final class WorkoutViewModel {
         let action = pendingAction
         pendingAction = nil
         let service = healthKitService
-        healthKitFollowUpTask?.cancel()
+        let vmID = ObjectIdentifier(self)
+        if Self.cancelsDeferredSaves {
+            healthKitFollowUpTask?.cancel()
+        }
         healthKitFollowUpTask = Task { @MainActor [weak self] in
             _ = await service.endWorkout()
-            guard !Task.isCancelled, let self else { return }
+            let cancelled = Task.isCancelled
+            guard Self.deferredSaveProceeds(
+                cancelled: cancelled,
+                alive: self != nil,
+                event: "completePendingAction",
+                vm: vmID
+            ), let self else { return }
             self.completePendingAction(action)
         }
     }
@@ -601,10 +654,19 @@ final class WorkoutViewModel {
         let action = pendingAction
         pendingAction = nil
         let service = healthKitService
-        healthKitFollowUpTask?.cancel()
+        let vmID = ObjectIdentifier(self)
+        if Self.cancelsDeferredSaves {
+            healthKitFollowUpTask?.cancel()
+        }
         healthKitFollowUpTask = Task { @MainActor [weak self] in
             await service.discardWorkout()
-            guard !Task.isCancelled, let self else { return }
+            let cancelled = Task.isCancelled
+            guard Self.deferredSaveProceeds(
+                cancelled: cancelled,
+                alive: self != nil,
+                event: "completePendingAction",
+                vm: vmID
+            ), let self else { return }
             self.completePendingAction(action)
         }
     }
@@ -629,10 +691,19 @@ final class WorkoutViewModel {
             showHealthKitKeepPrompt = true
         } else {
             let service = healthKitService
-            healthKitFollowUpTask?.cancel()
+            let vmID = ObjectIdentifier(self)
+            if Self.cancelsDeferredSaves {
+                healthKitFollowUpTask?.cancel()
+            }
             healthKitFollowUpTask = Task { @MainActor [weak self] in
                 await service.discardWorkout()
-                guard !Task.isCancelled, let self else { return }
+                let cancelled = Task.isCancelled
+                guard Self.deferredSaveProceeds(
+                    cancelled: cancelled,
+                    alive: self != nil,
+                    event: "completePendingAction",
+                    vm: vmID
+                ), let self else { return }
                 self.completePendingAction(action)
             }
         }
@@ -689,10 +760,19 @@ final class WorkoutViewModel {
         sessionPendingEffortRating = capturedSession
 
         let service = healthKitService
-        finishSaveTask?.cancel()
+        let vmID = ObjectIdentifier(self)
+        if Self.cancelsDeferredSaves {
+            finishSaveTask?.cancel()
+        }
         finishSaveTask = Task { @MainActor [weak self] in
             let uuid = await service.endWorkout()
-            guard !Task.isCancelled, let self else { return }
+            let cancelled = Task.isCancelled
+            guard Self.deferredSaveProceeds(
+                cancelled: cancelled,
+                alive: self != nil,
+                event: "finishSave",
+                vm: vmID
+            ), let self else { return }
             capturedSession.healthKitWorkoutUUID = uuid
             try? self.modelContext.save()
             if let uuid, let rating = capturedSession.effortRating {
@@ -703,6 +783,18 @@ final class WorkoutViewModel {
 
     /// Drops deferred saves so a freed store is not written after reset or restore.
     func cancelPendingWork() {
+        #if DEBUG
+        let vmID = ObjectIdentifier(self)
+        #endif
+        guard Self.cancelsDeferredSaves else {
+            #if DEBUG
+            Self.rlDiag("cancelPendingWork skipped", vm: vmID)
+            #endif
+            return
+        }
+        #if DEBUG
+        Self.rlDiag("cancelPendingWork", vm: vmID)
+        #endif
         finishSaveTask?.cancel()
         deferredPlannedStartTask?.cancel()
         deferredReplaceTask?.cancel()

@@ -72,6 +72,7 @@
 		C4D4A0015A1DE70DE7E7E002 /* SwipeToDeleteLogicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4D4A0015A1DE70DE7E7E001 /* SwipeToDeleteLogicTests.swift */; };
 		C4D4A0015A1DE70DE7E7E004 /* DayTypeRegistryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4D4A0015A1DE70DE7E7E003 /* DayTypeRegistryTests.swift */; };
 		C3B0A0003C0B000000000002 /* InMemoryRockLogStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3B0A0003C0B000000000001 /* InMemoryRockLogStore.swift */; };
+		RLDIAG0000000000000002 /* RockLogTestObservation.swift in Sources */ = {isa = PBXBuildFile; fileRef = RLDIAG0000000000000001 /* RockLogTestObservation.swift */; };
 		C3B0A0013C0B000000000002 /* PlannedBlockQueueTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3B0A0013C0B000000000001 /* PlannedBlockQueueTests.swift */; };
 		C3B0A0023C0B000000000002 /* SplitImportEdgeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3B0A0023C0B000000000001 /* SplitImportEdgeTests.swift */; };
 		C3B0A0033C0B000000000002 /* WorkoutEdgeCaseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3B0A0033C0B000000000001 /* WorkoutEdgeCaseTests.swift */; };
@@ -191,6 +192,7 @@
 		C4D4A0015A1DE70DE7E7E001 /* SwipeToDeleteLogicTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwipeToDeleteLogicTests.swift; sourceTree = "<group>"; };
 		C4D4A0015A1DE70DE7E7E003 /* DayTypeRegistryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayTypeRegistryTests.swift; sourceTree = "<group>"; };
 		C3B0A0003C0B000000000001 /* InMemoryRockLogStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InMemoryRockLogStore.swift; sourceTree = "<group>"; };
+		RLDIAG0000000000000001 /* RockLogTestObservation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RockLogTestObservation.swift; sourceTree = "<group>"; };
 		C3B0A0013C0B000000000001 /* PlannedBlockQueueTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlannedBlockQueueTests.swift; sourceTree = "<group>"; };
 		C3B0A0023C0B000000000001 /* SplitImportEdgeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitImportEdgeTests.swift; sourceTree = "<group>"; };
 		C3B0A0033C0B000000000001 /* WorkoutEdgeCaseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutEdgeCaseTests.swift; sourceTree = "<group>"; };
@@ -450,6 +452,7 @@
 				C4D4A0015A1DE70DE7E7E001 /* SwipeToDeleteLogicTests.swift */,
 				C4D4A0015A1DE70DE7E7E003 /* DayTypeRegistryTests.swift */,
 				C3B0A0003C0B000000000001 /* InMemoryRockLogStore.swift */,
+				RLDIAG0000000000000001 /* RockLogTestObservation.swift */,
 				C3B0A0013C0B000000000001 /* PlannedBlockQueueTests.swift */,
 				C3B0A0023C0B000000000001 /* SplitImportEdgeTests.swift */,
 				C3B0A0033C0B000000000001 /* WorkoutEdgeCaseTests.swift */,
@@ -918,6 +921,7 @@
 				C4D4A0015A1DE70DE7E7E002 /* SwipeToDeleteLogicTests.swift in Sources */,
 				C4D4A0015A1DE70DE7E7E004 /* DayTypeRegistryTests.swift in Sources */,
 				C3B0A0003C0B000000000002 /* InMemoryRockLogStore.swift in Sources */,
+				RLDIAG0000000000000002 /* RockLogTestObservation.swift in Sources */,
 				C3B0A0013C0B000000000002 /* PlannedBlockQueueTests.swift in Sources */,
 				C3B0A0023C0B000000000002 /* SplitImportEdgeTests.swift in Sources */,
 				C3B0A0033C0B000000000002 /* WorkoutEdgeCaseTests.swift in Sources */,
@@ -1135,6 +1139,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 53AH938CUW;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSPrincipalClass = RockLogTestObservation;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.lee.rocklog.tests;
 				PRODUCT_NAME = RockLogTests;
@@ -1284,6 +1289,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 53AH938CUW;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSPrincipalClass = RockLogTestObservation;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.lee.rocklog.tests;
 				PRODUCT_NAME = RockLogTests;

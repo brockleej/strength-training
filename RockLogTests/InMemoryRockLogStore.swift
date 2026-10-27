@@ -55,17 +55,27 @@ class RockLogStoreTestCase: XCTestCase {
 
     override func setUpWithError() throws {
         try super.setUpWithError()
+        #if DEBUG
+        RockLogTestObservation.installIfNeeded()
+        WorkoutViewModel.diagnosticTestName = name
+        #endif
         container = try InMemoryRockLogStore.make()
         container.mainContext.autosaveEnabled = false
     }
 
     override func tearDown() {
+        #if DEBUG
+        let held = heldWorkoutViewModels.map { "\(ObjectIdentifier($0))" }.joined(separator: ",")
+        #endif
         heldWorkoutViewModels.forEach { $0.cancelPendingWork() }
         heldWorkoutViewModels.removeAll()
         DayTypeRegistry.shared.resetToFallback()
         secondaryContainer?.mainContext.rollback()
         container?.mainContext.rollback()
         secondaryContainer = nil
+        #if DEBUG
+        print("[RLDIAG] tearDown nil container test=\(WorkoutViewModel.diagnosticTestName) held=\(held)")
+        #endif
         container = nil
         super.tearDown()
     }
