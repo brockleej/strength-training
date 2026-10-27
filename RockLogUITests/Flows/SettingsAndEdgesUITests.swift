@@ -15,26 +15,7 @@ final class SettingsAndEdgesUITests: RockLogUITestCase {
         // The Backup section is below the fold. A lazy List does not build
         // settings.restore until that row is scrolled on screen.
         let restore = element(UITestID.settingsRestore)
-        if !restore.exists {
-            let candidates = [
-                app.collectionViews.firstMatch,
-                app.tables.firstMatch,
-                app.scrollViews.firstMatch,
-            ].filter(\.exists)
-            let list: XCUIElement = candidates.max(by: { $0.frame.height < $1.frame.height })
-                ?? (app.collectionViews.firstMatch.exists
-                    ? app.collectionViews.firstMatch
-                    : app.tables.firstMatch)
-            for _ in 0..<6 {
-                if restore.exists { break }
-                list.swipeUp()
-            }
-        }
-        if !restore.exists {
-            XCTFail("settings.restore not found after 6 swipes")
-            return
-        }
-        XCTAssertTrue(restore.isHittable)
+        scrollUntilHittable(restore)
         XCTAssertTrue(element(UITestID.settingsExport).exists)
         XCTAssertTrue(element(UITestID.settingsAddPlanned).exists)
         XCTAssertTrue(element(UITestID.settingsImportSplit).exists)

@@ -64,8 +64,6 @@ class RockLogUITestCase: XCTestCase {
             let trash = element(UITestID.swipeTrash)
             if trash.waitForExistence(timeout: 2), trash.isHittable {
                 trash.tap()
-            } else if row.exists {
-                row.coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.5)).tap()
             }
         }
 

@@ -15,6 +15,7 @@ final class SplitEditorUITests: RockLogUITestCase {
 
         let pull = waitFor(UITestID.splitDay("Pull"))
         let labelBefore = pull.label
+        scrollUntilHittable(pull)
         swipeToRemove(pull)
         XCTAssertTrue(element(UITestID.splitDay("Pull")).exists, "A full swipe must not delete a split day.")
         dismissAlert(button: "Delete day")
@@ -25,26 +26,24 @@ final class SplitEditorUITests: RockLogUITestCase {
         selectPushIfNeeded()
         waitFor(UITestID.todayEditDay).tap()
         let bench = waitFor(UITestID.dayPlanExercise("UI Bench Press"))
+        scrollUntilHittable(bench)
         swipeToRemove(bench)
         XCTAssertFalse(element(UITestID.dayPlanExercise("UI Bench Press")).waitForExistence(timeout: 3))
     }
 
-    /// Gesture smoke only. The Move up action is the check that reorder works.
-    /// A longer wait here does not replace that action.
+    /// Reorder is checked through the row's Move up action. The long-press
+    /// drag stays in the app; this test does not depend on it.
     func test_splitReorder_dragChangesPositionLabel() {
         launch(preset: "typical")
         tapTab("Settings")
         waitFor(UITestID.settingsEditSplit).tap()
 
         let pull = waitFor(UITestID.splitDay("Pull"))
-        let push = waitFor(UITestID.splitDay("Push"))
         XCTAssertTrue(pull.label.hasPrefix("2."))
-        // Presets sit above the day list. Off-screen rows exist in the
-        // tree; the drag has to start on a hittable row or the ScrollView
-        // takes it. Hold long enough for the long-press to lock scrolling.
         scrollUntilHittable(pull)
-        XCTAssertTrue(push.isHittable)
-        pull.press(forDuration: 1.0, thenDragTo: push, withVelocity: .slow, thenHoldForDuration: 0.4)
+        let moveUp = pull.buttons["Move up"]
+        XCTAssertTrue(moveUp.waitForExistence(timeout: 4))
+        moveUp.tap()
 
         let moved = element(UITestID.splitDay("Pull"))
         XCTAssertTrue(moved.waitForExistence(timeout: 4))

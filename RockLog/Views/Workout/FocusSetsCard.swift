@@ -136,6 +136,11 @@ struct FocusSetsCard: View {
     private func comparisonRow(index: Int, thisSet: SetRecord?, previous: PreviousSet?, planned: PreviousSet?) -> some View {
         let hasLoggedSet = thisSet != nil
         let isSelected = thisSet.map { selectedSetID == $0.id } ?? false
+        let buttonTraits: AccessibilityTraits = {
+            guard hasLoggedSet else { return [] }
+            if isSelected { return [.isButton, .isSelected] }
+            return [.isButton]
+        }()
         return HStack(spacing: 10) {
             // Set number + status
             HStack(spacing: 6) {
@@ -211,6 +216,11 @@ struct FocusSetsCard: View {
         .accessibilityElement(children: .combine)
         .accessibilityLabel(comparisonA11y(index: index, thisSet: thisSet, previous: previous, planned: planned, isSelected: isSelected))
         .accessibilityIdentifier(AccessibilityID.focusSet(thisSet?.setNumber ?? index + 1))
+        .accessibilityAddTraits(buttonTraits)
+        .accessibilityAction {
+            guard let logged = thisSet else { return }
+            onSelect(logged)
+        }
     }
 
     @ViewBuilder
@@ -288,7 +298,8 @@ struct FocusSetsCard: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(setAccessibilityLabel(set, isSelected: isSelected))
         .accessibilityIdentifier(AccessibilityID.focusSet(set.setNumber))
-        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : [.isButton])
+        .accessibilityAction { onSelect(set) }
     }
 
     /// Compact muted last-session pair.
