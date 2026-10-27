@@ -307,10 +307,10 @@ final class ProgramImportTests: RockLogStoreTestCase {
         let document = sampleDocument(firstSession: yesterday)
         _ = try ProgramImportService.importDocument(document, context: context)
 
-        let vm = WorkoutViewModel(
+        let vm = holdWorkoutViewModel(WorkoutViewModel(
             modelContext: context,
             healthKitService: HealthKitWorkoutService()
-        )
+        ))
         vm.autoCompleteStaleSession()
 
         let plannedID = document.block.sessions[0].id
@@ -336,10 +336,10 @@ final class ProgramImportTests: RockLogStoreTestCase {
         let document = sampleDocument(firstSession: today)
         _ = try ProgramImportService.importDocument(document, context: context)
 
-        let vm = WorkoutViewModel(
+        let vm = holdWorkoutViewModel(WorkoutViewModel(
             modelContext: context,
             healthKitService: HealthKitWorkoutService()
-        )
+        ))
         XCTAssertNil(vm.activeSession, "planned days must not auto-start")
 
         vm.startSession(dayType: .push, rotationTrack: .a)
@@ -368,10 +368,10 @@ final class ProgramImportTests: RockLogStoreTestCase {
         let document = sampleDocument(firstSession: today)
         _ = try ProgramImportService.importDocument(document, context: context)
 
-        let vm = WorkoutViewModel(
+        let vm = holdWorkoutViewModel(WorkoutViewModel(
             modelContext: context,
             healthKitService: HealthKitWorkoutService()
-        )
+        ))
         vm.startSession(dayType: .legs, rotationTrack: .a)
 
         let live = try XCTUnwrap(vm.activeSession)
@@ -439,10 +439,10 @@ final class ProgramImportTests: RockLogStoreTestCase {
         let document = rotatingLowerDocument(dlDate: today, rdlDate: today.addingTimeInterval(3 * 86_400))
         _ = try ProgramImportService.importDocument(document, context: context)
 
-        let vm = WorkoutViewModel(
+        let vm = holdWorkoutViewModel(WorkoutViewModel(
             modelContext: context,
             healthKitService: HealthKitWorkoutService()
-        )
+        ))
         vm.startSession(dayType: .lower, rotationTrack: .a)
 
         let session = try XCTUnwrap(vm.activeSession)
@@ -460,10 +460,10 @@ final class ProgramImportTests: RockLogStoreTestCase {
         let document = rotatingLowerDocument(dlDate: earlier, rdlDate: today)
         _ = try ProgramImportService.importDocument(document, context: context)
 
-        let vm = WorkoutViewModel(
+        let vm = holdWorkoutViewModel(WorkoutViewModel(
             modelContext: context,
             healthKitService: HealthKitWorkoutService()
-        )
+        ))
         vm.autoCompleteStaleSession(now: today)
         vm.startSession(dayType: .lower, rotationTrack: .a, now: today)
 
@@ -486,10 +486,10 @@ final class ProgramImportTests: RockLogStoreTestCase {
 
         _ = try ProgramImportService.importDocument(document, context: context)
 
-        let vm = WorkoutViewModel(
+        let vm = holdWorkoutViewModel(WorkoutViewModel(
             modelContext: context,
             healthKitService: HealthKitWorkoutService()
-        )
+        ))
         vm.autoCompleteStaleSession(now: wednesday)
 
         let unusedBefore = PlannedBlockQueue.unusedSessions(
@@ -549,10 +549,10 @@ final class ProgramImportTests: RockLogStoreTestCase {
         XCTAssertEqual(SessionRosterLogic.names(in: unused[0]), ["Conventional Deadlift"])
         XCTAssertEqual(SessionRosterLogic.names(in: unused[1]), ["Romanian Deadlift"])
 
-        let vm = WorkoutViewModel(
+        let vm = holdWorkoutViewModel(WorkoutViewModel(
             modelContext: context,
             healthKitService: HealthKitWorkoutService()
-        )
+        ))
         vm.startSession(dayType: .lower, rotationTrack: .a, now: monday)
         XCTAssertEqual(SessionRosterLogic.names(in: try XCTUnwrap(vm.activeSession)), ["Conventional Deadlift"])
     }
@@ -628,10 +628,10 @@ final class ProgramImportTests: RockLogStoreTestCase {
         session.planStatus = .skipped
         try context.save()
 
-        let vm = WorkoutViewModel(
+        let vm = holdWorkoutViewModel(WorkoutViewModel(
             modelContext: context,
             healthKitService: HealthKitWorkoutService()
-        )
+        ))
         vm.autoCompleteStaleSession()
         vm.startSession(dayType: .push, rotationTrack: .a)
 

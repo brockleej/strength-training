@@ -41,7 +41,7 @@ final class WorkoutEdgeCaseTests: RockLogStoreTestCase {
         context.insert(session)
         try context.save()
 
-        let viewModel = WorkoutViewModel(modelContext: context, healthKitService: HealthKitWorkoutService())
+        let viewModel = holdWorkoutViewModel(WorkoutViewModel(modelContext: context, healthKitService: HealthKitWorkoutService()))
         viewModel.activeSession = session
         viewModel.addSet(exercise: exercise, weight: 0, reps: 10)
         XCTAssertNil(viewModel.pendingCelebration, "A zero-load set must not celebrate a PR.")
@@ -62,7 +62,7 @@ final class WorkoutEdgeCaseTests: RockLogStoreTestCase {
         context.insert(session)
         try context.save()
 
-        let viewModel = WorkoutViewModel(modelContext: context, healthKitService: HealthKitWorkoutService())
+        let viewModel = holdWorkoutViewModel(WorkoutViewModel(modelContext: context, healthKitService: HealthKitWorkoutService()))
         viewModel.activeSession = session
         viewModel.addSet(exercise: exercise, weight: 135, reps: 5)
         let set = try XCTUnwrap(session.exerciseRecordsArray.flatMap(\.loggedSetsArray).first)

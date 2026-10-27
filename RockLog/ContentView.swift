@@ -210,6 +210,7 @@ struct ContentView: View {
             workoutViewModel?.wantsFocusOnWorkoutTab = false
         }
         .onReceive(NotificationCenter.default.publisher(for: .rockLogStoreWillReplace)) { _ in
+            workoutViewModel?.cancelPendingWork()
             workoutViewModel?.resetAfterStoreReplace()
             storeReplaceInProgress = true
             selectedTab = "settings"

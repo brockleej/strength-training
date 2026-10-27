@@ -469,7 +469,7 @@ final class OptimizationLogicTests: RockLogStoreTestCase {
     @MainActor
     func test_addSet_withNoLiveSession_doesNotCrash() throws {
         let context = container.mainContext
-        let viewModel = WorkoutViewModel(modelContext: context, healthKitService: HealthKitWorkoutService())
+        let viewModel = holdWorkoutViewModel(WorkoutViewModel(modelContext: context, healthKitService: HealthKitWorkoutService()))
         viewModel.resetAfterStoreReplace()
         let exercise = Exercise.make(name: "Bench", dayType: .push, muscleGroup: "Chest", sortOrder: 0)
         context.insert(exercise)
@@ -482,7 +482,7 @@ final class OptimizationLogicTests: RockLogStoreTestCase {
     @MainActor
     func test_warmupFlag_isNotCopiedOntoTheNextLoggedSet() throws {
         let context = container.mainContext
-        let viewModel = WorkoutViewModel(modelContext: context, healthKitService: HealthKitWorkoutService())
+        let viewModel = holdWorkoutViewModel(WorkoutViewModel(modelContext: context, healthKitService: HealthKitWorkoutService()))
         let exercise = Exercise.make(name: "Squat", dayType: .legs, muscleGroup: "Quads", sortOrder: 0)
         context.insert(exercise)
         viewModel.startSession(dayType: .legs, rotationTrack: .every)

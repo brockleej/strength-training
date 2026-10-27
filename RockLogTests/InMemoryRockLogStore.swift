@@ -45,6 +45,13 @@ class RockLogStoreTestCase: XCTestCase {
     var container: ModelContainer!
     /// Second store for a test that copies between two containers.
     var secondaryContainer: ModelContainer?
+    /// Kept until tearDown so deferred saves can be cancelled before the store is released.
+    private var heldWorkoutViewModels: [WorkoutViewModel] = []
+
+    func holdWorkoutViewModel(_ viewModel: WorkoutViewModel) -> WorkoutViewModel {
+        heldWorkoutViewModels.append(viewModel)
+        return viewModel
+    }
 
     override func setUpWithError() throws {
         try super.setUpWithError()
@@ -53,6 +60,8 @@ class RockLogStoreTestCase: XCTestCase {
     }
 
     override func tearDown() {
+        heldWorkoutViewModels.forEach { $0.cancelPendingWork() }
+        heldWorkoutViewModels.removeAll()
         DayTypeRegistry.shared.resetToFallback()
         secondaryContainer?.mainContext.rollback()
         container?.mainContext.rollback()

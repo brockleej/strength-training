@@ -88,6 +88,16 @@ final class WorkoutViewModel {
     private var restMonitorTask: Task<Void, Never>?
     /// GCD timer survives better than Task.sleep when the app is backgrounded with audio.
     private var restDispatchTimer: DispatchSourceTimer?
+    /// Unstructured work that can reach `modelContext.save()` after this object’s store is gone.
+    private var finishSaveTask: Task<Void, Never>?
+    private var deferredPlannedStartTask: Task<Void, Never>?
+    private var deferredReplaceTask: Task<Void, Never>?
+    private var healthKitFollowUpTask: Task<Void, Never>?
+    private static var liveInstances: [LiveInstance] = []
+
+    private struct LiveInstance {
+        weak var viewModel: WorkoutViewModel?
+    }
 
     var isResting: Bool {
         guard let end = restEndDate else { return false }
@@ -244,7 +254,7 @@ final class WorkoutViewModel {
     private var pendingAction: PendingAction?
     private var healthKitDecisionMade = false
 
-    private enum PendingAction {
+    private enum PendingAction: Sendable {
         case cancelOnly
         case replaceWith(DayType, RotationTrack)
     }
@@ -252,6 +262,8 @@ final class WorkoutViewModel {
     init(modelContext: ModelContext, healthKitService: HealthKitWorkoutService) {
         self.modelContext = modelContext
         self.healthKitService = healthKitService
+        Self.liveInstances.removeAll { $0.viewModel == nil }
+        Self.liveInstances.append(LiveInstance(viewModel: self))
         healthKitService.checkAuthorization()
         healthKitService.cleanUpOrphanedState()
         _ = GymLibrary.ensureHome(in: modelContext)
@@ -418,8 +430,11 @@ final class WorkoutViewModel {
             suspendedSession = nil
         }
         clearRevisiting()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
-            self?.activatePlannedSession(session, rotationTrack: rotationTrack, now: .now)
+        deferredPlannedStartTask?.cancel()
+        deferredPlannedStartTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .milliseconds(350))
+            guard !Task.isCancelled, let self else { return }
+            self.activatePlannedSession(session, rotationTrack: rotationTrack, now: .now)
         }
     }
 
@@ -485,8 +500,11 @@ final class WorkoutViewModel {
         }
         clearRevisiting()
         // Delay to let the first confirmation dialog dismiss before potentially showing the HealthKit one.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
-            self?.resolveHealthKitDisposal(.replaceWith(dayType, rotationTrack))
+        deferredReplaceTask?.cancel()
+        deferredReplaceTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .milliseconds(350))
+            guard !Task.isCancelled, let self else { return }
+            self.resolveHealthKitDisposal(.replaceWith(dayType, rotationTrack))
         }
     }
 
@@ -569,9 +587,12 @@ final class WorkoutViewModel {
         healthKitDecisionMade = true
         let action = pendingAction
         pendingAction = nil
-        Task {
-            await healthKitService.endWorkout()
-            await MainActor.run { [weak self] in self?.completePendingAction(action) }
+        let service = healthKitService
+        healthKitFollowUpTask?.cancel()
+        healthKitFollowUpTask = Task { @MainActor [weak self] in
+            _ = await service.endWorkout()
+            guard !Task.isCancelled, let self else { return }
+            self.completePendingAction(action)
         }
     }
 
@@ -579,9 +600,12 @@ final class WorkoutViewModel {
         healthKitDecisionMade = true
         let action = pendingAction
         pendingAction = nil
-        Task {
-            await healthKitService.discardWorkout()
-            await MainActor.run { [weak self] in self?.completePendingAction(action) }
+        let service = healthKitService
+        healthKitFollowUpTask?.cancel()
+        healthKitFollowUpTask = Task { @MainActor [weak self] in
+            await service.discardWorkout()
+            guard !Task.isCancelled, let self else { return }
+            self.completePendingAction(action)
         }
     }
 
@@ -604,9 +628,12 @@ final class WorkoutViewModel {
             healthKitDecisionMade = false
             showHealthKitKeepPrompt = true
         } else {
-            Task {
-                await healthKitService.discardWorkout()
-                await MainActor.run { [weak self] in self?.completePendingAction(action) }
+            let service = healthKitService
+            healthKitFollowUpTask?.cancel()
+            healthKitFollowUpTask = Task { @MainActor [weak self] in
+                await service.discardWorkout()
+                guard !Task.isCancelled, let self else { return }
+                self.completePendingAction(action)
             }
         }
     }
@@ -661,14 +688,37 @@ final class WorkoutViewModel {
         // HK session (phone lock) skipped intensity and left Duration as "—".
         sessionPendingEffortRating = capturedSession
 
-        Task { @MainActor in
-            let uuid = await healthKitService.endWorkout()
+        let service = healthKitService
+        finishSaveTask?.cancel()
+        finishSaveTask = Task { @MainActor [weak self] in
+            let uuid = await service.endWorkout()
+            guard !Task.isCancelled, let self else { return }
             capturedSession.healthKitWorkoutUUID = uuid
-            try? modelContext.save()
+            try? self.modelContext.save()
             if let uuid, let rating = capturedSession.effortRating {
-                await healthKitService.saveEffortRating(rating, workoutUUID: uuid)
+                await service.saveEffortRating(rating, workoutUUID: uuid)
             }
         }
+    }
+
+    /// Drops deferred saves so a freed store is not written after reset or restore.
+    func cancelPendingWork() {
+        finishSaveTask?.cancel()
+        deferredPlannedStartTask?.cancel()
+        deferredReplaceTask?.cancel()
+        healthKitFollowUpTask?.cancel()
+        finishSaveTask = nil
+        deferredPlannedStartTask = nil
+        deferredReplaceTask = nil
+        healthKitFollowUpTask = nil
+    }
+
+    /// Every live view model. Restore runs without a reference to the one on screen.
+    static func cancelLivePendingWork() {
+        for entry in liveInstances {
+            entry.viewModel?.cancelPendingWork()
+        }
+        liveInstances.removeAll { $0.viewModel == nil }
     }
 
     /// Re-open a completed session for set edits / skipped lifts.

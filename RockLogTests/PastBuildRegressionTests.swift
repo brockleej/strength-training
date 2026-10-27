@@ -56,7 +56,7 @@ final class PastBuildRegressionTests: RockLogStoreTestCase {
     func test_build14_finishAsksForEffortWithoutHealthKit() throws {
         let context = container.mainContext
         let session = try loggedSession(context: context, start: Date(), setDates: [Date()])
-        let viewModel = WorkoutViewModel(modelContext: context, healthKitService: HealthKitWorkoutService())
+        let viewModel = holdWorkoutViewModel(WorkoutViewModel(modelContext: context, healthKitService: HealthKitWorkoutService()))
         XCTAssertEqual(viewModel.activeSession?.id, session.id)
 
         viewModel.finishSession()
@@ -71,7 +71,7 @@ final class PastBuildRegressionTests: RockLogStoreTestCase {
     func test_build14_saveEffortWritesRating_reopenDoesNotAskAgain() throws {
         let context = container.mainContext
         let session = try loggedSession(context: context, start: Date(), setDates: [Date()])
-        let viewModel = WorkoutViewModel(modelContext: context, healthKitService: HealthKitWorkoutService())
+        let viewModel = holdWorkoutViewModel(WorkoutViewModel(modelContext: context, healthKitService: HealthKitWorkoutService()))
         viewModel.finishSession()
         viewModel.saveEffortRating(8)
         XCTAssertEqual(session.effortRating, 8)
@@ -190,7 +190,7 @@ final class PastBuildRegressionTests: RockLogStoreTestCase {
         context.insert(planned)
         try context.save()
 
-        let viewModel = WorkoutViewModel(modelContext: context, healthKitService: HealthKitWorkoutService())
+        let viewModel = holdWorkoutViewModel(WorkoutViewModel(modelContext: context, healthKitService: HealthKitWorkoutService()))
         XCTAssertEqual(viewModel.activeSession?.id, live.id)
         XCTAssertTrue(PlannedBlockQueue.isUnused(planned))
         XCTAssertFalse(planned.isCompleted)
@@ -202,10 +202,10 @@ final class PastBuildRegressionTests: RockLogStoreTestCase {
         let session = try loggedSession(context: context, start: yesterday, setDates: [yesterday])
         XCTAssertFalse(session.isCompleted)
 
-        _ = WorkoutViewModel(modelContext: context, healthKitService: HealthKitWorkoutService())
+        _ = holdWorkoutViewModel(WorkoutViewModel(modelContext: context, healthKitService: HealthKitWorkoutService()))
         XCTAssertTrue(session.isCompleted)
         XCTAssertNil(
-            WorkoutViewModel(modelContext: context, healthKitService: HealthKitWorkoutService()).activeSession
+            holdWorkoutViewModel(WorkoutViewModel(modelContext: context, healthKitService: HealthKitWorkoutService())).activeSession
         )
     }
 

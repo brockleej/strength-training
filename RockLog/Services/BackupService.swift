@@ -528,6 +528,7 @@ struct BackupService {
     @MainActor
     @discardableResult
     static func restoreAfterTearingDownUI(from data: Data, context: ModelContext) async throws -> BackupRestoreReport {
+        WorkoutViewModel.cancelLivePendingWork()
         NotificationCenter.default.post(name: .rockLogStoreWillReplace, object: nil)
         // Two turns so SwiftUI can unmount TabView / FocusView before deletes.
         await Task.yield()
