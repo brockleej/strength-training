@@ -29,7 +29,7 @@
       shouldUseLaunchSchemeArgsEnv = "YES">
       <TestPlans>
          <TestPlanReference
-            reference = "container:RockLog.xcodeproj/xcshareddata/xctestplans/RockLogEvidence.xctestplan"
+            reference = "container:RockLog.xcodeproj/xcshareddata/xctestplans/RockLogEvidenceSuite.xctestplan"
             default = "YES">
          </TestPlanReference>
       </TestPlans>
