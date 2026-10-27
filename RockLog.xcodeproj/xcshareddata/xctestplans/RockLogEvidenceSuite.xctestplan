@@ -1,7 +1,7 @@
 {
   "configurations" : [
     {
-      "id" : "3C0B0001-A11B-4C0B-8A11-000000000010",
+      "id" : "3C0B0001-A11B-4C0B-8A11-000000000001",
       "name" : "Test",
       "options" : {
 
@@ -15,7 +15,7 @@
       "identifier" : "E18CFB5E2F4A312400991D60",
       "name" : "RockLog"
     },
-    "testRepetitionMode" : "upUntilMaximumRepetitions"
+    "testRepetitionMode" : "fixedIterations"
   },
   "testTargets" : [
     {
