@@ -4,7 +4,33 @@
 # Archive on main does not run this. A missing bundle must not fail the job.
 set -u
 
-echo "ci_post_xcodebuild: CI_XCODEBUILD_ACTION=${CI_XCODEBUILD_ACTION:-unset} CI_BRANCH=${CI_BRANCH:-unset}"
+echo "ci_post_xcodebuild: CI_XCODEBUILD_ACTION=${CI_XCODEBUILD_ACTION:-unset} CI_BRANCH=${CI_BRANCH:-unset} CI_WORKFLOW=${CI_WORKFLOW:-unset}"
+
+# xcresulttool can sit on a large result bundle until Xcode Cloud kills the
+# action. Bound every call. python3 is already used by ci_pre_xcodebuild.
+run_xcresulttool() {
+  _seconds="$1"
+  shift
+  if command -v python3 >/dev/null 2>&1; then
+    python3 - "$_seconds" "$@" << 'PY'
+import subprocess, sys
+seconds = float(sys.argv[1])
+cmd = sys.argv[2:]
+try:
+    completed = subprocess.run(cmd, timeout=seconds)
+except subprocess.TimeoutExpired:
+    print(
+        "ci_post_xcodebuild: timed out after %ss: %s" % (sys.argv[1], " ".join(cmd)),
+        flush=True,
+    )
+    sys.exit(124)
+sys.exit(completed.returncode)
+PY
+  else
+    echo "ci_post_xcodebuild: python3 is missing; running without a timeout."
+    "$@"
+  fi
+}
 
 if [ "${CI_BRANCH:-}" = "main" ]; then
   echo "ci_post_xcodebuild: main archive is unchanged. Skipping the crash log."
@@ -38,18 +64,23 @@ if ! command -v xcrun >/dev/null 2>&1; then
 fi
 
 echo "ci_post_xcodebuild: test-results summary"
-xcrun xcresulttool get test-results summary --path "$BUNDLE" || \
+run_xcresulttool 180 xcrun xcresulttool get test-results summary --path "$BUNDLE" || \
   echo "ci_post_xcodebuild: test-results summary was not available."
 
 echo "ci_post_xcodebuild: test-results tests"
-xcrun xcresulttool get test-results tests --path "$BUNDLE" || \
+run_xcresulttool 180 xcrun xcresulttool get test-results tests --path "$BUNDLE" || \
   echo "ci_post_xcodebuild: test-results tests was not available."
 
-# Older Xcode: one JSON blob, which includes crash diagnostics when present.
-echo "ci_post_xcodebuild: legacy xcresult JSON"
-xcrun xcresulttool get --legacy --path "$BUNDLE" --format json || \
-  xcrun xcresulttool get --path "$BUNDLE" --format json || \
-  echo "ci_post_xcodebuild: legacy get was not available."
+# The full legacy blob is what hung Evidence after a multi-hour result.
+# Branch Test still prints it, under the same timeout.
+if [ "${CI_WORKFLOW:-}" = "RockLog Evidence" ]; then
+  echo "ci_post_xcodebuild: skipping legacy xcresult JSON for workflow RockLog Evidence."
+else
+  echo "ci_post_xcodebuild: legacy xcresult JSON"
+  run_xcresulttool 180 xcrun xcresulttool get --legacy --path "$BUNDLE" --format json || \
+    run_xcresulttool 180 xcrun xcresulttool get --path "$BUNDLE" --format json || \
+    echo "ci_post_xcodebuild: legacy get was not available."
+fi
 
 find "$(dirname "$BUNDLE")" -type f \( -name '*.crash' -o -name '*.ips' \) -print 2>/dev/null | while IFS= read -r crash; do
   echo "ci_post_xcodebuild: crash file $crash"
