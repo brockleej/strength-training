@@ -4,7 +4,7 @@
 //
 //  Configure the user's training split: presets (bro, PPL, …) plus
 //  add / rename / reorder / delete custom day types.
-//  Reorder uses the global long-press-drag pattern (no Edit mode).
+//  Reorder uses the long-press drag plus small Move up / Move down buttons.
 //
 
 import SwiftUI
@@ -224,6 +224,27 @@ struct TrainingSplitSettingsView: View {
     }
 
     private func dayRow(_ day: SplitDay, weekPosition: Int) -> some View {
+        let isFirst = weekPosition == 1
+        let isLast = weekPosition == displayedDays.count
+        return HStack(spacing: 8) {
+            dayRowSummary(day, weekPosition: weekPosition)
+            dayMoveButtons(day, moveUpDisabled: isFirst, moveDownDisabled: isLast)
+        }
+        .accessibilityElement(children: .contain)
+        .padding(.leading, 14)
+        .padding(.trailing, 8)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(draggingID == day.id ? Color.uplift.surface2 : Color.uplift.surface1)
+        }
+    }
+
+    /// Label, swipe, and long-press. Move buttons stay outside this view:
+    /// the swipe row's tap gesture would otherwise take their taps, and
+    /// combining children would hide them from XCUITest.
+    private func dayRowSummary(_ day: SplitDay, weekPosition: Int) -> some View {
         HStack(spacing: 12) {
             Text("\(weekPosition)")
                 .font(.uplift.mono(13, weight: .bold))
@@ -256,13 +277,7 @@ struct TrainingSplitSettingsView: View {
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(Color.uplift.fgDim)
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background {
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(draggingID == day.id ? Color.uplift.surface2 : Color.uplift.surface1)
-        }
+        .contentShape(Rectangle())
         // The row is one accessibility element (the position label). The
         // long-press has to live on that element, not only the number, or a
         // press on the row never reorders. It stays outside swipe-to-delete
@@ -289,6 +304,54 @@ struct TrainingSplitSettingsView: View {
         .accessibilityHint("Long press the number and drag to reorder, swipe left to delete, double tap to edit")
         .accessibilityAction(named: "Move up") { moveDay(day.id, by: -1) }
         .accessibilityAction(named: "Move down") { moveDay(day.id, by: 1) }
+    }
+
+    private func dayMoveButtons(
+        _ day: SplitDay,
+        moveUpDisabled: Bool,
+        moveDownDisabled: Bool
+    ) -> some View {
+        VStack(spacing: 4) {
+            dayMoveButton(
+                systemImage: "chevron.up",
+                label: "Move up",
+                identifier: AccessibilityID.splitDayMoveUp(day.name),
+                isDisabled: moveUpDisabled
+            ) {
+                moveDay(day.id, by: -1)
+            }
+            dayMoveButton(
+                systemImage: "chevron.down",
+                label: "Move down",
+                identifier: AccessibilityID.splitDayMoveDown(day.name),
+                isDisabled: moveDownDisabled
+            ) {
+                moveDay(day.id, by: 1)
+            }
+        }
+    }
+
+    private func dayMoveButton(
+        systemImage: String,
+        label: String,
+        identifier: String,
+        isDisabled: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(Color.uplift.fg)
+                .frame(width: 32, height: 26)
+                .background {
+                    RoundedRectangle(cornerRadius: 7, style: .continuous)
+                        .fill(Color.uplift.surface2)
+                }
+        }
+        .buttonStyle(.plain)
+        .disabled(isDisabled)
+        .accessibilityLabel(label)
+        .accessibilityIdentifier(identifier)
     }
 
     private func moveDay(_ id: UUID, by delta: Int) {

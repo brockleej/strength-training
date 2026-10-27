@@ -31,8 +31,8 @@ final class SplitEditorUITests: RockLogUITestCase {
         XCTAssertFalse(element(UITestID.dayPlanExercise("UI Bench Press")).waitForExistence(timeout: 3))
     }
 
-    /// Reorder is checked through the row's Move up action. The long-press
-    /// drag stays in the app; this test does not depend on it.
+    /// Reorder is checked through the visible Move up button. The long-press
+    /// drag stays in the app; this test does not perform it.
     func test_splitReorder_dragChangesPositionLabel() {
         launch(preset: "typical")
         tapTab("Settings")
@@ -40,15 +40,42 @@ final class SplitEditorUITests: RockLogUITestCase {
 
         let pull = waitFor(UITestID.splitDay("Pull"))
         XCTAssertTrue(pull.label.hasPrefix("2."))
-        scrollUntilHittable(pull)
-        let moveUp = pull.buttons["Move up"]
-        XCTAssertTrue(moveUp.waitForExistence(timeout: 4))
+        let pushUp = waitFor(UITestID.splitDayMoveUp("Push"))
+        XCTAssertFalse(pushUp.isEnabled, "Move up is disabled on the first day")
+
+        let moveUp = waitFor(UITestID.splitDayMoveUp("Pull"))
+        scrollUntilHittable(moveUp)
+        XCTAssertTrue(moveUp.isEnabled)
         moveUp.tap()
 
         let moved = element(UITestID.splitDay("Pull"))
         XCTAssertTrue(moved.waitForExistence(timeout: 4))
         let settled = XCTNSPredicateExpectation(
             predicate: NSPredicate(format: "label BEGINSWITH '1.'"),
+            object: moved
+        )
+        wait(for: [settled], timeout: 10)
+    }
+
+    func test_splitReorder_moveDownButtonChangesPositionLabel() {
+        launch(preset: "typical")
+        tapTab("Settings")
+        waitFor(UITestID.settingsEditSplit).tap()
+
+        let pull = waitFor(UITestID.splitDay("Pull"))
+        XCTAssertTrue(pull.label.hasPrefix("2."))
+        let legsDown = waitFor(UITestID.splitDayMoveDown("Legs"))
+        XCTAssertFalse(legsDown.isEnabled, "Move down is disabled on the last day")
+
+        let moveDown = waitFor(UITestID.splitDayMoveDown("Pull"))
+        scrollUntilHittable(moveDown)
+        XCTAssertTrue(moveDown.isEnabled)
+        moveDown.tap()
+
+        let moved = element(UITestID.splitDay("Pull"))
+        XCTAssertTrue(moved.waitForExistence(timeout: 4))
+        let settled = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "label BEGINSWITH '3.'"),
             object: moved
         )
         wait(for: [settled], timeout: 10)

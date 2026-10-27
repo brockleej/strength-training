@@ -80,6 +80,8 @@ enum AccessibilityID {
     static let settingsImportSplit = "settings.importSplit"
 
     static func splitDay(_ name: String) -> String { "split.day.\(name)" }
+    static func splitDayMoveUp(_ name: String) -> String { "split.day.\(name).moveUp" }
+    static func splitDayMoveDown(_ name: String) -> String { "split.day.\(name).moveDown" }
     static let swipeTrash = "swipe.trash"
 
     static let historyEmpty = "history.empty"

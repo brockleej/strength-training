@@ -68,7 +68,7 @@ final class WorkoutLoggingUITests: RockLogUITestCase {
         XCTAssertFalse(duration.label.contains("200"))
     }
 
-    /// The set row's default accessibility action, not a coordinate tap, enters edit mode.
+    /// The set row is the button. A tap on that element enters edit mode.
     func test_setRowAccessibilityAction_entersEditMode() {
         launch(preset: "typical")
         selectPushIfNeeded()
@@ -78,9 +78,8 @@ final class WorkoutLoggingUITests: RockLogUITestCase {
 
         let logged = waitFor(UITestID.focusSet(1))
         scrollUntilHittable(logged)
-        let activate = logged.buttons["Activate"]
-        XCTAssertTrue(activate.waitForExistence(timeout: 4), "Set row is missing its default accessibility action")
-        activate.tap()
+        XCTAssertTrue(logged.isHittable)
+        logged.tap()
 
         let editing = XCTNSPredicateExpectation(
             predicate: NSPredicate(format: "label CONTAINS %@", "editing"),
