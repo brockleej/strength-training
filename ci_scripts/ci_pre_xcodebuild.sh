@@ -36,6 +36,16 @@ if [ "${CI_XCODE_SCHEME:-}" = "RockCoach" ]; then
   exit 1
 fi
 
+# Evidence repeats the full suite. It must never archive or upload.
+if [ "${CI_XCODE_SCHEME:-}" = "RockLogEvidence" ]; then
+  case "${CI_XCODEBUILD_ACTION:-}" in
+    archive|build-for-archive|export)
+      echo "ci_pre_xcodebuild: scheme RockLogEvidence is test-only. Refusing to archive or upload."
+      exit 1
+      ;;
+  esac
+fi
+
 # Build Tests already pinned versions. This later action does not need them.
 if [ "${CI_XCODEBUILD_ACTION:-}" = "test-without-building" ]; then
   echo "ci_pre_xcodebuild: skipping version pin for test-without-building."

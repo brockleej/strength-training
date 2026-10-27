@@ -1,0 +1,39 @@
+{
+  "configurations" : [
+    {
+      "id" : "3C0B0001-A11B-4C0B-8A11-000000000010",
+      "name" : "Test",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "maximumTestRepetitions" : 10,
+    "targetForVariableExpansion" : {
+      "containerPath" : "container:RockLog.xcodeproj",
+      "identifier" : "E18CFB5E2F4A312400991D60",
+      "name" : "RockLog"
+    },
+    "testRepetitionMode" : "upUntilMaximumRepetitions"
+  },
+  "testTargets" : [
+    {
+      "parallelizable" : false,
+      "target" : {
+        "containerPath" : "container:RockLog.xcodeproj",
+        "identifier" : "CF2665086E70C7E1BDE1852D",
+        "name" : "RockLogTests"
+      }
+    },
+    {
+      "parallelizable" : false,
+      "target" : {
+        "containerPath" : "container:RockLog.xcodeproj",
+        "identifier" : "A11B00013C0B000000000001",
+        "name" : "RockLogUITests"
+      }
+    }
+  ],
+  "version" : 1
+}

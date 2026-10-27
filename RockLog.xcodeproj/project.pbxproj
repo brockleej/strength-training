@@ -199,6 +199,7 @@
 		C3B0A0043C0B000000000001 /* PastBuildRegressionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PastBuildRegressionTests.swift; sourceTree = "<group>"; };
 		A11B00013C0B000000000002 /* RockLogUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RockLogUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A11B00013C0B00000000000C /* RockLogSuite.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; name = RockLogSuite.xctestplan; path = RockLog.xcodeproj/xcshareddata/xctestplans/RockLogSuite.xctestplan; sourceTree = "<group>"; };
+		A11B00013C0B00000000000D /* RockLogEvidence.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; name = RockLogEvidence.xctestplan; path = RockLog.xcodeproj/xcshareddata/xctestplans/RockLogEvidence.xctestplan; sourceTree = "<group>"; };
 		C0ACF001D0C000000000000C /* CoachInbox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoachInbox.swift; sourceTree = "<group>"; };
 		C0ACF001D0C0000000000010 /* CompareGridTable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompareGridTable.swift; sourceTree = "<group>"; };
 		C0ACF001D0C0000000000020 /* MonthlyOverload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthlyOverload.swift; sourceTree = "<group>"; };
@@ -579,6 +580,7 @@
 				51C16B157883C4911DC9C13D /* RockLogTests */,
 				A11B00013C0B000000000009 /* RockLogUITests */,
 				A11B00013C0B00000000000C /* RockLogSuite.xctestplan */,
+				A11B00013C0B00000000000D /* RockLogEvidence.xctestplan */,
 				08081F3FD2336389AEDC8540 /* progression-lab */,
 				0F1B900D7BD7B14B41F6AEC0 /* progression-lab-tests */,
 			);
