@@ -21,7 +21,10 @@ final class SettingsAndEdgesUITests: RockLogUITestCase {
                 app.tables.firstMatch,
                 app.scrollViews.firstMatch,
             ].filter(\.exists)
-            let list = candidates.max(by: { $0.frame.height < $1.frame.height }) ?? app
+            let list: XCUIElement = candidates.max(by: { $0.frame.height < $1.frame.height })
+                ?? (app.collectionViews.firstMatch.exists
+                    ? app.collectionViews.firstMatch
+                    : app.tables.firstMatch)
             for _ in 0..<6 {
                 if restore.exists { break }
                 list.swipeUp()
