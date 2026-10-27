@@ -51,6 +51,9 @@ enum AccessibilityID {
     static let focusCancelEdit = "focus.cancelEdit"
 
     static func focusSet(_ number: Int) -> String { "focus.set.\(number)" }
+    /// Last-time column. Kept off `focus.set` so a tap on the set does not load it.
+    static func focusLoadLast(_ number: Int) -> String { "focus.loadLast.\(number)" }
+    static func focusLoadPlan(_ number: Int) -> String { "focus.loadPlan.\(number)" }
     static func stepperIncrease(_ label: String) -> String { "stepper.increase.\(label)" }
     static func stepperDecrease(_ label: String) -> String { "stepper.decrease.\(label)" }
 

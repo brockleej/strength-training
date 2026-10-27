@@ -16,14 +16,8 @@ final class WorkoutLoggingUITests: RockLogUITestCase {
         fresh.tap()
         waitFor(UITestID.focusLogSet).tap()
 
-        let logged = waitFor(UITestID.focusSet(1))
-        scrollUntilHittable(logged)
-        logged.tap()
-        let editing = XCTNSPredicateExpectation(
-            predicate: NSPredicate(format: "label CONTAINS %@", "editing"),
-            object: logged
-        )
-        wait(for: [editing], timeout: 6)
+        let logged = tapHittableSet(1)
+        waitUntilEditing(logged)
         waitFor(UITestID.stepperIncrease("Reps")).tap()
         waitFor(UITestID.focusUpdateSet).tap()
 
@@ -76,16 +70,51 @@ final class WorkoutLoggingUITests: RockLogUITestCase {
         waitFor(UITestID.workoutExercise("UI Fresh Lift")).tap()
         waitFor(UITestID.focusLogSet).tap()
 
+        let logged = tapHittableSet(1)
+        waitUntilEditing(logged)
+        XCTAssertTrue(element(UITestID.focusUpdateSet).waitForExistence(timeout: 4))
+    }
+
+    /// Bench has a last-time control beside the set. Tapping the set identifier
+    /// must edit; that control stays a separate element outside the set's frame.
+    func test_comparisonRowTap_selectsSetNotLastTime() {
+        launch(preset: "typical")
+        selectPushIfNeeded()
+        waitFor(UITestID.todayStart).tap()
+        waitFor(UITestID.workoutExercise("UI Bench Press")).tap()
+        waitFor(UITestID.focusLogSet).tap()
+
+        let lastTime = waitFor(UITestID.focusLoadLast(1))
         let logged = waitFor(UITestID.focusSet(1))
         scrollUntilHittable(logged)
-        XCTAssertTrue(logged.isHittable)
+        XCTAssertTrue(logged.isHittable, "focus.set.1 is not hittable")
+        XCTAssertTrue(lastTime.isHittable, "focus.loadLast.1 is not hittable")
+        XCTAssertNotEqual(lastTime.identifier, logged.identifier)
+        let setCenter = CGPoint(x: logged.frame.midX, y: logged.frame.midY)
+        XCTAssertFalse(
+            lastTime.frame.contains(setCenter),
+            "focus.set center sits on the last-time control, so a tap loads last time instead of editing."
+        )
         logged.tap()
+        waitUntilEditing(logged)
+        XCTAssertTrue(element(UITestID.focusUpdateSet).waitForExistence(timeout: 4))
+        XCTAssertTrue(lastTime.exists, "Selecting the set should leave the last-time control in place")
+    }
 
+    /// Tap the set by its identifier once it is on screen. Never a fixed coordinate.
+    private func tapHittableSet(_ number: Int) -> XCUIElement {
+        let row = waitFor(UITestID.focusSet(number))
+        scrollUntilHittable(row)
+        XCTAssertTrue(row.isHittable, "\(UITestID.focusSet(number)) is not hittable")
+        row.tap()
+        return row
+    }
+
+    private func waitUntilEditing(_ row: XCUIElement, timeout: TimeInterval = 6) {
         let editing = XCTNSPredicateExpectation(
             predicate: NSPredicate(format: "label CONTAINS %@", "editing"),
-            object: logged
+            object: row
         )
-        wait(for: [editing], timeout: 6)
-        XCTAssertTrue(element(UITestID.focusUpdateSet).waitForExistence(timeout: 4))
+        wait(for: [editing], timeout: timeout)
     }
 }

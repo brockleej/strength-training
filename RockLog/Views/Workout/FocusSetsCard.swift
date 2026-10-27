@@ -30,6 +30,11 @@ struct FocusSetsCard: View {
     var onSelectPrevious: ((PreviousSet) -> Void)? = nil
     var onSelectPlanned: ((PreviousSet) -> Void)? = nil
 
+    /// One tap can deliver the button action and the accessibility action.
+    /// A second delivery in this window must not toggle straight back out of edit.
+    @State private var lastSelectAt = Date.distantPast
+    @State private var lastSelectID: UUID?
+
     private var rowCount: Int {
         let n = max(sets.count, previousSets.count, plannedSets.count)
         return n == 0 ? 0 : n
@@ -106,7 +111,7 @@ struct FocusSetsCard: View {
                             .lineLimit(1)
                     }
                 }
-                .frame(width: 88, alignment: .leading)
+                .frame(width: 72, alignment: .leading)
                 Text("THIS")
                     .frame(maxWidth: .infinity, alignment: .trailing)
             } else {
@@ -134,44 +139,27 @@ struct FocusSetsCard: View {
     }
 
     private func comparisonRow(index: Int, thisSet: SetRecord?, previous: PreviousSet?, planned: PreviousSet?) -> some View {
-        let hasLoggedSet = thisSet != nil
         let isSelected = thisSet.map { selectedSetID == $0.id } ?? false
-        let buttonTraits: AccessibilityTraits = {
-            guard hasLoggedSet else { return [] }
-            if isSelected { return [.isButton, .isSelected] }
-            return [.isButton]
-        }()
+        let setNumber = thisSet?.setNumber ?? index + 1
+        let rowLabel = comparisonA11y(
+            index: index,
+            thisSet: thisSet,
+            previous: previous,
+            planned: planned,
+            isSelected: isSelected
+        )
+        // Last/plan stay siblings of the select target. A combined row puts
+        // those buttons under the center of focus.set on a narrow phone, so
+        // a tap loads last time instead of editing.
         return HStack(spacing: 10) {
-            // Set number + status
-            HStack(spacing: 6) {
-                if hasLoggedSet {
-                    ZStack {
-                        Circle().fill(
-                            isSelected
-                                ? Color.uplift.accent.opacity(0.22)
-                                : Color.uplift.up.opacity(0.18)
-                        )
-                        Image(systemName: isSelected ? "pencil" : "checkmark")
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundStyle(isSelected ? Color.uplift.accent : Color.uplift.up)
-                    }
-                    .frame(width: 22, height: 22)
-                } else {
-                    Circle()
-                        .strokeBorder(Color.uplift.hairline, lineWidth: 1)
-                        .frame(width: 22, height: 22)
-                }
-                Text("\(index + 1)")
-                    .font(.uplift.mono(15, weight: .bold))
-                    .foregroundStyle(Color.uplift.fg)
-            }
-            .frame(width: showPlannedColumn ? 36 : 44, alignment: .leading)
+            setIndexMark(index: index, thisSet: thisSet, isSelected: isSelected)
 
             snapshotButton(
                 previous,
-                width: showPlannedColumn ? 70 : 104,
+                width: showPlannedColumn ? 70 : 72,
                 showLoadIcon: !showPlannedColumn,
                 accessibility: "Load last set \(index + 1) into steppers",
+                identifier: AccessibilityID.focusLoadLast(setNumber),
                 action: onSelectPrevious
             )
 
@@ -181,18 +169,23 @@ struct FocusSetsCard: View {
                     width: 70,
                     showLoadIcon: false,
                     accessibility: "Load planned set \(index + 1) into steppers",
+                    identifier: AccessibilityID.focusLoadPlan(setNumber),
                     action: onSelectPlanned
                 )
             }
 
-            Spacer(minLength: 4)
-
             if let logged = thisSet {
-                thisPairLabel(thisSet: logged, previous: previous ?? planned)
+                loggedSetButton(logged, isSelected: isSelected, label: rowLabel) {
+                    thisPairLabel(thisSet: logged, previous: previous ?? planned)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                }
             } else {
                 Text("·")
                     .font(.uplift.mono(16, weight: .medium))
                     .foregroundStyle(Color.uplift.fgDim)
+                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .trailing)
+                    .accessibilityLabel(rowLabel)
+                    .accessibilityIdentifier(AccessibilityID.focusSet(setNumber))
             }
         }
         .padding(.vertical, 11)
@@ -201,26 +194,40 @@ struct FocusSetsCard: View {
             RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .fill(isSelected ? Color.uplift.accent.opacity(0.10) : Color.clear)
         }
-        .contentShape(Rectangle())
-        .modifier(OptionalSwipe(
-            enabled: hasLoggedSet,
-            onDelete: {
-                guard let logged = thisSet else { return }
-                onDelete(logged)
-            },
-            onTap: {
-                guard let logged = thisSet else { return }
-                onSelect(logged)
+    }
+
+    /// Set number. Hidden from VoiceOver; the select target speaks the set.
+    /// A tap here still selects, without widening focus.set over last/plan.
+    private func setIndexMark(index: Int, thisSet: SetRecord?, isSelected: Bool) -> some View {
+        HStack(spacing: 6) {
+            if thisSet != nil {
+                ZStack {
+                    Circle().fill(
+                        isSelected
+                            ? Color.uplift.accent.opacity(0.22)
+                            : Color.uplift.up.opacity(0.18)
+                    )
+                    Image(systemName: isSelected ? "pencil" : "checkmark")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(isSelected ? Color.uplift.accent : Color.uplift.up)
+                }
+                .frame(width: 22, height: 22)
+            } else {
+                Circle()
+                    .strokeBorder(Color.uplift.hairline, lineWidth: 1)
+                    .frame(width: 22, height: 22)
             }
-        ))
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(comparisonA11y(index: index, thisSet: thisSet, previous: previous, planned: planned, isSelected: isSelected))
-        .accessibilityIdentifier(AccessibilityID.focusSet(thisSet?.setNumber ?? index + 1))
-        .accessibilityAddTraits(buttonTraits)
-        .accessibilityAction {
-            guard let logged = thisSet else { return }
-            onSelect(logged)
+            Text("\(index + 1)")
+                .font(.uplift.mono(15, weight: .bold))
+                .foregroundStyle(Color.uplift.fg)
         }
+        .frame(width: showPlannedColumn ? 36 : 44, alignment: .leading)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            guard let thisSet else { return }
+            select(thisSet)
+        }
+        .accessibilityHidden(true)
     }
 
     @ViewBuilder
@@ -229,6 +236,7 @@ struct FocusSetsCard: View {
         width: CGFloat,
         showLoadIcon: Bool,
         accessibility: String,
+        identifier: String,
         action: ((PreviousSet) -> Void)?
     ) -> some View {
         if let snapshot {
@@ -248,6 +256,7 @@ struct FocusSetsCard: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel(accessibility)
+            .accessibilityIdentifier(identifier)
         } else {
             Text("—")
                 .font(.uplift.mono(14, weight: .medium))
@@ -256,50 +265,85 @@ struct FocusSetsCard: View {
         }
     }
 
-    private func simpleRow(_ set: SetRecord) -> some View {
-        let isSelected = selectedSetID == set.id
-        return HStack {
-            HStack(spacing: 8) {
-                ZStack {
-                    Circle().fill(
-                        isSelected
-                            ? Color.uplift.accent.opacity(0.22)
-                            : Color.uplift.up.opacity(0.16)
-                    )
-                    Image(systemName: isSelected ? "pencil" : "checkmark")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(isSelected ? Color.uplift.accent : Color.uplift.up)
-                }
-                .frame(width: 22, height: 22)
-                .accessibilityHidden(true)
-                Text("\(set.setNumber)")
-                    .font(.uplift.mono(14, weight: .semibold))
-                    .foregroundStyle(Color.uplift.fg)
-            }
-            Spacer()
-            flagChips(warmup: set.isWarmup, eachSide: set.isEachSide, assisted: set.isAssisted)
-            Text(set.weightDisplay)
-                .font(.uplift.mono(14, weight: .semibold))
-                .foregroundStyle(Color.uplift.weightTint)
-                .frame(width: 64, alignment: .trailing)
-            Text(set.isEachSide ? "\(set.reps)×2" : "\(set.reps)")
-                .font(.uplift.mono(14, weight: .semibold))
-                .foregroundStyle(Color.uplift.repsTint)
-                .frame(width: 52, alignment: .trailing)
+    /// Select target for a logged set. Last/plan buttons are not inside it,
+    /// and the swipe gesture does not also toggle edit.
+    private func loggedSetButton<Content: View>(
+        _ set: SetRecord,
+        isSelected: Bool,
+        label: String,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        Button {
+            select(set)
+        } label: {
+            content()
+                .frame(maxWidth: .infinity, minHeight: 44)
+                .contentShape(Rectangle())
         }
-        .padding(.vertical, 10)
-        .padding(.horizontal, 6)
-        .background {
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(isSelected ? Color.uplift.accent.opacity(0.10) : Color.clear)
-        }
-        .contentShape(Rectangle())
-        .swipeToDelete(fullSwipeDeletes: true, onDelete: { onDelete(set) }, onTap: { onSelect(set) })
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(setAccessibilityLabel(set, isSelected: isSelected))
+        .buttonStyle(.plain)
+        .swipeToDelete(fullSwipeDeletes: true, onDelete: { onDelete(set) }, onTap: nil)
+        // Identifier on the swipe container, same as day-plan rows. An inner
+        // identifier is a different hit target, so swipe never reaches Remove.
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(label)
         .accessibilityIdentifier(AccessibilityID.focusSet(set.setNumber))
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : [.isButton])
-        .accessibilityAction { onSelect(set) }
+        .accessibilityAction { select(set) }
+    }
+
+    private func select(_ set: SetRecord) {
+        let now = Date()
+        if lastSelectID == set.id, now.timeIntervalSince(lastSelectAt) < 0.25 {
+            return
+        }
+        lastSelectAt = now
+        lastSelectID = set.id
+        onSelect(set)
+    }
+
+    private func simpleRow(_ set: SetRecord) -> some View {
+        let isSelected = selectedSetID == set.id
+        return loggedSetButton(
+            set,
+            isSelected: isSelected,
+            label: setAccessibilityLabel(set, isSelected: isSelected)
+        ) {
+            HStack {
+                HStack(spacing: 8) {
+                    ZStack {
+                        Circle().fill(
+                            isSelected
+                                ? Color.uplift.accent.opacity(0.22)
+                                : Color.uplift.up.opacity(0.16)
+                        )
+                        Image(systemName: isSelected ? "pencil" : "checkmark")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(isSelected ? Color.uplift.accent : Color.uplift.up)
+                    }
+                    .frame(width: 22, height: 22)
+                    .accessibilityHidden(true)
+                    Text("\(set.setNumber)")
+                        .font(.uplift.mono(14, weight: .semibold))
+                        .foregroundStyle(Color.uplift.fg)
+                }
+                Spacer()
+                flagChips(warmup: set.isWarmup, eachSide: set.isEachSide, assisted: set.isAssisted)
+                Text(set.weightDisplay)
+                    .font(.uplift.mono(14, weight: .semibold))
+                    .foregroundStyle(Color.uplift.weightTint)
+                    .frame(width: 64, alignment: .trailing)
+                Text(set.isEachSide ? "\(set.reps)×2" : "\(set.reps)")
+                    .font(.uplift.mono(14, weight: .semibold))
+                    .foregroundStyle(Color.uplift.repsTint)
+                    .frame(width: 52, alignment: .trailing)
+            }
+            .padding(.vertical, 10)
+            .padding(.horizontal, 6)
+            .background {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(isSelected ? Color.uplift.accent.opacity(0.10) : Color.clear)
+            }
+        }
     }
 
     /// Compact muted last-session pair.
@@ -476,21 +520,6 @@ struct FocusSetsCard: View {
             parts.append("actual not logged yet")
         }
         return parts.joined(separator: ", ")
-    }
-}
-
-/// Applies swipe-to-delete only when a this-session set exists on the row.
-private struct OptionalSwipe: ViewModifier {
-    let enabled: Bool
-    let onDelete: () -> Void
-    let onTap: () -> Void
-
-    func body(content: Content) -> some View {
-        if enabled {
-            content.swipeToDelete(fullSwipeDeletes: true, onDelete: onDelete, onTap: onTap)
-        } else {
-            content
-        }
     }
 }
 
