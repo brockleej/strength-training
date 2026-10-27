@@ -94,9 +94,9 @@ final class WorkoutViewModel {
     private var deferredReplaceTask: Task<Void, Never>?
     private var healthKitFollowUpTask: Task<Void, Never>?
     private static var liveInstances: [LiveInstance] = []
-    /// Fix 18. Tests can set this to false to let a deferred save run after tearDown.
-    nonisolated(unsafe) static var cancelsDeferredSaves = true
     #if DEBUG
+    /// Tests can set this to false to let a deferred save run after tearDown.
+    nonisolated(unsafe) static var cancelsDeferredSaves = true
     /// Set by the test observer. "-" outside a test.
     nonisolated(unsafe) static var diagnosticTestName = "-"
 
@@ -105,14 +105,23 @@ final class WorkoutViewModel {
     }
     #endif
 
-    /// `Task.isCancelled` only stops the save while `cancelsDeferredSaves` is on.
+    /// Release always cancels. Debug builds read `cancelsDeferredSaves`.
+    private nonisolated static var shouldCancelDeferredSaves: Bool {
+        #if DEBUG
+        cancelsDeferredSaves
+        #else
+        true
+        #endif
+    }
+
+    /// `Task.isCancelled` stops the save when deferred saves are cancelled.
     private nonisolated static func deferredSaveProceeds(
         cancelled: Bool,
         alive: Bool,
         event: String,
         vm: ObjectIdentifier
     ) -> Bool {
-        let proceed = (!cancelsDeferredSaves || !cancelled) && alive
+        let proceed = (!shouldCancelDeferredSaves || !cancelled) && alive
         #if DEBUG
         rlDiag("\(event) proceed=\(proceed) cancelled=\(cancelled) alive=\(alive)", vm: vm)
         #else
@@ -457,7 +466,7 @@ final class WorkoutViewModel {
         }
         clearRevisiting()
         let vmID = ObjectIdentifier(self)
-        if Self.cancelsDeferredSaves {
+        if Self.shouldCancelDeferredSaves {
             deferredPlannedStartTask?.cancel()
         }
         deferredPlannedStartTask = Task { @MainActor [weak self] in
@@ -536,7 +545,7 @@ final class WorkoutViewModel {
         clearRevisiting()
         // Delay to let the first confirmation dialog dismiss before potentially showing the HealthKit one.
         let vmID = ObjectIdentifier(self)
-        if Self.cancelsDeferredSaves {
+        if Self.shouldCancelDeferredSaves {
             deferredReplaceTask?.cancel()
         }
         deferredReplaceTask = Task { @MainActor [weak self] in
@@ -633,7 +642,7 @@ final class WorkoutViewModel {
         pendingAction = nil
         let service = healthKitService
         let vmID = ObjectIdentifier(self)
-        if Self.cancelsDeferredSaves {
+        if Self.shouldCancelDeferredSaves {
             healthKitFollowUpTask?.cancel()
         }
         healthKitFollowUpTask = Task { @MainActor [weak self] in
@@ -655,7 +664,7 @@ final class WorkoutViewModel {
         pendingAction = nil
         let service = healthKitService
         let vmID = ObjectIdentifier(self)
-        if Self.cancelsDeferredSaves {
+        if Self.shouldCancelDeferredSaves {
             healthKitFollowUpTask?.cancel()
         }
         healthKitFollowUpTask = Task { @MainActor [weak self] in
@@ -692,7 +701,7 @@ final class WorkoutViewModel {
         } else {
             let service = healthKitService
             let vmID = ObjectIdentifier(self)
-            if Self.cancelsDeferredSaves {
+            if Self.shouldCancelDeferredSaves {
                 healthKitFollowUpTask?.cancel()
             }
             healthKitFollowUpTask = Task { @MainActor [weak self] in
@@ -761,7 +770,7 @@ final class WorkoutViewModel {
 
         let service = healthKitService
         let vmID = ObjectIdentifier(self)
-        if Self.cancelsDeferredSaves {
+        if Self.shouldCancelDeferredSaves {
             finishSaveTask?.cancel()
         }
         finishSaveTask = Task { @MainActor [weak self] in
@@ -786,7 +795,7 @@ final class WorkoutViewModel {
         #if DEBUG
         let vmID = ObjectIdentifier(self)
         #endif
-        guard Self.cancelsDeferredSaves else {
+        guard Self.shouldCancelDeferredSaves else {
             #if DEBUG
             Self.rlDiag("cancelPendingWork skipped", vm: vmID)
             #endif
