@@ -4,7 +4,8 @@
 //
 //  Configure the user's training split: presets (bro, PPL, …) plus
 //  add / rename / reorder / delete custom day types.
-//  Reorder uses the long-press drag plus small Move up / Move down buttons.
+//  Reorder uses the long-press drag. Move up / Move down appear only
+//  while the Reorder control is on, outside the swipe area.
 //
 
 import SwiftUI
@@ -23,6 +24,7 @@ struct TrainingSplitSettingsView: View {
     @State private var showKeepLastDay = false
     @State private var orderedIDs: [UUID] = []
     @State private var draggingID: UUID?
+    @State private var isReordering = false
     @AppStorage(SplitSchedulePreferences.modeKey)
     private var scheduleModeRaw: String = SplitScheduleMode.rolling.rawValue
 
@@ -191,7 +193,18 @@ struct TrainingSplitSettingsView: View {
 
     private var daysSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            sectionHeader("Your days · weekly order")
+            HStack(alignment: .firstTextBaseline) {
+                sectionHeader("Your days · weekly order")
+                Spacer(minLength: 8)
+                Button(isReordering ? "Done" : "Reorder") {
+                    isReordering.toggle()
+                }
+                .font(.uplift.text(13, weight: .semibold))
+                .foregroundStyle(Color.uplift.accent)
+                .buttonStyle(.plain)
+                .accessibilityIdentifier(AccessibilityID.splitReorder)
+                .accessibilityAddTraits(isReordering ? AccessibilityTraits.isSelected : AccessibilityTraits())
+            }
             Text(ListMutationCopy.reorderAndRemove + " Tap to edit.")
                 .font(.uplift.text(13, weight: .medium))
                 .foregroundStyle(Color.uplift.fgMuted)
@@ -228,7 +241,9 @@ struct TrainingSplitSettingsView: View {
         let isLast = weekPosition == displayedDays.count
         return HStack(spacing: 8) {
             dayRowSummary(day, weekPosition: weekPosition)
-            dayMoveButtons(day, moveUpDisabled: isFirst, moveDownDisabled: isLast)
+            if isReordering {
+                dayMoveButtons(day, moveUpDisabled: isFirst, moveDownDisabled: isLast)
+            }
         }
         .accessibilityElement(children: .contain)
         .padding(.leading, 14)

@@ -79,6 +79,7 @@ enum AccessibilityID {
     static let settingsAddPlanned = "settings.addPlanned"
     static let settingsImportSplit = "settings.importSplit"
 
+    static let splitReorder = "split.reorder"
     static func splitDay(_ name: String) -> String { "split.day.\(name)" }
     static func splitDayMoveUp(_ name: String) -> String { "split.day.\(name).moveUp" }
     static func splitDayMoveDown(_ name: String) -> String { "split.day.\(name).moveDown" }

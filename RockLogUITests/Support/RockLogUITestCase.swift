@@ -48,17 +48,40 @@ class RockLogUITestCase: XCTestCase {
         button.tap()
     }
 
-    /// Soft remove: swipe, then tap the trailing trash strip.
-    /// Set rows allow a full swipe to delete; split rows must not.
-    /// A disappeared row counts only when the matching identifier count
-    /// drops by exactly 1. "Delete day" leaves the split row in place.
-    func swipeToRemove(_ row: XCUIElement) {
+    /// Soft remove: swipe, then tap the trash control by its identifier.
+    /// Set rows and day-plan rows may disappear. A split day must not:
+    /// pass `confirmingDelete` so a vanished row fails before Delete day.
+    func swipeToRemove(_ row: XCUIElement, confirmingDelete: Bool = false) {
         XCTAssertTrue(row.waitForExistence(timeout: 6))
         let identifier = row.identifier
+        XCTAssertFalse(identifier.isEmpty, "Row is missing an accessibility identifier")
         let query = app.descendants(matching: .any).matching(identifier: identifier)
         let before = query.count
         XCTAssertGreaterThan(before, 0, "No row for \(identifier)")
         row.swipeLeft()
+
+        if confirmingDelete {
+            guard query.count >= before else {
+                XCTFail("\(identifier) vanished before Delete day")
+                return
+            }
+            let trash = element(UITestID.swipeTrash)
+            XCTAssertTrue(trash.waitForExistence(timeout: 2), "Missing \(UITestID.swipeTrash)")
+            XCTAssertTrue(trash.isHittable, "\(UITestID.swipeTrash) is not hittable")
+            trash.tap()
+            guard query.count >= before else {
+                XCTFail("\(identifier) vanished before Delete day")
+                return
+            }
+            let dialog = app.buttons["Delete day"]
+            XCTAssertTrue(dialog.waitForExistence(timeout: 4), "Delete day did not appear for \(identifier)")
+            XCTAssertGreaterThanOrEqual(
+                query.count,
+                before,
+                "\(identifier) vanished before Delete day was confirmed"
+            )
+            return
+        }
 
         if query.count >= before {
             let trash = element(UITestID.swipeTrash)
