@@ -89,7 +89,8 @@ final class WorkoutViewModel {
     /// GCD timer survives better than Task.sleep when the app is backgrounded with audio.
     private var restDispatchTimer: DispatchSourceTimer?
     /// Unstructured work that can reach `modelContext.save()` after this object’s store is gone.
-    private var finishSaveTask: Task<Void, Never>?
+    /// Each finish keeps its own save. A later finish does not cancel an earlier one.
+    private var finishSaveTasks: [UUID: Task<Void, Never>] = [:]
     private var deferredPlannedStartTask: Task<Void, Never>?
     private var deferredReplaceTask: Task<Void, Never>?
     private var healthKitFollowUpTask: Task<Void, Never>?
@@ -770,10 +771,11 @@ final class WorkoutViewModel {
 
         let service = healthKitService
         let vmID = ObjectIdentifier(self)
-        if Self.shouldCancelDeferredSaves {
-            finishSaveTask?.cancel()
-        }
-        finishSaveTask = Task { @MainActor [weak self] in
+        let saveID = UUID()
+        // Only `cancelPendingWork` cancels a finish save. A second finish must
+        // leave the first save running so its HealthKit UUID still lands.
+        let task = Task { @MainActor [weak self] in
+            defer { self?.finishSaveTasks[saveID] = nil }
             let uuid = await service.endWorkout()
             let cancelled = Task.isCancelled
             guard Self.deferredSaveProceeds(
@@ -782,12 +784,15 @@ final class WorkoutViewModel {
                 event: "finishSave",
                 vm: vmID
             ), let self else { return }
-            capturedSession.healthKitWorkoutUUID = uuid
+            if let uuid {
+                capturedSession.healthKitWorkoutUUID = uuid
+            }
             try? self.modelContext.save()
-            if let uuid, let rating = capturedSession.effortRating {
+            if let uuid = capturedSession.healthKitWorkoutUUID, let rating = capturedSession.effortRating {
                 await service.saveEffortRating(rating, workoutUUID: uuid)
             }
         }
+        finishSaveTasks[saveID] = task
     }
 
     /// Drops deferred saves so a freed store is not written after reset or restore.
@@ -804,11 +809,11 @@ final class WorkoutViewModel {
         #if DEBUG
         Self.rlDiag("cancelPendingWork", vm: vmID)
         #endif
-        finishSaveTask?.cancel()
+        finishSaveTasks.values.forEach { $0.cancel() }
         deferredPlannedStartTask?.cancel()
         deferredReplaceTask?.cancel()
         healthKitFollowUpTask?.cancel()
-        finishSaveTask = nil
+        finishSaveTasks.removeAll()
         deferredPlannedStartTask = nil
         deferredReplaceTask = nil
         healthKitFollowUpTask = nil

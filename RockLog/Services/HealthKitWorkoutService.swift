@@ -30,6 +30,10 @@ final class HealthKitWorkoutService {
     private(set) var activeCalories: Double = 0
     private(set) var heartRate: Double?
     private(set) var elapsedSeconds: TimeInterval = 0
+    /// Tests substitute a synthetic workout id. Nil keeps the HealthKit finish.
+    var endWorkoutOverride: (() async -> UUID?)?
+    /// Tests skip the HealthKit effort write. Nil keeps the real save.
+    var saveEffortRatingOverride: ((Int, UUID) async -> Void)?
 
     // MARK: - Private State
 
@@ -227,6 +231,9 @@ final class HealthKitWorkoutService {
 
     @discardableResult
     func endWorkout() async -> UUID? {
+        if let endWorkoutOverride {
+            return await endWorkoutOverride()
+        }
         let start = sessionStartDate ?? persistedStartDate
         let endDate = Date()
         let builder = workoutBuilder
@@ -335,6 +342,10 @@ final class HealthKitWorkoutService {
     }
 
     func saveEffortRating(_ rating: Int, workoutUUID: UUID) async {
+        if let saveEffortRatingOverride {
+            await saveEffortRatingOverride(rating, workoutUUID)
+            return
+        }
         guard isAvailable else {
             print("[HealthKit Effort] Not available")
             return

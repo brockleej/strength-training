@@ -234,6 +234,116 @@ final class WorkoutSessionLogicTests: RockLogStoreTestCase {
 
         XCTAssertTrue(record.setsArray.isEmpty)
     }
+
+    /// A second finish must not cancel the first finish's HealthKit save.
+    func test_secondFinishKeepsHealthKitUUIDAndEffortRating() async throws {
+        #if DEBUG
+        let previousCancels = WorkoutViewModel.cancelsDeferredSaves
+        WorkoutViewModel.cancelsDeferredSaves = true
+        defer { WorkoutViewModel.cancelsDeferredSaves = previousCancels }
+        #endif
+
+        let context = container.mainContext
+        let exercise = Exercise.make(name: "Bench", dayType: .push, muscleGroup: "Chest", isCustom: true)
+        let session = WorkoutSession(dayType: .push)
+        let record = ExerciseRecord(trainingMode: .highWeightLowReps, sortOrder: 0)
+        record.exercise = exercise
+        record.session = session
+        session.exerciseRecords = [record]
+        let set = SetRecord(setNumber: 1, weightLbs: 135, reps: 5)
+        set.completedAt = Date()
+        set.exerciseRecord = record
+        record.sets = [set]
+        context.insert(exercise)
+        context.insert(session)
+        context.insert(record)
+        context.insert(set)
+        try context.save()
+
+        let workoutID = UUID(uuidString: "AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE")!
+        let gate = FinishEndGate()
+        defer { gate.releaseAll() }
+        let service = HealthKitWorkoutService()
+        service.endWorkoutOverride = { await gate.end() }
+        service.saveEffortRatingOverride = { _, _ in
+            await Task.yield()
+        }
+        let viewModel = holdWorkoutViewModel(
+            WorkoutViewModel(modelContext: context, healthKitService: service)
+        )
+        XCTAssertEqual(viewModel.activeSession?.id, session.id)
+
+        viewModel.finishSession()
+        await waitUntil { gate.waiting == 1 }
+
+        viewModel.saveEffortRating(8)
+        XCTAssertEqual(session.effortRating, 8)
+
+        viewModel.finishSession()
+        await waitUntil { gate.waiting == 2 }
+
+        gate.release(workoutID)
+        await waitUntil { session.healthKitWorkoutUUID == workoutID }
+
+        gate.release(nil)
+        await waitUntil { gate.waiting == 0 }
+        for _ in 0..<20 {
+            await Task.yield()
+        }
+
+        XCTAssertEqual(session.healthKitWorkoutUUID, workoutID)
+        XCTAssertEqual(session.effortRating, 8)
+    }
+
+    private func waitUntil(
+        timeout: TimeInterval = 2,
+        _ condition: () -> Bool
+    ) async {
+        let deadline = Date().addingTimeInterval(timeout)
+        while !condition() {
+            if Date() >= deadline {
+                XCTFail("Timed out waiting for the double-finish save")
+                return
+            }
+            await Task.yield()
+            try? await Task.sleep(nanoseconds: 10_000_000)
+        }
+    }
+
+    /// Suspends each `endWorkout` until the test releases it, in order.
+    private final class FinishEndGate: @unchecked Sendable {
+        private let lock = NSLock()
+        private var waiters: [CheckedContinuation<UUID?, Never>] = []
+
+        func end() async -> UUID? {
+            await withCheckedContinuation { continuation in
+                lock.lock()
+                waiters.append(continuation)
+                lock.unlock()
+            }
+        }
+
+        func release(_ uuid: UUID?) {
+            lock.lock()
+            let waiter = waiters.isEmpty ? nil : waiters.removeFirst()
+            lock.unlock()
+            waiter?.resume(returning: uuid)
+        }
+
+        func releaseAll() {
+            lock.lock()
+            let pending = waiters
+            waiters.removeAll()
+            lock.unlock()
+            pending.forEach { $0.resume(returning: nil) }
+        }
+
+        var waiting: Int {
+            lock.lock()
+            defer { lock.unlock() }
+            return waiters.count
+        }
+    }
 }
 
 @MainActor
