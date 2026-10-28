@@ -99,6 +99,7 @@ final class WorkoutLoggingUITests: RockLogUITestCase {
             lastTime.frame.contains(setCenter),
             "focus.set center sits on the last-time control, so a tap loads last time instead of editing."
         )
+        attachTapScreenshot()
         logged.tap()
         printTEMPEditDeliveries("after comparison tap")
         waitUntilEditing(logged)
@@ -112,6 +113,7 @@ final class WorkoutLoggingUITests: RockLogUITestCase {
         let row = waitFor(UITestID.focusSet(number))
         scrollUntilHittable(row)
         XCTAssertTrue(row.isHittable, "\(UITestID.focusSet(number)) is not hittable")
+        attachTapScreenshot()
         row.tap()
         return row
     }
@@ -157,14 +159,48 @@ final class WorkoutLoggingUITests: RockLogUITestCase {
         }
     }
 
+    private func attachTapScreenshot() {
+        let shot = XCTAttachment(screenshot: app.screenshot())
+        shot.name = "TEMP screenshot at set tap"
+        shot.lifetime = .keepAlways
+        add(shot)
+    }
+
     private func focusSetDump(_ number: Int) -> String {
         let query = app.descendants(matching: .any).matching(identifier: UITestID.focusSet(number))
         var lines = ["count=\(query.count)"]
         for index in 0..<query.count {
-            let match = query.element(boundBy: index)
-            let value = (match.value as? String) ?? String(describing: match.value ?? "nil")
-            lines.append("[\(index)] identifier=\(match.identifier) label=\(match.label) value=\(value)")
+            lines.append(describeElement(query.element(boundBy: index), index: index))
+        }
+        if query.count > 0 {
+            lines.append("centerOwner=\(elementOwningCenter(of: query.element(boundBy: 0)))")
         }
         return lines.joined(separator: " | ")
+    }
+
+    private func describeElement(_ match: XCUIElement, index: Int) -> String {
+        let value = (match.value as? String) ?? String(describing: match.value ?? "nil")
+        let frame = match.frame
+        return "[\(index)] type=\(match.elementType.rawValue) identifier=\(match.identifier) label=\(match.label) value=\(value) enabled=\(match.isEnabled) hittable=\(match.isHittable) frame=(\(frame.minX),\(frame.minY),\(frame.width),\(frame.height))"
+    }
+
+    /// Smallest element whose frame contains the set row's center.
+    private func elementOwningCenter(of row: XCUIElement) -> String {
+        let center = CGPoint(x: row.frame.midX, y: row.frame.midY)
+        let query = app.descendants(matching: .any)
+        let limit = min(query.count, 800)
+        var bestArea = CGFloat.greatestFiniteMagnitude
+        var best = "none"
+        for index in 0..<limit {
+            let match = query.element(boundBy: index)
+            let frame = match.frame
+            guard frame.width > 1, frame.height > 1, frame.contains(center) else { continue }
+            let area = frame.width * frame.height
+            guard area < bestArea else { continue }
+            bestArea = area
+            let value = (match.value as? String) ?? ""
+            best = "type=\(match.elementType.rawValue) identifier=\(match.identifier) label=\(match.label) value=\(value) enabled=\(match.isEnabled) hittable=\(match.isHittable)"
+        }
+        return best
     }
 }

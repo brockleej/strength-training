@@ -232,14 +232,6 @@ struct FocusSetsCard: View {
                 .foregroundStyle(Color.uplift.fg)
         }
         .frame(width: showPlannedColumn ? 36 : 44, alignment: .leading)
-        .contentShape(Rectangle())
-        .onTapGesture {
-            guard let thisSet else { return }
-            #if DEBUG
-            editDeliveries?.record(.gesture)
-            #endif
-            onSelect(thisSet)
-        }
         .accessibilityHidden(true)
     }
 
@@ -278,36 +270,28 @@ struct FocusSetsCard: View {
         }
     }
 
-    /// Select target for a logged set. Last/plan buttons are not inside it.
-    /// A plain tap selects; the swipe drag wins once the finger moves.
-    /// The identifier sits on this same element so a test tap hits the target.
+    /// One button. Its action is the only select path. Last/plan stay outside it.
     private func loggedSetButton<Content: View>(
         _ set: SetRecord,
         isSelected: Bool,
         label: String,
         @ViewBuilder content: () -> Content
     ) -> some View {
-        content()
-            .frame(maxWidth: .infinity, minHeight: 44)
-            .contentShape(Rectangle())
-            .onTapGesture {
-                #if DEBUG
-                editDeliveries?.record(.gesture)
-                #endif
-                onSelect(set)
-            }
-            .swipeToDelete(fullSwipeDeletes: true, onDelete: { onDelete(set) }, onTap: nil)
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel(label)
-            .accessibilityValue(isSelected ? "editing" : "logged")
-            .accessibilityIdentifier(AccessibilityID.focusSet(set.setNumber))
-            .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : [.isButton])
-            .accessibilityAction {
-                #if DEBUG
-                editDeliveries?.record(.accessibility)
-                #endif
-                onSelect(set)
-            }
+        Button {
+            #if DEBUG
+            editDeliveries?.record(.button)
+            #endif
+            onSelect(set)
+        } label: {
+            content()
+                .frame(maxWidth: .infinity, minHeight: 44)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
+        .accessibilityHint("double tap to edit")
+        .accessibilityValue(isSelected ? "editing" : "logged")
+        .accessibilityIdentifier(AccessibilityID.focusSet(set.setNumber))
+        .swipeToDelete(fullSwipeDeletes: true, onDelete: { onDelete(set) }, onTap: nil)
     }
 
     private func simpleRow(_ set: SetRecord) -> some View {
@@ -545,7 +529,6 @@ enum FocusSetRowLabel {
             weightPart,
             repsPart,
             isWarmup ? "warmup" : nil,
-            isSelected ? nil : "double tap to edit",
         ].compactMap { $0 }
         return parts.joined(separator: ", ")
     }

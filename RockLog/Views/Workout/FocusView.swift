@@ -38,6 +38,10 @@ struct FocusView: View {
             .sorted { $0.setNumber < $1.setNumber }
     }
 
+    private var loggedSetIDs: [UUID] {
+        loggedSets.map(\.id)
+    }
+
     private var plannedSetsForCard: [FocusSetsCard.PreviousSet] {
         let _ = workoutVM.setMutationEpoch
         return (workoutVM.currentRecord(for: exercise)?.plannedSetsArray ?? [])
@@ -200,6 +204,9 @@ struct FocusView: View {
             focusVM = makeFocusVM()
             historyExpanded = false
             isNoteEditing = false
+        }
+        .onChange(of: loggedSetIDs) { _, ids in
+            focusVM?.clearEditIfSetNoLongerListed(ids, restore: currentPrefill().0)
         }
         .sheet(isPresented: $showEditExercise) {
             EditExerciseView(

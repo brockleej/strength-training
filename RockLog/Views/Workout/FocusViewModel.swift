@@ -122,6 +122,14 @@ final class FocusViewModel {
         beginEdit(set: set)
     }
 
+    /// Drops edit when that set is no longer logged. Covers removals that
+    /// never go through the row's onDelete.
+    func clearEditIfSetNoLongerListed(_ ids: some Sequence<UUID>, restore prefill: FocusTargetLogic.Prefill) {
+        guard let editingSetID else { return }
+        guard !ids.contains(editingSetID) else { return }
+        cancelEdit(restore: prefill)
+    }
+
     func beginEdit(set: SetRecord) {
         assignEditingSetID(set.id, caller: "enterEdit")
         weight = set.weightLbs
@@ -182,6 +190,7 @@ final class EditDeliveryLog {
     enum Path: String {
         case gesture
         case accessibility
+        case button
     }
 
     struct Stamp: Equatable {
@@ -216,7 +225,7 @@ final class EditDeliveryLog {
         let ids = idChanges.suffix(8).map {
             "\($0.oldToken)>\($0.newToken)#\($0.caller)@\(Self.stamp($0.timestamp))"
         }.joined(separator: ",")
-        return "TEMP \(side(.gesture)) \(side(.accessibility)) id=\(ids)"
+        return "TEMP \(side(.button)) \(side(.gesture)) \(side(.accessibility)) id=\(ids)"
     }
 
     private func side(_ path: Path) -> String {

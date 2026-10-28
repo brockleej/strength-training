@@ -302,6 +302,23 @@ final class FocusSetEditTests: XCTestCase {
         )
         XCTAssertFalse(idle.contains("editing"))
     }
+
+    func test_setRemovedOutsideOnDeleteRestoresLogControl() {
+        let vm = FocusViewModel(prefill: prefill)
+        let set = SetRecord(setNumber: 1, weightLbs: 135, reps: 8)
+        let other = SetRecord(setNumber: 2, weightLbs: 145, reps: 5)
+        vm.enterEdit(set: set)
+        XCTAssertEqual(
+            FocusLogControl.identifier(isEditing: vm.isEditingSet),
+            AccessibilityID.focusUpdateSet
+        )
+        vm.clearEditIfSetNoLongerListed([other.id], restore: prefill)
+        XCTAssertNil(vm.editingSetID)
+        XCTAssertEqual(
+            FocusLogControl.identifier(isEditing: vm.isEditingSet),
+            AccessibilityID.focusLogSet
+        )
+    }
 }
 
 #if DEBUG
@@ -309,15 +326,18 @@ final class FocusSetEditTests: XCTestCase {
 final class EditDeliveryLogTests: XCTestCase {
     func test_TEMP_pathsAndIDChangesAreSeparate() {
         let log = EditDeliveryLog()
+        log.record(.button)
         log.record(.gesture)
         log.record(.accessibility)
         let setID = UUID(uuidString: "AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE")
         log.recordIDChange(old: nil, new: setID, caller: "enterEdit")
+        XCTAssertEqual(log.stamps.filter { $0.path == .button }.count, 1)
         XCTAssertEqual(log.stamps.filter { $0.path == .gesture }.count, 1)
         XCTAssertEqual(log.stamps.filter { $0.path == .accessibility }.count, 1)
         XCTAssertEqual(log.idChanges.count, 1)
         XCTAssertEqual(log.idChanges[0].caller, "enterEdit")
         XCTAssertEqual(log.idChanges[0].oldToken, "nil")
+        XCTAssertTrue(log.summary.contains("button=1@"))
         XCTAssertTrue(log.summary.contains("gesture=1@"))
         XCTAssertTrue(log.summary.contains("accessibility=1@"))
         XCTAssertTrue(log.summary.contains("id=nil>AAAAAAAA#enterEdit@"))
