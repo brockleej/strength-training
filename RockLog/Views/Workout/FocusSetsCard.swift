@@ -24,6 +24,10 @@ struct FocusSetsCard: View {
     /// Programmed targets. When non-empty, a PLAN column appears and Actual stays blank until logged.
     var plannedSets: [PreviousSet] = []
     var selectedSetID: UUID? = nil
+    #if DEBUG
+    /// TEMP: remove before merge. Nil outside the debug UI-test launch.
+    var editDeliveries: EditDeliveryLog? = nil
+    #endif
     var onSelect: (SetRecord) -> Void = { _ in }
     var onDelete: (SetRecord) -> Void = { _ in }
     /// Load a previous set into steppers (weight, reps, warmup, eachSide, assisted).
@@ -40,6 +44,17 @@ struct FocusSetsCard: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            #if DEBUG
+            // TEMP: remove before merge. Hidden. Value is counts and id tokens only.
+            if let editDeliveries {
+                Color.clear
+                    .frame(width: 1, height: 1)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityIdentifier(AccessibilityID.focusEditDeliveryTEMP)
+                    .accessibilityLabel("edit delivery")
+                    .accessibilityValue(editDeliveries.summary)
+            }
+            #endif
             header
             if sets.isEmpty && previousSets.isEmpty && plannedSets.isEmpty {
                 Text("No sets yet")
@@ -220,6 +235,9 @@ struct FocusSetsCard: View {
         .contentShape(Rectangle())
         .onTapGesture {
             guard let thisSet else { return }
+            #if DEBUG
+            editDeliveries?.record(.gesture)
+            #endif
             onSelect(thisSet)
         }
         .accessibilityHidden(true)
@@ -272,13 +290,24 @@ struct FocusSetsCard: View {
         content()
             .frame(maxWidth: .infinity, minHeight: 44)
             .contentShape(Rectangle())
-            .onTapGesture { onSelect(set) }
+            .onTapGesture {
+                #if DEBUG
+                editDeliveries?.record(.gesture)
+                #endif
+                onSelect(set)
+            }
             .swipeToDelete(fullSwipeDeletes: true, onDelete: { onDelete(set) }, onTap: nil)
             .accessibilityElement(children: .combine)
             .accessibilityLabel(label)
+            .accessibilityValue(isSelected ? "editing" : "logged")
             .accessibilityIdentifier(AccessibilityID.focusSet(set.setNumber))
             .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : [.isButton])
-            .accessibilityAction { onSelect(set) }
+            .accessibilityAction {
+                #if DEBUG
+                editDeliveries?.record(.accessibility)
+                #endif
+                onSelect(set)
+            }
     }
 
     private func simpleRow(_ set: SetRecord) -> some View {
@@ -464,15 +493,13 @@ struct FocusSetsCard: View {
         } else {
             weightPart = "\(StepperLogic.format(set.weightLbs)) pounds"
         }
-        let parts = [
-            "Set \(set.setNumber)",
-            isSelected ? "editing" : nil,
-            weightPart,
-            set.isEachSide ? "\(set.reps) reps each side" : "\(set.reps) reps",
-            set.isWarmup ? "warmup" : nil,
-            isSelected ? "double tap to cancel" : "double tap to edit",
-        ].compactMap { $0 }
-        return parts.joined(separator: ", ")
+        return FocusSetRowLabel.text(
+            setNumber: set.setNumber,
+            isSelected: isSelected,
+            weightPart: weightPart,
+            repsPart: set.isEachSide ? "\(set.reps) reps each side" : "\(set.reps) reps",
+            isWarmup: set.isWarmup
+        )
     }
 
     private func comparisonA11y(index: Int, thisSet: SetRecord?, previous: PreviousSet?, planned: PreviousSet?, isSelected: Bool) -> String {
@@ -499,6 +526,27 @@ struct FocusSetsCard: View {
         } else {
             parts.append("actual not logged yet")
         }
+        return parts.joined(separator: ", ")
+    }
+}
+
+/// Spoken label for a logged set row. "editing" is present only while selected.
+enum FocusSetRowLabel {
+    static func text(
+        setNumber: Int,
+        isSelected: Bool,
+        weightPart: String,
+        repsPart: String,
+        isWarmup: Bool
+    ) -> String {
+        let parts = [
+            "Set \(setNumber)",
+            isSelected ? "editing" : nil,
+            weightPart,
+            repsPart,
+            isWarmup ? "warmup" : nil,
+            isSelected ? nil : "double tap to edit",
+        ].compactMap { $0 }
         return parts.joined(separator: ", ")
     }
 }

@@ -27,8 +27,8 @@ final class FocusViewModel {
 
     /// When non-nil, steppers edit this set and the primary button is "Update set".
     private(set) var editingSetID: UUID?
-    /// One tap can deliver both the row gesture and the accessibility action.
-    /// A second call for the same set inside this window must not cancel edit.
+    /// Repeat delivery of the same set inside this window is ignored.
+    /// It does not cancel edit. Cancel edit is the only way off.
     static let repeatToggleSuppression: TimeInterval = 0.3
     private var lastToggleAt = Date.distantPast
     private var lastToggleID: UUID?
@@ -38,6 +38,11 @@ final class FocusViewModel {
     var offeredWeight: Double = 0
 
     var isEditingSet: Bool { editingSetID != nil }
+
+    #if DEBUG
+    /// TEMP: remove before merge. Debug UI-test log only. No workout data.
+    let editDeliveries = EditDeliveryLog()
+    #endif
 
     /// - prefersAssist: exercise-level default when no session last set (e.g. pull-ups).
     init(prefill: FocusTargetLogic.Prefill, prefersAssist: Bool = false) {
@@ -78,7 +83,7 @@ final class FocusViewModel {
         isEachSide: Bool = false,
         isAssisted: Bool = false
     ) {
-        editingSetID = nil
+        assignEditingSetID(nil, caller: "loadFromHistory")
         self.weight = weight
         self.reps = Double(max(1, reps))
         self.isWarmup = isWarmup
@@ -89,8 +94,8 @@ final class FocusViewModel {
     }
 
     /// Mode switch re-prefills values and dress from the new mode's suggestion.
-    func apply(prefill: FocusTargetLogic.Prefill, openingLine: String? = nil) {
-        editingSetID = nil
+    func apply(prefill: FocusTargetLogic.Prefill, openingLine: String? = nil, idCaller: String = "apply") {
+        assignEditingSetID(nil, caller: idCaller)
         weight = prefill.weight
         reps = Double(prefill.reps)
         isWarmup = WarmupPolicy.nextTag(planSaysWarmup: prefill.isWarmup)
@@ -104,22 +109,21 @@ final class FocusViewModel {
 
     // MARK: - Edit logged set
 
-    func toggleEdit(set: SetRecord, prefillIfCancel: FocusTargetLogic.Prefill) {
+    /// Puts this set into edit. A second call stays in edit and never cancels.
+    /// A repeat inside `repeatToggleSuppression` is dropped. Leaving edit is
+    /// `cancelEdit`, from the Cancel edit control.
+    func enterEdit(set: SetRecord) {
         let now = Date()
         if lastToggleID == set.id, now.timeIntervalSince(lastToggleAt) < Self.repeatToggleSuppression {
             return
         }
         lastToggleAt = now
         lastToggleID = set.id
-        if editingSetID == set.id {
-            cancelEdit(restore: prefillIfCancel)
-            return
-        }
         beginEdit(set: set)
     }
 
     func beginEdit(set: SetRecord) {
-        editingSetID = set.id
+        assignEditingSetID(set.id, caller: "enterEdit")
         weight = set.weightLbs
         reps = Double(set.reps)
         isWarmup = set.isWarmup
@@ -130,14 +134,22 @@ final class FocusViewModel {
     }
 
     func cancelEdit(restore prefill: FocusTargetLogic.Prefill) {
-        editingSetID = nil
-        apply(prefill: prefill)
+        apply(prefill: prefill, idCaller: "cancelEdit")
     }
 
     func clearSelectionAfterSave() {
-        editingSetID = nil
+        assignEditingSetID(nil, caller: "clearSelectionAfterSave")
         weightDelta = nil
         repsDelta = nil
+    }
+
+    private func assignEditingSetID(_ newID: UUID?, caller: String) {
+        #if DEBUG
+        if editingSetID != newID {
+            editDeliveries.recordIDChange(old: editingSetID, new: newID, caller: caller)
+        }
+        #endif
+        editingSetID = newID
     }
 
     func clearEditIfMatching(_ set: SetRecord, restore prefill: FocusTargetLogic.Prefill) {
@@ -153,3 +165,72 @@ final class FocusViewModel {
         isWarmup = false
     }
 }
+
+/// Log versus Update on the focus footer. Editing hides the log identifier.
+enum FocusLogControl {
+    static func identifier(isEditing: Bool) -> String {
+        isEditing ? AccessibilityID.focusUpdateSet : AccessibilityID.focusLogSet
+    }
+}
+
+#if DEBUG
+/// TEMP: remove before merge.
+/// Debug UI-test log. Timestamps, path names, and an 8-character id token.
+/// No names, weights, or reps.
+@Observable
+final class EditDeliveryLog {
+    enum Path: String {
+        case gesture
+        case accessibility
+    }
+
+    struct Stamp: Equatable {
+        let path: Path
+        let timestamp: Date
+    }
+
+    struct IDChange: Equatable {
+        let oldToken: String
+        let newToken: String
+        let caller: String
+        let timestamp: Date
+    }
+
+    private(set) var stamps: [Stamp] = []
+    private(set) var idChanges: [IDChange] = []
+
+    func record(_ path: Path) {
+        stamps.append(Stamp(path: path, timestamp: Date()))
+    }
+
+    func recordIDChange(old: UUID?, new: UUID?, caller: String) {
+        idChanges.append(IDChange(
+            oldToken: Self.token(old),
+            newToken: Self.token(new),
+            caller: caller,
+            timestamp: Date()
+        ))
+    }
+
+    var summary: String {
+        let ids = idChanges.suffix(8).map {
+            "\($0.oldToken)>\($0.newToken)#\($0.caller)@\(Self.stamp($0.timestamp))"
+        }.joined(separator: ",")
+        return "TEMP \(side(.gesture)) \(side(.accessibility)) id=\(ids)"
+    }
+
+    private func side(_ path: Path) -> String {
+        let times = stamps.filter { $0.path == path }.map { Self.stamp($0.timestamp) }
+        return "\(path.rawValue)=\(times.count)@\(times.joined(separator: ","))"
+    }
+
+    private static func stamp(_ date: Date) -> String {
+        String(format: "%.3f", date.timeIntervalSince1970)
+    }
+
+    private static func token(_ id: UUID?) -> String {
+        guard let id else { return "nil" }
+        return String(id.uuidString.prefix(8))
+    }
+}
+#endif

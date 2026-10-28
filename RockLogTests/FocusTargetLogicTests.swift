@@ -258,24 +258,71 @@ final class FocusTargetLogicTests: XCTestCase {
 final class FocusSetEditTests: XCTestCase {
     private let prefill = FocusTargetLogic.Prefill(weight: 45, reps: 5, weightDelta: nil, repsDelta: nil)
 
-    /// A tap can deliver the row gesture and the accessibility action together.
-    /// The second delivery must leave the set in edit mode.
-    func test_repeatToggleInsideTheWindowStaysEditing() {
+    /// Both the row gesture and the accessibility action call enterEdit.
+    /// A second call must stay on that set.
+    func test_enterEditTwiceStaysOnTheSameSet() {
         let vm = FocusViewModel(prefill: prefill)
         let set = SetRecord(setNumber: 1, weightLbs: 135, reps: 8)
-        vm.toggleEdit(set: set, prefillIfCancel: prefill)
-        vm.toggleEdit(set: set, prefillIfCancel: prefill)
+        vm.enterEdit(set: set)
+        vm.enterEdit(set: set)
         XCTAssertEqual(vm.editingSetID, set.id)
         XCTAssertEqual(vm.weight, 135)
         XCTAssertEqual(vm.reps, 8)
     }
 
-    func test_toggleAfterTheWindowCancelsEdit() {
+    func test_cancelEditClearsTheSelection() {
         let vm = FocusViewModel(prefill: prefill)
         let set = SetRecord(setNumber: 1, weightLbs: 135, reps: 8)
-        vm.toggleEdit(set: set, prefillIfCancel: prefill)
-        Thread.sleep(forTimeInterval: FocusViewModel.repeatToggleSuppression + 0.05)
-        vm.toggleEdit(set: set, prefillIfCancel: prefill)
+        vm.enterEdit(set: set)
+        vm.cancelEdit(restore: prefill)
         XCTAssertNil(vm.editingSetID)
+        XCTAssertEqual(vm.weight, prefill.weight)
+    }
+
+    func test_enterEditSetsIDAndRowLabelContainsEditing() {
+        let vm = FocusViewModel(prefill: prefill)
+        let set = SetRecord(setNumber: 1, weightLbs: 135, reps: 8)
+        XCTAssertNil(vm.editingSetID)
+        vm.enterEdit(set: set)
+        XCTAssertEqual(vm.editingSetID, set.id)
+        let label = FocusSetRowLabel.text(
+            setNumber: set.setNumber,
+            isSelected: vm.editingSetID == set.id,
+            weightPart: "135 pounds",
+            repsPart: "8 reps",
+            isWarmup: false
+        )
+        XCTAssertTrue(label.contains("editing"))
+        let idle = FocusSetRowLabel.text(
+            setNumber: set.setNumber,
+            isSelected: false,
+            weightPart: "135 pounds",
+            repsPart: "8 reps",
+            isWarmup: false
+        )
+        XCTAssertFalse(idle.contains("editing"))
     }
 }
+
+#if DEBUG
+/// TEMP: remove before merge. Counts and id tokens only.
+final class EditDeliveryLogTests: XCTestCase {
+    func test_TEMP_pathsAndIDChangesAreSeparate() {
+        let log = EditDeliveryLog()
+        log.record(.gesture)
+        log.record(.accessibility)
+        let setID = UUID(uuidString: "AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE")
+        log.recordIDChange(old: nil, new: setID, caller: "enterEdit")
+        XCTAssertEqual(log.stamps.filter { $0.path == .gesture }.count, 1)
+        XCTAssertEqual(log.stamps.filter { $0.path == .accessibility }.count, 1)
+        XCTAssertEqual(log.idChanges.count, 1)
+        XCTAssertEqual(log.idChanges[0].caller, "enterEdit")
+        XCTAssertEqual(log.idChanges[0].oldToken, "nil")
+        XCTAssertTrue(log.summary.contains("gesture=1@"))
+        XCTAssertTrue(log.summary.contains("accessibility=1@"))
+        XCTAssertTrue(log.summary.contains("id=nil>AAAAAAAA#enterEdit@"))
+        XCTAssertFalse(log.summary.contains("135"))
+        XCTAssertFalse(log.summary.contains("reps"))
+    }
+}
+#endif

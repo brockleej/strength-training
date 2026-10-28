@@ -51,6 +51,8 @@ enum AccessibilityID {
     static let focusCancelEdit = "focus.cancelEdit"
 
     static func focusSet(_ number: Int) -> String { "focus.set.\(number)" }
+    /// TEMP: remove before merge. Delivery counts only, no workout data.
+    static let focusEditDeliveryTEMP = "focus.editDelivery.TEMP"
     /// Last-time column. Kept off `focus.set` so a tap on the set does not load it.
     static func focusLoadLast(_ number: Int) -> String { "focus.loadLast.\(number)" }
     static func focusLoadPlan(_ number: Int) -> String { "focus.loadPlan.\(number)" }

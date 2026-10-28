@@ -258,29 +258,8 @@ struct FocusView: View {
                 .padding(.horizontal, 20)
 
             if let focusVM {
-                FocusSetsCard(
-                    sets: loggedSets,
-                    previousSets: prev,
-                    previousDateLabel: previousDateLabel,
-                    plannedSets: planned,
-                    selectedSetID: focusVM.editingSetID,
-                    onSelect: { set in
-                        focusVM.toggleEdit(set: set, prefillIfCancel: currentPrefill().0)
-                    },
-                    onDelete: { set in
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            focusVM.clearEditIfMatching(set, restore: currentPrefill().0)
-                            workoutVM.deleteSet(set, from: exercise)
-                        }
-                    },
-                    onSelectPrevious: { prev in
-                        loadSnapshot(prev)
-                    },
-                    onSelectPlanned: { planned in
-                        loadSnapshot(planned)
-                    }
-                )
-                .padding(.horizontal, 20)
+                configuredSetsCard(focusVM, previous: prev, planned: planned)
+                    .padding(.horizontal, 20)
             } else {
                 FocusSetsCard(
                     sets: loggedSets,
@@ -297,6 +276,39 @@ struct FocusView: View {
             }
         }
         .padding(.bottom, 8)
+    }
+
+    private func configuredSetsCard(
+        _ focusVM: FocusViewModel,
+        previous: [FocusSetsCard.PreviousSet],
+        planned: [FocusSetsCard.PreviousSet]
+    ) -> some View {
+        var card = FocusSetsCard(
+            sets: loggedSets,
+            previousSets: previous,
+            previousDateLabel: previousDateLabel,
+            plannedSets: planned,
+            selectedSetID: focusVM.editingSetID,
+            onSelect: { set in
+                focusVM.enterEdit(set: set)
+            },
+            onDelete: { set in
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    focusVM.clearEditIfMatching(set, restore: currentPrefill().0)
+                    workoutVM.deleteSet(set, from: exercise)
+                }
+            },
+            onSelectPrevious: { prev in
+                loadSnapshot(prev)
+            },
+            onSelectPlanned: { planned in
+                loadSnapshot(planned)
+            }
+        )
+        #if DEBUG
+        card.editDeliveries = UITestLaunch.isEnabled ? focusVM.editDeliveries : nil
+        #endif
+        return card
     }
 
     private var titleSection: some View {
@@ -535,7 +547,7 @@ struct FocusView: View {
                     }
                     .buttonStyle(.plain)
                     .accessibilityIdentifier(
-                        focusVM.isEditingSet ? AccessibilityID.focusUpdateSet : AccessibilityID.focusLogSet
+                        FocusLogControl.identifier(isEditing: focusVM.isEditingSet)
                     )
 
                     doneWithLiftButton

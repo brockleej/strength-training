@@ -17,7 +17,9 @@ final class WorkoutLoggingUITests: RockLogUITestCase {
         waitFor(UITestID.focusLogSet).tap()
 
         let logged = tapHittableSet(1)
+        printTEMPEditDeliveries("after set tap")
         waitUntilEditing(logged)
+        printTEMPEditDeliveries("after editing")
         waitFor(UITestID.stepperIncrease("Reps")).tap()
         waitFor(UITestID.focusUpdateSet).tap()
 
@@ -71,7 +73,9 @@ final class WorkoutLoggingUITests: RockLogUITestCase {
         waitFor(UITestID.focusLogSet).tap()
 
         let logged = tapHittableSet(1)
+        printTEMPEditDeliveries("after set tap")
         waitUntilEditing(logged)
+        printTEMPEditDeliveries("after editing")
         XCTAssertTrue(element(UITestID.focusUpdateSet).waitForExistence(timeout: 4))
     }
 
@@ -96,7 +100,9 @@ final class WorkoutLoggingUITests: RockLogUITestCase {
             "focus.set center sits on the last-time control, so a tap loads last time instead of editing."
         )
         logged.tap()
+        printTEMPEditDeliveries("after comparison tap")
         waitUntilEditing(logged)
+        printTEMPEditDeliveries("after comparison editing")
         XCTAssertTrue(element(UITestID.focusUpdateSet).waitForExistence(timeout: 4))
         XCTAssertTrue(lastTime.exists, "Selecting the set should leave the last-time control in place")
     }
@@ -110,11 +116,55 @@ final class WorkoutLoggingUITests: RockLogUITestCase {
         return row
     }
 
+    /// TEMP: remove before merge. Prints gesture, accessibility, and id-change counts.
+    private func printTEMPEditDeliveries(_ note: String) {
+        let text = editDeliveryValue()
+        print("TEMP edit-delivery \(note): \(text)")
+        XCTContext.runActivity(named: "TEMP edit-delivery \(note): \(text)") { _ in }
+    }
+
+    private func editDeliveryValue() -> String {
+        let probe = element(UITestID.focusEditDeliveryTEMP)
+        guard probe.waitForExistence(timeout: 2) else { return "missing" }
+        if let value = probe.value as? String, !value.isEmpty {
+            return value
+        }
+        return probe.label
+    }
+
     private func waitUntilEditing(_ row: XCUIElement, timeout: TimeInterval = 6) {
         let editing = XCTNSPredicateExpectation(
-            predicate: NSPredicate(format: "label CONTAINS %@", "editing"),
+            predicate: NSPredicate(format: "label CONTAINS %@ OR value CONTAINS %@", "editing", "editing"),
             object: row
         )
-        wait(for: [editing], timeout: timeout)
+        let result = XCTWaiter.wait(for: [editing], timeout: timeout)
+        guard result == .completed else {
+            let dump = focusSetDump(1)
+            let delivery = editDeliveryValue()
+            print("TEMP edit-delivery on timeout: \(delivery)")
+            print("TEMP focus.set dump: \(dump)")
+            let hierarchy = XCTAttachment(string: app.debugDescription)
+            hierarchy.name = "TEMP focus hierarchy"
+            hierarchy.lifetime = .keepAlways
+            add(hierarchy)
+            let shot = XCTAttachment(screenshot: app.screenshot())
+            shot.name = "TEMP focus screenshot"
+            shot.lifetime = .keepAlways
+            add(shot)
+            let seenValue = (row.value as? String) ?? String(describing: row.value ?? "nil")
+            XCTFail("focus.set did not show editing in label or value. label=\(row.label) value=\(seenValue) delivery=\(delivery) \(dump)")
+            return
+        }
+    }
+
+    private func focusSetDump(_ number: Int) -> String {
+        let query = app.descendants(matching: .any).matching(identifier: UITestID.focusSet(number))
+        var lines = ["count=\(query.count)"]
+        for index in 0..<query.count {
+            let match = query.element(boundBy: index)
+            let value = (match.value as? String) ?? String(describing: match.value ?? "nil")
+            lines.append("[\(index)] identifier=\(match.identifier) label=\(match.label) value=\(value)")
+        }
+        return lines.joined(separator: " | ")
     }
 }

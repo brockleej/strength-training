@@ -51,6 +51,8 @@ enum UITestID {
     static let focusCancelEdit = "focus.cancelEdit"
 
     static func focusSet(_ number: Int) -> String { "focus.set.\(number)" }
+    /// TEMP: remove before merge. Delivery counts only, no workout data.
+    static let focusEditDeliveryTEMP = "focus.editDelivery.TEMP"
     static func focusLoadLast(_ number: Int) -> String { "focus.loadLast.\(number)" }
     static func focusLoadPlan(_ number: Int) -> String { "focus.loadPlan.\(number)" }
     static func stepperIncrease(_ label: String) -> String { "stepper.increase.\(label)" }
