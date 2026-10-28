@@ -192,6 +192,7 @@ final class EditDeliveryLog {
         case accessibility
         case button
         case probe
+        case diag
     }
 
     struct Stamp: Equatable {
@@ -226,7 +227,7 @@ final class EditDeliveryLog {
         let ids = idChanges.suffix(8).map {
             "\($0.oldToken)>\($0.newToken)#\($0.caller)@\(Self.stamp($0.timestamp))"
         }.joined(separator: ",")
-        return "TEMP \(side(.button)) \(side(.gesture)) \(side(.accessibility)) \(side(.probe)) id=\(ids)"
+        return "TEMP \(side(.button)) \(side(.gesture)) \(side(.accessibility)) \(side(.probe)) \(side(.diag)) id=\(ids)"
     }
 
     private func side(_ path: Path) -> String {

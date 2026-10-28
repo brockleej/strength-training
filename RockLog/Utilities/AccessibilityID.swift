@@ -55,6 +55,8 @@ enum AccessibilityID {
     static let focusEditDeliveryTEMP = "focus.editDelivery.TEMP"
     /// TEMP: remove before merge. Control outside swipeToDelete.
     static let focusEditDeliveryProbeTEMP = "focus.editDelivery.probe.TEMP"
+    /// TEMP: remove before merge. Plain button in the sets card, after a set is logged.
+    static let focusDiagControl = "focus.diag.control"
     /// TEMP: remove before merge. Hit-test chain. No labels or weights.
     static let focusTouchLogTEMP = "focus.touchLog.TEMP"
     /// Last-time column. Kept off `focus.set` so a tap on the set does not load it.

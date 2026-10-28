@@ -57,7 +57,10 @@ enum UITestID {
     static let focusEditDeliveryProbeTEMP = "focus.editDelivery.probe.TEMP"
     /// TEMP: remove before merge. Hit-test chain. No labels or weights.
     static let focusTouchLogTEMP = "focus.touchLog.TEMP"
+    static let focusDiagControl = "focus.diag.control"
     static let touchLogArgument = "-RockLogTouchLog"
+    static let plainSetRowsArgument = "-RockLogPlainSetRows"
+    static let diagControlArgument = "-RockLogDiag"
     static func focusLoadLast(_ number: Int) -> String { "focus.loadLast.\(number)" }
     static func focusLoadPlan(_ number: Int) -> String { "focus.loadPlan.\(number)" }
     static func stepperIncrease(_ label: String) -> String { "stepper.increase.\(label)" }

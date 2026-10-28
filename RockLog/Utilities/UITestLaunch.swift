@@ -32,6 +32,10 @@ enum UITestLaunch {
     static let restTimerArgument = "-RockLogRestTimer"
     /// TEMP: remove before merge. Records touch hit-tests. UI tests only.
     static let touchLogArgument = "-RockLogTouchLog"
+    /// TEMP: remove before merge. Set rows are a button with no swipe wrapper.
+    static let plainSetRowsArgument = "-RockLogPlainSetRows"
+    /// TEMP: remove before merge. Shows focus.diag.control. Diagnostic tests only.
+    static let diagControlArgument = "-RockLogDiag"
     static let injectEnvironmentKey = "ROCKLOG_INJECT_FILE_B64"
 
     static func restTimerEnabled(arguments: [String]) -> Bool {
@@ -56,6 +60,24 @@ enum UITestLaunch {
     static var touchLogEnabled: Bool {
         #if DEBUG
         isEnabled && ProcessInfo.processInfo.arguments.contains(touchLogArgument)
+        #else
+        false
+        #endif
+    }
+
+    /// TEMP: remove before merge. Shows the sets-card diagnostic button.
+    static var diagControlEnabled: Bool {
+        #if DEBUG
+        isEnabled && ProcessInfo.processInfo.arguments.contains(diagControlArgument)
+        #else
+        false
+        #endif
+    }
+
+    /// TEMP: remove before merge. Set rows skip SwipeToDelete and card taps.
+    static var plainSetRowsEnabled: Bool {
+        #if DEBUG
+        isEnabled && ProcessInfo.processInfo.arguments.contains(plainSetRowsArgument)
         #else
         false
         #endif

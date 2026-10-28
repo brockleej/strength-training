@@ -68,6 +68,11 @@ struct FocusSetsCard: View {
             }
             #endif
             header
+            #if DEBUG
+            if UITestLaunch.diagControlEnabled, !sets.isEmpty {
+                DiagControlButton()
+            }
+            #endif
             if sets.isEmpty && previousSets.isEmpty && plannedSets.isEmpty {
                 Text("No sets yet")
                     .font(.uplift.text(13, weight: .medium))
@@ -299,13 +304,24 @@ struct FocusSetsCard: View {
             #endif
             onSelect(set)
         } label: {
+            #if DEBUG
+            if UITestLaunch.plainSetRowsEnabled {
+                content()
+                    .frame(maxWidth: .infinity, minHeight: 44)
+                    .contentShape(Rectangle())
+            } else {
+                content()
+                    .frame(maxWidth: .infinity, minHeight: 44)
+            }
+            #else
             content()
                 .frame(maxWidth: .infinity, minHeight: 44)
+            #endif
         }
         .buttonStyle(.plain)
         #if DEBUG
         .background {
-            if set.setNumber == 1, UITestLaunch.touchLogEnabled {
+            if set.setNumber == 1, UITestLaunch.touchLogEnabled, !UITestLaunch.plainSetRowsEnabled {
                 GeometryReader { proxy in
                     Color.clear.preference(
                         key: SetOneGlobalFrameKey.self,
@@ -319,7 +335,11 @@ struct FocusSetsCard: View {
         .accessibilityHint("double tap to edit")
         .accessibilityValue(isSelected ? "editing" : "logged")
         .accessibilityIdentifier(AccessibilityID.focusSet(set.setNumber))
+        #if DEBUG
+        .modifier(PlainOrSwipeSetRow(onDelete: { onDelete(set) }))
+        #else
         .swipeToDelete(fullSwipeDeletes: true, onDelete: { onDelete(set) }, onTap: nil)
+        #endif
     }
 
     private func simpleRow(_ set: SetRecord) -> some View {
@@ -571,12 +591,53 @@ private struct SetOneGlobalFrameKey: PreferenceKey {
     }
 }
 
+#if DEBUG
+/// TEMP: remove before merge. Own counter for focus.diag.control.
+@MainActor
+@Observable
+final class DiagControlCounter {
+    static let shared = DiagControlCounter()
+    private(set) var count = 0
+    func bump() { count += 1 }
+}
+
+private struct DiagControlButton: View {
+    var body: some View {
+        let count = DiagControlCounter.shared.count
+        Button {
+            DiagControlCounter.shared.bump()
+        } label: {
+            Text("Diag")
+                .frame(maxWidth: .infinity, minHeight: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier(AccessibilityID.focusDiagControl)
+        .accessibilityLabel("Diagnostic control")
+        .accessibilityValue("diag=\(count)")
+    }
+}
+#endif
+
+/// TEMP: remove before merge. `-RockLogPlainSetRows` is the button alone.
+private struct PlainOrSwipeSetRow: ViewModifier {
+    let onDelete: () -> Void
+
+    func body(content: Content) -> some View {
+        if UITestLaunch.plainSetRowsEnabled {
+            content
+        } else {
+            content.swipeToDelete(fullSwipeDeletes: true, onDelete: onDelete, onTap: nil)
+        }
+    }
+}
+
 /// TEMP: remove before merge. Records a card tap without handling it.
 private struct CardTapProbe: ViewModifier {
     let frame: CGRect
 
     func body(content: Content) -> some View {
-        if UITestLaunch.touchLogEnabled {
+        if UITestLaunch.touchLogEnabled, !UITestLaunch.plainSetRowsEnabled {
             content.simultaneousGesture(
                 SpatialTapGesture(coordinateSpace: .global).onEnded { value in
                     TouchLog.shared.recordCardTap(location: value.location, setFrame: frame)
