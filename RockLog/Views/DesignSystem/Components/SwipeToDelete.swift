@@ -77,79 +77,59 @@ struct SwipeToDeleteModifier: ViewModifier {
 
     @State private var offsetX: CGFloat = 0
     @State private var isRevealed = false
-    @State private var rowWidth: CGFloat = 0
 
     private var revealWidth: CGFloat { SwipeToDeleteLogic.revealWidth }
 
     func body(content: Content) -> some View {
         ZStack(alignment: .trailing) {
-            // Visual only. Taps are dispatched on the container via hitZone so a
-            // ScrollView / sibling overlay cannot swallow the trash.
             if offsetX < -4 {
                 trashControl
             }
 
-            content
+            rowButton(content)
                 .offset(x: offsetX)
         }
         .contentShape(Rectangle())
-        .onGeometryChange(for: CGFloat.self) { proxy in
-            proxy.size.width
-        } action: { _, width in
-            rowWidth = width
-        }
-        // Mask instead of adding and removing the gesture. Branching on
-        // isEnabled rebuilds the row when a long-press sets draggingID.
-        .simultaneousGesture(dragGesture, including: isEnabled ? .all : .subviews)
-        // Attach the tap only when this row has an edit action. A masked
-        // high-priority tap stays in the tree and blocks the subtree, so a
-        // Button inside a row with onTap == nil never receives the touch.
-        // onTap does not change during a gesture, so this branch does not
-        // rebuild the row mid long-press.
-        .modifier(SwipeRowTap(
-            attach: onTap != nil,
-            onTap: { location in
-                handleTap(x: location.x)
-            }
-        ))
+        .simultaneousGesture(dragGesture)
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         .accessibilityAction(named: "Remove") { onDelete() }
     }
 
-    private var trashControl: some View {
-        Image(systemName: "trash.fill")
-            .font(.system(size: 15, weight: .semibold))
-            .foregroundStyle(.white)
-            .frame(width: revealWidth)
-            .frame(maxHeight: .infinity)
-            .background(Color.uplift.down)
-            .opacity(min(1, Double(-offsetX / revealWidth)))
-            .accessibilityLabel("Remove")
-            .accessibilityIdentifier(AccessibilityID.swipeTrash)
-            .accessibilityAddTraits(.isButton)
-    }
-
-    private func handleTap(x: CGFloat) {
-        guard isEnabled else { return }
-        switch SwipeToDeleteLogic.tapAction(
-            x: x,
-            rowWidth: rowWidth,
-            isRevealed: isRevealed,
-            hasEditAction: onTap != nil
-        ) {
-        case .delete:
-            commitDelete()
-        case .close:
-            withAnimation(.easeOut(duration: 0.2)) { close() }
-        case .edit:
-            onTap?()
-        case .ignore:
-            break
+    @ViewBuilder
+    private func rowButton(_ content: Content) -> some View {
+        if let onTap {
+            Button {
+                if isRevealed {
+                    close()
+                } else {
+                    onTap()
+                }
+            } label: {
+                content
+            }
+            .buttonStyle(.plain)
+        } else {
+            content
         }
     }
 
+    private var trashControl: some View {
+        Button(action: commitDelete) {
+            Image(systemName: "trash.fill")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: revealWidth)
+                .frame(maxHeight: .infinity)
+                .background(Color.uplift.down)
+                .opacity(min(1, Double(-offsetX / revealWidth)))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Remove")
+        .accessibilityIdentifier(AccessibilityID.swipeTrash)
+    }
+
     private var dragGesture: some Gesture {
-        DragGesture(minimumDistance: 16, coordinateSpace: .local)
+        DragGesture(minimumDistance: 20, coordinateSpace: .local)
             .onChanged { value in
                 guard isEnabled else { return }
                 // Horizontal-dominant only — leave vertical to the list / reorder.
@@ -192,26 +172,6 @@ struct SwipeToDeleteModifier: ViewModifier {
     private func close() {
         isRevealed = false
         offsetX = 0
-    }
-}
-
-/// Location-based tap on the swipe container. Used instead of a sibling
-/// trash control so ScrollView cannot swallow the trailing strip.
-/// Omitted entirely when the row has no edit action.
-private struct SwipeRowTap: ViewModifier {
-    let attach: Bool
-    let onTap: (CGPoint) -> Void
-
-    func body(content: Content) -> some View {
-        if attach {
-            content.highPriorityGesture(
-                SpatialTapGesture().onEnded { value in
-                    onTap(value.location)
-                }
-            )
-        } else {
-            content
-        }
     }
 }
 

@@ -55,7 +55,8 @@ final class TouchLog {
         var depth = 0
         while let node = current, depth < 6 {
             let identifier = node.accessibilityIdentifier ?? "-"
-            chain.append("\(type(of: node)) id=\(identifier)")
+            let concrete = NSStringFromClass(object_getClass(node) ?? UIView.self)
+            chain.append("type=\(concrete) id=\(identifier)")
             current = node.superview
             depth += 1
         }
