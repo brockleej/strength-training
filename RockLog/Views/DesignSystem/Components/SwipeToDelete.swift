@@ -101,8 +101,13 @@ struct SwipeToDeleteModifier: ViewModifier {
         // Mask instead of adding and removing the gesture. Branching on
         // isEnabled rebuilds the row when a long-press sets draggingID.
         .simultaneousGesture(dragGesture, including: isEnabled ? .all : .subviews)
+        // Attach the tap only when this row has an edit action. A masked
+        // high-priority tap stays in the tree and blocks the subtree, so a
+        // Button inside a row with onTap == nil never receives the touch.
+        // onTap does not change during a gesture, so this branch does not
+        // rebuild the row mid long-press.
         .modifier(SwipeRowTap(
-            isEnabled: isEnabled && (isRevealed || onTap != nil),
+            attach: onTap != nil,
             onTap: { location in
                 handleTap(x: location.x)
             }
@@ -192,19 +197,21 @@ struct SwipeToDeleteModifier: ViewModifier {
 
 /// Location-based tap on the swipe container. Used instead of a sibling
 /// trash control so ScrollView cannot swallow the trailing strip.
+/// Omitted entirely when the row has no edit action.
 private struct SwipeRowTap: ViewModifier {
-    let isEnabled: Bool
+    let attach: Bool
     let onTap: (CGPoint) -> Void
 
     func body(content: Content) -> some View {
-        // Always the same view. An if/else on isEnabled changes identity
-        // mid long-press once draggingID disables the swipe.
-        content.highPriorityGesture(
-            SpatialTapGesture().onEnded { value in
-                onTap(value.location)
-            },
-            including: isEnabled ? .all : .subviews
-        )
+        if attach {
+            content.highPriorityGesture(
+                SpatialTapGesture().onEnded { value in
+                    onTap(value.location)
+                }
+            )
+        } else {
+            content
+        }
     }
 }
 

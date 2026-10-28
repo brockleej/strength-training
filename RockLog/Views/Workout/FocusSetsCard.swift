@@ -53,6 +53,15 @@ struct FocusSetsCard: View {
                     .accessibilityIdentifier(AccessibilityID.focusEditDeliveryTEMP)
                     .accessibilityLabel("edit delivery")
                     .accessibilityValue(editDeliveries.summary)
+                // Outside swipeToDelete, so a tap here can prove the readout updates.
+                Button {
+                    editDeliveries.record(.probe)
+                } label: {
+                    Color.clear.frame(width: 44, height: 44)
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier(AccessibilityID.focusEditDeliveryProbeTEMP)
+                .accessibilityLabel("TEMP probe")
             }
             #endif
             header

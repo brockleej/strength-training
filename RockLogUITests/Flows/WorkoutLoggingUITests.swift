@@ -71,6 +71,7 @@ final class WorkoutLoggingUITests: RockLogUITestCase {
         waitFor(UITestID.todayStart).tap()
         waitFor(UITestID.workoutExercise("UI Fresh Lift")).tap()
         waitFor(UITestID.focusLogSet).tap()
+        assertTEMPProbeBumpsReadout()
 
         let logged = tapHittableSet(1)
         printTEMPEditDeliveries("after set tap")
@@ -116,6 +117,20 @@ final class WorkoutLoggingUITests: RockLogUITestCase {
         attachTapScreenshot()
         row.tap()
         return row
+    }
+
+    /// TEMP: remove before merge. A control outside swipeToDelete must move the readout.
+    private func assertTEMPProbeBumpsReadout() {
+        let probe = waitFor(UITestID.focusEditDeliveryProbeTEMP)
+        scrollUntilHittable(probe)
+        XCTAssertTrue(probe.isHittable, "TEMP probe is not hittable")
+        probe.tap()
+        let readout = editDeliveryValue()
+        print("TEMP probe readout: \(readout)")
+        XCTAssertTrue(
+            readout.contains("probe=1@"),
+            "TEMP counter readout did not update outside swipeToDelete: \(readout)"
+        )
     }
 
     /// TEMP: remove before merge. Prints gesture, accessibility, and id-change counts.
