@@ -11,8 +11,8 @@ import SwiftUI
 
 @Observable
 final class FocusViewModel {
-    /// Weight step sizes for gym plates / fractional plates.
-    static let weightSteps: [Double] = [5, 1, 0.5]
+    /// Weight step sizes for the active unit. 5 / 1 / 0.5 lb, or 2.5 / 1 / 0.5 kg.
+    static var weightSteps: [Double] { MassUnitPreferences.unit.stepperSteps }
 
     var weight: Double
     var reps: Double                       // UpliftStepper drives Doubles; log as Int
@@ -21,7 +21,7 @@ final class FocusViewModel {
     /// Weight field is assistance (machine “−100 lb”), not bar load.
     var isAssisted: Bool = false
     /// Current weight stepper increment (5 / 1 / 0.5). Persists while Focus is alive.
-    var weightStep: Double = 5
+    var weightStep: Double = MassUnitPreferences.unit.stepperSteps[0]
     private(set) var weightDelta: String?  // non-nil → weight stepper target dress
     private(set) var repsDelta: String?    // non-nil → reps stepper target dress
 
@@ -49,6 +49,20 @@ final class FocusViewModel {
         isEachSide = prefill.isEachSide
         isAssisted = prefill.isAssisted || prefersAssist
         offeredWeight = prefill.weight
+        weightStep = MassUnitPreferences.unit.stepperSteps[0]
+    }
+
+    /// Keep the typed number in the new unit and snap the increment onto that unit's grid.
+    func adoptUnit(_ unit: MassUnit, from old: MassUnit) {
+        if old != unit {
+            let pounds = MassMath.pounds(fromDisplay: weight, unit: old)
+            weight = MassMath.display(fromPounds: pounds, unit: unit)
+            let offeredPounds = MassMath.pounds(fromDisplay: offeredWeight, unit: old)
+            offeredWeight = MassMath.display(fromPounds: offeredPounds, unit: unit)
+        }
+        if !unit.stepperSteps.contains(weightStep) {
+            weightStep = unit.stepperSteps[0]
+        }
     }
 
     /// Any manual +/− clears BOTH target dresses (spec §6.1).
@@ -59,7 +73,7 @@ final class FocusViewModel {
 
     /// Cycle 5 → 1 → 0.5 → 5. Snaps current weight onto the new grid when possible.
     func cycleWeightStep() {
-        let steps = Self.weightSteps
+        let steps = MassUnitPreferences.unit.stepperSteps
         guard let idx = steps.firstIndex(of: weightStep) else {
             weightStep = steps[0]
             return

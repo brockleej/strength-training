@@ -31,6 +31,7 @@ struct FocusView: View {
     @State private var historyExpanded = false
     /// Note field has the keyboard. Hide the log footer so Cancel/Save stay reachable.
     @State private var isNoteEditing = false
+    @AppStorage(MassUnitPreferences.key) private var massUnitRaw = MassUnit.pounds.rawValue
 
     private var loggedSets: [SetRecord] {
         let _ = workoutVM.setMutationEpoch
@@ -186,6 +187,11 @@ struct FocusView: View {
         .onChange(of: workoutVM.selectedMode) {
             let opening = currentPrefill()
             focusVM?.apply(prefill: opening.0, openingLine: opening.1)
+        }
+        .onChange(of: massUnitRaw) { old, new in
+            let from = MassUnit(rawValue: old) ?? .pounds
+            let to = MassUnit(rawValue: new) ?? .pounds
+            focusVM?.adoptUnit(to, from: from)
         }
         .onChange(of: exercise.id) { _, _ in
             focusVM = makeFocusVM()
@@ -961,15 +967,16 @@ struct FocusView: View {
 
     private func commitSet(_ focusVM: FocusViewModel) {
         let unit = MassUnitPreferences.unit
-        let weight = MassMath.storedPounds(fromEntered: focusVM.weight, unit: unit)
+        let entered = focusVM.weight
+        let weight = MassMath.storedPounds(fromEntered: entered, unit: unit)
         let offered = MassMath.storedPounds(fromEntered: focusVM.offeredWeight, unit: unit)
         let reps = max(1, Int(focusVM.reps.rounded()))
         let isWarmup = focusVM.isWarmup
         let isEachSide = focusVM.isEachSide
         let isAssisted = focusVM.isAssisted || exercise.loadMode == .assist
-        focusVM.weight = MassMath.display(fromPounds: weight, unit: unit)
+        focusVM.weight = entered
         ExerciseAssistPreferences.setPrefersAssist(isAssisted, for: exercise.id)
-        let loggedTheOffer = MassMath.sameStoredPounds(weight, offered)
+        let loggedTheOffer = MassMath.sameDisplayed(weight, offered, unit: unit)
         let setNumber = (focusVM.editingSetID.flatMap { id in loggedSets.first { $0.id == id }?.setNumber })
             ?? (loggedSets.count + 1)
 
@@ -983,7 +990,9 @@ struct FocusView: View {
                 reps: reps,
                 isWarmup: isWarmup,
                 isEachSide: isEachSide,
-                isAssisted: isAssisted
+                isAssisted: isAssisted,
+                enteredValue: entered,
+                enteredUnit: unit
             )
             workoutVM.applyCarry(
                 exercise: exercise,
@@ -1005,7 +1014,9 @@ struct FocusView: View {
             isEachSide: isEachSide,
             isAssisted: isAssisted,
             offeredWeight: offered,
-            loadMode: exercise.loadMode == .bar && isAssisted ? .assist : exercise.loadMode
+            loadMode: exercise.loadMode == .bar && isAssisted ? .assist : exercise.loadMode,
+            enteredValue: entered,
+            enteredUnit: unit
         )
         workoutVM.applyCarry(
             exercise: exercise,

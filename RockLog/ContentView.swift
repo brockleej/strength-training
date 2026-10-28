@@ -162,6 +162,7 @@ struct ContentView: View {
             // Hydrate iCloud split prefs before first-run UI, so a reinstall
             // does not ask to pick a split that already lives in KVS.
             SeedData.hydrateSplitPreferencesFromICloud()
+            MassUnitPreferences.pullFromCloud()
             GymMembershipStore.shared.hydrateFromICloud()
             BodyProfileStore.shared.hydrateFromICloud()
             showFirstUseSplitSetup = SeedData.needsFirstUseSplitSetup(context: modelContext)
@@ -203,6 +204,7 @@ struct ContentView: View {
             #if DEBUG
             if UITestLaunch.isEnabled { return }
             #endif
+            MassUnitPreferences.pullFromCloud()
             SeedData.hydrateSplitPreferencesFromICloud()
             SeedData.reconcileSplitToSnapshot(context: modelContext)
             DayTypeRegistry.shared.reload(context: modelContext)

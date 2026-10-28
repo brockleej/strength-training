@@ -100,6 +100,7 @@ final class BackupRestoreRegressionTests: RockLogStoreTestCase {
         XCTAssertEqual(days.map(\.id), [originalDayID])
         XCTAssertEqual(days.map(\.name), ["Original Day"])
         XCTAssertFalse(days.contains { $0.name == "Incoming Day" })
+        XCTAssertFalse(UserDefaults.standard.bool(forKey: BackupService.restorePreferencesPendingKey))
 
         let after = Exercise.make(name: "After Rollback", dayType: .push, muscleGroup: "Chest", isCustom: true)
         context.insert(after)
@@ -110,12 +111,70 @@ final class BackupRestoreRegressionTests: RockLogStoreTestCase {
 
     /// Settings is destroyed while the store is replaced. The summary has to
     /// live on the root, or the Success alert never appears.
+    func test_backup_recordsKilogramsAndRestoresTheEnteredNumber() throws {
+        let context = container.mainContext
+        let exercise = Exercise.make(name: "Synthetic Press", dayType: .push, muscleGroup: "Chest", isCustom: true)
+        let session = WorkoutSession(dayType: .push, date: Date(timeIntervalSince1970: 1_800_000_000))
+        session.isCompleted = true
+        let record = ExerciseRecord(trainingMode: .highWeightLowReps, sortOrder: 0)
+        record.exercise = exercise
+        record.session = session
+        let set = SetRecord(setNumber: 1, weightLbs: 0, reps: 5)
+        set.stampEntered(80, unit: .kilograms)
+        set.exerciseRecord = record
+        record.sets = [set]
+        session.exerciseRecords = [record]
+        context.insert(exercise)
+        context.insert(session)
+        context.insert(record)
+        context.insert(set)
+        try context.save()
+        MassUnitPreferences.useIsolatedUnit(.kilograms)
+        defer { MassUnitPreferences.useIsolatedUnit(.pounds) }
+
+        let data = try BackupService.export(context: context)
+        let decoded = try BackupService.decode(data)
+        XCTAssertEqual(decoded.weightUnit, "kg")
+        let backedUp = try XCTUnwrap(decoded.sessions.first?.exerciseRecords.first?.sets.first)
+        XCTAssertEqual(backedUp.enteredUnitRaw, "kg")
+        XCTAssertEqual(backedUp.enteredValue ?? 0, 80, accuracy: 0.001)
+
+        try BackupService.restore(from: data, context: context)
+        let restored = try XCTUnwrap(try context.fetch(FetchDescriptor<SetRecord>()).first)
+        XCTAssertEqual(restored.displayValue(in: .kilograms), 80, accuracy: 0.001)
+    }
+
     func test_restoreNotice_keepsTheSummaryAfterSettingsIsGone() {
         RestoreNotice.shared.dismiss()
         RestoreNotice.shared.present("Replaced the split and exercises.")
         XCTAssertEqual(RestoreNotice.shared.message, "Replaced the split and exercises.")
         RestoreNotice.shared.dismiss()
         XCTAssertNil(RestoreNotice.shared.message)
+    }
+
+    func test_restorePreferences_rebuildFromTheStoreWhenThePreferenceWriteDidNotFinish() throws {
+        let context = container.mainContext
+        let day = SplitDay(
+            name: "Push",
+            systemImage: "dumbbell.fill",
+            subtitle: "",
+            colorHex: 0x112233,
+            includesAllExercises: false,
+            sortOrder: 0
+        )
+        let exercise = Exercise.make(name: "Synthetic Press", dayType: .push, muscleGroup: "Chest", isCustom: true)
+        context.insert(day)
+        context.insert(exercise)
+        try context.save()
+        UserDefaults.standard.removeObject(forKey: SeedData.dayPlanSnapshotKey)
+        BackupService.markRestorePreferencesPending()
+        XCTAssertNil(SeedData.loadDayPlanSnapshot())
+
+        BackupService.recoverRestorePreferencesIfNeeded(context: context)
+
+        XCTAssertFalse(UserDefaults.standard.bool(forKey: BackupService.restorePreferencesPendingKey))
+        let plans = try XCTUnwrap(SeedData.loadDayPlanSnapshot())
+        XCTAssertTrue(plans.contains { $0.exerciseIDs.contains(exercise.id) })
     }
 
     // MARK: - B1

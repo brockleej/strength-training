@@ -127,7 +127,7 @@ struct CoachSessionDetailView: View {
                 .font(.caption.monospacedDigit().weight(.semibold))
                 .foregroundStyle(Color.coach.dim)
                 .frame(width: 20, alignment: .leading)
-            Text(CoachProgression.setLabel(set))
+            Text(CoachProgression.setLabel(set, unitRaw: document?.athlete.weightUnit))
                 .font(.body.monospacedDigit().weight(.semibold))
                 .foregroundStyle(Color.coach.fg)
             Spacer()

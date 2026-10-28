@@ -27,6 +27,8 @@ struct AppBackup: Codable {
     let gyms: [GymBackup]?
     /// Stack profiles keyed by gym and lift. Same nil-vs-empty rule.
     let stackProfiles: [StackProfileBackup]?
+    /// "lb" or "kg" at export. Missing on older files, which are pounds.
+    let weightUnit: String?
 
     init(
         version: Int,
@@ -38,7 +40,8 @@ struct AppBackup: Codable {
         trainingBlocks: [TrainingBlockBackup]? = nil,
         bodyMetrics: [BodyMetricBackup]? = nil,
         gyms: [GymBackup]? = nil,
-        stackProfiles: [StackProfileBackup]? = nil
+        stackProfiles: [StackProfileBackup]? = nil,
+        weightUnit: String? = nil
     ) {
         self.version = version
         self.exportedAt = exportedAt
@@ -50,11 +53,12 @@ struct AppBackup: Codable {
         self.bodyMetrics = bodyMetrics
         self.gyms = gyms
         self.stackProfiles = stackProfiles
+        self.weightUnit = weightUnit
     }
 
     private enum CodingKeys: String, CodingKey {
         case version, exportedAt, exercises, sessions, splitDays, dayPlans
-        case trainingBlocks, bodyMetrics, gyms, stackProfiles
+        case trainingBlocks, bodyMetrics, gyms, stackProfiles, weightUnit
     }
 
     init(from decoder: Decoder) throws {
@@ -70,6 +74,7 @@ struct AppBackup: Codable {
         bodyMetrics = try container.decodeIfPresent([BodyMetricBackup].self, forKey: .bodyMetrics)
         gyms = try container.decodeIfPresent([GymBackup].self, forKey: .gyms)
         stackProfiles = try container.decodeIfPresent([StackProfileBackup].self, forKey: .stackProfiles)
+        weightUnit = try container.decodeIfPresent(String.self, forKey: .weightUnit)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -84,6 +89,7 @@ struct AppBackup: Codable {
         try container.encodeIfPresent(bodyMetrics, forKey: .bodyMetrics)
         try container.encodeIfPresent(gyms, forKey: .gyms)
         try container.encodeIfPresent(stackProfiles, forKey: .stackProfiles)
+        try container.encodeIfPresent(weightUnit, forKey: .weightUnit)
     }
 }
 
@@ -357,6 +363,9 @@ struct SetRecordBackup: Codable {
     let bodyWeightUsedLbs: Double?
     let plannedRestSeconds: Int?
     let actualRestSeconds: Int?
+    /// Missing on older files. Empty means the set was stored as pounds only.
+    let enteredUnitRaw: String?
+    let enteredValue: Double?
 
     init(
         id: UUID,
@@ -372,7 +381,9 @@ struct SetRecordBackup: Codable {
         loadModeRaw: String? = nil,
         bodyWeightUsedLbs: Double? = nil,
         plannedRestSeconds: Int? = nil,
-        actualRestSeconds: Int? = nil
+        actualRestSeconds: Int? = nil,
+        enteredUnitRaw: String? = nil,
+        enteredValue: Double? = nil
     ) {
         self.id = id
         self.setNumber = setNumber
@@ -388,6 +399,8 @@ struct SetRecordBackup: Codable {
         self.bodyWeightUsedLbs = bodyWeightUsedLbs
         self.plannedRestSeconds = plannedRestSeconds
         self.actualRestSeconds = actualRestSeconds
+        self.enteredUnitRaw = enteredUnitRaw
+        self.enteredValue = enteredValue
     }
 
     var resolvedEachSide: Bool { isEachSide ?? false }

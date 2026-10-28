@@ -64,8 +64,6 @@ struct SettingsView: View {
     private var setPrefillModeRaw: String = SetPrefillPreferences.defaultMode.rawValue
     @AppStorage(StartingWeightPreferences.key)
     private var startingWeightRaw: String = StartingWeightChoice.lastTime.rawValue
-    @AppStorage(MassUnitPreferences.key)
-    private var massUnitRaw: String = MassUnit.pounds.rawValue
     @AppStorage(RestAlertPreferences.tapAtTenKey)
     private var tapAtTen: Bool = false
     @AppStorage(RestAlertPreferences.learningKey)
@@ -91,9 +89,6 @@ struct SettingsView: View {
     @State private var bodyProfileDirty = false
     @State private var showBodyProfileSaved = false
 
-    @Bindable private var gymMembership = GymMembershipStore.shared
-
-    @State private var showGymPass = false
     @State private var showWelcomeGuide = false
     @State private var showCoachPicker = false
     @State private var showClearPlannedConfirm = false
@@ -255,9 +250,6 @@ struct SettingsView: View {
                     .fontWeight(.semibold)
                 }
             }
-            .fullScreenCover(isPresented: $showGymPass) {
-                GymPassView()
-            }
             .fullScreenCover(isPresented: $showWelcomeGuide) {
                 FirstRunView(showsSplitSetup: false) {
                     showWelcomeGuide = false
@@ -407,18 +399,15 @@ struct SettingsView: View {
                 .listRowBackground(Color.uplift.surface1)
 
                 Section {
-                    UpliftSegmentedControl(
-                        segments: MassUnit.allCases.map { UpliftSegment(id: $0.rawValue, label: $0.title) },
-                        selection: $massUnitRaw
-                    )
-                    .accessibilityIdentifier(AccessibilityID.settingsMassUnit)
-                    .onChange(of: massUnitRaw) { _, raw in
-                        if let unit = MassUnit(rawValue: raw) { MassUnitPreferences.unit = unit }
+                    NavigationLink {
+                        UnitsSettingsView()
+                    } label: {
+                        Label("Units", systemImage: "scalemass")
+                            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                     }
-                } header: {
-                    sectionHeader("Weight unit")
+                    .accessibilityIdentifier(AccessibilityID.settingsUnits)
                 } footer: {
-                    sectionFooter("Pounds stay stored. Kilograms change what you see, the plate math, and the progression snap.")
+                    sectionFooter("Pounds or kilograms. Each set keeps the number you entered, and the other unit is converted from that.")
                 }
                 .listRowBackground(Color.uplift.surface1)
 
@@ -639,49 +628,15 @@ struct SettingsView: View {
                 .onAppear { loadBodyProfileDraft() }
 
                 Section {
-                    TextField(
-                        "Label",
-                        text: $gymMembership.label,
-                        prompt: Text(GymMembershipPreferences.defaultLabel)
-                    )
-                    .font(.uplift.text(15, weight: .medium))
-                    .foregroundStyle(Color.uplift.fg)
-                    .textInputAutocapitalization(.words)
-
-                    TextField("Member ID / barcode number", text: $gymMembership.code)
-                        .font(.uplift.mono(15, weight: .medium))
-                        .foregroundStyle(Color.uplift.fg)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                        .keyboardType(.asciiCapable)
-
-                    Picker("Format", selection: $gymMembership.formatRaw) {
-                        ForEach(GymMembershipPreferences.Format.allCases) { format in
-                            Text(format.title).tag(format.rawValue)
-                        }
-                    }
-                    .font(.uplift.text(15, weight: .medium))
-
-                    Button {
-                        showGymPass = true
+                    NavigationLink {
+                        GymAccessSettingsView()
                     } label: {
-                        Label(
-                            gymMembership.isConfigured
-                                ? "Show gym pass"
-                                : "Preview pass (add ID first)",
-                            systemImage: "barcode.viewfinder"
-                        )
-                        .foregroundStyle(
-                            gymMembership.isConfigured
-                                ? Color.uplift.accent
-                                : Color.uplift.fgDim
-                        )
+                        Label("Gym Access", systemImage: "barcode.viewfinder")
+                            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                     }
-                    .disabled(!gymMembership.isConfigured)
-                } header: {
-                    sectionHeader("Gym pass")
+                    .accessibilityIdentifier(AccessibilityID.settingsGymAccess)
                 } footer: {
-                    sectionFooter("Number under your membership barcode. Syncs via iCloud. Open from Today’s barcode button at check-in.")
+                    sectionFooter("Barcodes, an app such as Kisi, or a link. Today’s Gym pass button uses the only saved gym, or the nearest one within 150 m.")
                 }
                 .listRowBackground(Color.uplift.surface1)
 
@@ -1025,7 +980,7 @@ struct SettingsView: View {
         // Normalize draft text after save (empty if cleared).
         loadBodyProfileDraft()
         showBodyProfileSaved = true
-        UINotificationFeedbackGenerator().notificationOccurred(.success)
+        HapticService.success()
     }
 
     private static func formatDraftNumber(_ value: Double) -> String {

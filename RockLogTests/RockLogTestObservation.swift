@@ -33,6 +33,7 @@ final class RockLogTestObservation: NSObject, XCTestObservation {
 
     func testCaseWillStart(_ testCase: XCTestCase) {
         #if DEBUG
+        MassUnitPreferences.useIsolatedUnit(.pounds)
         let label = Self.rlDiagLabel(testCase)
         WorkoutViewModel.diagnosticTestName = label
         print("[RLDIAG] test start \(label)")

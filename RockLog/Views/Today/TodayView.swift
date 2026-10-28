@@ -8,6 +8,7 @@
 
 import SwiftUI
 import SwiftData
+import UIKit
 
 struct TodayView: View {
     @Bindable var workoutVM: WorkoutViewModel
@@ -17,7 +18,8 @@ struct TodayView: View {
     @State private var dayCatalog = DayTypeRegistry.shared
     /// Day type pending the "Replace Current Workout?" confirmation.
     @State private var confirmingDayType: DayType?
-    @State private var showGymPass = false
+    @State private var passEntry: GymAccessEntry?
+    @Bindable private var gymAccess = GymAccessStore.shared
     @State private var showDayPlanEditor = false
     @State private var yesterdayPRCount = 0
     @State private var previewPlannedID: UUID?
@@ -362,7 +364,7 @@ struct TodayView: View {
             }
             Spacer(minLength: 8)
             Button {
-                showGymPass = true
+                Task { await openGymAccess() }
             } label: {
                 VStack(spacing: 4) {
                     ZStack {
@@ -381,11 +383,63 @@ struct TodayView: View {
             .buttonStyle(.plain)
             .accessibilityIdentifier(AccessibilityID.todayGymPass)
             .accessibilityLabel("Show gym membership barcode")
+            .contextMenu {
+                ForEach(gymAccess.entries) { entry in
+                    Button(entry.trimmedName) {
+                        gymAccess.pin(entry)
+                        present(entry)
+                    }
+                    .accessibilityIdentifier(AccessibilityID.gymAccessSwitch(entry.trimmedName))
+                }
+            }
         }
         .padding(.top, 12)
-        .fullScreenCover(isPresented: $showGymPass) {
-            GymPassView()
+        .fullScreenCover(item: $passEntry) { entry in
+            GymPassView(entry: entry)
         }
+    }
+
+    private func openGymAccess() async {
+        var location: GeoPoint?
+        if gymAccess.entries.count > 1 {
+            let fix = await WhenInUseLocation.shared.requestOnce()
+            location = fix.map { GeoPoint(latitude: $0.coordinate.latitude, longitude: $0.coordinate.longitude) }
+            if let location,
+               let nearest = GymAccessChoice.nearest(
+                in: gymAccess.entries,
+                to: location,
+                within: GymAccessChoice.nearMeters
+               ) {
+                gymAccess.pin(nearest)
+            }
+        }
+        guard let entry = gymAccess.select(at: location) else {
+            passEntry = GymAccessEntry(
+                id: UUID(),
+                name: "",
+                latitude: nil,
+                longitude: nil,
+                isDefault: true,
+                method: .barcode,
+                barcodePayload: "",
+                symbology: .code128,
+                appPreset: .custom,
+                appOpenURL: "",
+                appStoreURL: "",
+                linkURL: ""
+            )
+            return
+        }
+        present(entry)
+    }
+
+    private func present(_ entry: GymAccessEntry) {
+        if entry.method == .barcode {
+            passEntry = entry
+            return
+        }
+        guard let url = entry.externalURL(canOpen: { UIApplication.shared.canOpenURL($0) }) else { return }
+        UIApplication.shared.open(url)
     }
 
     private func eyebrow(_ text: String) -> some View {

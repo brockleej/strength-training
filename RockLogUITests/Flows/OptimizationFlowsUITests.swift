@@ -22,11 +22,33 @@ final class OptimizationFlowsUITests: RockLogUITestCase {
         waitFor(UITestID.firstRunSkip).tap()
         tapTab("Settings")
         scrollUntilExists(UITestID.settingsStartingWeight)
-        scrollUntilExists(UITestID.settingsMassUnit)
+        // Pounds / kilograms live on the Units page, not the Settings root.
+        scrollUntilHittable(element(UITestID.settingsUnits))
+        element(UITestID.settingsUnits).tap()
+        let massUnit = element(UITestID.settingsMassUnit)
+        XCTAssertTrue(massUnit.waitForExistence(timeout: 6))
+        XCTAssertTrue(massUnit.isHittable)
+        app.navigationBars.buttons["Settings"].tap()
         scrollUntilExists(UITestID.settingsGym)
         // settings.tapAtTen is on the "Tap at 10 seconds" toggle, which
         // is in the list because setup turned the rest timer on.
         scrollUntilExists(UITestID.settingsTapAtTen)
+    }
+
+    func test_workoutList_lastTargetToggleIsVisible() {
+        launch(preset: "typical")
+        selectPushIfNeeded()
+        waitFor(UITestID.todayStart).tap()
+        let toggle = waitFor(UITestID.workoutSecondaryToggle)
+        XCTAssertTrue(toggle.isHittable)
+        let before = toggle.label
+        toggle.tap()
+        let after = waitFor(UITestID.workoutSecondaryToggle)
+        XCTAssertNotEqual(after.label, before)
+        XCTAssertFalse(element(UITestID.focusBack).exists)
+        XCTAssertFalse(element(UITestID.focusLogSet).exists)
+        waitFor(UITestID.workoutExercise("UI Fresh Lift")).tap()
+        XCTAssertTrue(element(UITestID.focusLogSet).waitForExistence(timeout: 8))
     }
 
     func test_focus_showsWarmupDoneComparisonAndPlates() {

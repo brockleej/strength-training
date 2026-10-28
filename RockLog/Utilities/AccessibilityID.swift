@@ -22,6 +22,26 @@ enum AccessibilityID {
     static let todayStart = "today.start"
     static let todayEditDay = "today.editDay"
     static let todayGymPass = "today.gymPass"
+    static let settingsGymAccess = "settings.gymAccess"
+    static let gymAccessAdd = "gymAccess.add"
+    static let gymAccessName = "gymAccess.name"
+    static let gymAccessSave = "gymAccess.save"
+    static let gymAccessDefault = "gymAccess.default"
+    static let gymAccessUseLocation = "gymAccess.useLocation"
+    static let gymAccessPickMap = "gymAccess.pickMap"
+    static let gymAccessClearLocation = "gymAccess.clearLocation"
+    static let gymAccessMethod = "gymAccess.method"
+    static let gymAccessBarcode = "gymAccess.barcode"
+    static let gymAccessScan = "gymAccess.scan"
+    static let gymAccessSymbology = "gymAccess.symbology"
+    static let gymAccessAppURL = "gymAccess.appURL"
+    static let gymAccessAppStore = "gymAccess.appStore"
+    static let gymAccessKisi = "gymAccess.kisi"
+    static let gymAccessLink = "gymAccess.link"
+    static let gymPassClose = "gymPass.close"
+    static let gymPassCode = "gymPass.code"
+    static func gymAccessRow(_ name: String) -> String { "gymAccess.row.\(name)" }
+    static func gymAccessSwitch(_ name: String) -> String { "gymAccess.switch.\(name)" }
     static let todayCancel = "today.cancelWorkout"
 
     static func todayDay(_ name: String) -> String { "today.day.\(name)" }
@@ -35,6 +55,8 @@ enum AccessibilityID {
     static let workoutSaveOrderRemaining = "workout.saveOrderRemaining"
 
     static func workoutExercise(_ name: String) -> String { "workout.exercise.\(name)" }
+    static let workoutSecondaryToggle = "workout.secondaryToggle"
+    static let storeRetry = "store.retry"
 
     static let focusBack = "focus.back"
     static let focusPrevious = "focus.previous"
@@ -70,6 +92,7 @@ enum AccessibilityID {
     static let summaryDetails = "summary.details"
     static let summaryDuration = "summary.duration"
 
+    static let settingsUnits = "settings.units"
     static let settingsMassUnit = "settings.massUnit"
     static let settingsStartingWeight = "settings.startingWeight"
     static let settingsTapAtTen = "settings.tapAtTen"

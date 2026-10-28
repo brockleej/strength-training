@@ -72,7 +72,9 @@ enum CoachExportService {
                         isAssisted: set.isAssisted,
                         completedAt: set.completedAt,
                         loadMode: set.loadModeRaw.isEmpty ? (set.isAssisted ? "assist" : nil) : set.loadModeRaw,
-                        bodyWeightLbs: set.bodyWeightUsedLbs > 0 ? set.bodyWeightUsedLbs : nil
+                        bodyWeightLbs: set.bodyWeightUsedLbs > 0 ? set.bodyWeightUsedLbs : nil,
+                        enteredUnit: set.enteredUnitRaw.isEmpty ? nil : set.enteredUnitRaw,
+                        enteredValue: set.enteredUnitRaw.isEmpty ? nil : set.enteredValue
                     )
                 }
             guard !sets.isEmpty else { continue }
@@ -106,11 +108,15 @@ enum CoachExportService {
         let notes = session.notes.trimmingCharacters(in: .whitespacesAndNewlines)
         let track = session.rotationTrack.trimmingCharacters(in: .whitespacesAndNewlines)
 
+        var stampedAthlete = athlete
+        if stampedAthlete.weightUnit == nil {
+            stampedAthlete.weightUnit = MassUnitPreferences.unit.rawValue
+        }
         return CoachSessionDocument(
             format: CoachFormat.formatName,
             schemaVersion: CoachFormat.schemaVersion,
             exportedAt: exportedAt,
-            athlete: athlete,
+            athlete: stampedAthlete,
             session: CoachSessionPayload(
                 id: session.id,
                 startedAt: session.date,
@@ -120,7 +126,8 @@ enum CoachExportService {
                 effortRating: session.effortRating,
                 exercises: exercises,
                 gymID: coachGym(for: session)?.id,
-                gymName: coachGym(for: session)?.name
+                gymName: coachGym(for: session)?.name,
+                timeZoneIdentifier: TimeZone.current.identifier
             )
         )
     }

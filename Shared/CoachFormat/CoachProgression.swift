@@ -145,12 +145,20 @@ nonisolated enum CoachProgression {
         return CompareGrid(columns: columns, rows: rows)
     }
 
-    nonisolated static func setLabel(_ set: CoachSetPayload) -> String {
+    nonisolated static func setLabel(_ set: CoachSetPayload, unitRaw: String? = nil) -> String {
+        let shown: Double
+        if let enteredUnit = set.enteredUnit, enteredUnit == unitRaw, let entered = set.enteredValue {
+            shown = entered
+        } else if unitRaw == "kg" {
+            shown = set.weightLbs / 2.2046226218
+        } else {
+            shown = set.weightLbs
+        }
         let weight: String
         if set.resolvedAssisted {
-            weight = "−\(trimmed(set.weightLbs))"
+            weight = "−\(trimmed(shown))"
         } else {
-            weight = trimmed(set.weightLbs)
+            weight = trimmed(shown)
         }
         var suffix = ""
         if set.resolvedEachSide { suffix += " ea" }

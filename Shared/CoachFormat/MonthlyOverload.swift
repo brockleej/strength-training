@@ -94,6 +94,19 @@ nonisolated enum MonthlyOverload {
 
     // MARK: - Calendar windows
 
+    /// Zone for a coach's month table. The first recorded identifier wins.
+    /// A file with no zone uses UTC, so the coach's phone zone cannot move
+    /// a session across a month boundary.
+    static func groupingTimeZone(recorded identifiers: [String]) -> TimeZone {
+        for raw in identifiers {
+            let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+            if let zone = TimeZone(identifier: trimmed) {
+                return zone
+            }
+        }
+        return TimeZone(secondsFromGMT: 0)!
+    }
+
     /// Half-open `[start, end)`. `DateInterval.contains` is closed on some
     /// SDKs, so the first instant of the next month would land in both windows.
     static func contains(_ date: Date, in interval: DateInterval) -> Bool {
@@ -153,8 +166,12 @@ nonisolated enum MonthlyOverload {
         case (nil, _?):
             return .missing
         case let (current?, previous?):
-            if current.weightLbs > previous.weightLbs { return .up }
-            if current.weightLbs < previous.weightLbs { return .down }
+            // A kg round-trip can move stored pounds by a few tenths. That is
+            // not a heavier month. A half-pound step (0.5) still counts.
+            if abs(current.weightLbs - previous.weightLbs) >= 0.5 {
+                if current.weightLbs > previous.weightLbs { return .up }
+                return .down
+            }
             if current.reps > previous.reps { return .up }
             if current.reps < previous.reps { return .down }
             return .flat
@@ -172,7 +189,7 @@ nonisolated enum MonthlyOverload {
         case .up, .down:
             guard let current = thisMonth, let previous = lastMonth else { return "—" }
             let weightDelta = current.weightLbs - previous.weightLbs
-            if weightDelta != 0 {
+            if abs(weightDelta) >= 0.5 {
                 let sign = weightDelta > 0 ? "+" : "−"
                 return "\(sign)\(formatWeight(abs(weightDelta))) lb"
             }

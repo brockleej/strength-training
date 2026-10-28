@@ -9,24 +9,30 @@ import SwiftUI
 import UIKit
 
 struct GymPassView: View {
-    @Environment(\.dismiss) private var dismiss
+    var entry: GymAccessEntry?
 
-    @Bindable private var membership = GymMembershipStore.shared
+    @Environment(\.dismiss) private var dismiss
 
     @State private var previousBrightness: CGFloat?
     /// Screen we adjusted — restore on the same instance (not UIScreen.main).
     @State private var brightnessScreen: UIScreen?
+    @State private var previousIdleDisabled = false
 
-    private var format: GymMembershipPreferences.Format {
-        membership.format
+    private var payload: String {
+        entry?.barcodePayload ?? ""
+    }
+
+    private var symbology: BarcodeSymbology {
+        entry?.symbology ?? .code128
     }
 
     private var displayLabel: String {
-        membership.displayLabel
+        let name = entry?.trimmedName ?? ""
+        return name.isEmpty ? "Gym membership" : name
     }
 
     private var barcodeImage: UIImage? {
-        BarcodeImageGenerator.image(from: membership.code, format: format)
+        BarcodeImageGenerator.image(from: payload, symbology: symbology)
     }
 
     var body: some View {
@@ -44,7 +50,9 @@ struct GymPassView: View {
                             .symbolRenderingMode(.hierarchical)
                             .foregroundStyle(.black.opacity(0.45))
                     }
+                    .frame(minWidth: 44, minHeight: 44)
                     .accessibilityLabel("Close")
+                    .accessibilityIdentifier(AccessibilityID.gymPassClose)
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 12)
@@ -62,9 +70,9 @@ struct GymPassView: View {
                         .interpolation(.none)
                         .resizable()
                         .scaledToFit()
-                        .frame(maxWidth: format == .qr ? 260 : .infinity)
-                        .frame(height: format == .qr ? 260 : 140)
-                        .padding(.horizontal, format == .qr ? 40 : 20)
+                        .frame(maxWidth: symbology == .qr || symbology == .aztec ? 260 : .infinity)
+                        .frame(height: symbology == .qr || symbology == .aztec ? 260 : 140)
+                        .padding(.horizontal, symbology == .qr || symbology == .aztec ? 40 : 20)
                         .padding(.top, 28)
                         .accessibilityLabel("Membership barcode")
                 } else {
@@ -81,12 +89,13 @@ struct GymPassView: View {
                     .padding(.horizontal, 32)
                 }
 
-                if membership.isConfigured {
-                    Text(membership.code)
+                if !payload.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    Text(payload)
                         .font(.system(size: 16, weight: .medium, design: .monospaced))
                         .foregroundStyle(.black.opacity(0.55))
                         .padding(.top, 16)
                         .textSelection(.enabled)
+                        .accessibilityIdentifier(AccessibilityID.gymPassCode)
                 }
 
                 Text("Hold under the scanner")
@@ -100,8 +109,15 @@ struct GymPassView: View {
         }
         .statusBarHidden(true)
         .persistentSystemOverlays(.hidden)
-        .onAppear { boostBrightness() }
-        .onDisappear { restoreBrightness() }
+        .onAppear {
+            previousIdleDisabled = UIApplication.shared.isIdleTimerDisabled
+            UIApplication.shared.isIdleTimerDisabled = true
+            boostBrightness()
+        }
+        .onDisappear {
+            UIApplication.shared.isIdleTimerDisabled = previousIdleDisabled
+            restoreBrightness()
+        }
     }
 
     private func boostBrightness() {

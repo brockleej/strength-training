@@ -10,6 +10,7 @@ import SwiftData
 struct RockCoachApp: App {
     @State private var container: ModelContainer?
     @State private var storeError: String?
+    @State private var storeAttempt = 0
     @State private var inbox = ImportInbox.shared
 
     var body: some Scene {
@@ -29,17 +30,20 @@ struct RockCoachApp: App {
                                     .foregroundStyle(Color.coach.muted)
                                     .multilineTextAlignment(.center)
                                     .padding(.horizontal, 28)
-                                Button("Try again") {
-                                    self.storeError = nil
+                                Button("Retry") {
+                                    storeError = nil
+                                    storeAttempt += 1
                                 }
                                 .font(.headline)
                                 .foregroundStyle(Color.coach.accent)
+                                .frame(minWidth: 44, minHeight: 44)
+                                .accessibilityIdentifier("store.retry")
                             }
                             .padding(.bottom, 48)
                         }
                 } else {
                     RockCoachLaunchPlaceholder(showsProgress: true)
-                        .task { await openStore() }
+                        .task(id: storeAttempt) { await openStore() }
                 }
             }
             .preferredColorScheme(.dark)

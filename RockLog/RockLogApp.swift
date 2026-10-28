@@ -13,11 +13,13 @@ import UserNotifications
 struct RockLogApp: App {
     @State private var container: ModelContainer?
     @State private var storeError: String?
+    @State private var storeAttempt = 0
 
     init() {
         // Rest timer is audio-only; suppress/clear any leftover rest-timer notifications.
         UNUserNotificationCenter.current().delegate = RestTimerNotificationDelegate.shared
         RestTimerNotificationScheduler.cancelAll()
+        MassUnitPreferences.pullFromCloud()
     }
 
     var body: some Scene {
@@ -37,17 +39,20 @@ struct RockLogApp: App {
                                 .foregroundStyle(Color.uplift.fgMuted)
                                 .multilineTextAlignment(.center)
                                 .padding(.horizontal, 28)
-                            Button("Try again") {
+                            Button("Retry") {
                                 self.storeError = nil
+                                storeAttempt += 1
                             }
                             .font(.headline)
                             .foregroundStyle(Color.uplift.accent)
+                            .frame(minWidth: 44, minHeight: 44)
+                            .accessibilityIdentifier(AccessibilityID.storeRetry)
                         }
                         .padding(.bottom, 48)
                     }
             } else {
                 RockLogLaunchPlaceholder(showsProgress: true)
-                    .task { await openStore() }
+                    .task(id: storeAttempt) { await openStore() }
             }
         }
     }
@@ -64,7 +69,7 @@ struct RockLogApp: App {
             return
         }
         #endif
-        let schema = Schema(versionedSchema: RockLogSchemaV2.self)
+        let schema = Schema(versionedSchema: RockLogSchemaV3.self)
         let config = ModelConfiguration(
             schema: schema,
             cloudKitDatabase: .automatic
@@ -77,6 +82,9 @@ struct RockLogApp: App {
                     configurations: [config]
                 )
             }.value
+            if let container {
+                BackupService.recoverRestorePreferencesIfNeeded(context: container.mainContext)
+            }
         } catch {
             storeError = "Couldn’t open the workout store. \(error.localizedDescription)"
         }

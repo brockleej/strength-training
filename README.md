@@ -80,13 +80,15 @@ Layered on the foundation above for a more freeform, physique-aware gym log:
 - **Explicit “Done with this lift”** (any set count) + **Next** that skips only marked-done lifts
 - **Finish prompt** when every lift is marked done
 - **Swipe left to delete** an extra logged set (full swipe deletes; long-press has the same Delete). **Undo** stays on screen for about 5 seconds. Split-day delete still asks first.
+- **Last / Target** on a workout row switches that line. It is a button, not a hidden tap.
+- A planned-workout file whose `schemaVersion` is newer or unknown is rejected, and the message includes the version number. Older files in the supported range still import.
 - **Per-exercise notes** — difficulty / next time / modifications (Focus + Edit); Cancel/Save stay on screen if the keyboard opens
 - **Session duration** — first logged set → last logged set (not Start→Finish wall clock)
 - **Rest timer** — defaults + **per-exercise** on/off (supersets), countdown sounds
-- **Assisted lifts** — assist amount, effective load for volume/e1RM everywhere
+- **Pounds or kilograms** — Settings → Units, default pounds. Each set keeps the number you entered. Steppers use 5 lb or 2.5 kg. Plates are a 45 lb bar or a 20 kg bar.
 - **Each-side** volume doubling
 - **History reopen for edit** without dropping the session from History
-- **Gym pass** — membership barcode from Today
+- **Gym pass** — one Today button. Settings → Gym Access holds barcodes, an app (Kisi or a custom link), or a web link. With several gyms it uses the nearest within 150 m, and only asks for location when you tap the button or start a workout.
 
 ### Body & progress
 - **Body metrics** log (weight, waist, neck, chest, arm, hips)

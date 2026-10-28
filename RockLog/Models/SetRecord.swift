@@ -31,6 +31,10 @@ final class SetRecord {
     var bodyWeightUsedLbs: Double = 0
     var plannedRestSeconds: Int = 0
     var actualRestSeconds: Int = 0
+    /// "lb" or "kg". Empty means a legacy set stored only as pounds.
+    var enteredUnitRaw: String = ""
+    /// The number typed or stepped in `enteredUnitRaw`.
+    var enteredValue: Double = 0
 
     var exerciseRecord: ExerciseRecord?
 
@@ -74,11 +78,31 @@ final class SetRecord {
         E1RM.estimate(weightLbs: effectiveLoadLbs(), reps: reps)
     }
 
+    var enteredUnit: MassUnit? { MassUnit(rawValue: enteredUnitRaw) }
+
+    /// Canonical pounds plus the original entry. Matching units show the entry.
+    func displayValue(in unit: MassUnit = MassUnitPreferences.unit) -> Double {
+        MassMath.shown(
+            enteredValue: enteredUnit == nil ? nil : enteredValue,
+            enteredUnit: enteredUnit,
+            canonicalPounds: weightLbs,
+            display: unit
+        )
+    }
+
+    /// Remember the number the lifter used and the pound equivalent.
+    func stampEntered(_ value: Double, unit: MassUnit) {
+        enteredUnitRaw = unit.rawValue
+        enteredValue = value
+        weightLbs = MassMath.pounds(fromDisplay: value, unit: unit)
+    }
+
     /// Display string for weight column, e.g. "225" or "−100".
     var weightDisplay: String {
+        let shown = StepperLogic.format(displayValue())
         if isAssisted {
-            return "−\(StepperLogic.format(weightLbs))"
+            return "−\(shown)"
         }
-        return StepperLogic.format(weightLbs)
+        return shown
     }
 }

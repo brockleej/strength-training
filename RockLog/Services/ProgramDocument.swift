@@ -12,6 +12,16 @@ nonisolated enum ProgramFormat {
     static let formatName = "rocklog.program"
     static let splitFormatName = "rocklog.split"
     static let schemaVersion = 1
+    /// Oldest file this build still reads. Newer builds keep accepting this range.
+    static let minimumSchemaVersion = 1
+
+    static func accepts(
+        _ version: Int,
+        current: Int = schemaVersion,
+        minimum: Int = minimumSchemaVersion
+    ) -> Bool {
+        version >= minimum && version <= current
+    }
     static let utTypeIdentifier = "com.lee.rocklog.program"
     static let pathExtension = "rocklogprogram"
 }
@@ -20,6 +30,8 @@ nonisolated struct ProgramDocument: Codable, Hashable, Sendable {
     var format: String
     var schemaVersion: Int
     var exportedAt: Date
+    /// "lb" or "kg". Missing means the set numbers are pounds.
+    var weightUnit: String? = nil
     var block: ProgramBlockPayload
 
     enum ProgramFormatError: LocalizedError {
@@ -34,8 +46,11 @@ nonisolated struct ProgramDocument: Codable, Hashable, Sendable {
             switch self {
             case .wrongFormat:
                 return "This file is not a planned-workout file."
-            case .unsupportedVersion:
-                return "This planned-workout file is newer than this version of RockLog."
+            case .unsupportedVersion(let version):
+                if version > ProgramFormat.schemaVersion {
+                    return "Planned-workout version \(version) is newer than this RockLog (reads \(ProgramFormat.minimumSchemaVersion)–\(ProgramFormat.schemaVersion)). Update RockLog, or ask for a file saved as version \(ProgramFormat.schemaVersion)."
+                }
+                return "Planned-workout version \(version) is not a version this RockLog reads (\(ProgramFormat.minimumSchemaVersion)–\(ProgramFormat.schemaVersion))."
             case .emptyBlock:
                 return "This file has no planned workouts to add."
             case .fileTooLarge:
@@ -147,7 +162,7 @@ nonisolated enum ProgramCodec {
         else {
             throw ProgramDocument.ProgramFormatError.wrongFormat(doc.format)
         }
-        guard doc.schemaVersion == ProgramFormat.schemaVersion else {
+        guard ProgramFormat.accepts(doc.schemaVersion) else {
             throw ProgramDocument.ProgramFormatError.unsupportedVersion(doc.schemaVersion)
         }
         guard !doc.block.sessions.isEmpty else {

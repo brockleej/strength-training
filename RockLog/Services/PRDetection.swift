@@ -28,13 +28,25 @@ enum PRDetection {
         newWeight: Double,
         newReps: Int,
         priorBest: PriorBest?,
-        alreadyCelebrated: Bool
+        alreadyCelebrated: Bool,
+        unit: MassUnit = MassUnitPreferences.unit
     ) -> Outcome? {
         guard !alreadyCelebrated, let priorBest else { return nil }
-        let newE1RM = E1RM.estimate(weightLbs: newWeight, reps: newReps)
+        // Compare the weights the lifter sees. A kg round-trip can sit ~0.4 lb
+        // off the stored number and still display as the same load.
+        let shownNew = MassMath.storedPounds(
+            fromEntered: MassMath.display(fromPounds: newWeight, unit: unit),
+            unit: unit
+        )
+        let shownPrior = MassMath.storedPounds(
+            fromEntered: MassMath.display(fromPounds: priorBest.weight, unit: unit),
+            unit: unit
+        )
+        let newE1RM = E1RM.estimate(weightLbs: shownNew, reps: newReps)
+        let priorE1RM = E1RM.estimate(weightLbs: shownPrior, reps: priorBest.reps)
         // Strict > by design: a tie doesn't re-fire the fireworks, even though
         // the History/Today PR badges use >= (a tying set still DISPLAYS as PR).
-        guard newE1RM > priorBest.e1RM else { return nil }
-        return Outcome(newE1RM: newE1RM, weightDelta: newWeight - priorBest.weight)
+        guard newE1RM > priorE1RM else { return nil }
+        return Outcome(newE1RM: newE1RM, weightDelta: shownNew - shownPrior)
     }
 }

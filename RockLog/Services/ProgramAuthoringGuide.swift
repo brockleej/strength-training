@@ -25,7 +25,7 @@ enum ProgramAuthoringGuide {
 
     - JSON object.
     - `"format"` is `rocklog.program` (planned workouts) or `rocklog.split` (days and lifts).
-    - `"schemaVersion"` must be `1`.
+    - `"schemaVersion"` must be from \(ProgramFormat.minimumSchemaVersion) through \(ProgramFormat.schemaVersion). Older files in that range still import. A newer or unknown version is rejected and the message includes the number.
     - For `rocklog.program`, `block.sessions` is an **ordered queue**. First session is next up. Missed calendar days are not skipped.
     - Same `dayType` may appear more than once (e.g. two Lowers in one week with different lifts).
     - Each `id` must be a unique UUID string.

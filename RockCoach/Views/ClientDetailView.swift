@@ -21,6 +21,10 @@ struct ClientDetailView: View {
 
     private var sessions: [CoachStoredSession] { client.sortedSessions }
 
+    private var athleteWeightUnit: String? {
+        sessions.compactMap { $0.document?.athlete.weightUnit }.first { $0 == "kg" || $0 == "lb" }
+    }
+
     private var dayTypes: [String] {
         var seen = Set<String>()
         var ordered: [String] = []
@@ -43,6 +47,12 @@ struct ClientDetailView: View {
                     .textInputAutocapitalization(.words)
                 TextField("Notes", text: $client.notes, axis: .vertical)
                     .lineLimit(2...4)
+                if let unit = athleteWeightUnit {
+                    Text("Weights in \(unit)")
+                        .font(.subheadline)
+                        .foregroundStyle(Color.coach.muted)
+                        .accessibilityIdentifier("coach.weightUnit")
+                }
             } header: {
                 Text("Client")
             }
@@ -149,12 +159,13 @@ struct ClientDetailView: View {
 
     private func refreshMonthly() {
         let now = Date.now
-        let calendar = Calendar.current
+        let documents = client.sortedSessions.compactMap(\.document)
+        let recorded = documents.compactMap(\.session.timeZoneIdentifier)
         monthly = MonthlyOverload.review(
-            documents: client.sortedSessions.compactMap(\.document),
+            documents: documents,
             now: now,
-            calendar: calendar,
-            timeZone: calendar.timeZone
+            calendar: Calendar(identifier: .gregorian),
+            timeZone: MonthlyOverload.groupingTimeZone(recorded: recorded)
         )
     }
 
@@ -176,14 +187,14 @@ struct ClientDetailView: View {
                 Text(snap.name)
                     .font(.subheadline.weight(.semibold))
                 if let previous = snap.previous {
-                    Text("was \(CoachProgression.setLabel(previous))")
+                    Text("was \(CoachProgression.setLabel(previous, unitRaw: athleteWeightUnit))")
                         .font(.caption)
                         .foregroundStyle(Color.coach.dim)
                 }
             }
             Spacer()
             if let current = snap.current {
-                Text(CoachProgression.setLabel(current))
+                Text(CoachProgression.setLabel(current, unitRaw: athleteWeightUnit))
                     .font(.body.monospacedDigit().weight(.semibold))
             }
             Image(systemName: symbol(for: snap.direction))

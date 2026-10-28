@@ -20,7 +20,11 @@ class RockLogUITestCase: XCTestCase {
         extra: [String] = [],
         environment: [String: String] = [:]
     ) {
-        app.launchArguments = ["-RockLogUITesting", "-RockLogPreset", preset] + extra
+        var arguments = extra
+        if !arguments.contains("-RockLogMassUnit") {
+            arguments = ["-RockLogMassUnit", "lb"] + arguments
+        }
+        app.launchArguments = ["-RockLogUITesting", "-RockLogPreset", preset] + arguments
         app.launchEnvironment = environment
         app.launch()
     }

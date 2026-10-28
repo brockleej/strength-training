@@ -155,7 +155,9 @@ struct BackupService {
                                         loadModeRaw: s.loadModeRaw.isEmpty ? nil : s.loadModeRaw,
                                         bodyWeightUsedLbs: s.bodyWeightUsedLbs > 0 ? s.bodyWeightUsedLbs : nil,
                                         plannedRestSeconds: s.plannedRestSeconds > 0 ? s.plannedRestSeconds : nil,
-                                        actualRestSeconds: s.actualRestSeconds > 0 ? s.actualRestSeconds : nil
+                                        actualRestSeconds: s.actualRestSeconds > 0 ? s.actualRestSeconds : nil,
+                                        enteredUnitRaw: s.enteredUnitRaw.isEmpty ? nil : s.enteredUnitRaw,
+                                        enteredValue: s.enteredUnitRaw.isEmpty ? nil : s.enteredValue
                                     )
                                 },
                             groupID: r.groupID,
@@ -270,7 +272,8 @@ struct BackupService {
             trainingBlocks: blockBackups,
             bodyMetrics: metricBackups,
             gyms: gymBackups,
-            stackProfiles: profileBackups
+            stackProfiles: profileBackups,
+            weightUnit: MassUnitPreferences.unit.rawValue
         )
 
         let encoder = JSONEncoder()
@@ -560,6 +563,7 @@ struct BackupService {
         defer { context.autosaveEnabled = previousAutosave }
 
         let report: BackupRestoreReport
+        markRestorePreferencesPending()
         do {
             report = try writeBackup(backup, inspection: opened.inspection, into: context)
             if let persisting {
@@ -569,6 +573,7 @@ struct BackupService {
             }
         } catch {
             context.rollback()
+            clearRestorePreferencesPending()
             throw error
         }
 
@@ -708,6 +713,9 @@ struct BackupService {
                     set.bodyWeightUsedLbs = setb.bodyWeightUsedLbs ?? 0
                     set.plannedRestSeconds = setb.plannedRestSeconds ?? 0
                     set.actualRestSeconds = setb.actualRestSeconds ?? 0
+                    if let raw = setb.enteredUnitRaw, let unit = MassUnit(rawValue: raw), let value = setb.enteredValue {
+                        set.stampEntered(value, unit: unit)
+                    }
                     set.exerciseRecord = record
                     if record.sets == nil { record.sets = [] }
                     record.sets?.append(set)
@@ -842,6 +850,34 @@ struct BackupService {
         return orphans
     }
 
+    static let restorePreferencesPendingKey = "rocklog.restorePreferencesPending"
+
+    /// Set before `context.save()`. A crash after the save and before the
+    /// preference write leaves this true. The next launch rebuilds the mirrors
+    /// from the store that did commit.
+    @MainActor
+    static func markRestorePreferencesPending() {
+        UserDefaults.standard.set(true, forKey: restorePreferencesPendingKey)
+    }
+
+    @MainActor
+    static func clearRestorePreferencesPending() {
+        UserDefaults.standard.set(false, forKey: restorePreferencesPendingKey)
+    }
+
+    /// Rebuild UserDefaults mirrors from the store when a restore saved the
+    /// rows and then died before the preference write.
+    @MainActor
+    static func recoverRestorePreferencesIfNeeded(context: ModelContext) {
+        guard UserDefaults.standard.bool(forKey: restorePreferencesPendingKey) else { return }
+        SeedData.persistDayPlanSnapshot(context: context)
+        SeedData.persistSplitSnapshot(context: context)
+        SeedData.markCatalogSeeded()
+        SeedData.markDayPlansTrusted()
+        SeedData.markSplitConfigured(context: context)
+        clearRestorePreferencesPending()
+    }
+
     /// UserDefaults / iCloud KVS mirrors. Called only after the store save commits.
     @MainActor
     private static func commitRestorePreferences(from backup: AppBackup, context: ModelContext) {
@@ -853,6 +889,7 @@ struct BackupService {
         SeedData.markCatalogSeeded()
         SeedData.markDayPlansTrusted()
         SeedData.markSplitConfigured(context: context)
+        clearRestorePreferencesPending()
     }
 
     /// Prefer the stored split. Older backups only have session/exercise names —

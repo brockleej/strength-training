@@ -374,6 +374,7 @@ enum ProgramImportService {
                 if session.exerciseRecords == nil { session.exerciseRecords = [] }
                 session.exerciseRecords?.append(record)
 
+                let fileUnit = MassUnit(rawValue: document.weightUnit ?? "") ?? .pounds
                 for setPayload in exercisePayload.sets.sorted(by: { $0.setNumber < $1.setNumber }) {
                     let set = SetRecord(
                         setNumber: setPayload.setNumber,
@@ -384,6 +385,7 @@ enum ProgramImportService {
                         isAssisted: setPayload.resolvedAssisted,
                         isTarget: true
                     )
+                    set.stampEntered(setPayload.weightLbs, unit: fileUnit)
                     set.completedAt = payload.date
                     set.exerciseRecord = record
                     context.insert(set)

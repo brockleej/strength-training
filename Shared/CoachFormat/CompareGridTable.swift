@@ -182,7 +182,7 @@ struct CompareGridTable: View {
 
     private func setAccessibility(_ cell: CoachProgression.CompareCell) -> String {
         if cell.workingSets.isEmpty { return "No sets" }
-        return cell.workingSets.map(CoachProgression.setLabel).joined(separator: ", ")
+        return cell.workingSets.map { CoachProgression.setLabel($0) }.joined(separator: ", ")
     }
 }
 

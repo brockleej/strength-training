@@ -67,30 +67,114 @@ nonisolated enum MassUnit: String, Codable, CaseIterable, Sendable {
     }
 }
 
-nonisolated enum MassUnitPreferences {
-    static let key = "massUnit"
+/// One mass unit for the app. Local UserDefaults and iCloud hold the same
+/// raw value after a read: a choice on this device is written to iCloud, and
+/// a cloud value is copied locally only when this device has none.
+nonisolated struct MassUnitReading: Equatable, Sendable {
+    var unit: MassUnit
+    /// Nil leaves that side untouched.
+    var writeLocal: String?
+    var writeCloud: String?
+}
 
-    static var unit: MassUnit {
+nonisolated enum MassUnitResolution {
+    static func resolve(local: String?, cloud: String?) -> MassUnitReading {
+        if let local, let unit = MassUnit(rawValue: local) {
+            return MassUnitReading(
+                unit: unit,
+                writeLocal: nil,
+                writeCloud: cloud == local ? nil : local
+            )
+        }
+        if let cloud, let unit = MassUnit(rawValue: cloud) {
+            return MassUnitReading(unit: unit, writeLocal: cloud, writeCloud: nil)
+        }
+        return MassUnitReading(unit: .pounds, writeLocal: nil, writeCloud: nil)
+    }
+}
+
+nonisolated protocol MassUnitStoring: AnyObject {
+    var unit: MassUnit { get set }
+}
+
+/// In-memory unit for the unit-test host and UI-test launches. It never
+/// reads or writes `NSUbiquitousKeyValueStore`.
+nonisolated final class MemoryMassUnitStore: MassUnitStoring, @unchecked Sendable {
+    nonisolated(unsafe) var unit: MassUnit
+    init(unit: MassUnit) { self.unit = unit }
+}
+
+/// Production store. UserDefaults is what `@AppStorage` reads. iCloud is
+/// updated to that same value, or copied in when this device has no choice.
+nonisolated final class ProductionMassUnitStore: MassUnitStoring {
+    var unit: MassUnit {
         get {
-            let raw = UserDefaults.standard.string(forKey: key)
-                ?? NSUbiquitousKeyValueStore.default.string(forKey: key)
-            return MassUnit(rawValue: raw ?? "") ?? .pounds
+            let local = UserDefaults.standard.string(forKey: MassUnitPreferences.key)
+            let cloud = NSUbiquitousKeyValueStore.default.string(forKey: MassUnitPreferences.key)
+            let reading = MassUnitResolution.resolve(local: local, cloud: cloud)
+            if let writeLocal = reading.writeLocal {
+                UserDefaults.standard.set(writeLocal, forKey: MassUnitPreferences.key)
+            }
+            if let writeCloud = reading.writeCloud {
+                NSUbiquitousKeyValueStore.default.set(writeCloud, forKey: MassUnitPreferences.key)
+            }
+            return reading.unit
         }
         set {
-            UserDefaults.standard.set(newValue.rawValue, forKey: key)
-            NSUbiquitousKeyValueStore.default.set(newValue.rawValue, forKey: key)
+            let raw = newValue.rawValue
+            UserDefaults.standard.set(raw, forKey: MassUnitPreferences.key)
+            NSUbiquitousKeyValueStore.default.set(raw, forKey: MassUnitPreferences.key)
+        }
+    }
+}
+
+nonisolated enum MassUnitPreferences {
+    static let key = "massUnit"
+    /// UI tests pass `-RockLogMassUnit lb` or `kg`. The unit-test host omits
+    /// it and stays on pounds.
+    static let launchArgument = "-RockLogMassUnit"
+
+    private static let lock = NSLock()
+    nonisolated(unsafe) private static var storage: any MassUnitStoring = makeStore()
+
+    static var unit: MassUnit {
+        get { lock.withLock { storage.unit } }
+        set { lock.withLock { storage.unit = newValue } }
+    }
+
+    static var isIsolatedFromCloud: Bool {
+        RockLogTestHost.isUnitTestHost || UITestLaunch.isEnabled
+    }
+
+    static func unitFromLaunchArguments(_ arguments: [String]) -> MassUnit {
+        guard let index = arguments.firstIndex(of: launchArgument),
+              index + 1 < arguments.count,
+              let unit = MassUnit(rawValue: arguments[index + 1]) else {
+            return .pounds
+        }
+        return unit
+    }
+
+    /// Tests and UI launches only. Production keeps the store `makeStore` built.
+    static func useIsolatedUnit(_ unit: MassUnit) {
+        lock.withLock {
+            storage = MemoryMassUnitStore(unit: unit)
         }
     }
 
-    /// Pull a value another device wrote. Does not overwrite a local choice
-    /// when iCloud has nothing stored.
+    /// Adopt iCloud when this device has no local choice, and publish a local
+    /// choice that iCloud does not have yet. No-ops in tests.
     static func pullFromCloud() {
+        guard !isIsolatedFromCloud else { return }
         NSUbiquitousKeyValueStore.default.synchronize()
-        guard UserDefaults.standard.string(forKey: key) == nil,
-              let raw = NSUbiquitousKeyValueStore.default.string(forKey: key),
-              MassUnit(rawValue: raw) != nil
-        else { return }
-        UserDefaults.standard.set(raw, forKey: key)
+        _ = unit
+    }
+
+    private static func makeStore() -> any MassUnitStoring {
+        if isIsolatedFromCloud {
+            return MemoryMassUnitStore(unit: unitFromLaunchArguments(ProcessInfo.processInfo.arguments))
+        }
+        return ProductionMassUnitStore()
     }
 }
 
@@ -104,6 +188,33 @@ nonisolated enum MassMath {
 
     static func sameStoredPounds(_ lhs: Double, _ rhs: Double) -> Bool {
         lhs.isFinite && rhs.isFinite && abs(lhs - rhs) <= sameStoredToleranceLbs
+    }
+
+    /// True when both stored weights snap to the same number on `unit`'s readout.
+    /// A kg round-trip can move the stored pounds by a few tenths without
+    /// changing the kilograms the lifter sees. That is not a heavier set.
+    static func sameDisplayed(_ lhsPounds: Double, _ rhsPounds: Double, unit: MassUnit) -> Bool {
+        guard lhsPounds.isFinite, rhsPounds.isFinite else { return false }
+        return display(fromPounds: lhsPounds, unit: unit) == display(fromPounds: rhsPounds, unit: unit)
+    }
+
+    static func isHeavier(_ lhsPounds: Double, than rhsPounds: Double, unit: MassUnit) -> Bool {
+        guard lhsPounds.isFinite, rhsPounds.isFinite else { return false }
+        return display(fromPounds: lhsPounds, unit: unit) > display(fromPounds: rhsPounds, unit: unit)
+    }
+
+    /// What to show. The original entry wins when the display unit matches it,
+    /// so lb → kg → lb does not walk the number.
+    static func shown(
+        enteredValue: Double?,
+        enteredUnit: MassUnit?,
+        canonicalPounds: Double,
+        display: MassUnit
+    ) -> Double {
+        if let enteredUnit, enteredUnit == display, let enteredValue, enteredValue.isFinite {
+            return enteredValue
+        }
+        return self.display(fromPounds: canonicalPounds, unit: display)
     }
 
     static func clampedStackStep(_ step: Double, unit: MassUnit) -> Double {

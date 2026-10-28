@@ -19,6 +19,17 @@ final class CoachFormatTests: RockLogStoreTestCase {
         XCTAssertFalse(String(data: data, encoding: .utf8)!.contains("volume"))
     }
 
+    func test_sessionTimeZone_roundTripsAndOlderFilesOmitIt() throws {
+        var stamped = sampleDocument()
+        stamped.session.timeZoneIdentifier = "America/Los_Angeles"
+        let decoded = try CoachSessionCodec.decode(try CoachSessionCodec.encode(stamped))
+        XCTAssertEqual(decoded.session.timeZoneIdentifier, "America/Los_Angeles")
+
+        var legacy = sampleDocument()
+        legacy.session.timeZoneIdentifier = nil
+        XCTAssertNil(try CoachSessionCodec.decode(try CoachSessionCodec.encode(legacy)).session.timeZoneIdentifier)
+    }
+
     func test_codec_rejectsWrongFormat() throws {
         var doc = sampleDocument()
         doc.format = "not.a.coach.file"

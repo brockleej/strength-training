@@ -34,11 +34,41 @@ struct ExerciseListRow: View {
     var targetReps: Int? = nil
     var secondaryMode: SecondaryMode = .recipe
     var onToggleSecondary: (() -> Void)? = nil
+    /// Set on the tappable area, not the Last/Target control.
+    var openIdentifier: String? = nil
+    /// Row tap. The Last/Target button is outside this target.
+    var onOpen: (() -> Void)? = nil
 
     private var isActive: Bool { state == .active }
     private var isCompleted: Bool { state == .completed }
 
     var body: some View {
+        HStack(alignment: .center, spacing: 4) {
+            // contextMenu and long-press reorder swallow onTapGesture. One
+            // simultaneous tap on this area still opens Focus. The Last/Target
+            // button is a sibling, so its tap does not open Focus.
+            openTarget
+                .contentShape(Rectangle())
+                .simultaneousGesture(TapGesture().onEnded { onOpen?() })
+            if onToggleSecondary != nil {
+                toggleButton
+            }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .opacity(isCompleted ? 0.6 : 1)
+        .background {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(isActive ? Color.uplift.surface3 : Color.uplift.surface1)
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .strokeBorder(isActive ? Color.uplift.accent : .clear, lineWidth: 1.5)
+        }
+        .accessibilityElement(children: .contain)
+    }
+
+    private var openTarget: some View {
         HStack(spacing: 12) {
             statusCircle
             VStack(alignment: .leading, spacing: 3) {
@@ -64,9 +94,9 @@ struct ExerciseListRow: View {
                             .accessibilityLabel("Trained before")
                     }
                 }
-                secondaryLine
+                secondaryLabel(secondaryContent)
             }
-            Spacer(minLength: 8)
+            .frame(maxWidth: .infinity, alignment: .leading)
             if let personalBestSummary, !personalBestSummary.isEmpty {
                 VStack(alignment: .trailing, spacing: 2) {
                     Text("PR")
@@ -88,42 +118,28 @@ struct ExerciseListRow: View {
                     .accessibilityHidden(true)
             }
         }
-        .padding(14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .opacity(isCompleted ? 0.6 : 1)
-        .background {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(isActive ? Color.uplift.surface3 : Color.uplift.surface1)
-        }
-        .overlay {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .strokeBorder(isActive ? Color.uplift.accent : .clear, lineWidth: 1.5)
-        }
-        .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityText)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityHint("Opens this lift")
+        .accessibilityAction(.default) { onOpen?() }
+        .modifier(OpenIdentifier(openIdentifier))
     }
 
-    @ViewBuilder
-    private var secondaryLine: some View {
-        let content = secondaryContent
-        secondaryLabel(content)
-            .contentShape(Rectangle())
-            .accessibilityLabel(content.accessibility)
-            .accessibilityHint(
-                onToggleSecondary == nil
-                    ? ""
-                    : (secondaryMode == .recipe
-                        ? "Shows last session. Activate to show progression target."
-                        : "Shows progression target. Activate to show last session.")
-            )
-            .accessibilityAddTraits(onToggleSecondary == nil ? [] : .isButton)
-            // highPriorityGesture wins over parent NavigationLink for this strip only.
-            .highPriorityGesture(
-                TapGesture().onEnded {
-                    onToggleSecondary?()
-                }
-            )
+    private var toggleButton: some View {
+        Button {
+            onToggleSecondary?()
+        } label: {
+            Text(secondaryMode == .recipe ? "Last" : "Target")
+                .font(.uplift.text(12, weight: .semibold))
+                .foregroundStyle(Color.uplift.accent)
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier(AccessibilityID.workoutSecondaryToggle)
+        .accessibilityLabel(secondaryMode == .recipe ? "Showing last session" : "Showing progression target")
+        .accessibilityHint(secondaryMode == .recipe ? "Show progression target" : "Show last session")
     }
 
     private func secondaryLabel(_ content: SecondaryContent) -> some View {
@@ -270,6 +286,19 @@ struct ExerciseListRow: View {
             parts.append("trained before")
         }
         return parts.joined(separator: ", ")
+    }
+}
+
+private struct OpenIdentifier: ViewModifier {
+    let identifier: String?
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if let identifier {
+            content.accessibilityIdentifier(identifier)
+        } else {
+            content
+        }
     }
 }
 

@@ -17,9 +17,18 @@ enum HapticService {
     }
 
     static func exerciseCompleted() {
+        success()
+    }
+
+    static func success() {
+        notificationOccurred(.success)
+    }
+
+    /// Tests replace this. Production plays the system notification haptic.
+    static var notificationOccurred: (UINotificationFeedbackGenerator.FeedbackType) -> Void = { type in
         let generator = UINotificationFeedbackGenerator()
         generator.prepare()
-        generator.notificationOccurred(.success)
+        generator.notificationOccurred(type)
     }
 
     static func stepperTick() {

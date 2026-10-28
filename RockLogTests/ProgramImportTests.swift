@@ -683,6 +683,51 @@ final class ProgramImportTests: RockLogStoreTestCase {
         XCTAssertFalse(calendar.isDate(sessions[0].date, inSameDayAs: monday))
     }
 
+    func test_schemaVersion_acceptsOlderCompatibleFiles_andNamesTheRejectedVersion() throws {
+        XCTAssertTrue(ProgramFormat.accepts(1, current: 2, minimum: 1))
+        XCTAssertFalse(ProgramFormat.accepts(0, current: 2, minimum: 1))
+        XCTAssertFalse(ProgramFormat.accepts(3, current: 2, minimum: 1))
+        XCTAssertTrue(ProgramFormat.accepts(ProgramFormat.schemaVersion))
+
+        let newer = programJSON(schemaVersion: 99)
+        XCTAssertThrowsError(try ProgramCodec.decode(newer)) { error in
+            guard case ProgramDocument.ProgramFormatError.unsupportedVersion(let version) = error else {
+                return XCTFail("expected unsupportedVersion, got \(error)")
+            }
+            XCTAssertEqual(version, 99)
+            let message = error.localizedDescription
+            XCTAssertTrue(message.contains("99"))
+            XCTAssertTrue(message.contains("\(ProgramFormat.schemaVersion)"))
+        }
+
+        let unknown = programJSON(schemaVersion: 0)
+        XCTAssertThrowsError(try ProgramCodec.decode(unknown)) { error in
+            let message = error.localizedDescription
+            XCTAssertTrue(message.contains("0"))
+            XCTAssertTrue(message.contains("\(ProgramFormat.minimumSchemaVersion)"))
+        }
+
+        let current = try ProgramCodec.decode(programJSON(schemaVersion: ProgramFormat.schemaVersion))
+        XCTAssertEqual(current.schemaVersion, ProgramFormat.schemaVersion)
+    }
+
+    func test_import_kilogramFile_keepsTheEnteredNumber() throws {
+        let context = container.mainContext
+        var document = sampleDocument(firstSession: Date(timeIntervalSince1970: 1_800_000_000))
+        document.weightUnit = "kg"
+        document.block.sessions[0].exercises[0].sets[0].weightLbs = 100
+        _ = try ProgramImportService.importDocument(document, context: context)
+        let sets = try context.fetch(FetchDescriptor<SetRecord>())
+        let stamped = try XCTUnwrap(sets.first { $0.enteredValue == 100 })
+        XCTAssertEqual(stamped.enteredUnitRaw, "kg")
+        XCTAssertEqual(stamped.displayValue(in: .kilograms), 100, accuracy: 0.001)
+        XCTAssertEqual(
+            stamped.weightLbs,
+            MassMath.pounds(fromDisplay: 100, unit: .kilograms),
+            accuracy: 0.001
+        )
+    }
+
     func test_plainDayStamp_decodesOnTheLocalCalendarDay() throws {
         let json = """
         {
@@ -905,6 +950,30 @@ final class ProgramImportTests: RockLogStoreTestCase {
                 )
             )
         }
+    }
+
+    private func programJSON(schemaVersion: Int) -> Data {
+        let json = """
+        {
+          "format": "rocklog.program",
+          "schemaVersion": \(schemaVersion),
+          "exportedAt": "2026-08-31T12:00:00Z",
+          "block": {
+            "id": "11111111-1111-4111-8111-111111111111",
+            "name": "Synthetic Block",
+            "startDate": "2026-08-31",
+            "sessions": [
+              {
+                "id": "22222222-2222-4222-8222-222222222222",
+                "date": "2026-08-31",
+                "dayType": "Push",
+                "exercises": []
+              }
+            ]
+          }
+        }
+        """
+        return Data(json.utf8)
     }
 
     private func sampleDocument(firstSession: Date) -> ProgramDocument {

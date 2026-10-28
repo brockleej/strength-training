@@ -112,15 +112,19 @@ struct ProgressionService {
         return RecentAverage(weight: avgWeight, reps: avgReps, sessionCount: bestSets.count)
     }
 
-    /// The single heaviest *working* set in a snapshot record (by weight).
+    /// The single heaviest *working* set in a snapshot record.
     /// Warm-up sets are excluded so a heavy ramp does not drive progression.
-    /// Ties broken by first occurrence — Swift's `max(by:)` only replaces the
-    /// running max when the predicate returns true, so the predicate `<` makes
-    /// the *first* occurrence of the max win. This predicate is load-bearing.
+    /// Same rule as `MonthlyOverload.bestWorkingSet`: higher weight, then
+    /// higher reps, then the first occurrence.
     private static func bestSet(in record: ExerciseRecordSnapshot) -> SetSnapshot? {
         record.sets
             .filter { !$0.isWarmup }
-            .max(by: { $0.weightLbs < $1.weightLbs })
+            .max(by: { lhs, rhs in
+                if lhs.weightLbs != rhs.weightLbs {
+                    return lhs.weightLbs < rhs.weightLbs
+                }
+                return lhs.reps < rhs.reps
+            })
     }
 
     /// Round to the nearest 5 lbs.

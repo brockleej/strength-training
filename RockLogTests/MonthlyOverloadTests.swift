@@ -146,6 +146,62 @@ final class MonthlyOverloadTests: XCTestCase {
         XCTAssertEqual(best, MonthlyOverload.WorkingSet(weightLbs: 230, reps: 3))
     }
 
+    func test_groupingTimeZone_usesTheAthleteZoneOrUTC() {
+        let athlete = MonthlyOverload.groupingTimeZone(recorded: ["America/Los_Angeles"])
+        XCTAssertEqual(athlete.identifier, "America/Los_Angeles")
+        let utc = MonthlyOverload.groupingTimeZone(recorded: [])
+        XCTAssertEqual(utc.secondsFromGMT(), 0)
+        let coach = TimeZone(identifier: "Asia/Tokyo")!
+        XCTAssertNotEqual(utc.secondsFromGMT(for: Date(timeIntervalSince1970: 1_700_000_000)), coach.secondsFromGMT(for: Date(timeIntervalSince1970: 1_700_000_000)))
+    }
+
+    func test_monthBoundary_followsTheRecordedZoneNotTheCoachZone() {
+        let instant = ISO8601DateFormatter().date(from: "2026-03-01T07:30:00Z")!
+        let now = ISO8601DateFormatter().date(from: "2026-03-15T18:00:00Z")!
+        let session = MonthlyOverload.SessionInput(
+            date: instant,
+            lifts: [
+                MonthlyOverload.LiftInput(
+                    exerciseID: UUID(uuidString: "11111111-1111-4111-8111-111111111111")!,
+                    exerciseName: "Synthetic Press",
+                    dayTypeName: "Push",
+                    sortOrder: 0,
+                    sets: [set(100, 5)]
+                ),
+            ]
+        )
+        let gregorian = Calendar(identifier: .gregorian)
+        let losAngeles = MonthlyOverload.review(
+            sessions: [session],
+            now: now,
+            calendar: gregorian,
+            timeZone: TimeZone(identifier: "America/Los_Angeles")!
+        )
+        let utc = MonthlyOverload.review(
+            sessions: [session],
+            now: now,
+            calendar: gregorian,
+            timeZone: MonthlyOverload.groupingTimeZone(recorded: [])
+        )
+        XCTAssertEqual(losAngeles.lastMonthWorkoutCount, 1)
+        XCTAssertEqual(losAngeles.thisMonthWorkoutCount, 0)
+        XCTAssertEqual(utc.thisMonthWorkoutCount, 1)
+        XCTAssertEqual(utc.lastMonthWorkoutCount, 0)
+    }
+
+    func test_compare_kilogramDrift_isNotHeavier() {
+        let same = MonthlyOverload.compare(
+            thisMonth: MonthlyOverload.WorkingSet(weightLbs: 185.4, reps: 5),
+            lastMonth: MonthlyOverload.WorkingSet(weightLbs: 185, reps: 5)
+        )
+        XCTAssertEqual(same, .flat)
+        let real = MonthlyOverload.compare(
+            thisMonth: MonthlyOverload.WorkingSet(weightLbs: 185.5, reps: 5),
+            lastMonth: MonthlyOverload.WorkingSet(weightLbs: 185, reps: 5)
+        )
+        XCTAssertEqual(real, .up)
+    }
+
     func test_bestSet_sameWeight_higherRepsWins() {
         let best = MonthlyOverload.bestWorkingSet(in: [
             set(225, 4),

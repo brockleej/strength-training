@@ -5,6 +5,15 @@
 	<!-- Standard HTTPS / CloudKit / HealthKit only — no custom crypto. -->
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>RockLog uses your location only when you tap Gym pass or start a workout, to choose the nearest saved gym. It does not track you in the background.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>RockLog uses the camera to scan a gym barcode. The photo is not saved.</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>kisi</string>
+		<string>itms-apps</string>
+	</array>
 	<key>NSSupportsLiveActivities</key>
 	<false/>
 	<key>UIBackgroundModes</key>

@@ -30,6 +30,9 @@ enum UITestLaunch {
     /// Empty-library settings checks the rest-timer rows. Logging presets omit this
     /// and stay off so a logged set does not start a countdown.
     static let restTimerArgument = "-RockLogRestTimer"
+    /// `lb` or `kg`. Every UI launch passes one. The app stores it in memory
+    /// and does not write iCloud from a test.
+    static let massUnitArgument = "-RockLogMassUnit"
     /// Shows the set-row hit log. UI tests only. Release builds never read this.
     static let diagControlArgument = "-RockLogDiag"
     static let injectEnvironmentKey = "ROCKLOG_INJECT_FILE_B64"
@@ -38,6 +41,10 @@ enum UITestLaunch {
         guard let index = arguments.firstIndex(of: restTimerArgument),
               index + 1 < arguments.count else { return false }
         return arguments[index + 1] == "on"
+    }
+
+    static func massUnit(arguments: [String]) -> MassUnit {
+        MassUnitPreferences.unitFromLaunchArguments(arguments)
     }
 
     /// Stashed when a UI test injects a backup. Settings presents the
@@ -140,8 +147,12 @@ enum UITestLaunch {
     /// publish a split into the signed-in tester's account.
     static func prepareDefaults() {
         let defaults = UserDefaults.standard
+        let arguments = ProcessInfo.processInfo.arguments
+        let unit = massUnit(arguments: arguments)
+        defaults.set(unit.rawValue, forKey: MassUnitPreferences.key)
+        MassUnitPreferences.useIsolatedUnit(unit)
         defaults.set(
-            restTimerEnabled(arguments: ProcessInfo.processInfo.arguments),
+            restTimerEnabled(arguments: arguments),
             forKey: RestTimerPreferences.enabledKey
         )
         defaults.set(false, forKey: RestTimerPreferences.soundEnabledKey)

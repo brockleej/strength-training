@@ -134,6 +134,16 @@ struct UpliftStepper: View {
         return (isTarget ? "Target \(base)" : base).uppercased()
     }
 
+    /// Spoken unit for the step control. `unit` is the short code (`lb` / `kg`).
+    private var stepUnitWord: String {
+        switch unit {
+        case "kg": "kilograms"
+        case "lb": "pounds"
+        case let other?: other
+        default: "pounds"
+        }
+    }
+
     @ViewBuilder
     private var hintLine: some View {
         if let targetDelta {
@@ -151,7 +161,7 @@ struct UpliftStepper: View {
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Weight step \(StepperLogic.format(step)) pounds, tap to change step")
+            .accessibilityLabel("Weight step \(StepperLogic.format(step)) \(stepUnitWord), tap to change step")
         } else {
             Text("± \(StepperLogic.format(step))")
                 .font(.uplift.text(10, weight: .medium))

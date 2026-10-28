@@ -117,7 +117,7 @@ private nonisolated let pathCap = 12
 
 private nonisolated let rootKeys: Set<String> = [
     "version", "exportedAt", "exercises", "sessions", "splitDays", "dayPlans",
-    "trainingBlocks", "bodyMetrics", "gyms", "stackProfiles",
+    "trainingBlocks", "bodyMetrics", "gyms", "stackProfiles", "weightUnit",
 ]
 private nonisolated let exerciseKeys: Set<String> = [
     "id", "name", "dayType", "muscleGroup", "sortOrder", "isCustom", "notes",
@@ -136,7 +136,7 @@ private nonisolated let recordKeys: Set<String> = [
 private nonisolated let setKeys: Set<String> = [
     "id", "setNumber", "weightLbs", "reps", "isWarmup", "isEachSide", "isAssisted",
     "completedAt", "isTarget", "offeredWeightLbs", "loadModeRaw", "bodyWeightUsedLbs",
-    "plannedRestSeconds", "actualRestSeconds",
+    "plannedRestSeconds", "actualRestSeconds", "enteredUnitRaw", "enteredValue",
 ]
 private nonisolated let splitDayKeys: Set<String> = [
     "id", "name", "systemImage", "subtitle", "colorHex", "includesAllExercises", "sortOrder",

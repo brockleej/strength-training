@@ -187,8 +187,7 @@ final class ProgressionServicePureFunctionTests: XCTestCase {
 
     // MARK: - Best-set tie-breaking
 
-    func test_bestSet_firstOccurrenceWinsOnTie() {
-        // Two sets at same weight, different reps. bestSet should pick the FIRST.
+    func test_bestSet_equalWeight_higherRepsWins_sameAsMonthlyOverload() {
         let date = Date()
         let record = ExerciseRecordSnapshot(
             trainingMode: .highWeightLowReps,
@@ -198,13 +197,36 @@ final class ProgressionServicePureFunctionTests: XCTestCase {
                 SetSnapshot(weightLbs: 50, reps: 12, isWarmup: false, completedAt: date),
             ]
         )
-        // Single record → notEnoughData → returns the best set unchanged.
         let suggestion = ProgressionService.suggestion(
             records: [record],
             mode: .highWeightLowReps,
             params: .productionModerate
         )
-        XCTAssertEqual(suggestion?.targetReps, 8)  // first-occurrence wins
+        let monthly = MonthlyOverload.bestWorkingSet(in: [
+            MonthlyOverload.SetInput(weightLbs: 50, reps: 8),
+            MonthlyOverload.SetInput(weightLbs: 50, reps: 12),
+        ])
+        XCTAssertEqual(suggestion?.targetReps, 12)
+        XCTAssertEqual(monthly?.reps, suggestion?.targetReps)
+    }
+
+    func test_bestSet_equalWeightAndReps_keepsTheFirst() {
+        let date = Date()
+        let record = ExerciseRecordSnapshot(
+            trainingMode: .highWeightLowReps,
+            sessionDate: date,
+            sets: [
+                SetSnapshot(weightLbs: 50, reps: 8, isWarmup: false, completedAt: date),
+                SetSnapshot(weightLbs: 50, reps: 8, isWarmup: false, completedAt: date),
+            ]
+        )
+        let suggestion = ProgressionService.suggestion(
+            records: [record],
+            mode: .highWeightLowReps,
+            params: .productionModerate
+        )
+        XCTAssertEqual(suggestion?.targetWeight, 50)
+        XCTAssertEqual(suggestion?.targetReps, 8)
     }
 
     // MARK: - Warmup handling

@@ -28,10 +28,10 @@ extension ProgressionService {
         for exercise: Exercise,
         mode: TrainingMode,
         aggressiveness: ProgressionAggressiveness,
-        excludingSessionID: UUID? = nil
+        excludingSessionID: UUID? = nil,
+        unit: MassUnit = MassUnitPreferences.unit
     ) -> ProgressionSuggestion? {
         let snapshots = snapshotsFromCompletedRecords(of: exercise, excludingSessionID: excludingSessionID)
-        let unit = MassUnitPreferences.unit
         return suggestion(records: snapshots, mode: mode, params: aggressiveness.parameters) {
             MassMath.snapProgression(pounds: $0, unit: unit)
         }

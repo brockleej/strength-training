@@ -472,16 +472,13 @@ struct ExerciseListView: View {
                         targetWeight: rowData.targetWeight,
                         targetReps: rowData.targetReps,
                         secondaryMode: secondaryMode,
-                        onToggleSecondary: toggleSecondaryMode
+                        onToggleSecondary: toggleSecondaryMode,
+                        openIdentifier: AccessibilityID.workoutExercise(exercise.name),
+                        onOpen: {
+                            let start = flatExercises.firstIndex(where: { $0.id == exercise.id }) ?? 0
+                            focusLaunch = FocusLaunch(exerciseID: exercise.id, startIndex: start)
+                        }
                     )
-                    .contentShape(Rectangle())
-                    .accessibilityIdentifier(AccessibilityID.workoutExercise(exercise.name))
-                    // contextMenu and long-press reorder swallow onTapGesture, so a
-                    // tap never opens Focus. A simultaneous tap still reaches them.
-                    .simultaneousGesture(TapGesture().onEnded {
-                        let start = flatExercises.firstIndex(where: { $0.id == exercise.id }) ?? 0
-                        focusLaunch = FocusLaunch(exerciseID: exercise.id, startIndex: start)
-                    })
                     .contextMenu {
                         Button {
                             editingExercise = exercise
@@ -531,7 +528,7 @@ struct ExerciseListView: View {
                     Image(systemName: "hand.tap")
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(Color.uplift.accent)
-                    Text("Tap Last under a lift to switch between last session and progression target.")
+                    Text("Tap Last or Target under a lift to switch between last session and progression target.")
                         .font(.uplift.text(12, weight: .medium))
                         .foregroundStyle(Color.uplift.fgMuted)
                         .fixedSize(horizontal: false, vertical: true)

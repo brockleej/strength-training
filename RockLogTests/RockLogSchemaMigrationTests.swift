@@ -42,16 +42,16 @@ final class RockLogSchemaMigrationTests: XCTestCase {
         try open(schema: schema, url: storeURL, migrationPlan: true)
         let context = container!.mainContext
 
-        let exercises = try context.fetch(FetchDescriptor<Exercise>())
+        let exercises = try context.fetch(FetchDescriptor<RockLogSchemaV2.Exercise>())
         XCTAssertEqual(exercises.map(\.id), [exerciseID])
         XCTAssertEqual(exercises.map(\.name), ["Legacy Squat"])
 
-        let blocks = try context.fetch(FetchDescriptor<TrainingBlock>())
+        let blocks = try context.fetch(FetchDescriptor<RockLogSchemaV2.TrainingBlock>())
         XCTAssertEqual(blocks.map(\.id), [blockID])
         XCTAssertEqual(blocks.map(\.name), ["Legacy Block"])
         XCTAssertEqual(blocks.map(\.notes), ["from the unversioned store"])
 
-        let metrics = try context.fetch(FetchDescriptor<BodyMetricEntry>())
+        let metrics = try context.fetch(FetchDescriptor<RockLogSchemaV2.BodyMetricEntry>())
         XCTAssertEqual(metrics.map(\.id), [metricID])
         XCTAssertEqual(metrics.map(\.kind), [.weight])
         XCTAssertEqual(metrics.map(\.value), [180])
@@ -71,25 +71,134 @@ final class RockLogSchemaMigrationTests: XCTestCase {
         let schema = Schema(versionedSchema: RockLogSchemaV2.self)
         try open(schema: schema, url: storeURL, migrationPlan: true)
         let context = container!.mainContext
-        let exercises = try context.fetch(FetchDescriptor<Exercise>())
+        let exercises = try context.fetch(FetchDescriptor<RockLogSchemaV2.Exercise>())
         XCTAssertEqual(exercises.map(\.id), [exerciseID])
         XCTAssertEqual(exercises.first?.defaultRestSeconds, 0)
         XCTAssertEqual(exercises.first?.autoRestEnabled, true)
         XCTAssertEqual(exercises.first?.autoRestCopied, false)
         XCTAssertEqual(exercises.first?.suggestWarmupRamp, false)
         XCTAssertEqual(exercises.first?.loadModeRaw, "")
+        let gyms = try context.fetch(FetchDescriptor<RockLogSchemaV2.Gym>())
+        XCTAssertTrue(gyms.isEmpty)
+        let profiles = try context.fetch(FetchDescriptor<RockLogSchemaV2.MachineStackProfile>())
+        XCTAssertTrue(profiles.isEmpty)
+    }
+
+    /// A V1 file on disk, including a logged set, opens as V2 without dropping the set.
+    func test_v1OnDiskStore_migratesLoggedSetToV2() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("rocklog-v1-set-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let storeURL = directory.appendingPathComponent("RockLog.store")
+        let exerciseID = UUID()
+        let setID = UUID()
+        try writeVersionedV1Workout(url: storeURL, exerciseID: exerciseID, setID: setID)
+
+        let schema = Schema(versionedSchema: RockLogSchemaV2.self)
+        try open(schema: schema, url: storeURL, migrationPlan: true)
+        let context = container!.mainContext
+        let sets = try context.fetch(FetchDescriptor<RockLogSchemaV2.SetRecord>())
+        XCTAssertEqual(sets.map(\.id), [setID])
+        XCTAssertEqual(sets.first?.weightLbs, 135)
+        XCTAssertEqual(sets.first?.reps, 8)
+        XCTAssertEqual(sets.first?.exerciseRecord?.exercise?.id, exerciseID)
+        XCTAssertEqual(sets.first?.exerciseRecord?.session?.isCompleted, true)
+        let gyms = try context.fetch(FetchDescriptor<RockLogSchemaV2.Gym>())
+        XCTAssertTrue(gyms.isEmpty)
+    }
+
+    /// A V2 file on disk, including a logged set, opens as V3 and keeps the row.
+    /// Entered unit and value stay at the V3 defaults. Synthetic data only.
+    func test_v2OnDiskStore_migratesLoggedSetToV3() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("rocklog-v2-set-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let storeURL = directory.appendingPathComponent("RockLog.store")
+        let exerciseID = UUID()
+        let setID = UUID()
+        try writeVersionedV2Workout(url: storeURL, exerciseID: exerciseID, setID: setID)
+
+        let schema = Schema(versionedSchema: RockLogSchemaV3.self)
+        try open(schema: schema, url: storeURL, migrationPlan: true)
+        let context = container!.mainContext
+        let sets = try context.fetch(FetchDescriptor<SetRecord>())
+        XCTAssertEqual(sets.map(\.id), [setID])
+        XCTAssertEqual(sets.first?.weightLbs, 135)
+        XCTAssertEqual(sets.first?.reps, 8)
+        XCTAssertEqual(sets.first?.enteredUnitRaw, "")
+        XCTAssertEqual(sets.first?.enteredValue, 0)
+        XCTAssertEqual(sets.first?.exerciseRecord?.exercise?.id, exerciseID)
+        XCTAssertEqual(sets.first?.exerciseRecord?.exercise?.name, "Frozen V2 Press")
+        XCTAssertEqual(sets.first?.exerciseRecord?.session?.isCompleted, true)
+        let exercises = try context.fetch(FetchDescriptor<Exercise>())
+        XCTAssertEqual(exercises.map(\.id), [exerciseID])
         let gyms = try context.fetch(FetchDescriptor<Gym>())
         XCTAssertTrue(gyms.isEmpty)
-        let profiles = try context.fetch(FetchDescriptor<MachineStackProfile>())
-        XCTAssertTrue(profiles.isEmpty)
+    }
+
+    private func writeVersionedV2Workout(url: URL, exerciseID: UUID, setID: UUID) throws {
+        let schema = Schema(versionedSchema: RockLogSchemaV2.self)
+        try open(schema: schema, url: url, migrationPlan: false)
+        let context = container!.mainContext
+        insertLoggedSet(
+            in: context,
+            name: "Frozen V2 Press",
+            exerciseID: exerciseID,
+            setID: setID
+        )
+        try context.save()
+        container = nil
+    }
+
+    private func writeVersionedV1Workout(url: URL, exerciseID: UUID, setID: UUID) throws {
+        let schema = Schema(versionedSchema: RockLogSchemaV1.self)
+        try open(schema: schema, url: url, migrationPlan: false)
+        let context = container!.mainContext
+        insertLoggedSet(
+            in: context,
+            name: "Version One Press",
+            exerciseID: exerciseID,
+            setID: setID
+        )
+        try context.save()
+        container = nil
+    }
+
+    private func insertLoggedSet(
+        in context: ModelContext,
+        name: String,
+        exerciseID: UUID,
+        setID: UUID
+    ) {
+        let exercise = RockLogSchemaV2.Exercise(name: name, dayType: .push, muscleGroup: "Chest", isCustom: true)
+        exercise.id = exerciseID
+        let session = RockLogSchemaV2.WorkoutSession(dayType: .push, date: Date(timeIntervalSince1970: 1_700_000_000))
+        session.isCompleted = true
+        let record = RockLogSchemaV2.ExerciseRecord(trainingMode: .highWeightLowReps, sortOrder: 0)
+        record.exercise = exercise
+        record.session = session
+        let set = RockLogSchemaV2.SetRecord(setNumber: 1, weightLbs: 135, reps: 8)
+        set.id = setID
+        set.exerciseRecord = record
+        record.sets = [set]
+        session.exerciseRecords = [record]
+        context.insert(exercise)
+        exercise.id = exerciseID
+        context.insert(session)
+        context.insert(record)
+        context.insert(set)
+        set.id = setID
     }
 
     private func writeVersionedV1(url: URL, exerciseID: UUID) throws {
         let schema = Schema(versionedSchema: RockLogSchemaV1.self)
         try open(schema: schema, url: url, migrationPlan: false)
-        let exercise = Exercise.make(name: "Version One Press", dayType: .push, muscleGroup: "Chest", isCustom: true)
+        let exercise = RockLogSchemaV2.Exercise(name: "Version One Press", dayType: .push, muscleGroup: "Chest", isCustom: true)
         exercise.id = exerciseID
         container!.mainContext.insert(exercise)
+        exercise.id = exerciseID
         try container!.mainContext.save()
         container = nil
     }
@@ -105,23 +214,26 @@ final class RockLogSchemaMigrationTests: XCTestCase {
         try open(schema: schema, url: url, migrationPlan: false)
         let context = container!.mainContext
 
-        let exercise = Exercise.make(name: "Legacy Squat", dayType: .legs, muscleGroup: "Quads", isCustom: true)
+        let exercise = RockLogSchemaV2.Exercise(name: "Legacy Squat", dayType: .legs, muscleGroup: "Quads", isCustom: true)
         exercise.id = exerciseID
-        let block = TrainingBlock(
+        let block = RockLogSchemaV2.TrainingBlock(
             name: "Legacy Block",
             startDate: Date(timeIntervalSince1970: 1_700_000_000),
             notes: "from the unversioned store"
         )
         block.id = blockID
-        let metric = BodyMetricEntry(
+        let metric = RockLogSchemaV2.BodyMetricEntry(
             kind: .weight,
             value: 180,
             date: Date(timeIntervalSince1970: 1_700_000_000)
         )
         metric.id = metricID
         context.insert(exercise)
+        exercise.id = exerciseID
         context.insert(block)
+        block.id = blockID
         context.insert(metric)
+        metric.id = metricID
         try context.save()
         container = nil
     }

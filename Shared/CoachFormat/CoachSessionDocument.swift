@@ -87,6 +87,8 @@ nonisolated struct CoachSessionDocument: Codable, Hashable, Identifiable, Sendab
 nonisolated struct CoachAthlete: Codable, Hashable, Identifiable, Sendable {
     var id: UUID
     var displayName: String
+    /// "lb" or "kg" on the phone that exported. Missing files are pounds.
+    var weightUnit: String? = nil
 }
 
 nonisolated struct CoachSessionPayload: Codable, Hashable, Identifiable, Sendable {
@@ -101,6 +103,8 @@ nonisolated struct CoachSessionPayload: Codable, Hashable, Identifiable, Sendabl
     var gymID: UUID? = nil
     /// Name at export time. History can still show it after the gym row is gone.
     var gymName: String? = nil
+    /// IANA zone of the phone that logged the session. Missing on older files.
+    var timeZoneIdentifier: String? = nil
 }
 
 nonisolated struct CoachExercisePayload: Codable, Hashable, Identifiable, Sendable {
@@ -133,6 +137,9 @@ nonisolated struct CoachSetPayload: Codable, Hashable, Sendable {
     var loadMode: String? = nil
     /// Body weight used that day, in pounds. Required for a fair assist / added comparison.
     var bodyWeightLbs: Double? = nil
+    /// Unit of `enteredValue` when the phone stored the original entry.
+    var enteredUnit: String? = nil
+    var enteredValue: Double? = nil
 
     var resolvedWarmup: Bool { isWarmup ?? false }
 

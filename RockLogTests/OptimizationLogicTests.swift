@@ -12,6 +12,51 @@ import SwiftData
 
 final class OptimizationLogicTests: RockLogStoreTestCase {
 
+    func test_massUnitLaunchArgument_isPoundsUnlessTheLaunchSaysKilograms() {
+        XCTAssertEqual(UITestLaunch.massUnit(arguments: ["-RockLogUITesting", "-RockLogPreset", "typical"]), .pounds)
+        XCTAssertEqual(
+            UITestLaunch.massUnit(arguments: ["-RockLogUITesting", "-RockLogMassUnit", "lb"]),
+            .pounds
+        )
+        XCTAssertEqual(
+            UITestLaunch.massUnit(arguments: ["-RockLogUITesting", "-RockLogMassUnit", "kg"]),
+            .kilograms
+        )
+    }
+
+    func test_massUnitResolution_keepsOneValue() {
+        let localWins = MassUnitResolution.resolve(local: "lb", cloud: "kg")
+        XCTAssertEqual(localWins.unit, .pounds)
+        XCTAssertNil(localWins.writeLocal)
+        XCTAssertEqual(localWins.writeCloud, "lb")
+
+        let cloudFills = MassUnitResolution.resolve(local: nil, cloud: "kg")
+        XCTAssertEqual(cloudFills.unit, .kilograms)
+        XCTAssertEqual(cloudFills.writeLocal, "kg")
+        XCTAssertNil(cloudFills.writeCloud)
+
+        let empty = MassUnitResolution.resolve(local: nil, cloud: nil)
+        XCTAssertEqual(empty.unit, .pounds)
+        XCTAssertNil(empty.writeLocal)
+        XCTAssertNil(empty.writeCloud)
+
+        let already = MassUnitResolution.resolve(local: "kg", cloud: "kg")
+        XCTAssertEqual(already.unit, .kilograms)
+        XCTAssertNil(already.writeLocal)
+        XCTAssertNil(already.writeCloud)
+    }
+
+    func test_unitTestHost_usesAnIsolatedPoundStore() {
+        XCTAssertTrue(RockLogTestHost.isUnitTestHost)
+        XCTAssertTrue(MassUnitPreferences.isIsolatedFromCloud)
+        MassUnitPreferences.useIsolatedUnit(.pounds)
+        XCTAssertEqual(MassUnitPreferences.unit, .pounds)
+        MassUnitPreferences.unit = .kilograms
+        XCTAssertEqual(MassUnitPreferences.unit, .kilograms)
+        MassUnitPreferences.useIsolatedUnit(.pounds)
+        XCTAssertEqual(MassUnitPreferences.unit, .pounds)
+    }
+
     func test_loggingUITest_leavesRestTimerOffUnlessAsked() {
         XCTAssertFalse(UITestLaunch.restTimerEnabled(arguments: ["-RockLogUITesting", "-RockLogPreset", "typical"]))
         XCTAssertTrue(UITestLaunch.restTimerEnabled(arguments: ["-RockLogUITesting", "-RockLogRestTimer", "on"]))
@@ -28,6 +73,94 @@ final class OptimizationLogicTests: RockLogStoreTestCase {
         XCTAssertFalse(RestTimerPreferences.isEnabled)
         defaults.removeObject(forKey: RestTimerPreferences.enabledKey)
         XCTAssertTrue(RestTimerPreferences.isEnabled)
+    }
+
+    func test_kilogramRoundTrip_isNotAHeavierSetOrAPR() {
+        let original = 185.0
+        let shown = MassMath.display(fromPounds: original, unit: .kilograms)
+        let roundTrip = MassMath.storedPounds(fromEntered: shown, unit: .kilograms)
+        XCTAssertGreaterThan(abs(roundTrip - original), MassMath.sameStoredToleranceLbs)
+        XCTAssertTrue(MassMath.sameDisplayed(original, roundTrip, unit: .kilograms))
+        XCTAssertFalse(MassMath.isHeavier(roundTrip, than: original, unit: .kilograms))
+        XCTAssertFalse(MassMath.isHeavier(original, than: roundTrip, unit: .kilograms))
+
+        let prior = PRDetection.PriorBest(
+            weight: original,
+            reps: 5,
+            e1RM: E1RM.estimate(weightLbs: original, reps: 5),
+            date: Date(timeIntervalSince1970: 1_700_000_000)
+        )
+        XCTAssertNil(
+            PRDetection.celebration(
+                newWeight: roundTrip,
+                newReps: 5,
+                priorBest: prior,
+                alreadyCelebrated: false,
+                unit: .kilograms
+            )
+        )
+        XCTAssertNotNil(
+            PRDetection.celebration(
+                newWeight: original + 5,
+                newReps: 5,
+                priorBest: prior,
+                alreadyCelebrated: false,
+                unit: .kilograms
+            )
+        )
+    }
+
+    func test_hapticSuccess_usesTheSharedNotifier() {
+        var fired: UINotificationFeedbackGenerator.FeedbackType?
+        let previous = HapticService.notificationOccurred
+        HapticService.notificationOccurred = { fired = $0 }
+        defer { HapticService.notificationOccurred = previous }
+        HapticService.success()
+        XCTAssertEqual(fired, .success)
+    }
+
+    func test_enteredKilograms_roundTripWithoutDrift() {
+        let entered = 100.0
+        let pounds = MassMath.pounds(fromDisplay: entered, unit: .kilograms)
+        let back = MassMath.shown(
+            enteredValue: entered,
+            enteredUnit: .kilograms,
+            canonicalPounds: pounds,
+            display: .kilograms
+        )
+        XCTAssertEqual(back, 100, accuracy: 0.001)
+        let asPounds = MassMath.shown(
+            enteredValue: entered,
+            enteredUnit: .kilograms,
+            canonicalPounds: pounds,
+            display: .pounds
+        )
+        let walked = MassMath.storedPounds(fromEntered: asPounds, unit: .pounds)
+        let shownAgain = MassMath.shown(
+            enteredValue: entered,
+            enteredUnit: .kilograms,
+            canonicalPounds: walked,
+            display: .kilograms
+        )
+        XCTAssertEqual(shownAgain, 100, accuracy: 0.001)
+    }
+
+    func test_plates_kilogramBarAndPairs() {
+        let sixty = MassMath.plates(forTotal: 60, unit: .kilograms)
+        XCTAssertEqual(sixty.bar, 20)
+        XCTAssertEqual(sixty.platesPerSide, [20])
+        XCTAssertEqual(sixty.unit, .kilograms)
+        let hundred = MassMath.plates(forTotal: 100, unit: .kilograms)
+        XCTAssertEqual(hundred.platesPerSide, [25, 15])
+    }
+
+    func test_progressionSnap_landsOnTwoAndAHalfKilograms() {
+        let ideal = MassMath.pounds(fromDisplay: 101, unit: .kilograms)
+        let snapped = MassMath.snapProgression(pounds: ideal, unit: .kilograms)
+        let shown = MassMath.exactDisplay(fromPounds: snapped, unit: .kilograms)
+        XCTAssertEqual(shown, 100, accuracy: 0.001)
+        let again = MassMath.snapProgression(pounds: snapped, unit: .kilograms)
+        XCTAssertEqual(again, snapped, accuracy: 0.001)
     }
 
     func test_massRoundTrip_doesNotWalk() {

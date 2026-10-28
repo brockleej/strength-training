@@ -1,5 +1,20 @@
 # TestFlight — What to Test
 
+## Stage 2 — local, not a TestFlight paste yet
+
+```
+What's new: RockCoach's month table uses the athlete's time zone from the coach file, or UTC when the file has none. A kilogram round-trip no longer looks like a heavier set or a PR. Planned-workout files from an older supported version still import. A newer file names the version in the error. If opening the store fails, Retry tries again. On the workout list, Last and Target are buttons.
+
+Please try:
+1) Log a set in kilograms, switch to pounds and back, and log the same load again. It should not celebrate a PR.
+2) On the workout list, tap Last or Target. The line under the lift should change, and the lift should not open.
+3) If RockLog cannot open its store, Retry should try again.
+4) Settings → Gym Access: add one gym with a barcode. Today’s Gym pass button (same place as before) should show that code, full screen and bright. Long-press the button if you saved more than one.
+5) Settings → Units: switch to kilograms. A lift’s weight label should say KG, and the step should be 2.5. Switch back to pounds and a set you logged in kilograms should still show the kilograms you entered.
+```
+
+---
+
 ## Stage 1 — local, not a TestFlight paste yet
 
 ```

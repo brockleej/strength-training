@@ -38,6 +38,8 @@ struct DeletedSetUndo: Equatable {
     let bodyWeightUsedLbs: Double
     let plannedRestSeconds: Int
     let actualRestSeconds: Int
+    let enteredUnitRaw: String
+    let enteredValue: Double
 
     init(set: SetRecord, exerciseID: UUID, modeRaw: String) {
         self.exerciseID = exerciseID
@@ -55,6 +57,8 @@ struct DeletedSetUndo: Equatable {
         self.bodyWeightUsedLbs = set.bodyWeightUsedLbs
         self.plannedRestSeconds = set.plannedRestSeconds
         self.actualRestSeconds = set.actualRestSeconds
+        self.enteredUnitRaw = set.enteredUnitRaw
+        self.enteredValue = set.enteredValue
     }
 }
 
@@ -474,6 +478,7 @@ final class WorkoutViewModel {
     }
 
     func startSession(dayType: DayType, rotationTrack: RotationTrack? = nil, now: Date = .now) {
+        GymAccessStore.shared.noteWorkoutStarted()
         // Resume a suspended session of the same type
         if let suspended = suspendedSession, suspended.day == dayType {
             activeSession = suspended
@@ -503,6 +508,7 @@ final class WorkoutViewModel {
 
     /// Start a specific queued planned session (not only the next unused).
     func startPlannedSession(_ session: WorkoutSession, rotationTrack: RotationTrack? = nil, now: Date = .now) {
+        GymAccessStore.shared.noteWorkoutStarted()
         if let suspended = suspendedSession, suspended.id == session.id {
             activeSession = suspended
             if let rotationTrack {
@@ -1208,7 +1214,9 @@ final class WorkoutViewModel {
         isEachSide: Bool = false,
         isAssisted: Bool = false,
         offeredWeight: Double? = nil,
-        loadMode: LoadMode? = nil
+        loadMode: LoadMode? = nil,
+        enteredValue: Double? = nil,
+        enteredUnit: MassUnit? = nil
     ) {
         guard let record = findOrCreateRecord(for: exercise) else { return }
         // Logging again means the lift is no longer marked done.
@@ -1228,6 +1236,9 @@ final class WorkoutViewModel {
             set.loadModeRaw = (isAssisted && mode == .bar) ? LoadMode.assist.rawValue : mode.rawValue
         }
         if isAssisted { set.isAssisted = true }
+        if let enteredValue, let enteredUnit {
+            set.stampEntered(enteredValue, unit: enteredUnit)
+        }
         if !isWarmup, let offeredWeight, !MassMath.sameStoredPounds(offeredWeight, weight) {
             set.offeredWeightLbs = offeredWeight
         }
@@ -1255,9 +1266,15 @@ final class WorkoutViewModel {
         reps: Int,
         isWarmup: Bool = false,
         isEachSide: Bool = false,
-        isAssisted: Bool = false
+        isAssisted: Bool = false,
+        enteredValue: Double? = nil,
+        enteredUnit: MassUnit? = nil
     ) {
-        set.weightLbs = weight
+        if let enteredValue, let enteredUnit {
+            set.stampEntered(enteredValue, unit: enteredUnit)
+        } else {
+            set.weightLbs = weight
+        }
         set.reps = max(1, reps)
         set.isWarmup = isWarmup
         set.isEachSide = isEachSide
@@ -1334,6 +1351,8 @@ final class WorkoutViewModel {
         set.bodyWeightUsedLbs = snapshot.bodyWeightUsedLbs
         set.plannedRestSeconds = snapshot.plannedRestSeconds
         set.actualRestSeconds = snapshot.actualRestSeconds
+        set.enteredUnitRaw = snapshot.enteredUnitRaw
+        set.enteredValue = snapshot.enteredValue
         set.exerciseRecord = record
         set.setNumber = Int.max
         if record.sets == nil { record.sets = [] }

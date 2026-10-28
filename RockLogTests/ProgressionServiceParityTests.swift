@@ -75,7 +75,8 @@ final class ProgressionServiceParityTests: RockLogStoreTestCase {
                 let wrapperResult = ProgressionService.suggestion(
                     for: exercise,
                     mode: mode,
-                    aggressiveness: aggressiveness
+                    aggressiveness: aggressiveness,
+                    unit: .pounds
                 )
 
                 // Pure API — recreate the same input the wrapper builds internally.
@@ -174,7 +175,8 @@ final class ProgressionServiceParityTests: RockLogStoreTestCase {
         let suggestion = ProgressionService.suggestion(
             for: exercise,
             mode: .highWeightLowReps,
-            aggressiveness: .moderate
+            aggressiveness: .moderate,
+            unit: .pounds
         )
         XCTAssertEqual(suggestion?.basis, .improving)
         XCTAssertEqual(suggestion?.targetWeight, 50)
