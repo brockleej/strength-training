@@ -183,7 +183,7 @@ struct WorkoutSummaryView: View {
             Button {
                 workoutVM.dismissSummaryToToday()
             } label: {
-                Text("Done")
+                Text("Close")
                     .font(.uplift.text(15, weight: .semibold))
                     .padding(.vertical, 14)
                     .padding(.horizontal, 18)

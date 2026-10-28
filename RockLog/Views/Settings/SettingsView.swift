@@ -93,18 +93,6 @@ struct SettingsView: View {
     @State private var showCoachPicker = false
     @State private var showClearPlannedConfirm = false
 
-    /// Cheap flag only — do not load every incomplete session or walk their sets.
-    @Query(
-        filter: #Predicate<WorkoutSession> {
-            $0.isCompleted == false && ($0.planState == "planned" || $0.planState == "skipped")
-        }
-    )
-    private var queuedPlannedSessions: [WorkoutSession]
-
-    private var plannedQueueOwnsToday: Bool {
-        !queuedPlannedSessions.isEmpty
-    }
-
     var body: some View {
         settingsStack
             .alert(
@@ -221,11 +209,7 @@ struct SettingsView: View {
     private var settingsStack: some View {
         NavigationStack {
             List {
-                upperSettings
-                middleSettings
-                lowerSettings
-                appleHealthSection
-                iCloudSyncSection
+                settingsHub
             }
             .scrollContentBackground(.hidden)
             .background(Color.uplift.bgElev)
@@ -309,51 +293,56 @@ struct SettingsView: View {
     // MARK: - iCloud Sync Section
 
     @ViewBuilder
+    private var settingsHub: some View {
+        settingsLink("Workout defaults", systemImage: "timer", id: AccessibilityID.settingsWorkoutDefaults) {
+            List { upperSettings }
+                .settingsPage("Workout defaults")
+        }
+        settingsLink("Units", systemImage: "scalemass", id: AccessibilityID.settingsUnits) {
+            UnitsSettingsView()
+        }
+        settingsLink("Gyms", systemImage: "mappin.and.ellipse", id: AccessibilityID.settingsGyms) {
+            List { gymsSettings }
+                .settingsPage("Gyms")
+        }
+        settingsLink("Data & Backup", systemImage: "externaldrive", id: AccessibilityID.settingsDataBackup) {
+            List {
+                lowerSettings
+                appleHealthSection
+                iCloudSyncSection
+            }
+            .settingsPage("Data & Backup")
+        }
+        settingsLink("Appearance", systemImage: "circle.lefthalf.filled", id: AccessibilityID.settingsAppearance) {
+            AppearanceSettingsView()
+        }
+        settingsLink("About", systemImage: "info.circle", id: AccessibilityID.settingsAbout) {
+            List {
+                middleSettings
+                welcomeSettings
+            }
+            .settingsPage("About")
+        }
+    }
+
+    private func settingsLink<Destination: View>(
+        _ title: String,
+        systemImage: String,
+        id: String,
+        @ViewBuilder destination: () -> Destination
+    ) -> some View {
+        NavigationLink {
+            destination()
+        } label: {
+            Label(title, systemImage: systemImage)
+                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+        }
+        .accessibilityIdentifier(id)
+        .listRowBackground(Color.uplift.surface1)
+    }
+
+    @ViewBuilder
     private var upperSettings: some View {
-                Section {
-                    NavigationLink {
-                        TrainingSplitSettingsView()
-                    } label: {
-                        Label("Edit training split", systemImage: "calendar")
-                    }
-                    .accessibilityIdentifier(AccessibilityID.settingsEditSplit)
-                    if plannedQueueOwnsToday {
-                        Text(PlannedBlockQueue.splitPausedWhileQueued)
-                            .font(.uplift.text(13, weight: .medium))
-                            .foregroundStyle(Color.uplift.fgMuted)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                } header: {
-                    sectionHeader("Training split")
-                } footer: {
-                    if plannedQueueOwnsToday {
-                        sectionFooter("Today still shows the planned list. Edit day colors and icons here.")
-                    }
-                }
-                .listRowBackground(Color.uplift.surface1)
-
-                Section {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("Today’s day schedule")
-                            .font(.uplift.text(15, weight: .semibold))
-                            .foregroundStyle(Color.uplift.fg)
-                        UpliftSegmentedControl(
-                            segments: SplitScheduleMode.allCases.map {
-                                UpliftSegment(id: $0.rawValue, label: $0.shortTitle)
-                            },
-                            selection: $splitScheduleModeRaw
-                        )
-                        Text((SplitScheduleMode(rawValue: splitScheduleModeRaw) ?? .rolling).detail)
-                            .font(.uplift.text(12, weight: .medium))
-                            .foregroundStyle(Color.uplift.fgDim)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    .padding(.vertical, 4)
-                } header: {
-                    sectionHeader("Rolling / Weekly")
-                }
-                .listRowBackground(Color.uplift.surface1)
-
                 Section {
                     VStack(alignment: .leading, spacing: 10) {
                         Text("Next set defaults to")
@@ -395,55 +384,6 @@ struct SettingsView: View {
                     .accessibilityIdentifier(AccessibilityID.settingsStartingWeight)
                 } header: {
                     sectionHeader("Starting weight")
-                }
-                .listRowBackground(Color.uplift.surface1)
-
-                Section {
-                    NavigationLink {
-                        UnitsSettingsView()
-                    } label: {
-                        Label("Units", systemImage: "scalemass")
-                            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-                    }
-                    .accessibilityIdentifier(AccessibilityID.settingsUnits)
-                } footer: {
-                    sectionFooter("Pounds or kilograms. Each set keeps the number you entered, and the other unit is converted from that.")
-                }
-                .listRowBackground(Color.uplift.surface1)
-
-                Section {
-                    if gyms.isEmpty {
-                        Text("Home")
-                            .foregroundStyle(Color.uplift.fgMuted)
-                            .accessibilityIdentifier(AccessibilityID.settingsGym)
-                    }
-                    ForEach(gyms) { gym in
-                        Button(gym.isHome ? "\(gym.name) · default" : gym.name) {
-                            GymLibrary.select(gym)
-                        }
-                        .foregroundStyle(Color.uplift.fg)
-                        .accessibilityIdentifier(gym.isHome ? AccessibilityID.settingsGym : "settings.gym.\(gym.name)")
-                        .contextMenu {
-                            if !gym.isHome {
-                                Button("Make default") { GymLibrary.makeHome(gym, in: modelContext) }
-                                Button("Delete", role: .destructive) { gymPendingDelete = gym }
-                            }
-                        }
-                    }
-                    TextField("New gym", text: $newGymName)
-                        .onSubmit {
-                            let trimmed = newGymName.trimmingCharacters(in: .whitespacesAndNewlines)
-                            guard !trimmed.isEmpty, !GymLibrary.nameIsTaken(trimmed, in: modelContext) else { return }
-                            let gym = Gym(name: trimmed, sortOrder: gyms.count)
-                            modelContext.insert(gym)
-                            try? modelContext.save()
-                            GymLibrary.select(gym)
-                            newGymName = ""
-                        }
-                } header: {
-                    sectionHeader("Gym")
-                } footer: {
-                    sectionFooter("Home is the default. A lift uses this gym's stack, then Home, then 5 lb.")
                 }
                 .listRowBackground(Color.uplift.surface1)
 
@@ -628,19 +568,6 @@ struct SettingsView: View {
                 .onAppear { loadBodyProfileDraft() }
 
                 Section {
-                    NavigationLink {
-                        GymAccessSettingsView()
-                    } label: {
-                        Label("Gym Access", systemImage: "barcode.viewfinder")
-                            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-                    }
-                    .accessibilityIdentifier(AccessibilityID.settingsGymAccess)
-                } footer: {
-                    sectionFooter("Barcodes, an app such as Kisi, or a link. Today’s Gym pass button uses the only saved gym, or the nearest one within 150 m.")
-                }
-                .listRowBackground(Color.uplift.surface1)
-
-                Section {
                     Toggle(isOn: $coachFeaturesEnabled) {
                         Label("Use RockCoach", systemImage: "person.2")
                     }
@@ -692,40 +619,78 @@ struct SettingsView: View {
     }
 
     @ViewBuilder
-    private var lowerSettings: some View {
-                Section {
-                    Button {
-                        isImporting = true
-                    } label: {
-                        Label("Add planned workouts", systemImage: "calendar.badge.plus")
-                            .foregroundStyle(Color.uplift.accent)
-                    }
-                    .accessibilityIdentifier(AccessibilityID.settingsAddPlanned)
-                    Button {
-                        isImporting = true
-                    } label: {
-                        Label("Import training split", systemImage: "rectangle.split.3x1")
-                            .foregroundStyle(Color.uplift.accent)
-                    }
-                    .accessibilityIdentifier(AccessibilityID.settingsImportSplit)
-                    Button(action: sharePlannedWorkoutInstructions) {
-                        Label("Instructions for AI", systemImage: "doc.text")
-                            .foregroundStyle(Color.uplift.accent)
-                    }
-                    if plannedQueueOwnsToday {
-                        Button(role: .destructive) {
-                            showClearPlannedConfirm = true
-                        } label: {
-                            Label("Remove unused planned workouts", systemImage: "trash")
-                        }
-                    }
-                } header: {
-                    sectionHeader("Planned workouts")
-                } footer: {
-                    sectionFooter("Instructions for AI covers planned workouts and a training split. Import training split replaces days and lifts, then asks about leftover planned workouts. History stays.")
+    private var gymsSettings: some View {
+        Section {
+            if gyms.isEmpty {
+                Text("Home")
+                    .foregroundStyle(Color.uplift.fgMuted)
+                    .accessibilityIdentifier(AccessibilityID.settingsGym)
+            }
+            ForEach(gyms) { gym in
+                Button(gym.isHome ? "\(gym.name) · default" : gym.name) {
+                    GymLibrary.select(gym)
                 }
-                .listRowBackground(Color.uplift.surface1)
+                .foregroundStyle(Color.uplift.fg)
+                .accessibilityIdentifier(gym.isHome ? AccessibilityID.settingsGym : "settings.gym.\(gym.name)")
+                .contextMenu {
+                    if !gym.isHome {
+                        Button("Make default") { GymLibrary.makeHome(gym, in: modelContext) }
+                        Button("Delete", role: .destructive) { gymPendingDelete = gym }
+                    }
+                }
+            }
+            TextField("New gym", text: $newGymName)
+                .accessibilityIdentifier(AccessibilityID.settingsNewGym)
+                .onSubmit {
+                    let trimmed = newGymName.trimmingCharacters(in: .whitespacesAndNewlines)
+                    guard !trimmed.isEmpty, !GymLibrary.nameIsTaken(trimmed, in: modelContext) else { return }
+                    let gym = Gym(name: trimmed, sortOrder: gyms.count)
+                    modelContext.insert(gym)
+                    ModelSave.logged(modelContext, action: "add-gym")
+                    GymLibrary.select(gym)
+                    newGymName = ""
+                }
+        } header: {
+            sectionHeader("Gym")
+        } footer: {
+            sectionFooter("Home is the default. A lift uses this gym's stack, then Home, then 5 lb.")
+        }
+        .listRowBackground(Color.uplift.surface1)
 
+        Section {
+            NavigationLink {
+                GymAccessSettingsView()
+            } label: {
+                Label("Gym Access", systemImage: "barcode.viewfinder")
+                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            }
+            .accessibilityIdentifier(AccessibilityID.settingsGymAccess)
+        } footer: {
+            sectionFooter("Barcodes, an app such as Kisi, or a link. Today’s Gym pass button uses the only saved gym, or the nearest one within 150 m.")
+        }
+        .listRowBackground(Color.uplift.surface1)
+    }
+
+    @ViewBuilder
+    private var welcomeSettings: some View {
+        Section {
+            Button {
+                showWelcomeGuide = true
+            } label: {
+                Label("Welcome guide", systemImage: "book")
+                    .foregroundStyle(Color.uplift.accent)
+            }
+            .accessibilityIdentifier(AccessibilityID.settingsWelcome)
+        } header: {
+            sectionHeader("Welcome guide")
+        } footer: {
+            sectionFooter("Same pages as first launch: Today, logging (assist, sides, warm-up, Done), History, Progress.")
+        }
+        .listRowBackground(Color.uplift.surface1)
+    }
+
+    @ViewBuilder
+    private var lowerSettings: some View {
                 Section {
                     Button(action: exportBackup) {
                         Label("Export backup", systemImage: "square.and.arrow.up")
@@ -744,20 +709,6 @@ struct SettingsView: View {
                     sectionHeader("Backup")
                 } footer: {
                     sectionFooter("This is your save/export — a JSON of this phone’s log. Restore asks before replacing your current split and exercises. Planned-workout files above do not replace history.")
-                }
-                .listRowBackground(Color.uplift.surface1)
-
-                Section {
-                    Button {
-                        showWelcomeGuide = true
-                    } label: {
-                        Label("Welcome guide", systemImage: "book")
-                            .foregroundStyle(Color.uplift.accent)
-                    }
-                } header: {
-                    sectionHeader("Welcome guide")
-                } footer: {
-                    sectionFooter("Same pages as first launch: Today, logging (assist, sides, warm-up, Done), History, Progress.")
                 }
                 .listRowBackground(Color.uplift.surface1)
 

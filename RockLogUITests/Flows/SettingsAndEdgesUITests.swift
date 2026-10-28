@@ -10,13 +10,15 @@ final class SettingsAndEdgesUITests: RockLogUITestCase {
     func test_settingsOpensWithLongHistory_withoutFreezing() {
         launch(preset: "longHistory")
         tapTab("Settings")
-        XCTAssertTrue(element(UITestID.settingsEditSplit).waitForExistence(timeout: 20))
-
-        // The Backup section is below the fold. A lazy List does not build
-        // settings.restore until that row is scrolled on screen.
+        XCTAssertTrue(element(UITestID.settingsDataBackup).waitForExistence(timeout: 20))
+        element(UITestID.settingsDataBackup).tap()
         let restore = element(UITestID.settingsRestore)
         scrollUntilHittable(restore)
         XCTAssertTrue(element(UITestID.settingsExport).exists)
+        app.navigationBars.buttons["Settings"].tap()
+        tapTab("Workout")
+        waitFor(UITestID.workoutPrograms).tap()
+        XCTAssertTrue(element(UITestID.settingsEditSplit).waitForExistence(timeout: 8))
         XCTAssertTrue(element(UITestID.settingsAddPlanned).exists)
         XCTAssertTrue(element(UITestID.settingsImportSplit).exists)
     }

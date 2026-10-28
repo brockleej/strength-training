@@ -29,7 +29,7 @@ struct PRCelebrationView: View {
             VStack(spacing: 0) {
                 HStack {
                     Spacer()
-                    CircleButton(icon: "xmark", accessibilityLabel: "Dismiss celebration") {
+                    CircleButton(icon: "xmark", accessibilityLabel: "Close") {
                         onDismiss()
                     }
                 }

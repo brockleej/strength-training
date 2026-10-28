@@ -59,7 +59,7 @@ enum GymLibrary {
             dirty = true
         }
         if backfillEmptySessions(home: home, in: context) { dirty = true }
-        if dirty { try? context.save() }
+        if dirty { ModelSave.logged(context, action: "Gym") }
         return home
     }
 
@@ -92,7 +92,7 @@ enum GymLibrary {
     static func makeHome(_ gym: Gym, in context: ModelContext) {
         let gyms = (try? context.fetch(FetchDescriptor<Gym>())) ?? []
         for other in gyms { other.isHome = other.id == gym.id }
-        try? context.save()
+        ModelSave.logged(context, action: "Gym")
     }
 
     /// Home cannot be deleted. A travel gym takes its profiles with it.
@@ -108,7 +108,7 @@ enum GymLibrary {
         if UserDefaults.standard.string(forKey: activeKey) == id.uuidString {
             UserDefaults.standard.removeObject(forKey: activeKey)
         }
-        try? context.save()
+        ModelSave.logged(context, action: "Gym")
     }
 
     @MainActor

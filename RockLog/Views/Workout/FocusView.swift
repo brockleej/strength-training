@@ -1041,7 +1041,7 @@ struct FocusView: View {
                 ForEach(LoadMode.allCases, id: \.self) { mode in
                     Button(mode.title) {
                         exercise.loadMode = mode
-                        try? workoutVM.modelContext.save()
+                        ModelSave.logged(workoutVM.modelContext, action: "FocusView")
                     }
                 }
             } label: {

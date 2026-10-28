@@ -39,6 +39,6 @@ final class HistoryViewModel {
 
     func deleteSession(_ session: WorkoutSession) {
         modelContext.delete(session)
-        try? modelContext.save()
+        ModelSave.logged(modelContext, action: "HistoryViewModel")
     }
 }

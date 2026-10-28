@@ -93,8 +93,14 @@ nonisolated final class RestCallMonitor: NSObject, CXCallObserverDelegate {
     static let shared = RestCallMonitor()
 
     private let observer = CXCallObserver()
-    nonisolated(unsafe) private(set) var hasConnectedCall = false
+    private let lock = NSLock()
+    private var connected = false
     nonisolated(unsafe) var onChange: (() -> Void)?
+
+    var hasConnectedCall: Bool {
+        get { lock.withLock { connected } }
+        set { lock.withLock { connected = newValue } }
+    }
 
     func start() {
         observer.setDelegate(self, queue: .main)

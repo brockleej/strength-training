@@ -119,7 +119,7 @@ final class DayTypeRegistry {
             day.sortOrder = index
             context.insert(day)
         }
-        try? context.save()
+        ModelSave.logged(context, action: "DayTypeRegistry")
         SeedData.markSplitConfigured(preset: preset, context: context)
         if includeStarters {
             SeedData.applyStarterDayPlans(context: context, onlyIfDayEmpty: true)
@@ -150,7 +150,7 @@ final class DayTypeRegistry {
             inserted = true
         }
         if inserted {
-            try? context.save()
+            ModelSave.logged(context, action: "DayTypeRegistry")
             reload(context: context)
         }
     }
@@ -192,7 +192,7 @@ final class DayTypeRegistry {
                 )
             )
         }
-        try? context.save()
+        ModelSave.logged(context, action: "DayTypeRegistry")
         SeedData.markSplitConfigured(context: context)
         reload(context: context)
     }
@@ -216,7 +216,7 @@ final class DayTypeRegistry {
         guard let row = rows.first(where: { $0.id == id }) else { return }
         guard canDelete(id: id, from: rows) else { return }
         context.delete(row)
-        try? context.save()
+        ModelSave.logged(context, action: "DayTypeRegistry")
         SeedData.markSplitConfigured(context: context)
         reload(context: context)
     }
@@ -232,7 +232,7 @@ final class DayTypeRegistry {
         for (index, row) in rows.enumerated() {
             row.sortOrder = index
         }
-        try? context.save()
+        ModelSave.logged(context, action: "DayTypeRegistry")
         SeedData.markSplitConfigured(context: context)
         reload(context: context)
     }
@@ -259,7 +259,7 @@ final class DayTypeRegistry {
                 )
             )
         }
-        try? context.save()
+        ModelSave.logged(context, action: "DayTypeRegistry")
         SeedData.markSplitConfigured(context: context)
         reload(context: context)
     }
@@ -271,7 +271,7 @@ final class DayTypeRegistry {
         for (index, id) in ids.enumerated() {
             byID[id]?.sortOrder = index
         }
-        try? context.save()
+        ModelSave.logged(context, action: "DayTypeRegistry")
         SeedData.markSplitConfigured(context: context)
         reload(context: context)
     }

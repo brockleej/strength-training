@@ -56,7 +56,7 @@ final class BodyMetricsViewModel {
         let entry = BodyMetricEntry(kind: kind, value: value, date: date, note: note)
         modelContext.insert(entry)
         // Keep assisted-lift body weight in sync.
-        try? modelContext.save()
+        ModelSave.logged(modelContext, action: "BodyMetricsViewModel")
         reload()
         syncSettingsWeight()
         return entry
@@ -68,7 +68,7 @@ final class BodyMetricsViewModel {
             let entry = BodyMetricEntry(kind: kind, value: value, date: date)
             modelContext.insert(entry)
         }
-        try? modelContext.save()
+        ModelSave.logged(modelContext, action: "BodyMetricsViewModel")
         reload()
         syncSettingsWeight()
     }
@@ -87,7 +87,7 @@ final class BodyMetricsViewModel {
     func delete(_ entry: BodyMetricEntry) {
         let wasWeight = entry.kind == .weight
         modelContext.delete(entry)
-        try? modelContext.save()
+        ModelSave.logged(modelContext, action: "BodyMetricsViewModel")
         reload()
         // Keep assisted-lift BW in sync when the latest weight log is removed.
         if wasWeight {

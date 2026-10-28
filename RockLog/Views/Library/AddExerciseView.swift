@@ -227,7 +227,7 @@ struct AddExerciseView: View {
             additionalDayTypes: extras
         )
         exercise.insertPinned(into: modelContext)
-        try? modelContext.save()
+        ModelSave.logged(modelContext, action: "AddExerciseView")
         SeedData.persistUserPlan(context: modelContext)
         onCreated?(exercise)
         if !embedded {

@@ -1,5 +1,19 @@
 # TestFlight — What to Test
 
+## Stage 3 — local, not a TestFlight paste yet
+
+```
+What's new: Settings is a short list of pages. Programs (the split, day plans, and planned-workout import) opens from the Workout tab. While a workout is open, a timer stays on every tab. Appearance can follow the iPhone, or stay dark or light. Dark is still the default.
+
+Please try:
+1) Workout tab → Programs. Edit the split, then open a day plan. Import is on that page. A backup file should tell you to use Settings → Data & Backup.
+2) Start a workout, then open Settings. A workout timer should stay on screen. Log a set with the rest timer on and the bar should count the rest.
+3) Settings → Appearance: Dark, Light, and System. Settings → Units and Settings → Gyms are their own pages.
+4) Finish a workout. The summary's leave button says Close.
+```
+
+---
+
 ## Stage 2 — local, not a TestFlight paste yet
 
 ```

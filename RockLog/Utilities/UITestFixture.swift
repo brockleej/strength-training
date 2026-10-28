@@ -38,7 +38,7 @@ enum UITestFixture {
             seedCompletedHistory(context: context, lifts: lifts, sessionCount: 2)
             seedWaitingPlan(context: context, lifts: lifts)
         }
-        try? context.save()
+        ModelSave.logged(context, action: "UITestFixture")
     }
 
     // MARK: - Split and library

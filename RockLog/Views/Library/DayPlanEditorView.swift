@@ -143,7 +143,7 @@ struct DayPlanEditorView: View {
                     excludedIDs: Set(dayExercisesSorted.map(\.id)),
                     onPick: { exercise, _ in
                         exercise.addDayType(dayType, atEndOf: allExercises)
-                        try? modelContext.save()
+                        ModelSave.logged(modelContext, action: "DayPlanEditorView")
                         SeedData.persistUserPlan(context: modelContext)
                         syncOrderedIDsFromStore()
                     },
@@ -264,14 +264,14 @@ struct DayPlanEditorView: View {
         let ordered = orderedIDs.compactMap { byID[$0] }
         guard !ordered.isEmpty else { return }
         Exercise.applyOrder(ordered, for: dayType)
-        try? modelContext.save()
+        ModelSave.logged(modelContext, action: "DayPlanEditorView")
         SeedData.persistUserPlan(context: modelContext)
     }
 
     private func removeExercise(_ exercise: Exercise) {
         orderedIDs.removeAll { $0 == exercise.id }
         exercise.removeDayType(dayType)
-        try? modelContext.save()
+        ModelSave.logged(modelContext, action: "DayPlanEditorView")
         SeedData.persistUserPlan(context: modelContext)
     }
 }

@@ -12,6 +12,8 @@ import UIKit
 
 struct TodayView: View {
     @Bindable var workoutVM: WorkoutViewModel
+    /// Defaults to the phone's store. A preview or test can pass another one.
+    @Bindable var gymAccess: GymAccessStore = .shared
 
     @State private var todayVM = TodayViewModel()
     /// Observe split edits so the day picker refreshes after Settings changes.
@@ -19,7 +21,6 @@ struct TodayView: View {
     /// Day type pending the "Replace Current Workout?" confirmation.
     @State private var confirmingDayType: DayType?
     @State private var passEntry: GymAccessEntry?
-    @Bindable private var gymAccess = GymAccessStore.shared
     @State private var showDayPlanEditor = false
     @State private var yesterdayPRCount = 0
     @State private var previewPlannedID: UUID?
@@ -67,6 +68,16 @@ struct TodayView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     header
+                    NavigationLink {
+                        ProgramsHubView()
+                    } label: {
+                        Label("Programs", systemImage: "list.bullet.rectangle")
+                            .font(.uplift.text(15, weight: .semibold))
+                            .foregroundStyle(Color.uplift.accent)
+                            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                    }
+                    .accessibilityIdentifier(AccessibilityID.workoutPrograms)
+                    .padding(.top, 8)
                     if usesPlannedQueue {
                         plannedQueueBlock
                     } else {

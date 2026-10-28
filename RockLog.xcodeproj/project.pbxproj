@@ -55,6 +55,7 @@
 		RESTACT0000000000000002 /* RestActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = RESTACT0000000000000001 /* RestActivityAttributes.swift */; };
 		RESTACT0000000000000004 /* RestActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = RESTACT0000000000000001 /* RestActivityAttributes.swift */; };
 		OPTLOG0000000000000002 /* OptimizationLogicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = OPTLOG0000000000000001 /* OptimizationLogicTests.swift */; };
+		STG3L0000000000000002 /* Stage3LogicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = STG3L0000000000000001 /* Stage3LogicTests.swift */; };
 		HIST010000000000000002 /* HistoricalFormatRoundTripTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = HIST010000000000000001 /* HistoricalFormatRoundTripTests.swift */; };
 		B4C0A0010000000000000002 /* BackupMigration.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4C0A0010000000000000001 /* BackupMigration.swift */; };
 		B4C0A0020000000000000002 /* BackupMigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4C0A0020000000000000001 /* BackupMigrationTests.swift */; };
@@ -230,6 +231,7 @@
 		INTCHG0000000000000001 /* InterchangeCodec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InterchangeCodec.swift; sourceTree = "<group>"; };
 		RESTACT0000000000000001 /* RestActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RestActivityAttributes.swift; sourceTree = "<group>"; };
 		OPTLOG0000000000000001 /* OptimizationLogicTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OptimizationLogicTests.swift; sourceTree = "<group>"; };
+		STG3L0000000000000001 /* Stage3LogicTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Stage3LogicTests.swift; sourceTree = "<group>"; };
 		HIST010000000000000001 /* HistoricalFormatRoundTripTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoricalFormatRoundTripTests.swift; sourceTree = "<group>"; };
 		B4C0A0010000000000000001 /* BackupMigration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupMigration.swift; sourceTree = "<group>"; };
 		B4C0A0020000000000000001 /* BackupMigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupMigrationTests.swift; sourceTree = "<group>"; };
@@ -462,6 +464,7 @@
 				C3B0A0033C0B000000000001 /* WorkoutEdgeCaseTests.swift */,
 				C3B0A0043C0B000000000001 /* PastBuildRegressionTests.swift */,
 				OPTLOG0000000000000001 /* OptimizationLogicTests.swift */,
+				STG3L0000000000000001 /* Stage3LogicTests.swift */,
 				HIST010000000000000001 /* HistoricalFormatRoundTripTests.swift */,
 				B4C0A0020000000000000001 /* BackupMigrationTests.swift */,
 			);
@@ -933,6 +936,7 @@
 				C3B0A0033C0B000000000002 /* WorkoutEdgeCaseTests.swift in Sources */,
 				C3B0A0043C0B000000000002 /* PastBuildRegressionTests.swift in Sources */,
 				OPTLOG0000000000000002 /* OptimizationLogicTests.swift in Sources */,
+				STG3L0000000000000002 /* Stage3LogicTests.swift in Sources */,
 				HIST010000000000000002 /* HistoricalFormatRoundTripTests.swift in Sources */,
 				B4C0A0020000000000000002 /* BackupMigrationTests.swift in Sources */,
 			);
@@ -1057,7 +1061,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.danielkuhlwein.ProgressionLab.debug;
+				PRODUCT_BUNDLE_IDENTIFIER = com.lee.progressionlab.debug;
 				PRODUCT_NAME = ProgressionLab;
 				SDKROOT = macosx;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -1084,7 +1088,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.danielkuhlwein.ProgressionLab.debug;
+				PRODUCT_BUNDLE_IDENTIFIER = com.lee.progressionlab.debug;
 				PRODUCT_NAME = ProgressionLab;
 				SDKROOT = macosx;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -1516,7 +1520,7 @@
 				DEVELOPMENT_TEAM = V8227YC5UT;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.danielkuhlwein.progressionlabtests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.lee.progressionlab.tests;
 				PRODUCT_NAME = progression_lab_tests;
 				SDKROOT = macosx;
 				SWIFT_VERSION = 5.0;
@@ -1533,7 +1537,7 @@
 				DEVELOPMENT_TEAM = V8227YC5UT;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.danielkuhlwein.progressionlabtests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.lee.progressionlab.tests;
 				PRODUCT_NAME = progression_lab_tests;
 				SDKROOT = macosx;
 				SWIFT_VERSION = 5.0;
@@ -1634,7 +1638,7 @@
 				DEVELOPMENT_TEAM = 53AH938CUW;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = RockLogWidget/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -1661,7 +1665,7 @@
 				DEVELOPMENT_TEAM = 53AH938CUW;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = RockLogWidget/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",

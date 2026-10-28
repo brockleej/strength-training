@@ -127,7 +127,7 @@ struct SessionDetailView: View {
             let resolved = SessionMath.durationSeconds(of: session)
             if resolved > 0, abs(session.durationSeconds - resolved) > 1 {
                 session.durationSeconds = resolved
-                try? modelContext.save()
+                ModelSave.logged(modelContext, action: "SessionDetailView")
             }
             guard !loadedStats, let uuid = session.healthKitWorkoutUUID else { return }
             loadedStats = true

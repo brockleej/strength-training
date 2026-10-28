@@ -21,18 +21,20 @@ final class OptimizationFlowsUITests: RockLogUITestCase {
         waitFor(UITestID.firstRunContinue).tap()
         waitFor(UITestID.firstRunSkip).tap()
         tapTab("Settings")
+        scrollUntilHittable(element(UITestID.settingsWorkoutDefaults))
+        element(UITestID.settingsWorkoutDefaults).tap()
         scrollUntilExists(UITestID.settingsStartingWeight)
-        // Pounds / kilograms live on the Units page, not the Settings root.
+        scrollUntilExists(UITestID.settingsTapAtTen)
+        app.navigationBars.buttons["Settings"].tap()
         scrollUntilHittable(element(UITestID.settingsUnits))
         element(UITestID.settingsUnits).tap()
         let massUnit = element(UITestID.settingsMassUnit)
         XCTAssertTrue(massUnit.waitForExistence(timeout: 6))
         XCTAssertTrue(massUnit.isHittable)
         app.navigationBars.buttons["Settings"].tap()
+        scrollUntilHittable(element(UITestID.settingsGyms))
+        element(UITestID.settingsGyms).tap()
         scrollUntilExists(UITestID.settingsGym)
-        // settings.tapAtTen is on the "Tap at 10 seconds" toggle, which
-        // is in the list because setup turned the rest timer on.
-        scrollUntilExists(UITestID.settingsTapAtTen)
     }
 
     func test_workoutList_lastTargetToggleIsVisible() {
@@ -49,6 +51,17 @@ final class OptimizationFlowsUITests: RockLogUITestCase {
         XCTAssertFalse(element(UITestID.focusLogSet).exists)
         waitFor(UITestID.workoutExercise("UI Fresh Lift")).tap()
         XCTAssertTrue(element(UITestID.focusLogSet).waitForExistence(timeout: 8))
+    }
+
+    func test_activeWorkoutBar_staysOnSettings() {
+        launch(preset: "typical")
+        selectPushIfNeeded()
+        waitFor(UITestID.todayStart).tap()
+        XCTAssertTrue(element(UITestID.activeWorkoutBar).waitForExistence(timeout: 8))
+        tapTab("Settings")
+        XCTAssertTrue(element(UITestID.activeWorkoutBar).waitForExistence(timeout: 6))
+        tapTab("Workout")
+        waitFor(UITestID.workoutHome).tap()
     }
 
     func test_focus_showsWarmupDoneComparisonAndPlates() {

@@ -260,7 +260,7 @@ struct ExerciseListView: View {
                     onPick: { exercise, assignToCurrentDay in
                         if assignToCurrentDay {
                             exercise.addDayType(dayType, atEndOf: allExercises)
-                            try? workoutVM.modelContext.save()
+                            ModelSave.logged(workoutVM.modelContext, action: "ExerciseListView")
                             SeedData.persistUserPlan(context: workoutVM.modelContext)
                         }
                         workoutVM.addExerciseToSession(exercise)

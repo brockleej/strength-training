@@ -123,7 +123,7 @@ struct ExerciseListRow: View {
         .accessibilityAddTraits(.isButton)
         .accessibilityHint("Opens this lift")
         .accessibilityAction(.default) { onOpen?() }
-        .modifier(OpenIdentifier(openIdentifier))
+        .modifier(OpenIdentifier(identifier: openIdentifier))
     }
 
     private var toggleButton: some View {

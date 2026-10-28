@@ -39,7 +39,7 @@ struct SeedData {
                 }
             }
         }
-        if changed, saves { try? context.save() }
+        if changed, saves { ModelSave.logged(context, action: "SeedData") }
     }
 
     /// Upgrade stock compound lifts to multi-muscle labels (idempotent).
@@ -75,7 +75,7 @@ struct SeedData {
             exercise.muscleGroup = catalogMuscle
             changed = true
         }
-        if changed { try? context.save() }
+        if changed { ModelSave.logged(context, action: "SeedData") }
     }
 
     /// Removes duplicate exercises (same name), keeping the one with the most history.
@@ -109,7 +109,7 @@ struct SeedData {
                 context.delete(duplicate)
             }
         }
-        try? context.save()
+        ModelSave.logged(context, action: "SeedData")
     }
 
     /// Collapses duplicate split days (same name, case-insensitive) that can appear when
@@ -135,7 +135,7 @@ struct SeedData {
             }
         }
         if changed {
-            try? context.save()
+            ModelSave.logged(context, action: "SeedData")
             // reload() calls this with reloadCatalog: false to avoid recursion.
             if reloadCatalog {
                 DayTypeRegistry.shared.reload(context: context)
@@ -517,7 +517,7 @@ struct SeedData {
             }
         }
         if changed, saves {
-            try? context.save()
+            ModelSave.logged(context, action: "SeedData")
         }
         return changed
     }
@@ -592,7 +592,7 @@ struct SeedData {
         }
 
         if changed, saves {
-            try? context.save()
+            ModelSave.logged(context, action: "SeedData")
         }
         return changed
     }
@@ -616,7 +616,7 @@ struct SeedData {
         for (index, row) in remaining.enumerated() {
             row.sortOrder = index
         }
-        try? context.save()
+        ModelSave.logged(context, action: "SeedData")
         persistSplitSnapshot(context: context)
         return true
     }
@@ -670,7 +670,7 @@ struct SeedData {
             context.insert(day)
         }
         if saves {
-            try? context.save()
+            ModelSave.logged(context, action: "SeedData")
         }
     }
 
@@ -703,7 +703,7 @@ struct SeedData {
                 changed = true
             }
         }
-        if changed { try? context.save() }
+        if changed { ModelSave.logged(context, action: "SeedData") }
         migrateClashingDayColors(context: context)
     }
 
@@ -717,7 +717,7 @@ struct SeedData {
             row.colorHex = pullPurple
             changed = true
         }
-        if changed { try? context.save() }
+        if changed { ModelSave.logged(context, action: "SeedData") }
     }
 
     // MARK: - Exercise catalog
@@ -998,7 +998,7 @@ struct SeedData {
             // catalog fallback. Starters stay off restored days (apply-preset only).
             guard allowEmptyCatalogSeed else { return }
             insertCatalogExercises(context: context, existingNames: [], assignCatalogDays: false)
-            try? context.save()
+            ModelSave.logged(context, action: "SeedData")
             markCatalogSeeded()
             UserDefaults.standard.set(catalogVersion, forKey: catalogVersionKey)
             persistDayPlanSnapshot(context: context)
@@ -1070,7 +1070,7 @@ struct SeedData {
             }
         }
         if changed {
-            try? context.save()
+            ModelSave.logged(context, action: "SeedData")
         }
         return changed
     }
@@ -1117,7 +1117,7 @@ struct SeedData {
         }
 
         if changed {
-            try? context.save()
+            ModelSave.logged(context, action: "SeedData")
         }
     }
 
@@ -1144,7 +1144,7 @@ struct SeedData {
                 only: missing,
                 assignCatalogDays: false
             )
-            try? context.save()
+            ModelSave.logged(context, action: "SeedData")
         }
         UserDefaults.standard.set(catalogVersion, forKey: catalogVersionKey)
     }

@@ -9,7 +9,7 @@ final class SplitEditorUITests: RockLogUITestCase {
 
     func test_splitSwipeDelete_requiresConfirm_andDayPlanRemovesALift() {
         launch(preset: "typical")
-        tapTab("Settings")
+        waitFor(UITestID.workoutPrograms).tap()
         waitFor(UITestID.settingsEditSplit).tap()
         XCTAssertTrue(app.navigationBars["Training Split"].waitForExistence(timeout: 6))
 
@@ -40,7 +40,7 @@ final class SplitEditorUITests: RockLogUITestCase {
 
     func test_splitLongPressDelete_requiresConfirm() {
         launch(preset: "typical")
-        tapTab("Settings")
+        waitFor(UITestID.workoutPrograms).tap()
         waitFor(UITestID.settingsEditSplit).tap()
         let legs = waitFor(UITestID.splitDay("Legs"))
         pressForMenu(legs)
@@ -56,7 +56,7 @@ final class SplitEditorUITests: RockLogUITestCase {
     /// drag stays in the app; this test does not perform it.
     func test_splitReorder_dragChangesPositionLabel() {
         launch(preset: "typical")
-        tapTab("Settings")
+        waitFor(UITestID.workoutPrograms).tap()
         waitFor(UITestID.settingsEditSplit).tap()
 
         let pull = waitFor(UITestID.splitDay("Pull"))
@@ -86,7 +86,7 @@ final class SplitEditorUITests: RockLogUITestCase {
 
     func test_splitReorder_moveDownButtonChangesPositionLabel() {
         launch(preset: "typical")
-        tapTab("Settings")
+        waitFor(UITestID.workoutPrograms).tap()
         waitFor(UITestID.settingsEditSplit).tap()
 
         let pull = waitFor(UITestID.splitDay("Pull"))
@@ -116,7 +116,7 @@ final class SplitEditorUITests: RockLogUITestCase {
 
     func test_splitRowTap_opensEditor_andKeepsTheDay() {
         launch(preset: "typical")
-        tapTab("Settings")
+        waitFor(UITestID.workoutPrograms).tap()
         waitFor(UITestID.settingsEditSplit).tap()
 
         let pull = waitFor(UITestID.splitDay("Pull"))
@@ -142,7 +142,7 @@ final class SplitEditorUITests: RockLogUITestCase {
     /// Move up stays outside the swipe host. Pull moves from 2 to 1, Push from 1 to 2.
     func test_reorderMoveUp_movesTheRow() {
         launch(preset: "typical")
-        tapTab("Settings")
+        waitFor(UITestID.workoutPrograms).tap()
         waitFor(UITestID.settingsEditSplit).tap()
 
         let pull = waitFor(UITestID.splitDay("Pull"))

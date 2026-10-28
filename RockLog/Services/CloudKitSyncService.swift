@@ -90,7 +90,9 @@ final class CloudKitSyncService {
             isSyncing = false
             return
         }
-        try? modelContext?.save()
+        if let modelContext {
+            ModelSave.logged(modelContext, action: "CloudKitSyncService")
+        }
         // Give NSPersistentCloudKitContainer a moment to emit import/export events.
         try? await Task.sleep(for: .seconds(2))
         if isSyncing { isSyncing = false }

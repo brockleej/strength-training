@@ -187,7 +187,7 @@ extension WorkoutViewModel {
             recordsByID[seat.recordID]?.groupID = seat.groupID
             recordsByID[seat.recordID]?.groupPosition = seat.position
         }
-        try? modelContext.save()
+        ModelSave.logged(modelContext, action: "WorkoutViewModel+SessionTools")
         setMutationEpoch &+= 1
     }
 
@@ -195,7 +195,7 @@ extension WorkoutViewModel {
         guard let session = activeSession else { return }
         let ordered = orderedExercises(exercises, session: session)
         Exercise.applyOrder(ordered, for: session.day)
-        try? modelContext.save()
+        ModelSave.logged(modelContext, action: "WorkoutViewModel+SessionTools")
     }
 
     func saveTodayOrderToRemainingPlanned(exercises: [Exercise]) {
@@ -221,7 +221,7 @@ extension WorkoutViewModel {
             }
             planned.followsSessionRoster = true
         }
-        try? modelContext.save()
+        ModelSave.logged(modelContext, action: "WorkoutViewModel+SessionTools")
     }
 
     private func orderedExercises(_ exercises: [Exercise], session: WorkoutSession) -> [Exercise] {
@@ -244,7 +244,7 @@ extension WorkoutViewModel {
             record.groupID = group
             record.groupPosition = offset + 1
         }
-        try? modelContext.save()
+        ModelSave.logged(modelContext, action: "WorkoutViewModel+SessionTools")
         setMutationEpoch &+= 1
     }
 
@@ -308,7 +308,7 @@ extension WorkoutViewModel {
             profile.definition = next
             profile.updatedAt = Date()
         }
-        try? modelContext.save()
+        ModelSave.logged(modelContext, action: "WorkoutViewModel+SessionTools")
     }
 
     /// The workout header and the session agree. Unlogged plan rows snap to the new gym.
@@ -329,7 +329,7 @@ extension WorkoutViewModel {
                 set.reps = offer.reps
             }
         }
-        try? modelContext.save()
+        ModelSave.logged(modelContext, action: "WorkoutViewModel+SessionTools")
         setMutationEpoch &+= 1
     }
 
@@ -368,7 +368,7 @@ extension WorkoutViewModel {
         let profile = StackProfileStore.findOrCreate(gymID: gymID, exerciseID: exercise.id, in: modelContext)
         let storedPins = FeatureFlags.pinListEditor ? pins : []
         profile.applyTyped(step: step, pins: storedPins, unit: MassUnitPreferences.unit)
-        try? modelContext.save()
+        ModelSave.logged(modelContext, action: "WorkoutViewModel+SessionTools")
         setMutationEpoch &+= 1
     }
 
@@ -376,7 +376,7 @@ extension WorkoutViewModel {
         let gymID = GymLibrary.activeID(in: modelContext)
         guard let profile = StackProfileStore.profile(gymID: gymID, exerciseID: exercise.id, in: modelContext) else { return }
         profile.clearLearned()
-        try? modelContext.save()
+        ModelSave.logged(modelContext, action: "WorkoutViewModel+SessionTools")
         setMutationEpoch &+= 1
     }
 

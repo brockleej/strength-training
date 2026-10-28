@@ -27,6 +27,11 @@ final class GymAccessStore {
         load()
     }
 
+    /// A store that does not read this phone's saved gyms. Tests and previews use it.
+    init(previewEntries: [GymAccessEntry]) {
+        entries = previewEntries
+    }
+
     func load() {
         isApplying = true
         defer { isApplying = false }

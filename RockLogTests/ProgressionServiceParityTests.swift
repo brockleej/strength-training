@@ -57,7 +57,7 @@ final class ProgressionServiceParityTests: RockLogStoreTestCase {
         incSet.exerciseRecord = incRec
         context.insert(incSet)
 
-        try? context.save()
+        ModelSave.logged(context, action: "ProgressionServiceParityTests")
     }
 
     func test_wrapperAndPureFunctionAgree_acrossAllModesAndAggressiveness() throws {

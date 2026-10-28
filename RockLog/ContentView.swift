@@ -19,6 +19,7 @@ struct ContentView: View {
     /// resets it because that tears the TabView down.
     @State private var builtTabs = BuiltTabMemory(["workout"])
     @AppStorage(FirstRunPreferences.completedKey) private var hasCompletedFirstRun = false
+    @AppStorage(AppearanceChoice.key) private var appearanceRaw = AppearanceChoice.dark.rawValue
     @State private var showFirstUseSplitSetup = false
     /// While true the TabView (including Focus / workout list) is torn down
     /// so restore can delete SwiftData rows without those views reading them.
@@ -143,7 +144,7 @@ struct ContentView: View {
         rootContent
         .modifier(UITestDynamicTypeModifier())
         .tint(Color.uplift.accent)
-        .preferredColorScheme(.dark)
+        .preferredColorScheme((AppearanceChoice(rawValue: appearanceRaw) ?? .dark).colorScheme)
         .fullScreenCover(isPresented: Binding(
             get: { workoutViewModel != nil && !hasCompletedFirstRun },
             set: { if !$0 { hasCompletedFirstRun = true } }
@@ -293,6 +294,9 @@ struct ContentView: View {
             }
             .tabItem { Label("Settings", systemImage: "gear") }
             .tag("settings")
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            ActiveWorkoutBar(viewModel: vm)
         }
     }
 

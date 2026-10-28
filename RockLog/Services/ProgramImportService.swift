@@ -274,7 +274,7 @@ enum ProgramImportService {
         for block in blocks where block.sessionsArray.isEmpty {
             context.delete(block)
         }
-        try? context.save()
+        ModelSave.logged(context, action: "ProgramImportService")
     }
 
     /// Merge the file’s sessions. Dates stay as written unless `shiftingStartTo` is set.

@@ -11,6 +11,8 @@ final class GymAccessUITests: RockLogUITestCase {
     func test_addGymInSettings_thenTodayButtonShowsTheCode() {
         launch(preset: "typical")
         tapTab("Settings")
+        scrollUntilHittable(element(UITestID.settingsGyms))
+        element(UITestID.settingsGyms).tap()
         scrollUntilHittable(element(UITestID.settingsGymAccess))
         element(UITestID.settingsGymAccess).tap()
         let add = waitFor(UITestID.gymAccessAdd)

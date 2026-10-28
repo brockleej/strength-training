@@ -195,7 +195,7 @@ final class WorkoutViewModel {
     /// Per-exercise auto-start. The countdown length is a different control.
     func isRestTimerEnabled(for exercise: Exercise) -> Bool {
         if RestPreferenceMigration.copyIfNeeded(exercise) {
-            try? modelContext.save()
+            ModelSave.logged(modelContext, action: "WorkoutViewModel")
         }
         return exercise.autoRestEnabled
     }
@@ -221,7 +221,7 @@ final class WorkoutViewModel {
         _ = RestPreferenceMigration.copyIfNeeded(exercise)
         guard exercise.autoRestEnabled != enabled else { return }
         exercise.autoRestEnabled = enabled
-        try? modelContext.save()
+        ModelSave.logged(modelContext, action: "WorkoutViewModel")
         restTimerPreferenceEpoch &+= 1
         if !enabled {
             skipRest()
@@ -323,8 +323,10 @@ final class WorkoutViewModel {
         guard effects.endActivity else { return }
         recordRestSampleIfNeeded(endedAt: .now)
         // Leave the end date up long enough for the chirp to start, then clear the card.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) { [weak self] in
-            guard let self, let end = self.restEndDate, end.timeIntervalSinceNow <= 0 else { return }
+        restMonitorTask?.cancel()
+        restMonitorTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .milliseconds(700))
+            guard !Task.isCancelled, let self, let end = self.restEndDate, end.timeIntervalSinceNow <= 0 else { return }
             self.restAlert = nil
             self.restEndDate = nil
         }
@@ -437,7 +439,7 @@ final class WorkoutViewModel {
                     modelContext.delete(session)
                 }
             }
-            try? modelContext.save()
+            ModelSave.logged(modelContext, action: "WorkoutViewModel")
         }
     }
 
@@ -456,7 +458,7 @@ final class WorkoutViewModel {
         guard PlannedBlockQueue.isUnused(session) else { return }
         modelContext.delete(session)
         pruneEmptyTrainingBlocks()
-        try? modelContext.save()
+        ModelSave.logged(modelContext, action: "WorkoutViewModel")
     }
 
     /// Drop every leftover planned day. Finished workouts stay.
@@ -485,7 +487,7 @@ final class WorkoutViewModel {
             // Honor the track chosen on Today if the user flipped A/B before resume.
             if let rotationTrack {
                 suspended.track = rotationTrack
-                try? modelContext.save()
+                ModelSave.logged(modelContext, action: "WorkoutViewModel")
             }
             suspendedSession = nil
             // Historical re-open never had a live HK session.
@@ -513,7 +515,7 @@ final class WorkoutViewModel {
             activeSession = suspended
             if let rotationTrack {
                 suspended.track = rotationTrack
-                try? modelContext.save()
+                ModelSave.logged(modelContext, action: "WorkoutViewModel")
             }
             suspendedSession = nil
             if !isProtectedHistorySession(suspended) {
@@ -575,7 +577,7 @@ final class WorkoutViewModel {
     func setSessionRotationTrack(_ track: RotationTrack) {
         guard let session = activeSession else { return }
         session.track = track
-        try? modelContext.save()
+        ModelSave.logged(modelContext, action: "WorkoutViewModel")
     }
 
     /// Move the active session to the background without completing it.
@@ -683,7 +685,7 @@ final class WorkoutViewModel {
         if session.trainingBlock != nil && !Self.hasAthleteLoggedSets(session) {
             session.planStatus = .planned
             session.isCompleted = false
-            try? modelContext.save()
+            ModelSave.logged(modelContext, action: "WorkoutViewModel")
             return
         }
         let hasSets = Self.hasAthleteLoggedSets(session)
@@ -692,7 +694,7 @@ final class WorkoutViewModel {
         } else {
             modelContext.delete(session)
         }
-        try? modelContext.save()
+        ModelSave.logged(modelContext, action: "WorkoutViewModel")
     }
 
     /// Target rows from an imported plan do not count as trained work.
@@ -821,7 +823,7 @@ final class WorkoutViewModel {
         // stable backdrop while the effort-rating sheet and summary cover show.
         // The summary's Done/View Details handlers clear it so no intermediate
         // screens flash.
-        try? modelContext.save()
+        ModelSave.logged(modelContext, action: "WorkoutViewModel")
         HapticService.workoutCompleted()
 
         // Re-saving a historical workout: no new HealthKit session / effort prompt.
@@ -834,7 +836,7 @@ final class WorkoutViewModel {
             on: capturedSession,
             liveElapsed: healthKitService.wallClockElapsed
         )
-        try? modelContext.save()
+        ModelSave.logged(modelContext, action: "WorkoutViewModel")
         // Always ask for effort. HealthKit UUID used to gate this, so a dead
         // HK session (phone lock) skipped intensity and left Duration as "—".
         sessionPendingEffortRating = capturedSession
@@ -857,7 +859,7 @@ final class WorkoutViewModel {
             if let uuid {
                 capturedSession.healthKitWorkoutUUID = uuid
             }
-            try? self.modelContext.save()
+            ModelSave.logged(self.modelContext, action: "WorkoutViewModel")
             if let uuid = capturedSession.healthKitWorkoutUUID, let rating = capturedSession.effortRating {
                 await service.saveEffortRating(rating, workoutUUID: uuid)
             }
@@ -880,6 +882,12 @@ final class WorkoutViewModel {
         Self.rlDiag("cancelPendingWork", vm: vmID)
         #endif
         finishSaveTasks.values.forEach { $0.cancel() }
+        restMonitorTask?.cancel()
+        restMonitorTask = nil
+        restDispatchTimer?.cancel()
+        restDispatchTimer = nil
+        restEndDate = nil
+        restAlert = nil
         setUndoGeneration &+= 1
         setUndoTask?.cancel()
         setUndoTask = nil
@@ -963,13 +971,13 @@ final class WorkoutViewModel {
             }
             activeSession = nil
         }
-        try? modelContext.save()
+        ModelSave.logged(modelContext, action: "WorkoutViewModel")
     }
 
     func saveEffortRating(_ rating: Int) {
         guard let session = sessionPendingEffortRating else { return }
         session.effortRating = rating
-        try? modelContext.save()
+        ModelSave.logged(modelContext, action: "WorkoutViewModel")
         let uuid = session.healthKitWorkoutUUID
         pendingSummaryAfterRating = session
         sessionPendingEffortRating = nil
@@ -1036,7 +1044,7 @@ final class WorkoutViewModel {
         guard activeSession != nil else { return }
         activeSession?.unsuppressExercise(id: exercise.id)
         _ = findOrCreateRecord(for: exercise)
-        try? modelContext.save()
+        ModelSave.logged(modelContext, action: "WorkoutViewModel")
     }
 
     /// Remove from this workout only (does not delete the library exercise).
@@ -1052,7 +1060,7 @@ final class WorkoutViewModel {
             modelContext.delete(record)
         }
         session.suppressExercise(id: exercise.id)
-        try? modelContext.save()
+        ModelSave.logged(modelContext, action: "WorkoutViewModel")
     }
 
     /// Unassign from the day plan and hide it in this session.
@@ -1157,14 +1165,14 @@ final class WorkoutViewModel {
     func markExerciseDone(_ exercise: Exercise) {
         guard let record = findOrCreateRecord(for: exercise) else { return }
         record.isCompleted = true
-        try? modelContext.save()
+        ModelSave.logged(modelContext, action: "WorkoutViewModel")
     }
 
     /// Resume a lift after marking done (e.g. add more sets).
     func markExerciseNotDone(_ exercise: Exercise) {
         guard let record = currentRecord(for: exercise) else { return }
         record.isCompleted = false
-        try? modelContext.save()
+        ModelSave.logged(modelContext, action: "WorkoutViewModel")
     }
 
     func toggleExerciseDone(_ exercise: Exercise) {
@@ -1248,7 +1256,7 @@ final class WorkoutViewModel {
         record.sets?.append(set)
         modelContext.insert(set)
         setMutationEpoch &+= 1
-        try? modelContext.save()
+        ModelSave.logged(modelContext, action: "WorkoutViewModel")
         HapticService.setLogged()
         // Don't re-fire PR celebrations while fixing up an old session.
         if !isWarmup && !isRevisitingSavedSession {
@@ -1284,7 +1292,7 @@ final class WorkoutViewModel {
         // Editing while marked done keeps the lift open again.
         set.exerciseRecord?.isCompleted = false
         setMutationEpoch &+= 1
-        try? modelContext.save()
+        ModelSave.logged(modelContext, action: "WorkoutViewModel")
         HapticService.setLogged()
     }
 
@@ -1294,7 +1302,7 @@ final class WorkoutViewModel {
         HapticService.swipeToDelete()
         SetMutation.delete(set, from: currentRecord(for: exercise), in: modelContext)
         setMutationEpoch &+= 1
-        try? modelContext.save()
+        ModelSave.logged(modelContext, action: "WorkoutViewModel")
         pendingSetUndo = snapshot
         armSetUndoExpiry()
     }
@@ -1367,7 +1375,7 @@ final class WorkoutViewModel {
         }
         record.isCompleted = false
         setMutationEpoch &+= 1
-        try? modelContext.save()
+        ModelSave.logged(modelContext, action: "WorkoutViewModel")
     }
 
     /// Persist a cue on the exercise (and this session's record when one exists).
@@ -1377,7 +1385,7 @@ final class WorkoutViewModel {
         if let record = currentRecord(for: exercise) {
             record.notes = trimmed
         }
-        try? modelContext.save()
+        ModelSave.logged(modelContext, action: "WorkoutViewModel")
     }
 
     /// After marking a lift done, offer finish when every visible lift is done.
@@ -1409,7 +1417,7 @@ final class WorkoutViewModel {
         let session = WorkoutSession(dayType: dayType, date: now, rotationTrack: rotationTrack)
         modelContext.insert(session)
         assignCurrentGym(to: session)
-        try? modelContext.save()
+        ModelSave.logged(modelContext, action: "WorkoutViewModel")
         activeSession = session
         celebratedExerciseIDsThisSession = []
         startHealthKitWorkout()
@@ -1426,7 +1434,7 @@ final class WorkoutViewModel {
         session.date = now
         assignCurrentGym(to: session)
         suppressUnplannedDayLifts(on: session)
-        try? modelContext.save()
+        ModelSave.logged(modelContext, action: "WorkoutViewModel")
         activeSession = session
         celebratedExerciseIDsThisSession = []
         startHealthKitWorkout()
@@ -1481,7 +1489,7 @@ final class WorkoutViewModel {
         if session.exerciseRecords == nil { session.exerciseRecords = [] }
         session.exerciseRecords?.append(record)
         modelContext.insert(record)
-        try? modelContext.save()
+        ModelSave.logged(modelContext, action: "WorkoutViewModel")
         return record
     }
 

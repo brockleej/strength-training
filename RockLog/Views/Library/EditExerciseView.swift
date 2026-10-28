@@ -191,7 +191,7 @@ struct EditExerciseView: View {
             Button(ListMutationCopy.deleteFromLibrary, role: .destructive) {
                 CircuitStore.detach(exerciseID: exercise.id, in: modelContext)
                 modelContext.delete(exercise)
-                try? modelContext.save()
+                ModelSave.logged(modelContext, action: "EditExerciseView")
                 dismiss()
             }
             Button("Cancel", role: .cancel) {}
@@ -303,7 +303,7 @@ struct EditExerciseView: View {
         exercise.defaultRestSeconds = restSeconds
         exercise.autoRestEnabled = autoRest
         exercise.suggestWarmupRamp = warmupRamp
-        try? modelContext.save()
+        ModelSave.logged(modelContext, action: "EditExerciseView")
         SeedData.persistUserPlan(context: modelContext)
         dismiss()
     }

@@ -125,7 +125,7 @@ struct ExerciseLibraryView: View {
                     if let exercise = exercisePendingDelete {
                         CircuitStore.detach(exerciseID: exercise.id, in: modelContext)
                         modelContext.delete(exercise)
-                        try? modelContext.save()
+                        ModelSave.logged(modelContext, action: "ExerciseLibraryView")
                     }
                     exercisePendingDelete = nil
                 }
@@ -165,7 +165,7 @@ struct ExerciseLibraryView: View {
                     if !isUnassigned {
                         Button(ListMutationCopy.removeFromDay(dayType.rawValue)) {
                             exercise.removeDayType(dayType)
-                            try? modelContext.save()
+                            ModelSave.logged(modelContext, action: "ExerciseLibraryView")
                             SeedData.persistUserPlan(context: modelContext)
                         }
                         .tint(Color.uplift.customBadge)
@@ -184,7 +184,7 @@ struct ExerciseLibraryView: View {
                     if !isUnassigned {
                         Button {
                             exercise.removeDayType(dayType)
-                            try? modelContext.save()
+                            ModelSave.logged(modelContext, action: "ExerciseLibraryView")
                             SeedData.persistUserPlan(context: modelContext)
                         } label: {
                             Label(ListMutationCopy.removeFromDay(dayType.rawValue), systemImage: "minus.circle")
