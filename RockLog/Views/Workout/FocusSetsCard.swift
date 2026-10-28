@@ -305,7 +305,7 @@ struct FocusSetsCard: View {
         .buttonStyle(.plain)
         #if DEBUG
         .background {
-            if set.setNumber == 1, UITestLaunch.touchLogEnabled, !UITestLaunch.plainSetRowsEnabled {
+            if set.setNumber == 1, UITestLaunch.touchLogEnabled {
                 GeometryReader { proxy in
                     Color.clear.preference(
                         key: SetOneGlobalFrameKey.self,
@@ -319,11 +319,7 @@ struct FocusSetsCard: View {
         .accessibilityHint("double tap to edit")
         .accessibilityValue(isSelected ? "editing" : "logged")
         .accessibilityIdentifier(AccessibilityID.focusSet(set.setNumber))
-        #if DEBUG
-        .modifier(PlainOrSwipeSetRow(onDelete: { onDelete(set) }))
-        #else
         .swipeToDelete(fullSwipeDeletes: true, onDelete: { onDelete(set) }, onTap: nil)
-        #endif
     }
 
     private func simpleRow(_ set: SetRecord) -> some View {
@@ -575,26 +571,12 @@ private struct SetOneGlobalFrameKey: PreferenceKey {
     }
 }
 
-/// TEMP: remove before merge. `-RockLogPlainSetRows` is the button alone.
-private struct PlainOrSwipeSetRow: ViewModifier {
-    let onDelete: () -> Void
-
-    func body(content: Content) -> some View {
-        if UITestLaunch.plainSetRowsEnabled {
-            content
-        } else {
-            content.swipeToDelete(fullSwipeDeletes: true, onDelete: onDelete, onTap: nil)
-        }
-    }
-}
-
 /// TEMP: remove before merge. Records a card tap without handling it.
-/// simultaneousGesture so this probe does not compete with the row button.
 private struct CardTapProbe: ViewModifier {
     let frame: CGRect
 
     func body(content: Content) -> some View {
-        if UITestLaunch.touchLogEnabled, !UITestLaunch.plainSetRowsEnabled {
+        if UITestLaunch.touchLogEnabled {
             content.simultaneousGesture(
                 SpatialTapGesture(coordinateSpace: .global).onEnded { value in
                     TouchLog.shared.recordCardTap(location: value.location, setFrame: frame)

@@ -8,15 +8,7 @@ import XCTest
 final class WorkoutLoggingUITests: RockLogUITestCase {
 
     func test_logEditDeleteFinish_andEffortPrompt() {
-        runLogEditDeleteFinish(plainSetRows: false)
-    }
-
-    func test_logEditDeleteFinish_andEffortPrompt_plainSetRows() {
-        runLogEditDeleteFinish(plainSetRows: true)
-    }
-
-    private func runLogEditDeleteFinish(plainSetRows: Bool) {
-        launchLogging(plainSetRows: plainSetRows)
+        launch(preset: "typical", extra: [UITestID.touchLogArgument])
         selectPushIfNeeded()
         waitFor(UITestID.todayStart).tap()
 
@@ -75,15 +67,7 @@ final class WorkoutLoggingUITests: RockLogUITestCase {
 
     /// The set row is the button. A tap on that element enters edit mode.
     func test_setRowAccessibilityAction_entersEditMode() {
-        runSetRowAccessibilityAction(plainSetRows: false)
-    }
-
-    func test_setRowAccessibilityAction_entersEditMode_plainSetRows() {
-        runSetRowAccessibilityAction(plainSetRows: true)
-    }
-
-    private func runSetRowAccessibilityAction(plainSetRows: Bool) {
-        launchLogging(plainSetRows: plainSetRows)
+        launch(preset: "typical", extra: [UITestID.touchLogArgument])
         selectPushIfNeeded()
         waitFor(UITestID.todayStart).tap()
         waitFor(UITestID.workoutExercise("UI Fresh Lift")).tap()
@@ -101,15 +85,7 @@ final class WorkoutLoggingUITests: RockLogUITestCase {
     /// Bench has a last-time control beside the set. Tapping the set identifier
     /// must edit; that control stays a separate element outside the set's frame.
     func test_comparisonRowTap_selectsSetNotLastTime() {
-        runComparisonRowTap(plainSetRows: false)
-    }
-
-    func test_comparisonRowTap_selectsSetNotLastTime_plainSetRows() {
-        runComparisonRowTap(plainSetRows: true)
-    }
-
-    private func runComparisonRowTap(plainSetRows: Bool) {
-        launchLogging(plainSetRows: plainSetRows)
+        launch(preset: "typical", extra: [UITestID.touchLogArgument])
         selectPushIfNeeded()
         waitFor(UITestID.todayStart).tap()
         waitFor(UITestID.workoutExercise("UI Bench Press")).tap()
@@ -137,14 +113,6 @@ final class WorkoutLoggingUITests: RockLogUITestCase {
         printTEMPEditDeliveries("after comparison editing")
         XCTAssertTrue(element(UITestID.focusUpdateSet).waitForExistence(timeout: 4))
         XCTAssertTrue(lastTime.exists, "Selecting the set should leave the last-time control in place")
-    }
-
-    private func launchLogging(plainSetRows: Bool) {
-        var extra = [UITestID.touchLogArgument]
-        if plainSetRows {
-            extra.append(UITestID.plainSetRowsArgument)
-        }
-        launch(preset: "typical", extra: extra)
     }
 
     /// Tap the set by its identifier once it is on screen. Never a fixed coordinate.
