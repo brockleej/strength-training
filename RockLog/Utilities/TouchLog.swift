@@ -46,6 +46,8 @@ final class TouchLog {
 
     private(set) var hits: [String] = []
     private(set) var surfaces: [String] = []
+    private(set) var cardTap: String = "none"
+    private(set) var setFrame: String = "none"
 
     func recordHit(_ view: UIView?) {
         var chain: [String] = []
@@ -74,10 +76,18 @@ final class TouchLog {
         }
     }
 
+    func recordCardTap(location: CGPoint, setFrame: CGRect) {
+        cardTap = String(format: "%.1f,%.1f", location.x, location.y)
+        self.setFrame = String(
+            format: "%.1f,%.1f,%.1f,%.1f",
+            setFrame.origin.x, setFrame.origin.y, setFrame.width, setFrame.height
+        )
+    }
+
     var summary: String {
         let last = hits.last ?? "none"
         let surface = surfaces.suffix(6).joined(separator: ",")
-        return "TEMP touches=\(hits.count) last=\(last) surfaces=\(surface)"
+        return "TEMP touches=\(hits.count) last=\(last) cardTap=\(cardTap) geom=\(setFrame) surfaces=\(surface)"
     }
 }
 

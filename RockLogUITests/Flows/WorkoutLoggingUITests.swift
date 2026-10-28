@@ -104,8 +104,10 @@ final class WorkoutLoggingUITests: RockLogUITestCase {
             "focus.set center sits on the last-time control, so a tap loads last time instead of editing."
         )
         noteBeforeSetTap()
+        logFrameReads(logged)
         logged.tap()
         printHitOwner("after comparison tap")
+        printFrameReadouts("after comparison tap")
         printTEMPEditDeliveries("after comparison tap")
         waitUntilEditing(logged)
         printTEMPEditDeliveries("after comparison editing")
@@ -119,10 +121,36 @@ final class WorkoutLoggingUITests: RockLogUITestCase {
         scrollUntilHittable(row)
         XCTAssertTrue(row.isHittable, "\(UITestID.focusSet(number)) is not hittable")
         noteBeforeSetTap()
+        logFrameReads(row)
         row.tap()
         printHitOwner("after set tap")
+        printFrameReadouts("after set tap")
         return row
     }
+
+    /// Immediate frame reads only. The tap stays row.tap() and is not delayed.
+    private func logFrameReads(_ row: XCUIElement) {
+        var lines: [String] = []
+        for index in 0..<4 {
+            lines.append("TEMP frame[\(index)] \(formatFrame(row.frame))")
+        }
+        let frame = row.frame
+        lines.append("TEMP xctestFrame=\(formatFrame(frame)) tap=\(frame.midX),\(frame.midY)")
+        lastFrameLog = lines.joined(separator: " | ")
+        print(lastFrameLog)
+    }
+
+    private func printFrameReadouts(_ note: String) {
+        let line = "TEMP readouts \(note) touch=\(touchLogValue()) delivery=\(editDeliveryValue())"
+        lastFrameLog += " | \(line)"
+        print(line)
+    }
+
+    private func formatFrame(_ frame: CGRect) -> String {
+        String(format: "%.1f,%.1f,%.1f,%.1f", frame.minX, frame.minY, frame.width, frame.height)
+    }
+
+    private var lastFrameLog = ""
 
     private var logSetTapAt: Date?
 
@@ -228,7 +256,7 @@ final class WorkoutLoggingUITests: RockLogUITestCase {
             add(shot)
             let seenValue = (row.value as? String) ?? String(describing: row.value ?? "nil")
             let hit = touchLogValue()
-            XCTFail("focus.set did not show editing in label or value. label=\(row.label) value=\(seenValue) delivery=\(delivery) \(dump) \(lastSurfaceNote) hit=\(hit)")
+            XCTFail("focus.set did not show editing in label or value. label=\(row.label) value=\(seenValue) delivery=\(delivery) \(dump) \(lastSurfaceNote) hit=\(hit) \(lastFrameLog)")
             return
         }
     }

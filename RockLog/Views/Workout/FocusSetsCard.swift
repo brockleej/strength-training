@@ -25,6 +25,9 @@ struct FocusSetsCard: View {
     var plannedSets: [PreviousSet] = []
     var selectedSetID: UUID? = nil
     #if DEBUG
+    @State private var setOneGlobalFrame: CGRect = .zero
+    #endif
+    #if DEBUG
     /// TEMP: remove before merge. Nil outside the debug UI-test launch.
     var editDeliveries: EditDeliveryLog? = nil
     #endif
@@ -99,6 +102,10 @@ struct FocusSetsCard: View {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .fill(Color.uplift.surface1)
         }
+        #if DEBUG
+        .onPreferenceChange(SetOneGlobalFrameKey.self) { setOneGlobalFrame = $0 }
+        .modifier(CardTapProbe(frame: setOneGlobalFrame))
+        #endif
     }
 
     private var header: some View {
@@ -296,6 +303,18 @@ struct FocusSetsCard: View {
                 .frame(maxWidth: .infinity, minHeight: 44)
         }
         .buttonStyle(.plain)
+        #if DEBUG
+        .background {
+            if set.setNumber == 1, UITestLaunch.touchLogEnabled {
+                GeometryReader { proxy in
+                    Color.clear.preference(
+                        key: SetOneGlobalFrameKey.self,
+                        value: proxy.frame(in: .global)
+                    )
+                }
+            }
+        }
+        #endif
         .accessibilityLabel(label)
         .accessibilityHint("double tap to edit")
         .accessibilityValue(isSelected ? "editing" : "logged")
@@ -542,6 +561,33 @@ enum FocusSetRowLabel {
         return parts.joined(separator: ", ")
     }
 }
+
+#if DEBUG
+private struct SetOneGlobalFrameKey: PreferenceKey {
+    static var defaultValue: CGRect = .zero
+    static func reduce(value: inout CGRect, nextValue: () -> CGRect) {
+        let next = nextValue()
+        if next != .zero { value = next }
+    }
+}
+
+/// TEMP: remove before merge. Records a card tap without handling it.
+private struct CardTapProbe: ViewModifier {
+    let frame: CGRect
+
+    func body(content: Content) -> some View {
+        if UITestLaunch.touchLogEnabled {
+            content.simultaneousGesture(
+                SpatialTapGesture(coordinateSpace: .global).onEnded { value in
+                    TouchLog.shared.recordCardTap(location: value.location, setFrame: frame)
+                }
+            )
+        } else {
+            content
+        }
+    }
+}
+#endif
 
 #Preview("FocusSetsCard planned three columns") {
     FocusSetsCard(
