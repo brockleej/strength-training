@@ -3,9 +3,8 @@
 //  RockLog
 //
 //  Edit a day's exercise roster without starting a workout.
-//  Global list patterns: long-press the number to reorder, swipe-to-remove,
-//  Add exercise row. Not a List — native swipeActions + whole-row long-press
-//  + contextMenu stacked on one row and ate the Remove tap / froze the lift.
+//  Global list patterns: long-press the number to reorder, long-press the
+//  row to remove, Add exercise row.
 //
 
 import SwiftUI
@@ -177,7 +176,7 @@ struct DayPlanEditorView: View {
             Text("\(index + 1)")
                 .font(.uplift.mono(13, weight: .bold))
                 .foregroundStyle(Color.uplift.fgDim)
-                .frame(width: 28, height: 36)
+                .frame(width: 44, height: 44)
                 .contentShape(Rectangle())
                 .longPressReorder(
                     id: exercise.id,
@@ -226,18 +225,19 @@ struct DayPlanEditorView: View {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .fill(draggingID == exercise.id ? Color.uplift.surface2 : Color.uplift.surface1)
         }
-        .swipeToDelete(fullSwipeDeletes: false, isEnabled: draggingID == nil, onDelete: {
-            removeExercise(exercise)
-        }, onTap: {
+        .onTapGesture {
             editingExercise = exercise
-        })
+        }
+        .contextMenu {
+            Button("Remove", role: .destructive) {
+                removeExercise(exercise)
+            }
+        }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(planAccessibility(index: index, exercise: exercise, personalBest: personalBest, hasHistory: hasHistory))
-        // Identifier on the combined row, same as split days. An identifier
-        // inside the swipe container is a different hit target, so a swipe
-        // or trailing tap never reaches Remove.
+        // Identifier on the combined row. A long-press opens Remove.
         .accessibilityIdentifier(AccessibilityID.dayPlanExercise(exercise.name))
-        .accessibilityHint("Long press the number and drag to reorder, swipe left to remove, double tap to edit")
+        .accessibilityHint("Long press the number and drag to reorder, long press to remove, double tap to edit")
     }
 
     private func planAccessibility(

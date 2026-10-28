@@ -96,7 +96,7 @@ All screens compose the shared design system in `Views/DesignSystem/` — do not
 
 - **Colors:** `Color.uplift.*` tokens only (surfaces, foregrounds, ice accent, day-type inks/washes, semantic up/down/pr, Apple-Health greens). Never hardcode hex values outside `Tokens.swift`.
 - **Typography:** `Font.uplift.display/text/mono`. Hero/stat numerals use the `Num` component (SF Pro Display + tabular digits); small data numerals and live-ticking values use `Font.uplift.mono`.
-- **Components:** `DayChip`, `UpliftStepper`, `UpliftSegmentedControl`, `GlassHeader`, `PillBottomBar`, `SectionHeader`, `HealthKitCard`, `Stat`/`SummaryStat`/`BigStat`, `FilterChip`, `SearchField`, `CircleButton`, `AddItemRow`, `EmptyListState`, `swipeToDelete`, reorder helpers in `ListMutationPatterns.swift`.
+- **Components:** `DayChip`, `UpliftStepper`, `UpliftSegmentedControl`, `GlassHeader`, `PillBottomBar`, `SectionHeader`, `HealthKitCard`, `Stat`/`SummaryStat`/`BigStat`, `FilterChip`, `SearchField`, `CircleButton`, `AddItemRow`, `EmptyListState`, reorder helpers in `ListMutationPatterns.swift`.
 - **Appearance:** the app is locked to dark (`.preferredColorScheme(.dark)` + ice `.tint` in `ContentView`). Cards use continuous-corner rounded rectangles (14–20pt).
 - **Shared math:** the Epley estimate lives in `E1RM.estimate` and per-session aggregates in `SessionMath` — never re-inline the formula.
 
@@ -106,8 +106,8 @@ Keep remove / reorder / add **identical** across ordered lists (day plan, traini
 
 | Action | Pattern |
 |--------|---------|
-| **Remove (soft)** | Verb **Remove** (from day / workout). Swipe reveals trash, then tap — `swipeToDelete(fullSwipeDeletes: false)` or List `allowsFullSwipe: false`. No confirm for soft unassign/session hide. |
-| **Delete (hard)** | Verb **Delete** (library exercise, workout history, day type). Always **confirmation dialog** with a one-line consequence. Never full-swipe-commit hard deletes. |
+| **Remove (soft)** | Verb **Remove** (from day / workout). Long-press the row, then tap Remove. Library rows use List `.swipeActions` with `allowsFullSwipe: false`. |
+| **Delete (hard)** | Verb **Delete**. A logged set uses List `.swipeActions(allowsFullSwipe: true)` plus the same **Delete** in `.contextMenu`, then an Undo toast for about 5 seconds. A split day uses the same swipe, and the action still opens the **Delete day** confirm. |
 | **Reorder** | Long-press the number + drag (no Edit/Done, no system move handles). Shared `UUIDListDropDelegate` / `reorderDragSource` / `reorderDropTarget`. Hint: `ListMutationCopy.reorderAndRemove`. |
 | **Add to context** | Dashed `AddItemRow` (“Add exercise” / “Add day”). Exercise-in-context uses `AddExerciseSheet` (Library \| New). Library toolbar `+` is create-only. |
 | **Empty lists** | `EmptyListState` with optional primary `AddItemRow`. |

@@ -18,9 +18,6 @@ struct RockLogApp: App {
         // Rest timer is audio-only; suppress/clear any leftover rest-timer notifications.
         UNUserNotificationCenter.current().delegate = RestTimerNotificationDelegate.shared
         RestTimerNotificationScheduler.cancelAll()
-        #if DEBUG
-        TouchLogInstaller.installIfNeeded()
-        #endif
     }
 
     var body: some Scene {

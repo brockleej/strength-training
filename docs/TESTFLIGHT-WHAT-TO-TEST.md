@@ -1,5 +1,20 @@
 # TestFlight — What to Test
 
+## Stage 1 — local, not a TestFlight paste yet
+
+```
+What's new: Deleting a set is the system swipe (or a long-press Delete) and Undo sits on the lift for about 5 seconds. Bigger deletes still ask. A workout that runs past midnight stays open until about 6 hours after the last set. Planned-workout and split files are checked before anything is removed.
+
+Please try:
+1) Log a set, swipe it left, tap Delete. Tap Undo — the set comes back. Swipe it all the way off and wait — after a few seconds Undo is gone.
+2) On iPhone SE and iPhone 17 Pro, tap a set. It should say editing. Long-press should show Delete and should not start editing.
+3) Settings → Edit training split: swipe a day, then confirm Delete day. Cancel leaves the day.
+4) Leave a workout open past midnight and reopen the app within a few hours. The workout should still be open. An empty workout from a previous day should not sit in History.
+5) Optional: import a planned-workout file. A bad weight or a huge file should show an error and leave the current plan in place.
+```
+
+---
+
 Paste into App Store Connect → the build → **Test Details** → **What to Test**,  
 **or** drop an API key in `~/Documents/Hobbies/RockLog/secrets/` (see that folder’s README) and we set it from here.
 
@@ -115,13 +130,13 @@ What’s new
 • First launch (no iCloud split): pick a split or restore a JSON. Then starters or empty days.
 • Full Body is a real day with 4 starters, not “every lift in the library.”
 • Restore asks Don’t restore vs Replace split and exercises. Cancel does not change the plan.
-• Edit a day: swipe left → Remove from that day. Long-press the number to reorder.
+• Edit a day: swipe left → Delete, then confirm. Long-press the number to reorder.
 
 What to test
 • Fresh install signed into iCloud: your days and lifts come back. No extra unused templates.
 • Fresh install not signed in: first screen is Pick a split or restore. Empty days stay empty. Starters are only the short list.
 • Settings → Restore: Don’t restore leaves Today unchanged. Replace matches the file (counts and names).
-• Edit Push (or Upper): swipe a lift left and remove. Leave, come back — still gone.
+• Edit Push (or Upper): swipe a day row left and delete it, then confirm. Leave, come back — still gone.
 • Long-press a lift name → Remove from this day still works.
 
 If defaults reappear on a day you already customized, say whether you restored a file and which one.
@@ -191,13 +206,13 @@ Build 9 — welcome guide + the logging fixes from 8.
 
 What’s new
 • First-run welcome (4 pages). Replay anytime: Settings → Welcome guide.
-• Swipe-delete an extra set (full swipe or trash). Sets renumber.
+• Swipe left on an extra set, or swipe it all the way, to delete it. Sets renumber. Long-press has the same Delete.
 • After the last lift is Done: “Finish this workout?”
 • Exercise notes on the lift screen (and Edit exercise).
 
 What to test
 • Welcome: Continue through all pages, then Skip on a replay from Settings.
-• Log a set by mistake → swipe left → gone, numbers 1…n.
+• Log a set by mistake → swipe left → Delete, or swipe all the way. It is gone, numbers 1…n.
 • Tap a set → change it → Update set. Cancel edit leaves it alone.
 • Assist (machine help + body weight in Settings), Sides, Warm, ±5/1/0.5 under Weight.
 • Mark every lift Done → Finish vs Keep training.
@@ -209,10 +224,10 @@ If something feels off, say which lift and whether last-vs-this was showing.
 ## Build 8 (already processing — paste if 9 is not up yet)
 
 ```
-Build 8 — swipe-delete extra sets, finish prompt, exercise notes.
+Build 8 — swipe left to delete extra sets, finish prompt, exercise notes.
 
 What to test
-• Log a set by mistake → swipe left → set is gone and remaining sets renumber 1…n.
+• Log a set by mistake → swipe left → Delete, or swipe all the way. The set is gone and remaining sets renumber 1…n.
 • Mark every lift Done → “Finish this workout?” → Finish still goes to effort/summary; Keep training stays in the session.
 • Add a note on a lift (difficulty / next time / modification), leave Focus, come back — note is still there. Same field on Edit exercise.
 ```

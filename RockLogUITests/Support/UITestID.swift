@@ -51,15 +51,9 @@ enum UITestID {
     static let focusCancelEdit = "focus.cancelEdit"
 
     static func focusSet(_ number: Int) -> String { "focus.set.\(number)" }
-    /// TEMP: remove before merge. Delivery counts only, no workout data.
-    static let focusEditDeliveryTEMP = "focus.editDelivery.TEMP"
-    /// TEMP: remove before merge. Control outside swipeToDelete.
-    static let focusEditDeliveryProbeTEMP = "focus.editDelivery.probe.TEMP"
-    /// TEMP: remove before merge. Hit-test chain. No labels or weights.
-    static let focusTouchLogTEMP = "focus.touchLog.TEMP"
-    static let focusDiagControl = "focus.diag.control"
-    static let touchLogArgument = "-RockLogTouchLog"
-    static let plainSetRowsArgument = "-RockLogPlainSetRows"
+    static let focusHitLog = "focus.hitLog"
+    static let setDelete = "set.delete"
+    static let setUndo = "set.undo"
     static let diagControlArgument = "-RockLogDiag"
     static func focusLoadLast(_ number: Int) -> String { "focus.loadLast.\(number)" }
     static func focusLoadPlan(_ number: Int) -> String { "focus.loadPlan.\(number)" }
@@ -95,7 +89,7 @@ enum UITestID {
     static func splitDay(_ name: String) -> String { "split.day.\(name)" }
     static func splitDayMoveUp(_ name: String) -> String { "split.day.\(name).moveUp" }
     static func splitDayMoveDown(_ name: String) -> String { "split.day.\(name).moveDown" }
-    static let swipeTrash = "swipe.trash"
+    static let splitDelete = "split.delete"
 
     static let historyEmpty = "history.empty"
 

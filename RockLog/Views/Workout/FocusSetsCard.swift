@@ -24,13 +24,6 @@ struct FocusSetsCard: View {
     /// Programmed targets. When non-empty, a PLAN column appears and Actual stays blank until logged.
     var plannedSets: [PreviousSet] = []
     var selectedSetID: UUID? = nil
-    #if DEBUG
-    @State private var setOneGlobalFrame: CGRect = .zero
-    #endif
-    #if DEBUG
-    /// TEMP: remove before merge. Nil outside the debug UI-test launch.
-    var editDeliveries: EditDeliveryLog? = nil
-    #endif
     var onSelect: (SetRecord) -> Void = { _ in }
     var onDelete: (SetRecord) -> Void = { _ in }
     /// Load a previous set into steppers (weight, reps, warmup, eachSide, assisted).
@@ -47,32 +40,7 @@ struct FocusSetsCard: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            #if DEBUG
-            // TEMP: remove before merge. Hidden. Value is counts and id tokens only.
-            if let editDeliveries {
-                Color.clear
-                    .frame(width: 1, height: 1)
-                    .accessibilityElement(children: .ignore)
-                    .accessibilityIdentifier(AccessibilityID.focusEditDeliveryTEMP)
-                    .accessibilityLabel("edit delivery")
-                    .accessibilityValue(editDeliveries.summary)
-                // Outside swipeToDelete, so a tap here can prove the readout updates.
-                Button {
-                    editDeliveries.record(.probe)
-                } label: {
-                    Color.clear.frame(width: 44, height: 44)
-                }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier(AccessibilityID.focusEditDeliveryProbeTEMP)
-                .accessibilityLabel("TEMP probe")
-            }
-            #endif
             header
-            #if DEBUG
-            if UITestLaunch.diagControlEnabled, !sets.isEmpty {
-                DiagControlButton()
-            }
-            #endif
             if sets.isEmpty && previousSets.isEmpty && plannedSets.isEmpty {
                 Text("No sets yet")
                     .font(.uplift.text(13, weight: .medium))
@@ -88,17 +56,20 @@ struct FocusSetsCard: View {
                         .padding(.bottom, 6)
                 }
 
-                ForEach(0..<rowCount, id: \.self) { index in
-                    let thisSet = index < sets.count ? sets[index] : nil
-                    let prev = index < previousSets.count ? previousSets[index] : nil
-                    let planned = index < plannedSets.count ? plannedSets[index] : nil
-                    row(index: index, thisSet: thisSet, previous: prev, planned: planned)
-                    if index < rowCount - 1 {
-                        Rectangle()
-                            .fill(Color.uplift.hairline)
-                            .frame(height: 0.5)
+                List {
+                    ForEach(0..<rowCount, id: \.self) { index in
+                        let thisSet = index < sets.count ? sets[index] : nil
+                        let prev = index < previousSets.count ? previousSets[index] : nil
+                        let planned = index < plannedSets.count ? plannedSets[index] : nil
+                        setListRow(index: index, thisSet: thisSet, previous: prev, planned: planned)
                     }
                 }
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
+                .scrollDisabled(true)
+                .environment(\.defaultMinListRowHeight, 44)
+                .frame(height: CGFloat(rowCount) * 88)
+                .clipped()
             }
         }
         .padding(.horizontal, 14)
@@ -107,16 +78,12 @@ struct FocusSetsCard: View {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .fill(Color.uplift.surface1)
         }
-        #if DEBUG
-        .onPreferenceChange(SetOneGlobalFrameKey.self) { setOneGlobalFrame = $0 }
-        .modifier(CardTapProbe(frame: setOneGlobalFrame))
-        #endif
     }
 
     private var header: some View {
         HStack(spacing: 10) {
             Text("SET")
-                .frame(width: 44, alignment: .leading)
+                .frame(width: SetRowColumnLayout.indexWidth(showsPlan: showPlannedColumn), alignment: .leading)
             if showPlannedColumn {
                 VStack(alignment: .leading, spacing: 1) {
                     Text("LAST")
@@ -127,9 +94,9 @@ struct FocusSetsCard: View {
                             .lineLimit(1)
                     }
                 }
-                .frame(width: 70, alignment: .leading)
+                .frame(width: SetRowColumnLayout.lastWidth(showsPlan: true), alignment: .leading)
                 Text("PLAN")
-                    .frame(width: 70, alignment: .leading)
+                    .frame(width: SetRowColumnLayout.planWidth, alignment: .leading)
                 Text("ACTUAL")
                     .frame(maxWidth: .infinity, alignment: .trailing)
             } else if showPreviousColumn {
@@ -142,7 +109,7 @@ struct FocusSetsCard: View {
                             .lineLimit(1)
                     }
                 }
-                .frame(width: 72, alignment: .leading)
+                .frame(width: SetRowColumnLayout.lastWidth(showsPlan: false), alignment: .leading)
                 Text("THIS")
                     .frame(maxWidth: .infinity, alignment: .trailing)
             } else {
@@ -158,6 +125,14 @@ struct FocusSetsCard: View {
         .overlay(alignment: .bottom) {
             Rectangle().fill(Color.uplift.hairline).frame(height: 0.5)
         }
+    }
+
+    private func setListRow(index: Int, thisSet: SetRecord?, previous: PreviousSet?, planned: PreviousSet?) -> some View {
+        row(index: index, thisSet: thisSet, previous: previous, planned: planned)
+            .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+            .listRowSeparator(.hidden)
+            .listRowBackground(Color.clear)
+            .modifier(LoggedSetDeleteActions(set: thisSet, onDelete: onDelete, onSelect: onSelect))
     }
 
     @ViewBuilder
@@ -179,15 +154,14 @@ struct FocusSetsCard: View {
             planned: planned,
             isSelected: isSelected
         )
-        // Last/plan stay siblings of the select target. A combined row puts
-        // those buttons under the center of focus.set on a narrow phone, so
-        // a tap loads last time instead of editing.
-        return HStack(spacing: 10) {
+        // Last time stays beside the set, in a fixed column, so its frame
+        // cannot cover the center of the set button on a 320 or 375pt phone.
+        return HStack(spacing: SetRowColumnLayout.spacing) {
             setIndexMark(index: index, thisSet: thisSet, isSelected: isSelected)
 
             snapshotButton(
                 previous,
-                width: showPlannedColumn ? 70 : 72,
+                width: SetRowColumnLayout.lastWidth(showsPlan: showPlannedColumn),
                 showLoadIcon: !showPlannedColumn,
                 accessibility: "Load last set \(index + 1) into steppers",
                 identifier: AccessibilityID.focusLoadLast(setNumber),
@@ -197,7 +171,7 @@ struct FocusSetsCard: View {
             if showPlannedColumn {
                 snapshotButton(
                     planned,
-                    width: 70,
+                    width: SetRowColumnLayout.planWidth,
                     showLoadIcon: false,
                     accessibility: "Load planned set \(index + 1) into steppers",
                     identifier: AccessibilityID.focusLoadPlan(setNumber),
@@ -243,16 +217,19 @@ struct FocusSetsCard: View {
                         .foregroundStyle(isSelected ? Color.uplift.accent : Color.uplift.up)
                 }
                 .frame(width: 22, height: 22)
+                .frame(minHeight: 44)
             } else {
                 Circle()
                     .strokeBorder(Color.uplift.hairline, lineWidth: 1)
                     .frame(width: 22, height: 22)
+                    .frame(minHeight: 44)
             }
             Text("\(index + 1)")
                 .font(.uplift.mono(15, weight: .bold))
                 .foregroundStyle(Color.uplift.fg)
         }
-        .frame(width: showPlannedColumn ? 36 : 44, alignment: .leading)
+        .frame(width: SetRowColumnLayout.indexWidth(showsPlan: showPlannedColumn), alignment: .leading)
+        .allowsHitTesting(false)
         .accessibilityHidden(true)
     }
 
@@ -281,6 +258,7 @@ struct FocusSetsCard: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .layoutPriority(0)
             .accessibilityLabel(accessibility)
             .accessibilityIdentifier(identifier)
         } else {
@@ -291,7 +269,8 @@ struct FocusSetsCard: View {
         }
     }
 
-    /// One button. Its action is the only select path. Last/plan stay outside it.
+    /// One button. Its frame is the trailing column: at least 44pt tall and
+    /// the full leftover width. No gesture sits on it besides the menu.
     private func loggedSetButton<Content: View>(
         _ set: SetRecord,
         isSelected: Bool,
@@ -299,47 +278,20 @@ struct FocusSetsCard: View {
         @ViewBuilder content: () -> Content
     ) -> some View {
         Button {
-            #if DEBUG
-            editDeliveries?.record(.button)
-            #endif
             onSelect(set)
         } label: {
-            #if DEBUG
-            if UITestLaunch.plainSetRowsEnabled {
-                content()
-                    .frame(maxWidth: .infinity, minHeight: 44)
-                    .contentShape(Rectangle())
-            } else {
-                content()
-                    .frame(maxWidth: .infinity, minHeight: 44)
-            }
-            #else
             content()
-                .frame(maxWidth: .infinity, minHeight: 44)
-            #endif
+                .frame(maxWidth: .infinity, minHeight: 44, alignment: .trailing)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        #if DEBUG
-        .background {
-            if set.setNumber == 1, UITestLaunch.touchLogEnabled, !UITestLaunch.plainSetRowsEnabled {
-                GeometryReader { proxy in
-                    Color.clear.preference(
-                        key: SetOneGlobalFrameKey.self,
-                        value: proxy.frame(in: .global)
-                    )
-                }
-            }
-        }
-        #endif
+        .frame(maxWidth: .infinity, minHeight: 44)
+        .layoutPriority(1)
+        .contentShape(Rectangle())
         .accessibilityLabel(label)
         .accessibilityHint("double tap to edit")
         .accessibilityValue(isSelected ? "editing" : "logged")
         .accessibilityIdentifier(AccessibilityID.focusSet(set.setNumber))
-        #if DEBUG
-        .modifier(PlainOrSwipeSetRow(onDelete: { onDelete(set) }))
-        #else
-        .swipeToDelete(fullSwipeDeletes: true, onDelete: { onDelete(set) }, onTap: nil)
-        #endif
     }
 
     private func simpleRow(_ set: SetRecord) -> some View {
@@ -362,6 +314,7 @@ struct FocusSetsCard: View {
                             .foregroundStyle(isSelected ? Color.uplift.accent : Color.uplift.up)
                     }
                     .frame(width: 22, height: 22)
+                    .frame(width: 44, height: 44)
                     .accessibilityHidden(true)
                     Text("\(set.setNumber)")
                         .font(.uplift.mono(14, weight: .semibold))
@@ -582,73 +535,59 @@ enum FocusSetRowLabel {
     }
 }
 
-#if DEBUG
-private struct SetOneGlobalFrameKey: PreferenceKey {
-    static var defaultValue: CGRect = .zero
-    static func reduce(value: inout CGRect, nextValue: () -> CGRect) {
-        let next = nextValue()
-        if next != .zero { value = next }
+/// Trailing set column beside a fixed last-time column.
+/// The set button's center stays out of the last-time column at 320 and 375pt.
+enum SetRowColumnLayout {
+    static let spacing: CGFloat = 10
+    static let planWidth: CGFloat = 70
+
+    static func indexWidth(showsPlan: Bool) -> CGFloat { showsPlan ? 36 : 44 }
+
+    static func lastWidth(showsPlan: Bool) -> CGFloat { showsPlan ? 70 : 72 }
+
+    static func setColumn(rowWidth: CGFloat, showsPlan: Bool) -> CGRect {
+        let index = indexWidth(showsPlan: showsPlan)
+        let last = lastWidth(showsPlan: showsPlan)
+        let plan = showsPlan ? planWidth : 0
+        let gaps = showsPlan ? spacing * 3 : spacing * 2
+        let originX = index + last + plan + gaps
+        let width = max(44, rowWidth - originX)
+        return CGRect(x: originX, y: 0, width: width, height: 44)
+    }
+
+    static func centerHits(_ sibling: CGRect, setColumn: CGRect) -> Bool {
+        sibling.contains(CGPoint(x: setColumn.midX, y: setColumn.midY))
     }
 }
 
-#if DEBUG
-/// TEMP: remove before merge. Own counter for focus.diag.control.
-@MainActor
-@Observable
-final class DiagControlCounter {
-    static let shared = DiagControlCounter()
-    private(set) var count = 0
-    func bump() { count += 1 }
-}
+/// Swipe and long-press delete for a logged set. Rows with no set stay plain.
+private struct LoggedSetDeleteActions: ViewModifier {
+    let set: SetRecord?
+    let onDelete: (SetRecord) -> Void
+    let onSelect: (SetRecord) -> Void
 
-private struct DiagControlButton: View {
-    var body: some View {
-        let count = DiagControlCounter.shared.count
-        Button {
-            DiagControlCounter.shared.bump()
-        } label: {
-            Text("Diag")
-                .frame(maxWidth: .infinity, minHeight: 44)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityIdentifier(AccessibilityID.focusDiagControl)
-        .accessibilityLabel("Diagnostic control")
-        .accessibilityValue("diag=\(count)")
-    }
-}
-#endif
-
-/// TEMP: remove before merge. `-RockLogPlainSetRows` is the button alone.
-private struct PlainOrSwipeSetRow: ViewModifier {
-    let onDelete: () -> Void
-
+    @ViewBuilder
     func body(content: Content) -> some View {
-        if UITestLaunch.plainSetRowsEnabled {
+        if let set {
             content
-        } else {
-            content.swipeToDelete(fullSwipeDeletes: true, onDelete: onDelete, onTap: nil)
-        }
-    }
-}
-
-/// TEMP: remove before merge. Records a card tap without handling it.
-private struct CardTapProbe: ViewModifier {
-    let frame: CGRect
-
-    func body(content: Content) -> some View {
-        if UITestLaunch.touchLogEnabled, !UITestLaunch.plainSetRowsEnabled {
-            content.simultaneousGesture(
-                SpatialTapGesture(coordinateSpace: .global).onEnded { value in
-                    TouchLog.shared.recordCardTap(location: value.location, setFrame: frame)
+                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                    Button(role: .destructive) {
+                        onDelete(set)
+                    } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
+                    .accessibilityIdentifier(AccessibilityID.setDelete)
                 }
-            )
+                .contextMenu {
+                    Button("Edit") { onSelect(set) }
+                    Button("Delete", role: .destructive) { onDelete(set) }
+                        .accessibilityIdentifier(AccessibilityID.setDelete)
+                }
         } else {
             content
         }
     }
 }
-#endif
 
 #Preview("FocusSetsCard planned three columns") {
     FocusSetsCard(

@@ -36,27 +36,29 @@ final class OptimizationFlowsUITests: RockLogUITestCase {
         waitFor(UITestID.workoutExercise("UI Fresh Lift")).tap()
         XCTAssertTrue(element(UITestID.focusWarmup).waitForExistence(timeout: 8))
         XCTAssertTrue(element(UITestID.focusDone).exists)
-        XCTAssertTrue(element(UITestID.focusLogSet).exists)
+        _ = waitForLogSet()
         XCTAssertTrue(element(UITestID.focusPlates).exists)
         XCTAssertTrue(element(UITestID.focusLoadMode).exists)
         XCTAssertTrue(element(UITestID.stackOverride).exists)
         waitFor(UITestID.focusWarmup).tap()
-        waitFor(UITestID.focusLogSet).tap()
+        waitForLogSet().tap()
         XCTAssertTrue(element(UITestID.focusSet(1)).waitForExistence(timeout: 6))
         XCTAssertTrue(element(UITestID.restSkip).exists || element(UITestID.focusLogSet).exists)
     }
 
     func test_restChips_andReorderSheet() {
-        launch(preset: "typical")
+        // Logging presets leave the rest timer off, so a logged set does not
+        // count down and rest.plus is not in the tree. This test turns it on.
+        launch(preset: "typical", extra: ["-RockLogRestTimer", "on"])
         selectPushIfNeeded()
         waitFor(UITestID.todayStart).tap()
         waitFor(UITestID.workoutExercise("UI Fresh Lift")).tap()
-        waitFor(UITestID.focusLogSet).tap()
-        if element(UITestID.restPlus).waitForExistence(timeout: 4) {
-            element(UITestID.restPlus).tap()
-            element(UITestID.restMinus).tap()
-            element(UITestID.restSkip).tap()
-        }
+        waitForLogSet().tap()
+        let restPlus = waitFor(UITestID.restPlus)
+        XCTAssertTrue(restPlus.isHittable, "Rest +15 is not on screen. frame=\(restPlus.frame)")
+        restPlus.tap()
+        element(UITestID.restMinus).tap()
+        element(UITestID.restSkip).tap()
         waitFor(UITestID.focusBack).tap()
         let more = app.buttons["More options"]
         XCTAssertTrue(more.waitForExistence(timeout: 6))
@@ -74,7 +76,7 @@ final class OptimizationFlowsUITests: RockLogUITestCase {
         selectPushIfNeeded()
         waitFor(UITestID.todayStart).tap()
         waitFor(UITestID.workoutExercise("UI Fresh Lift")).tap()
-        let log = waitFor(UITestID.focusLogSet)
+        let log = waitForLogSet()
         XCTAssertTrue(log.isHittable)
         XCTAssertEqual(app.windows.firstMatch.frame.width > 0, true)
     }
@@ -84,7 +86,7 @@ final class OptimizationFlowsUITests: RockLogUITestCase {
         selectPushIfNeeded()
         waitFor(UITestID.todayStart).tap()
         waitFor(UITestID.workoutExercise("UI Fresh Lift")).tap()
-        waitFor(UITestID.focusLogSet).tap()
+        waitForLogSet().tap()
         XCTAssertTrue(element(UITestID.focusSet(1)).waitForExistence(timeout: 6))
         app.terminate()
         launch(preset: "typical", extra: ["-RockLogRelaunchStore", "-RockLogRelaunchKeep"])

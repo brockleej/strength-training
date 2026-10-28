@@ -14,9 +14,8 @@ final class ImportAndBackupUITests: RockLogUITestCase {
         )
         dismissAlert(button: "Add workouts")
         dismissAlert(button: "Keep my current split")
-        if app.buttons["OK"].waitForExistence(timeout: 4) {
-            app.buttons["OK"].tap()
-        }
+        XCTAssertTrue(app.buttons["OK"].waitForExistence(timeout: 4))
+        app.buttons["OK"].tap()
 
         XCTAssertTrue(app.staticTexts["What's next"].waitForExistence(timeout: 8))
         XCTAssertTrue(element(UITestID.plannedRow("Push")).waitForExistence(timeout: 6))
@@ -37,9 +36,8 @@ final class ImportAndBackupUITests: RockLogUITestCase {
             environment: SyntheticPayloads.environment(json: SyntheticPayloads.splitAlphaBeta())
         )
         dismissAlert(button: "Use this split")
-        if app.buttons["OK"].waitForExistence(timeout: 6) {
-            app.buttons["OK"].tap()
-        }
+        XCTAssertTrue(app.buttons["OK"].waitForExistence(timeout: 6))
+        app.buttons["OK"].tap()
         XCTAssertTrue(element(UITestID.todayDay("UI Alpha")).waitForExistence(timeout: 8))
         XCTAssertTrue(element(UITestID.todayDay("UI Beta")).exists)
     }
@@ -51,9 +49,8 @@ final class ImportAndBackupUITests: RockLogUITestCase {
         )
         dismissAlert(button: "Use this split")
         dismissAlert(button: "Keep them")
-        if app.buttons["OK"].waitForExistence(timeout: 4) {
-            app.buttons["OK"].tap()
-        }
+        XCTAssertTrue(app.buttons["OK"].waitForExistence(timeout: 4))
+        app.buttons["OK"].tap()
         XCTAssertTrue(element(UITestID.plannedRow("Push")).waitForExistence(timeout: 8))
     }
 
@@ -91,10 +88,14 @@ final class ImportAndBackupUITests: RockLogUITestCase {
         )
         tapTab("Settings")
         dismissAlert(button: "Replace split and exercises")
-        let restored = app.alerts["Success"].buttons["OK"]
-        if restored.waitForExistence(timeout: 12) {
-            restored.tap()
-        }
+        let restored = app.alerts["Success"]
+        XCTAssertTrue(
+            restored.waitForExistence(timeout: 12),
+            "Restore removed Settings before its alert could show. Success has to come from the root."
+        )
+        let ok = restored.buttons["OK"]
+        XCTAssertTrue(ok.isHittable)
+        ok.tap()
         XCTAssertTrue(element(UITestID.todayDay("UI Day")).waitForExistence(timeout: 8))
         waitFor(UITestID.todayStart).tap()
         XCTAssertTrue(element(UITestID.workoutExercise("UI Restored Lift")).waitForExistence(timeout: 8))
@@ -108,10 +109,14 @@ final class ImportAndBackupUITests: RockLogUITestCase {
         )
         tapTab("Settings")
         dismissAlert(button: "Replace split and exercises")
-        let restored = app.alerts["Success"].buttons["OK"]
-        if restored.waitForExistence(timeout: 12) {
-            restored.tap()
-        }
+        let restored = app.alerts["Success"]
+        XCTAssertTrue(
+            restored.waitForExistence(timeout: 12),
+            "Restore removed Settings before its alert could show. Success has to come from the root."
+        )
+        let ok = restored.buttons["OK"]
+        XCTAssertTrue(ok.isHittable)
+        ok.tap()
         XCTAssertTrue(element(UITestID.todayDay("UI Day")).waitForExistence(timeout: 8))
         let start = waitFor(UITestID.todayStart)
         XCTAssertTrue(start.label.contains("B week"), start.label)

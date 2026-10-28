@@ -21,6 +21,43 @@ struct PRCelebrationContext: Identifiable, Equatable {
     let weightDelta: Double
 }
 
+/// One logged set, kept long enough for the Undo toast to put it back.
+struct DeletedSetUndo: Equatable {
+    let exerciseID: UUID
+    let modeRaw: String
+    let setNumber: Int
+    let weightLbs: Double
+    let reps: Int
+    let isWarmup: Bool
+    let isEachSide: Bool
+    let isAssisted: Bool
+    let isTarget: Bool
+    let completedAt: Date
+    let loadModeRaw: String
+    let offeredWeightLbs: Double?
+    let bodyWeightUsedLbs: Double
+    let plannedRestSeconds: Int
+    let actualRestSeconds: Int
+
+    init(set: SetRecord, exerciseID: UUID, modeRaw: String) {
+        self.exerciseID = exerciseID
+        self.modeRaw = modeRaw
+        self.setNumber = set.setNumber
+        self.weightLbs = set.weightLbs
+        self.reps = set.reps
+        self.isWarmup = set.isWarmup
+        self.isEachSide = set.isEachSide
+        self.isAssisted = set.isAssisted
+        self.isTarget = set.isTarget
+        self.completedAt = set.completedAt
+        self.loadModeRaw = set.loadModeRaw
+        self.offeredWeightLbs = set.offeredWeightLbs
+        self.bodyWeightUsedLbs = set.bodyWeightUsedLbs
+        self.plannedRestSeconds = set.plannedRestSeconds
+        self.actualRestSeconds = set.actualRestSeconds
+    }
+}
+
 @Observable
 final class WorkoutViewModel {
     var modelContext: ModelContext
@@ -65,6 +102,12 @@ final class WorkoutViewModel {
     var restTimerPreferenceEpoch: Int = 0
     /// Bumped when sets are added/updated/removed so Focus re-reads SwiftData.
     var setMutationEpoch: Int = 0
+    /// Set just removed. The toast offers Undo until this clears.
+    var pendingSetUndo: DeletedSetUndo?
+    /// How long the Undo toast stays up. Tests shorten it.
+    var setUndoSeconds: TimeInterval = 5
+    private var setUndoTask: Task<Void, Never>?
+    private var setUndoGeneration = 0
     /// True when every lift is marked done — UI asks to finish the workout.
     var offerFinishWorkout: Bool = false
 
@@ -338,9 +381,27 @@ final class WorkoutViewModel {
         activeSession = try? modelContext.fetch(descriptor).first
     }
 
+    /// A live workout that crossed midnight stays open until this long after the last logged set.
+    static let staleLoggedWorkoutInterval: TimeInterval = 6 * 60 * 60
+
+    static func latestAthleteSetDate(_ session: WorkoutSession) -> Date? {
+        session.exerciseRecordsArray
+            .flatMap { record in
+                record.setsArray.filter { !$0.isTarget }.map(\.completedAt)
+            }
+            .max()
+    }
+
+    static func shouldCompleteStaleLoggedSession(lastLoggedAt: Date, now: Date) -> Bool {
+        now.timeIntervalSince(lastLoggedAt) >= staleLoggedWorkoutInterval
+    }
+
     /// Auto-complete unfinished *live* sessions from previous days.
+    /// A session with logged sets completes only after `staleLoggedWorkoutInterval`
+    /// since the last non-target set, so a workout that crosses midnight stays open.
     /// Unused planned sessions stay queued — never skipped, never History.
-    /// Empty live sessions (no sets) are deleted so History stays clean.
+    /// Empty live sessions (no sets) from a previous day are deleted so History stays clean.
+    /// Today's empty live session is not in this query.
     func autoCompleteStaleSession(now: Date = .now) {
         let startOfToday = Calendar.current.startOfDay(for: now)
 
@@ -360,8 +421,11 @@ final class WorkoutViewModel {
                 }
                 let hasSets = Self.hasAthleteLoggedSets(session)
                 if hasSets {
-                    session.isCompleted = true
-                    SessionMath.stampDuration(on: session, liveElapsed: 0, now: now)
+                    let lastLoggedAt = Self.latestAthleteSetDate(session) ?? session.date
+                    if Self.shouldCompleteStaleLoggedSession(lastLoggedAt: lastLoggedAt, now: now) {
+                        session.isCompleted = true
+                        SessionMath.stampDuration(on: session, liveElapsed: 0, now: now)
+                    }
                 } else if session.trainingBlock != nil {
                     session.planStatus = .planned
                     session.isCompleted = false
@@ -810,6 +874,9 @@ final class WorkoutViewModel {
         Self.rlDiag("cancelPendingWork", vm: vmID)
         #endif
         finishSaveTasks.values.forEach { $0.cancel() }
+        setUndoGeneration &+= 1
+        setUndoTask?.cancel()
+        setUndoTask = nil
         deferredPlannedStartTask?.cancel()
         deferredReplaceTask?.cancel()
         healthKitFollowUpTask?.cancel()
@@ -1127,6 +1194,7 @@ final class WorkoutViewModel {
         offerFinishWorkout = false
         revisitingSessionID = nil
         restEndDate = nil
+        expirePendingSetUndo()
         setMutationEpoch &+= 1
     }
 
@@ -1204,8 +1272,81 @@ final class WorkoutViewModel {
     }
 
     func deleteSet(_ set: SetRecord, from exercise: Exercise) {
+        let modeRaw = set.exerciseRecord?.trainingMode.rawValue ?? selectedMode.rawValue
+        let snapshot = DeletedSetUndo(set: set, exerciseID: exercise.id, modeRaw: modeRaw)
         HapticService.swipeToDelete()
         SetMutation.delete(set, from: currentRecord(for: exercise), in: modelContext)
+        setMutationEpoch &+= 1
+        try? modelContext.save()
+        pendingSetUndo = snapshot
+        armSetUndoExpiry()
+    }
+
+    /// Put the set from the Undo toast back on its lift.
+    func undoDeletedSet() {
+        guard let snapshot = pendingSetUndo else { return }
+        setUndoGeneration &+= 1
+        setUndoTask?.cancel()
+        setUndoTask = nil
+        pendingSetUndo = nil
+        restoreDeletedSet(snapshot)
+    }
+
+    /// Drop the Undo offer without restoring. The set stays deleted.
+    func expirePendingSetUndo() {
+        setUndoGeneration &+= 1
+        setUndoTask?.cancel()
+        setUndoTask = nil
+        pendingSetUndo = nil
+    }
+
+    private func armSetUndoExpiry() {
+        setUndoGeneration &+= 1
+        let generation = setUndoGeneration
+        let seconds = setUndoSeconds
+        setUndoTask?.cancel()
+        setUndoTask = Task { @MainActor [weak self] in
+            let delay = max(0, seconds)
+            try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+            guard !Task.isCancelled, let self, self.setUndoGeneration == generation else { return }
+            self.pendingSetUndo = nil
+            self.setUndoTask = nil
+        }
+    }
+
+    private func restoreDeletedSet(_ snapshot: DeletedSetUndo) {
+        let session = activeSession ?? suspendedSession
+        guard let record = session?.exerciseRecordsArray.first(where: {
+            $0.exercise?.id == snapshot.exerciseID && $0.trainingMode.rawValue == snapshot.modeRaw
+        }) else { return }
+        let set = SetRecord(
+            setNumber: snapshot.setNumber,
+            weightLbs: snapshot.weightLbs,
+            reps: snapshot.reps,
+            isWarmup: snapshot.isWarmup,
+            isEachSide: snapshot.isEachSide,
+            isAssisted: snapshot.isAssisted,
+            isTarget: snapshot.isTarget
+        )
+        set.completedAt = snapshot.completedAt
+        set.loadModeRaw = snapshot.loadModeRaw
+        set.offeredWeightLbs = snapshot.offeredWeightLbs
+        set.bodyWeightUsedLbs = snapshot.bodyWeightUsedLbs
+        set.plannedRestSeconds = snapshot.plannedRestSeconds
+        set.actualRestSeconds = snapshot.actualRestSeconds
+        set.exerciseRecord = record
+        set.setNumber = Int.max
+        if record.sets == nil { record.sets = [] }
+        record.sets?.append(set)
+        modelContext.insert(set)
+        var logged = record.loggedSetsArray.filter { $0.id != set.id }
+            .sorted { $0.setNumber < $1.setNumber }
+        let index = min(max(snapshot.setNumber - 1, 0), logged.count)
+        logged.insert(set, at: index)
+        for (offset, item) in logged.enumerated() {
+            item.setNumber = offset + 1
+        }
+        record.isCompleted = false
         setMutationEpoch &+= 1
         try? modelContext.save()
     }

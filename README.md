@@ -79,7 +79,7 @@ Layered on the foundation above for a more freeform, physique-aware gym log:
 - **Focus flow** overhaul — multi-lift navigation, **last-vs-this** set rows, superscript weight/rep deltas
 - **Explicit “Done with this lift”** (any set count) + **Next** that skips only marked-done lifts
 - **Finish prompt** when every lift is marked done
-- **Swipe to delete** an extra logged set
+- **Swipe left to delete** an extra logged set (full swipe deletes; long-press has the same Delete). **Undo** stays on screen for about 5 seconds. Split-day delete still asks first.
 - **Per-exercise notes** — difficulty / next time / modifications (Focus + Edit); Cancel/Save stay on screen if the keyboard opens
 - **Session duration** — first logged set → last logged set (not Start→Finish wall clock)
 - **Rest timer** — defaults + **per-exercise** on/off (supersets), countdown sounds

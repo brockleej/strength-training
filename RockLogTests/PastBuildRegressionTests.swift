@@ -125,21 +125,6 @@ final class PastBuildRegressionTests: RockLogStoreTestCase {
         XCTAssertEqual(names, ["UI Restored Lift"])
     }
 
-    // MARK: - Split swipe
-
-    func test_splitSwipe_fullSwipeDoesNotDelete() {
-        let flung = SwipeToDeleteLogic.endAction(projectedOffset: -10_000, fullSwipeDeletes: false)
-        XCTAssertEqual(flung, .reveal)
-        XCTAssertNotEqual(flung, .delete)
-        XCTAssertEqual(
-            SwipeToDeleteLogic.endAction(
-                projectedOffset: -SwipeToDeleteLogic.revealWidth * 2,
-                fullSwipeDeletes: true
-            ),
-            .delete
-        )
-    }
-
     // MARK: - DayTypeRegistry duplicate keys
 
     func test_reindex_whitespaceAndEmptyNames_doNotCrash() throws {

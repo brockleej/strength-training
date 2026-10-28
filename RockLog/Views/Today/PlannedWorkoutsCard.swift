@@ -30,11 +30,15 @@ struct PlannedWorkoutsCard: View {
             }
             ForEach(rows) { row in
                 rowContent(row)
-                    .swipeToDelete(fullSwipeDeletes: false, onDelete: {
-                        onDelete?(row.id)
-                    }, onTap: {
+                    .contentShape(Rectangle())
+                    .onTapGesture {
                         onSelect?(row.id)
-                    })
+                    }
+                    .contextMenu {
+                        Button("Delete", role: .destructive) {
+                            onDelete?(row.id)
+                        }
+                    }
                     .accessibilityIdentifier(AccessibilityID.plannedRow(row.dayType.rawValue))
                     .accessibilityLabel(rowAccessibility(row))
                     .accessibilityHint("Shows the lifts in this workout")

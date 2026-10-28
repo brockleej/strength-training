@@ -476,12 +476,12 @@ struct ExerciseListView: View {
                     )
                     .contentShape(Rectangle())
                     .accessibilityIdentifier(AccessibilityID.workoutExercise(exercise.name))
-                    .swipeToDelete {
-                        exercisePendingRemoval = exercise
-                    } onTap: {
+                    // contextMenu and long-press reorder swallow onTapGesture, so a
+                    // tap never opens Focus. A simultaneous tap still reaches them.
+                    .simultaneousGesture(TapGesture().onEnded {
                         let start = flatExercises.firstIndex(where: { $0.id == exercise.id }) ?? 0
                         focusLaunch = FocusLaunch(exerciseID: exercise.id, startIndex: start)
-                    }
+                    })
                     .contextMenu {
                         Button {
                             editingExercise = exercise
@@ -509,7 +509,7 @@ struct ExerciseListView: View {
                             }
                         }
                     }
-                    .accessibilityHint("Swipe left to remove from this workout or day plan. Long-press and drag to reorder today's list.")
+        .accessibilityHint("Long-press to remove from this workout or day plan. Long-press the number and drag to reorder today's list.")
                     .longPressReorder(
                         id: exercise.id,
                         orderedIDs: $reorderIDs,

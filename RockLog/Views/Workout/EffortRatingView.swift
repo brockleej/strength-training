@@ -28,7 +28,7 @@ struct EffortRatingView: View {
                     Image(systemName: "xmark")
                         .font(.footnote.bold())
                         .foregroundStyle(.secondary)
-                        .frame(width: 30, height: 30)
+                        .frame(width: 44, height: 44)
                         .background(.ultraThinMaterial)
                         .clipShape(Circle())
                 }
@@ -45,7 +45,7 @@ struct EffortRatingView: View {
                     Image(systemName: "checkmark")
                         .font(.footnote.bold())
                         .foregroundStyle(selectedRating != nil ? Color.uplift.onAccent : Color.uplift.fgDim)
-                        .frame(width: 30, height: 30)
+                        .frame(width: 44, height: 44)
                         .background {
                             if selectedRating != nil {
                                 Circle().fill(Color.uplift.accent)

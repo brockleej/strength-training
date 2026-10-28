@@ -109,6 +109,11 @@ struct FocusView: View {
     }
 
     var body: some View {
+        // The sets card is a List inside this scroll view. A List given an
+        // unbounded height grows over the safe area and hides Log set from
+        // accessibility. The log bar is a real sibling below the scroll view,
+        // so it keeps a frame even when the list is on screen.
+        VStack(spacing: 0) {
         ZStack(alignment: .top) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
@@ -164,27 +169,9 @@ struct FocusView: View {
                 overflowMenu
             }
         }
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            if !isNoteEditing, let focusVM {
-                VStack(spacing: 12) {
-                    stepperFooter(focusVM)
-                    comparisonLine(focusVM)
-                    loadAndStackRow
-                    carryUndoLine
-                    warmupRampRow(focusVM)
-                    actionBar(focusVM)
-                }
-                .padding(.top, 8)
-                .background {
-                    // Content fades out under the sticky footer
-                    LinearGradient(
-                        colors: [Color.uplift.bgElev.opacity(0), Color.uplift.bgElev],
-                        startPoint: .top, endPoint: .bottom
-                    )
-                    .ignoresSafeArea(edges: .bottom)
-                }
-            }
+        focusFooter
         }
+        .background(Color.uplift.bgElev)
         .navigationBarHidden(true)
         .fullScreenCover(item: $workoutVM.pendingCelebration) { context in
             PRCelebrationView(context: context) {
@@ -248,12 +235,57 @@ struct FocusView: View {
         } message: {
             Text("This workout only hides it today. Remove from the day to drop it from the plan. Sets logged this session will be deleted.")
         }
-        #if DEBUG
-        .uiTestSurface("editExercise", isShown: showEditExercise, blocksHits: true)
-        .uiTestSurface("replaceExercise", isShown: showReplaceSheet, blocksHits: true)
-        .uiTestSurface("removeConfirm", isShown: showRemoveConfirm, blocksHits: true)
-        .uiTestSurface("celebration", isShown: workoutVM.pendingCelebration != nil, blocksHits: true)
-        #endif
+    }
+
+    @ViewBuilder
+    private var focusFooter: some View {
+        if workoutVM.pendingSetUndo != nil || (!isNoteEditing && focusVM != nil) {
+            VStack(spacing: 8) {
+                if workoutVM.pendingSetUndo != nil {
+                    setDeletedToast
+                }
+                if !isNoteEditing, let focusVM {
+                    VStack(spacing: 12) {
+                        stepperFooter(focusVM)
+                        comparisonLine(focusVM)
+                        loadAndStackRow
+                        carryUndoLine
+                        warmupRampRow(focusVM)
+                        actionBar(focusVM)
+                    }
+                }
+            }
+            .padding(.top, 8)
+            .background {
+                Color.uplift.bgElev
+                    .ignoresSafeArea(edges: .bottom)
+            }
+            .accessibilityElement(children: .contain)
+        }
+    }
+
+    private var setDeletedToast: some View {
+        HStack(spacing: 12) {
+            Text("Set deleted")
+                .font(.uplift.text(15, weight: .semibold))
+                .foregroundStyle(Color.uplift.fg)
+            Spacer(minLength: 8)
+            Button("Undo") {
+                workoutVM.undoDeletedSet()
+            }
+            .font(.uplift.text(15, weight: .bold))
+            .foregroundStyle(Color.uplift.accent)
+            .frame(minWidth: 44, minHeight: 44)
+            .accessibilityIdentifier(AccessibilityID.setUndo)
+        }
+        .padding(.leading, 16)
+        .padding(.trailing, 8)
+        .background {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color.uplift.surface1)
+        }
+        .padding(.horizontal, 20)
+        .accessibilityElement(children: .contain)
     }
 
     // MARK: - Sections
@@ -318,9 +350,6 @@ struct FocusView: View {
                 loadSnapshot(planned)
             }
         )
-        #if DEBUG
-        card.editDeliveries = UITestLaunch.isEnabled ? focusVM.editDeliveries : nil
-        #endif
         return card
     }
 
@@ -347,10 +376,11 @@ struct FocusView: View {
                                 Image(systemName: "chevron.left")
                                     .font(.system(size: 13, weight: .semibold))
                                     .foregroundStyle(Color.uplift.fgMuted)
-                                    .frame(width: 36, height: 36)
+                                    .frame(width: 44, height: 44)
                                     .background(Circle().fill(Color.uplift.surface1))
                             }
                             .buttonStyle(.plain)
+                            .frame(minWidth: 44, minHeight: 44)
                             .accessibilityIdentifier(AccessibilityID.focusPrevious)
                             .accessibilityLabel("Previous exercise")
                         }
@@ -367,9 +397,11 @@ struct FocusView: View {
                                 .foregroundStyle(Color.uplift.onAccent)
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 9)
+                                .frame(minWidth: 44, minHeight: 44)
                                 .background(Capsule().fill(Color.uplift.accent))
                             }
                             .buttonStyle(.plain)
+                            .frame(minWidth: 44, minHeight: 44)
                             .accessibilityIdentifier(AccessibilityID.focusNext)
                             .accessibilityLabel("Next unfinished exercise")
                         }
@@ -430,7 +462,7 @@ struct FocusView: View {
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(Color.uplift.fg)
             }
-            .frame(width: 36, height: 36)
+            .frame(width: 44, height: 44)
             .frame(minWidth: 44, minHeight: 44)
             .contentShape(Rectangle())
         }

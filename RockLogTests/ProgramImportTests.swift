@@ -477,7 +477,7 @@ final class ProgramImportTests: RockLogStoreTestCase {
     func test_wednesdayStart_loadsFirstUnusedThenSecond_noFakeHistory() throws {
         let context = container.mainContext
         var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        calendar.timeZone = TimeZone.current
         let monday = calendar.date(from: DateComponents(year: 2026, month: 8, day: 31))!
         let tuesday = calendar.date(byAdding: .day, value: 1, to: monday)!
         let wednesday = calendar.date(from: DateComponents(year: 2026, month: 9, day: 2, hour: 16))!
@@ -534,7 +534,7 @@ final class ProgramImportTests: RockLogStoreTestCase {
     func test_queue_followsFileOrder_notEarlierCalendarDate() throws {
         let context = container.mainContext
         var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        calendar.timeZone = TimeZone.current
         let monday = calendar.date(from: DateComponents(year: 2026, month: 8, day: 31))!
         let thursday = calendar.date(byAdding: .day, value: 3, to: monday)!
         // File lists Conventional first even though its date is later.
@@ -644,7 +644,7 @@ final class ProgramImportTests: RockLogStoreTestCase {
     func test_import_keepsFileCalendarDatesByDefault() throws {
         let context = container.mainContext
         var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        calendar.timeZone = TimeZone.current
         let monday = calendar.date(from: DateComponents(year: 2026, month: 8, day: 31))!
         let thursday = calendar.date(byAdding: .day, value: 3, to: monday)!
         let document = rotatingLowerDocument(dlDate: monday, rdlDate: thursday)
@@ -663,7 +663,7 @@ final class ProgramImportTests: RockLogStoreTestCase {
     func test_import_shiftStartToToday_isOptIn() throws {
         let context = container.mainContext
         var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        calendar.timeZone = TimeZone.current
         let monday = calendar.date(from: DateComponents(year: 2026, month: 8, day: 31))!
         let thursday = calendar.date(byAdding: .day, value: 3, to: monday)!
         let document = rotatingLowerDocument(dlDate: monday, rdlDate: thursday)
@@ -681,6 +681,104 @@ final class ProgramImportTests: RockLogStoreTestCase {
         let shiftedThursday = calendar.date(byAdding: .day, value: 3, to: today)!
         XCTAssertTrue(calendar.isDate(sessions[1].date, inSameDayAs: shiftedThursday))
         XCTAssertFalse(calendar.isDate(sessions[0].date, inSameDayAs: monday))
+    }
+
+    func test_plainDayStamp_decodesOnTheLocalCalendarDay() throws {
+        let json = """
+        {
+          "format": "rocklog.program",
+          "schemaVersion": 1,
+          "exportedAt": "2026-08-31T12:00:00Z",
+          "block": {
+            "id": "11111111-1111-4111-8111-111111111111",
+            "name": "Synthetic Block",
+            "startDate": "2026-08-31",
+            "sessions": [
+              {
+                "id": "22222222-2222-4222-8222-222222222222",
+                "date": "2026-08-31",
+                "dayType": "Push",
+                "exercises": []
+              }
+            ]
+          }
+        }
+        """
+        let document = try ProgramCodec.decode(Data(json.utf8))
+        var local = Calendar(identifier: .gregorian)
+        local.timeZone = .current
+        let parts = local.dateComponents([.year, .month, .day], from: document.block.sessions[0].date)
+        XCTAssertEqual(parts.year, 2026)
+        XCTAssertEqual(parts.month, 8)
+        XCTAssertEqual(parts.day, 31)
+        let start = local.date(from: DateComponents(year: 2026, month: 8, day: 31))!
+        XCTAssertEqual(document.block.sessions[0].date, start)
+        XCTAssertEqual(document.block.startDate, start)
+    }
+
+    func test_decode_rejectsAFileLargerThanFiveMegabytes() {
+        let data = Data(count: ProgramLimits.maxFileBytes + 1)
+        XCTAssertThrowsError(try ProgramCodec.decode(data)) { error in
+            guard case ProgramDocument.ProgramFormatError.fileTooLarge = error else {
+                return XCTFail("expected fileTooLarge, got \(error)")
+            }
+        }
+    }
+
+    func test_validate_acceptsWeightAndRepBounds() throws {
+        var document = sampleDocument(firstSession: Date(timeIntervalSince1970: 1_800_000_000))
+        document.block.sessions[0].exercises[0].sets[0].weightLbs = 0
+        document.block.sessions[0].exercises[0].sets[0].reps = 0
+        document.block.sessions[0].exercises[0].sets[1].weightLbs = ProgramLimits.maxWeightLbs
+        document.block.sessions[0].exercises[0].sets[1].reps = ProgramLimits.maxReps
+        XCTAssertNoThrow(try ProgramCodec.validateValues(document))
+
+        document.block.sessions[0].exercises[0].sets[0].weightLbs = ProgramLimits.maxWeightLbs + 1
+        XCTAssertThrowsError(try ProgramCodec.validateValues(document)) { error in
+            guard case ProgramDocument.ProgramFormatError.weightOutOfRange = error else {
+                return XCTFail("expected weightOutOfRange, got \(error)")
+            }
+        }
+        document.block.sessions[0].exercises[0].sets[0].weightLbs = 135
+        document.block.sessions[0].exercises[0].sets[0].reps = ProgramLimits.maxReps + 1
+        XCTAssertThrowsError(try ProgramCodec.validateValues(document)) { error in
+            guard case ProgramDocument.ProgramFormatError.repsOutOfRange = error else {
+                return XCTFail("expected repsOutOfRange, got \(error)")
+            }
+        }
+    }
+
+    func test_replaceUnusedPlan_rejectsOutOfRangeWeight_withoutDeleting() throws {
+        let context = container.mainContext
+        let document = sampleDocument(firstSession: Date(timeIntervalSince1970: 1_800_000_000))
+        _ = try ProgramImportService.importDocument(document, context: context)
+        let plannedID = document.block.sessions[0].id
+
+        var rejected = document
+        rejected.block.sessions[0].exercises[0].sets[0].weightLbs = 10_001
+        XCTAssertThrowsError(
+            try ProgramImportService.importDocument(rejected, context: context, replaceUnusedPlan: true)
+        )
+
+        let sessions = try context.fetch(FetchDescriptor<WorkoutSession>())
+        XCTAssertTrue(sessions.contains { $0.id == plannedID && PlannedBlockQueue.isUnused($0) })
+    }
+
+    func test_importSplit_rejectsReps_withoutReplacingTheSplit() throws {
+        let context = container.mainContext
+        insertSplit(names: ["Arms", "Legs"], context: context)
+        var document = sampleDocument(firstSession: Date(timeIntervalSince1970: 1_800_000_000))
+        document.format = ProgramFormat.splitFormatName
+        document.block.sessions[0].exercises[0].sets[0].reps = 500
+        XCTAssertThrowsError(try ProgramImportService.importSplit(document, context: context, removeUnusedPlan: true))
+
+        let days = try context.fetch(
+            FetchDescriptor<SplitDay>(sortBy: [SortDescriptor(\SplitDay.sortOrder)])
+        )
+        XCTAssertEqual(days.map(\.name), ["Arms", "Legs"])
+        let created = try context.fetch(FetchDescriptor<Exercise>())
+            .filter { $0.name == "Barbell Bench Press" }
+        XCTAssertTrue(created.isEmpty)
     }
 
     func test_import_withoutReplace_leavesExistingSplit() throws {

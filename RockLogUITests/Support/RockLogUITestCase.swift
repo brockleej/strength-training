@@ -36,6 +36,18 @@ class RockLogUITestCase: XCTestCase {
         return match
     }
 
+    /// Log set lives under the sets list. It must exist and sit on screen.
+    /// A nested List used to cover the safe-area bar, so this button never appeared.
+    @discardableResult
+    func waitForLogSet(timeout: TimeInterval = 12) -> XCUIElement {
+        let log = waitFor(UITestID.focusLogSet, timeout: timeout)
+        let window = app.windows.firstMatch.frame
+        XCTAssertGreaterThan(log.frame.height, 20, "Log set has no height. frame=\(log.frame)")
+        XCTAssertTrue(window.intersects(log.frame), "Log set is outside the window. frame=\(log.frame) window=\(window)")
+        XCTAssertTrue(log.isHittable, "Log set is not hittable. frame=\(log.frame) window=\(window)")
+        return log
+    }
+
     func tapTab(_ name: String) {
         let tab = app.tabBars.buttons[name]
         XCTAssertTrue(tab.waitForExistence(timeout: 8), "Missing tab \(name)")
@@ -48,84 +60,42 @@ class RockLogUITestCase: XCTestCase {
         button.tap()
     }
 
-    /// Soft remove: swipe, then tap the trash control by its identifier.
-    /// Set rows and day-plan rows may disappear. A split day must not:
-    /// pass `confirmingDelete` so a vanished row fails before Delete day.
-    func swipeToRemove(_ row: XCUIElement, confirmingDelete: Bool = false) {
+    /// Long-press, then tap a context-menu item by identifier or label.
+    func pressForMenu(_ row: XCUIElement) {
         XCTAssertTrue(row.waitForExistence(timeout: 6))
-        let identifier = row.identifier
-        XCTAssertFalse(identifier.isEmpty, "Row is missing an accessibility identifier")
-        let query = app.descendants(matching: .any).matching(identifier: identifier)
-        let before = query.count
-        XCTAssertGreaterThan(before, 0, "No row for \(identifier)")
-        row.swipeLeft()
+        scrollUntilHittable(row)
+        row.press(forDuration: 1.0)
+    }
 
-        if confirmingDelete {
-            guard query.count >= before else {
-                XCTFail("\(identifier) vanished before Delete day")
-                return
-            }
-            let trash = element(UITestID.swipeTrash)
-            XCTAssertTrue(trash.waitForExistence(timeout: 2), "Missing \(UITestID.swipeTrash)")
-            XCTAssertTrue(trash.isHittable, "\(UITestID.swipeTrash) is not hittable")
-            trash.tap()
-            guard query.count >= before else {
-                XCTFail("\(identifier) vanished before Delete day")
-                return
-            }
-            let dialog = app.buttons["Delete day"]
-            XCTAssertTrue(dialog.waitForExistence(timeout: 4), "Delete day did not appear for \(identifier)")
-            XCTAssertGreaterThanOrEqual(
-                query.count,
-                before,
-                "\(identifier) vanished before Delete day was confirmed"
-            )
+    func tapMenuItem(identifier: String, label: String) {
+        let byID = element(identifier)
+        if byID.waitForExistence(timeout: 2) {
+            byID.tap()
             return
         }
-
-        if query.count >= before {
-            let trash = element(UITestID.swipeTrash)
-            if trash.waitForExistence(timeout: 2), trash.isHittable {
-                trash.tap()
-            }
-        }
-
-        if query.count == before, app.buttons["Delete day"].waitForExistence(timeout: 2) {
-            XCTAssertEqual(query.count, before, "Delete day must leave \(identifier) until the confirm is tapped")
-            return
-        }
-
-        let dropped = XCTNSPredicateExpectation(
-            predicate: NSPredicate(format: "count == %d", before - 1),
-            object: query
-        )
-        dropped.expectationDescription = "\(identifier) count should drop from \(before) to \(before - 1)"
-        wait(for: [dropped], timeout: 4)
+        let button = app.buttons[label]
+        XCTAssertTrue(button.waitForExistence(timeout: 3), "Missing menu item \(label)")
+        button.tap()
     }
 
     /// Settings is a lazy List. On iOS 26 that List is often a collection
     /// view, so a swipe on `tables.firstMatch` can hit an empty table and
     /// never move the list. Slow swipes so a short row is not skipped.
     func scrollUntilExists(_ identifier: String, maxSwipes: Int = 8) {
-        let match = element(identifier)
-        if match.waitForExistence(timeout: 2) { return }
-        for _ in 0..<maxSwipes {
-            swipeUpInScrollable()
-            if match.waitForExistence(timeout: 1) { return }
-        }
-        XCTAssertTrue(match.waitForExistence(timeout: 2), "Timed out scrolling to \(identifier)")
+        scrollUntilExists(element: element(identifier), maxSwipes: maxSwipes)
     }
 
     /// Same as `scrollUntilExists`, for a control that has a label but no identifier.
     /// The first label is `element` so this does not share an Objective-C selector
-    /// with `scrollUntilExists(_:maxSwipes:)`.
+    /// with `scrollUntilExists(_:maxSwipes:)`. Existence is not enough: the match
+    /// must be hittable before the helper returns.
     func scrollUntilExists(element match: XCUIElement, maxSwipes: Int = 8) {
-        if match.waitForExistence(timeout: 2) { return }
+        if match.waitForExistence(timeout: 2), match.isHittable { return }
         for _ in 0..<maxSwipes {
             swipeUpInScrollable()
-            if match.waitForExistence(timeout: 1) { return }
+            if match.exists, match.isHittable { return }
         }
-        XCTAssertTrue(match.waitForExistence(timeout: 2), "Timed out scrolling to \(match)")
+        scrollUntilHittable(match, maxSwipes: 2)
     }
 
     /// Scroll until the element is on screen. Existence is not enough: a

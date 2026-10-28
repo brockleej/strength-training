@@ -206,7 +206,7 @@ struct SessionDetailView: View {
                     .font(.system(size: 18))
                     .foregroundStyle(Color.uplift.pr)
             }
-            .frame(width: 36, height: 36)
+            .frame(width: 44, height: 44)
             .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 1) {
                 Text("\(prNames.count) personal record\(prNames.count == 1 ? "" : "s")")

@@ -13,8 +13,10 @@ PBX=""
 if [ -f "$ROOT/RockLog.xcodeproj/project.pbxproj" ]; then
   PBX="$ROOT/RockLog.xcodeproj/project.pbxproj"
 else
-  # The repo project is RockLog.xcodeproj. Do not use the old
-  # strength-training.xcodeproj name; it is only a symlink.
+  # The repo project is RockLog.xcodeproj. The old
+  # strength-training.xcodeproj symlink has been removed. Skip that
+  # name if a checkout still has it, and confirm the Cloud workflow
+  # project in App Store Connect is RockLog.xcodeproj.
   for proj in "$ROOT"/*.xcodeproj; do
     [ -d "$proj" ] || continue
     name=$(basename "$proj")

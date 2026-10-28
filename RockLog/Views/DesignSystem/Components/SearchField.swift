@@ -29,7 +29,7 @@ struct SearchField: View {
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 15))
                         .foregroundStyle(Color.uplift.fgDim)
-                        .frame(width: 36, height: 36)   // hit region; glyph stays 15pt
+                        .frame(width: 44, height: 44)   // hit region; glyph stays 15pt
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)

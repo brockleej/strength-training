@@ -30,11 +30,7 @@ enum UITestLaunch {
     /// Empty-library settings checks the rest-timer rows. Logging presets omit this
     /// and stay off so a logged set does not start a countdown.
     static let restTimerArgument = "-RockLogRestTimer"
-    /// TEMP: remove before merge. Records touch hit-tests. UI tests only.
-    static let touchLogArgument = "-RockLogTouchLog"
-    /// TEMP: remove before merge. Set rows are a button with no swipe wrapper.
-    static let plainSetRowsArgument = "-RockLogPlainSetRows"
-    /// TEMP: remove before merge. Shows focus.diag.control. Diagnostic tests only.
+    /// Shows the set-row hit log. UI tests only. Release builds never read this.
     static let diagControlArgument = "-RockLogDiag"
     static let injectEnvironmentKey = "ROCKLOG_INJECT_FILE_B64"
 
@@ -56,28 +52,10 @@ enum UITestLaunch {
         #endif
     }
 
-    /// TEMP: remove before merge. Requires the UI-test launch as well.
-    static var touchLogEnabled: Bool {
-        #if DEBUG
-        isEnabled && ProcessInfo.processInfo.arguments.contains(touchLogArgument)
-        #else
-        false
-        #endif
-    }
-
-    /// TEMP: remove before merge. Shows the sets-card diagnostic button.
+    /// Shows the set-row hit log. Requires the UI-test launch as well.
     static var diagControlEnabled: Bool {
         #if DEBUG
         isEnabled && ProcessInfo.processInfo.arguments.contains(diagControlArgument)
-        #else
-        false
-        #endif
-    }
-
-    /// TEMP: remove before merge. Set rows skip SwipeToDelete and card taps.
-    static var plainSetRowsEnabled: Bool {
-        #if DEBUG
-        isEnabled && ProcessInfo.processInfo.arguments.contains(plainSetRowsArgument)
         #else
         false
         #endif

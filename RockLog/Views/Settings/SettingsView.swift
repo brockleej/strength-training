@@ -1224,8 +1224,7 @@ struct SettingsView: View {
         Task { @MainActor in
             do {
                 let report = try await BackupService.restoreAfterTearingDownUI(from: data, context: modelContext)
-                successMessage = report.userFacingSummary
-                showSuccess = true
+                RestoreNotice.shared.present(report.userFacingSummary)
             } catch {
                 errorMessage = error.localizedDescription
                 showError = true

@@ -39,6 +39,7 @@ struct ContentView: View {
     @State private var showIncomingKeepPlannedConfirm = false
     @State private var incomingFileMessage = ""
     @State private var showIncomingFileMessage = false
+    @Bindable private var restoreNotice = RestoreNotice.shared
 
     var body: some View {
         chrome
@@ -125,6 +126,17 @@ struct ContentView: View {
             } message: {
                 Text(incomingFileMessage)
             }
+            .alert(
+                "Success",
+                isPresented: Binding(
+                    get: { restoreNotice.message != nil },
+                    set: { if !$0 { restoreNotice.dismiss() } }
+                )
+            ) {
+                Button("OK", role: .cancel) { restoreNotice.dismiss() }
+            } message: {
+                Text(restoreNotice.message ?? "")
+            }
     }
 
     private var chrome: some View {
@@ -132,13 +144,6 @@ struct ContentView: View {
         .modifier(UITestDynamicTypeModifier())
         .tint(Color.uplift.accent)
         .preferredColorScheme(.dark)
-        #if DEBUG
-        .overlay(alignment: .top) {
-            if UITestLaunch.touchLogEnabled {
-                TouchLogReadout()
-            }
-        }
-        #endif
         .fullScreenCover(isPresented: Binding(
             get: { workoutViewModel != nil && !hasCompletedFirstRun },
             set: { if !$0 { hasCompletedFirstRun = true } }

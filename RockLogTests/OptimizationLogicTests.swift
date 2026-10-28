@@ -12,6 +12,24 @@ import SwiftData
 
 final class OptimizationLogicTests: RockLogStoreTestCase {
 
+    func test_loggingUITest_leavesRestTimerOffUnlessAsked() {
+        XCTAssertFalse(UITestLaunch.restTimerEnabled(arguments: ["-RockLogUITesting", "-RockLogPreset", "typical"]))
+        XCTAssertTrue(UITestLaunch.restTimerEnabled(arguments: ["-RockLogUITesting", "-RockLogRestTimer", "on"]))
+        let defaults = UserDefaults.standard
+        let previous = defaults.object(forKey: RestTimerPreferences.enabledKey)
+        defer {
+            if let previous {
+                defaults.set(previous, forKey: RestTimerPreferences.enabledKey)
+            } else {
+                defaults.removeObject(forKey: RestTimerPreferences.enabledKey)
+            }
+        }
+        defaults.set(false, forKey: RestTimerPreferences.enabledKey)
+        XCTAssertFalse(RestTimerPreferences.isEnabled)
+        defaults.removeObject(forKey: RestTimerPreferences.enabledKey)
+        XCTAssertTrue(RestTimerPreferences.isEnabled)
+    }
+
     func test_massRoundTrip_doesNotWalk() {
         let pounds = 225.0
         let shown = MassMath.display(fromPounds: pounds, unit: .kilograms)

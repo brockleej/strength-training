@@ -235,6 +235,128 @@ final class WorkoutSessionLogicTests: RockLogStoreTestCase {
         XCTAssertTrue(record.setsArray.isEmpty)
     }
 
+    @MainActor
+    func test_deleteSet_undoRestoresTheLoggedSet() throws {
+        let context = container.mainContext
+        let exercise = Exercise.make(name: "Bench", dayType: .push, muscleGroup: "Chest", sortOrder: 0)
+        let session = WorkoutSession(dayType: .push)
+        let record = ExerciseRecord(trainingMode: .highWeightLowReps, sortOrder: 0)
+        record.exercise = exercise
+        record.session = session
+        session.exerciseRecords = [record]
+        let first = SetRecord(setNumber: 1, weightLbs: 135, reps: 8)
+        let second = SetRecord(setNumber: 2, weightLbs: 155, reps: 5)
+        for set in [first, second] { set.exerciseRecord = record }
+        record.sets = [first, second]
+        context.insert(exercise)
+        context.insert(session)
+        context.insert(record)
+        context.insert(first)
+        context.insert(second)
+        try context.save()
+
+        let vm = holdWorkoutViewModel(WorkoutViewModel(
+            modelContext: context,
+            healthKitService: HealthKitWorkoutService()
+        ))
+        vm.activeSession = session
+        XCTAssertEqual(vm.setUndoSeconds, 5, accuracy: 0.001)
+        vm.deleteSet(first, from: exercise)
+        XCTAssertEqual(record.loggedSetsArray.map(\.weightLbs), [155])
+        XCTAssertNotNil(vm.pendingSetUndo)
+        vm.undoDeletedSet()
+        let restored = record.loggedSetsArray.sorted { $0.setNumber < $1.setNumber }
+        XCTAssertEqual(restored.map(\.setNumber), [1, 2])
+        XCTAssertEqual(restored.map(\.weightLbs), [135, 155])
+        XCTAssertEqual(restored.map(\.reps), [8, 5])
+        XCTAssertNil(vm.pendingSetUndo)
+    }
+
+    @MainActor
+    func test_deleteSet_undoExpiresWithoutRestoring() async throws {
+        let context = container.mainContext
+        let exercise = Exercise.make(name: "Curl", dayType: .arms, muscleGroup: "Biceps", sortOrder: 0)
+        let session = WorkoutSession(dayType: .arms)
+        let record = ExerciseRecord(trainingMode: .highWeightLowReps, sortOrder: 0)
+        record.exercise = exercise
+        record.session = session
+        session.exerciseRecords = [record]
+        let set = SetRecord(setNumber: 1, weightLbs: 30, reps: 12)
+        set.exerciseRecord = record
+        record.sets = [set]
+        context.insert(exercise)
+        context.insert(session)
+        context.insert(record)
+        context.insert(set)
+        try context.save()
+
+        let vm = holdWorkoutViewModel(WorkoutViewModel(
+            modelContext: context,
+            healthKitService: HealthKitWorkoutService()
+        ))
+        vm.activeSession = session
+        vm.setUndoSeconds = 0.05
+        vm.deleteSet(set, from: exercise)
+        try await Task.sleep(for: .milliseconds(200))
+        XCTAssertNil(vm.pendingSetUndo)
+        vm.undoDeletedSet()
+        XCTAssertTrue(record.loggedSetsArray.isEmpty)
+    }
+
+    @MainActor
+    func test_midnightCrossingWorkout_staysOpenUntilSixHoursAfterLastSet() throws {
+        let context = container.mainContext
+        let now = Date()
+        let startOfToday = Calendar.current.startOfDay(for: now)
+        let session = WorkoutSession(dayType: .push, date: startOfToday.addingTimeInterval(-60))
+        let exercise = Exercise.make(name: "Bench", dayType: .push, muscleGroup: "Chest", sortOrder: 0)
+        let record = ExerciseRecord(trainingMode: .highWeightLowReps, sortOrder: 0)
+        record.exercise = exercise
+        record.session = session
+        session.exerciseRecords = [record]
+        let set = SetRecord(setNumber: 1, weightLbs: 185, reps: 5)
+        set.completedAt = now.addingTimeInterval(-60 * 60)
+        set.exerciseRecord = record
+        record.sets = [set]
+        context.insert(exercise)
+        context.insert(session)
+        context.insert(record)
+        context.insert(set)
+        try context.save()
+
+        let vm = holdWorkoutViewModel(WorkoutViewModel(
+            modelContext: context,
+            healthKitService: HealthKitWorkoutService()
+        ))
+        XCTAssertFalse(session.isCompleted, "relaunch within 6 hours of the last set must stay open")
+
+        let later = set.completedAt.addingTimeInterval(WorkoutViewModel.staleLoggedWorkoutInterval)
+        vm.autoCompleteStaleSession(now: later)
+        XCTAssertTrue(session.isCompleted)
+    }
+
+    @MainActor
+    func test_emptyPreviousDaySession_isRemoved_todayEmptySessionStays() throws {
+        let context = container.mainContext
+        let now = Date()
+        let startOfToday = Calendar.current.startOfDay(for: now)
+        let yesterday = WorkoutSession(dayType: .pull, date: startOfToday.addingTimeInterval(-3_600))
+        let today = WorkoutSession(dayType: .push, date: now)
+        context.insert(yesterday)
+        context.insert(today)
+        try context.save()
+        let todayID = today.id
+
+        _ = holdWorkoutViewModel(WorkoutViewModel(
+            modelContext: context,
+            healthKitService: HealthKitWorkoutService()
+        ))
+
+        let remaining = try context.fetch(FetchDescriptor<WorkoutSession>())
+        XCTAssertEqual(remaining.map(\.id), [todayID])
+        XCTAssertFalse(remaining[0].isCompleted)
+    }
+
     /// A second finish must not cancel the first finish's HealthKit save.
     func test_secondFinishKeepsHealthKitUUIDAndEffortRating() async throws {
         #if DEBUG

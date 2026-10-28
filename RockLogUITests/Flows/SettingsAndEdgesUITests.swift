@@ -46,7 +46,7 @@ final class SettingsAndEdgesUITests: RockLogUITestCase {
         selectPushIfNeeded()
         waitFor(UITestID.todayStart).tap()
         waitFor(UITestID.workoutExercise("UI Fresh Lift")).tap()
-        waitFor(UITestID.focusLogSet).tap()
+        waitForLogSet().tap()
         XCTAssertTrue(element(UITestID.focusSet(1)).waitForExistence(timeout: 6))
 
         app.terminate()

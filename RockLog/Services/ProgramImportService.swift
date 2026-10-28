@@ -152,6 +152,7 @@ enum ProgramImportService {
         context: ModelContext,
         removeUnusedPlan: Bool = false
     ) throws {
+        try ProgramCodec.validateValues(document)
         guard document.format == ProgramFormat.splitFormatName else {
             throw ProgramDocument.ProgramFormatError.wrongFormat(document.format)
         }
@@ -285,6 +286,7 @@ enum ProgramImportService {
         shiftingStartTo anchor: Date? = nil,
         replaceUnusedPlan: Bool = false
     ) throws -> ProgramImportResult {
+        try ProgramCodec.validateValues(document)
         if replaceUnusedPlan {
             removeUnusedPlannedSessions(context: context)
         }

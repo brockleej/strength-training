@@ -39,11 +39,6 @@ final class FocusViewModel {
 
     var isEditingSet: Bool { editingSetID != nil }
 
-    #if DEBUG
-    /// TEMP: remove before merge. Debug UI-test log only. No workout data.
-    let editDeliveries = EditDeliveryLog()
-    #endif
-
     /// - prefersAssist: exercise-level default when no session last set (e.g. pull-ups).
     init(prefill: FocusTargetLogic.Prefill, prefersAssist: Bool = false) {
         weight = prefill.weight
@@ -83,7 +78,7 @@ final class FocusViewModel {
         isEachSide: Bool = false,
         isAssisted: Bool = false
     ) {
-        assignEditingSetID(nil, caller: "loadFromHistory")
+        editingSetID = nil
         self.weight = weight
         self.reps = Double(max(1, reps))
         self.isWarmup = isWarmup
@@ -94,8 +89,8 @@ final class FocusViewModel {
     }
 
     /// Mode switch re-prefills values and dress from the new mode's suggestion.
-    func apply(prefill: FocusTargetLogic.Prefill, openingLine: String? = nil, idCaller: String = "apply") {
-        assignEditingSetID(nil, caller: idCaller)
+    func apply(prefill: FocusTargetLogic.Prefill, openingLine: String? = nil) {
+        editingSetID = nil
         weight = prefill.weight
         reps = Double(prefill.reps)
         isWarmup = WarmupPolicy.nextTag(planSaysWarmup: prefill.isWarmup)
@@ -131,7 +126,7 @@ final class FocusViewModel {
     }
 
     func beginEdit(set: SetRecord) {
-        assignEditingSetID(set.id, caller: "enterEdit")
+        editingSetID = set.id
         weight = set.weightLbs
         reps = Double(set.reps)
         isWarmup = set.isWarmup
@@ -142,22 +137,13 @@ final class FocusViewModel {
     }
 
     func cancelEdit(restore prefill: FocusTargetLogic.Prefill) {
-        apply(prefill: prefill, idCaller: "cancelEdit")
+        apply(prefill: prefill)
     }
 
     func clearSelectionAfterSave() {
-        assignEditingSetID(nil, caller: "clearSelectionAfterSave")
+        editingSetID = nil
         weightDelta = nil
         repsDelta = nil
-    }
-
-    private func assignEditingSetID(_ newID: UUID?, caller: String) {
-        #if DEBUG
-        if editingSetID != newID {
-            editDeliveries.recordIDChange(old: editingSetID, new: newID, caller: caller)
-        }
-        #endif
-        editingSetID = newID
     }
 
     func clearEditIfMatching(_ set: SetRecord, restore prefill: FocusTargetLogic.Prefill) {
@@ -180,68 +166,3 @@ enum FocusLogControl {
         isEditing ? AccessibilityID.focusUpdateSet : AccessibilityID.focusLogSet
     }
 }
-
-#if DEBUG
-/// TEMP: remove before merge.
-/// Debug UI-test log. Timestamps, path names, and an 8-character id token.
-/// No names, weights, or reps.
-@Observable
-final class EditDeliveryLog {
-    enum Path: String {
-        case gesture
-        case accessibility
-        case button
-        case probe
-        case diag
-    }
-
-    struct Stamp: Equatable {
-        let path: Path
-        let timestamp: Date
-    }
-
-    struct IDChange: Equatable {
-        let oldToken: String
-        let newToken: String
-        let caller: String
-        let timestamp: Date
-    }
-
-    private(set) var stamps: [Stamp] = []
-    private(set) var idChanges: [IDChange] = []
-
-    func record(_ path: Path) {
-        stamps.append(Stamp(path: path, timestamp: Date()))
-    }
-
-    func recordIDChange(old: UUID?, new: UUID?, caller: String) {
-        idChanges.append(IDChange(
-            oldToken: Self.token(old),
-            newToken: Self.token(new),
-            caller: caller,
-            timestamp: Date()
-        ))
-    }
-
-    var summary: String {
-        let ids = idChanges.suffix(8).map {
-            "\($0.oldToken)>\($0.newToken)#\($0.caller)@\(Self.stamp($0.timestamp))"
-        }.joined(separator: ",")
-        return "TEMP \(side(.button)) \(side(.gesture)) \(side(.accessibility)) \(side(.probe)) \(side(.diag)) id=\(ids)"
-    }
-
-    private func side(_ path: Path) -> String {
-        let times = stamps.filter { $0.path == path }.map { Self.stamp($0.timestamp) }
-        return "\(path.rawValue)=\(times.count)@\(times.joined(separator: ","))"
-    }
-
-    private static func stamp(_ date: Date) -> String {
-        String(format: "%.3f", date.timeIntervalSince1970)
-    }
-
-    private static func token(_ id: UUID?) -> String {
-        guard let id else { return "nil" }
-        return String(id.uuidString.prefix(8))
-    }
-}
-#endif

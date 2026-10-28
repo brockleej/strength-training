@@ -18,9 +18,14 @@ final class SplitEditorUITests: RockLogUITestCase {
         let labelBefore = pull.label
         assertMoveButtonsHidden()
         scrollUntilHittable(pull)
-        swipeToRemove(pull, confirmingDelete: true)
-        XCTAssertTrue(element(UITestID.splitDay("Pull")).exists, "A full swipe must not delete a split day.")
-        dismissAlert(button: "Delete day")
+        pull.swipeLeft()
+        if element(UITestID.splitDay("Pull")).exists {
+            tapMenuItem(identifier: UITestID.splitDelete, label: "Delete")
+        }
+        XCTAssertTrue(element(UITestID.splitDay("Pull")).exists, "Swipe must not delete a split day before confirm.")
+        let dialog = app.buttons["Delete day"]
+        XCTAssertTrue(dialog.waitForExistence(timeout: 4), "Delete day did not appear")
+        dialog.tap()
         XCTAssertFalse(element(UITestID.splitDay("Pull")).waitForExistence(timeout: 2))
         XCTAssertTrue(labelBefore.contains("Pull"))
 
@@ -28,9 +33,23 @@ final class SplitEditorUITests: RockLogUITestCase {
         selectPushIfNeeded()
         waitFor(UITestID.todayEditDay).tap()
         let bench = waitFor(UITestID.dayPlanExercise("UI Bench Press"))
-        scrollUntilHittable(bench)
-        swipeToRemove(bench)
+        pressForMenu(bench)
+        tapMenuItem(identifier: "Remove", label: "Remove")
         XCTAssertFalse(element(UITestID.dayPlanExercise("UI Bench Press")).waitForExistence(timeout: 3))
+    }
+
+    func test_splitLongPressDelete_requiresConfirm() {
+        launch(preset: "typical")
+        tapTab("Settings")
+        waitFor(UITestID.settingsEditSplit).tap()
+        let legs = waitFor(UITestID.splitDay("Legs"))
+        pressForMenu(legs)
+        tapMenuItem(identifier: UITestID.splitDelete, label: "Delete")
+        XCTAssertTrue(element(UITestID.splitDay("Legs")).exists, "The menu must not delete a split day before confirm.")
+        let dialog = app.buttons["Delete day"]
+        XCTAssertTrue(dialog.waitForExistence(timeout: 4))
+        dialog.tap()
+        XCTAssertFalse(element(UITestID.splitDay("Legs")).waitForExistence(timeout: 2))
     }
 
     /// Reorder is checked through the visible Move up button. The long-press
@@ -118,6 +137,35 @@ final class SplitEditorUITests: RockLogUITestCase {
         XCTAssertEqual(still.label, labelBefore)
         XCTAssertTrue(element(UITestID.splitDay("Push")).exists)
         XCTAssertTrue(element(UITestID.splitDay("Legs")).exists)
+    }
+
+    /// Move up stays outside the swipe host. Pull moves from 2 to 1, Push from 1 to 2.
+    func test_reorderMoveUp_movesTheRow() {
+        launch(preset: "typical")
+        tapTab("Settings")
+        waitFor(UITestID.settingsEditSplit).tap()
+
+        let pull = waitFor(UITestID.splitDay("Pull"))
+        XCTAssertTrue(pull.label.hasPrefix("2."))
+        let push = waitFor(UITestID.splitDay("Push"))
+        XCTAssertTrue(push.label.hasPrefix("1."))
+        showMoveButtons()
+
+        let moveUp = waitFor(UITestID.splitDayMoveUp("Pull"))
+        scrollUntilHittable(moveUp)
+        moveUp.tap()
+
+        let movedPull = element(UITestID.splitDay("Pull"))
+        let movedPush = element(UITestID.splitDay("Push"))
+        let pullSettled = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "label BEGINSWITH '1.'"),
+            object: movedPull
+        )
+        let pushSettled = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "label BEGINSWITH '2.'"),
+            object: movedPush
+        )
+        wait(for: [pullSettled, pushSettled], timeout: 10)
     }
 
     private func assertMoveButtonsHidden() {

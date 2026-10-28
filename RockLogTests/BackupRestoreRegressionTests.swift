@@ -108,6 +108,16 @@ final class BackupRestoreRegressionTests: RockLogStoreTestCase {
         XCTAssertEqual(names, ["After Rollback", "Keep Me"])
     }
 
+    /// Settings is destroyed while the store is replaced. The summary has to
+    /// live on the root, or the Success alert never appears.
+    func test_restoreNotice_keepsTheSummaryAfterSettingsIsGone() {
+        RestoreNotice.shared.dismiss()
+        RestoreNotice.shared.present("Replaced the split and exercises.")
+        XCTAssertEqual(RestoreNotice.shared.message, "Replaced the split and exercises.")
+        RestoreNotice.shared.dismiss()
+        XCTAssertNil(RestoreNotice.shared.message)
+    }
+
     // MARK: - B1
 
     func test_b1_trainingBlock_survivesExportRestore() throws {

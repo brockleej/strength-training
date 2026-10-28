@@ -21,9 +21,9 @@ enum ListMutationCopy {
     static let librarySwipe =
         "Swipe to remove from a day, or delete from the library. Delete always asks first."
 
-    /// Focus sets — swipe commits delete (easy to undo an extra tap).
+    /// Focus sets. A full swipe deletes. A short swipe reveals Delete.
     static let setsSwipe =
-        "Tap a set to edit · swipe left to delete"
+        "Tap a set to edit. Swipe left to delete. Undo stays up for a few seconds."
 
     static func removeFromDay(_ day: String) -> String { "Remove from \(day)" }
     static let removeFromWorkout = "Remove from this workout"
@@ -40,7 +40,7 @@ enum ListMutationCopy {
     static let addDay = "Add day"
     /// In-session exercise list.
     static let workoutListHint =
-        "Swipe left to remove a lift from this workout or from the day plan. Long-press for edit or replace."
+        "Long-press a lift to remove it from this workout or from the day plan."
 }
 
 // MARK: - Reorder (long-press drag, no Edit mode)
@@ -85,8 +85,7 @@ struct UUIDListDropDelegate: DropDelegate {
 }
 
 extension View {
-    /// Long-press, then drag vertically to reorder. Does not steal a short
-    /// horizontal swipe (that belongs to swipe-to-remove).
+    /// Long-press, then drag vertically to reorder.
     func longPressReorder(
         id: UUID,
         orderedIDs: Binding<[UUID]>,

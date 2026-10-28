@@ -218,11 +218,33 @@ struct TrainingSplitSettingsView: View {
                     action: { showAddSheet = true }
                 )
             } else {
-                VStack(spacing: 8) {
+                List {
                     ForEach(Array(displayedDays.enumerated()), id: \.element.id) { index, day in
                         dayRow(day, weekPosition: index + 1)
+                            .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
+                            .listRowSeparator(.hidden)
+                            .listRowBackground(Color.clear)
+                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                Button(role: .destructive) {
+                                    requestDelete(day)
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                                .accessibilityIdentifier(AccessibilityID.splitDelete)
+                            }
+                            .contextMenu {
+                                Button("Delete", role: .destructive) {
+                                    requestDelete(day)
+                                }
+                                .accessibilityIdentifier(AccessibilityID.splitDelete)
+                            }
                     }
                 }
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
+                .scrollDisabled(true)
+                .environment(\.defaultMinListRowHeight, 44)
+                .frame(height: CGFloat(displayedDays.count) * (isReordering ? 128 : 88))
             }
 
             if !displayedDays.isEmpty {
@@ -256,17 +278,25 @@ struct TrainingSplitSettingsView: View {
         }
     }
 
-    /// Label, swipe, and long-press. Move buttons stay outside this view:
-    /// the swipe row's tap gesture would otherwise take their taps, and
-    /// combining children would hide them from XCUITest.
+    /// Label and long-press menu. Move buttons stay outside this view
+    /// so XCUITest can tap them. Reorder drag stays on the number.
     private func dayRowSummary(_ day: SplitDay, weekPosition: Int) -> some View {
-        HStack(spacing: 12) {
+        Button {
+            editingDay = day
+        } label: {
+            HStack(spacing: 12) {
             Text("\(weekPosition)")
                 .font(.uplift.mono(13, weight: .bold))
                 .foregroundStyle(Color.uplift.fgDim)
-                .frame(width: 28, height: 36)
+                .frame(width: 44, height: 44)
                 .contentShape(Rectangle())
                 .accessibilityLabel("Reorder \(day.name)")
+                .longPressReorder(
+                    id: day.id,
+                    orderedIDs: $orderedIDs,
+                    draggingID: $draggingID,
+                    onReorder: persistOrder
+                )
 
             DayChip(dayType: day.asDayType, size: .sm)
 
@@ -291,34 +321,30 @@ struct TrainingSplitSettingsView: View {
             Image(systemName: "chevron.right")
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(Color.uplift.fgDim)
-        }
-        .contentShape(Rectangle())
-        // The row is one accessibility element (the position label). The
-        // long-press has to live on that element, not only the number, or a
-        // press on the row never reorders. It stays outside swipe-to-delete
-        // so disabling the swipe when draggingID is set does not rebuild it.
-        .swipeToDelete(fullSwipeDeletes: false, isEnabled: draggingID == nil, onDelete: {
-            // Soft reveal only; hard delete requires confirm (T2/T3).
-            if DayTypeRegistry.shared.canDelete(id: day.id, from: splitDays) {
-                dayPendingDelete = day
-            } else {
-                showKeepLastDay = true
             }
-        }, onTap: {
-            editingDay = day
-        })
-        .longPressReorder(
-            id: day.id,
-            orderedIDs: $orderedIDs,
-            draggingID: $draggingID,
-            onReorder: persistOrder
-        )
+        }
+        .buttonStyle(.plain)
+        .contentShape(Rectangle())
+        .contextMenu {
+            Button("Delete", role: .destructive) {
+                requestDelete(day)
+            }
+            .accessibilityIdentifier(AccessibilityID.splitDelete)
+        }
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(weekPosition). \(day.name)")
         .accessibilityIdentifier(AccessibilityID.splitDay(day.name))
-        .accessibilityHint("Long press the number and drag to reorder, swipe left to delete, double tap to edit")
+        .accessibilityHint("Long press the number and drag to reorder, swipe left or long press to delete, tap to edit")
         .accessibilityAction(named: "Move up") { moveDay(day.id, by: -1) }
         .accessibilityAction(named: "Move down") { moveDay(day.id, by: 1) }
+    }
+
+    private func requestDelete(_ day: SplitDay) {
+        if DayTypeRegistry.shared.canDelete(id: day.id, from: splitDays) {
+            dayPendingDelete = day
+        } else {
+            showKeepLastDay = true
+        }
     }
 
     private func dayMoveButtons(
@@ -437,17 +463,24 @@ private struct SplitDayEditorSheet: View {
                 Section("Color") {
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4), spacing: 12) {
                         ForEach(DayTypePalette.inks, id: \.self) { hex in
-                            Circle()
-                                .fill(Color(hex: hex))
-                                .frame(width: 36, height: 36)
-                                .overlay {
-                                    if hex == colorHex {
-                                        Image(systemName: "checkmark")
-                                            .font(.system(size: 14, weight: .bold))
-                                            .foregroundStyle(.white)
+                            Button {
+                                colorHex = hex
+                            } label: {
+                                Circle()
+                                    .fill(Color(hex: hex))
+                                    .frame(width: 36, height: 36)
+                                    .frame(width: 44, height: 44)
+                                    .overlay {
+                                        if hex == colorHex {
+                                            Image(systemName: "checkmark")
+                                                .font(.system(size: 14, weight: .bold))
+                                                .foregroundStyle(.white)
+                                        }
                                     }
-                                }
-                                .onTapGesture { colorHex = hex }
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("Day color")
+                            .accessibilityAddTraits(hex == colorHex ? [.isSelected] : [])
                         }
                     }
                     .padding(.vertical, 4)
@@ -457,27 +490,32 @@ private struct SplitDayEditorSheet: View {
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4), spacing: 10) {
                         ForEach(DayTypePalette.iconChoices, id: \.symbol) { choice in
                             let selected = choice.symbol == systemImage
-                            VStack(spacing: 4) {
-                                Image(systemName: choice.symbol)
-                                    .font(.system(size: 22, weight: .medium))
-                                    .foregroundStyle(selected ? Color(hex: colorHex) : Color.uplift.fgMuted)
-                                    .frame(width: 48, height: 48)
-                                    .background {
-                                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                            .fill(selected ? Color(hex: colorHex, opacity: 0.16) : Color.uplift.surface2)
-                                    }
-                                    .overlay {
-                                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                            .strokeBorder(selected ? Color(hex: colorHex) : Color.clear, lineWidth: 1.5)
-                                    }
-                                Text(choice.label)
-                                    .font(.uplift.text(9, weight: .medium))
-                                    .foregroundStyle(selected ? Color.uplift.fg : Color.uplift.fgDim)
-                                    .lineLimit(2)
-                                    .multilineTextAlignment(.center)
-                                    .frame(minHeight: 22, alignment: .top)
+                            Button {
+                                systemImage = choice.symbol
+                            } label: {
+                                VStack(spacing: 4) {
+                                    Image(systemName: choice.symbol)
+                                        .font(.system(size: 22, weight: .medium))
+                                        .foregroundStyle(selected ? Color(hex: colorHex) : Color.uplift.fgMuted)
+                                        .frame(width: 48, height: 48)
+                                        .background {
+                                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                                .fill(selected ? Color(hex: colorHex, opacity: 0.16) : Color.uplift.surface2)
+                                        }
+                                        .overlay {
+                                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                                .strokeBorder(selected ? Color(hex: colorHex) : Color.clear, lineWidth: 1.5)
+                                        }
+                                    Text(choice.label)
+                                        .font(.uplift.text(9, weight: .medium))
+                                        .foregroundStyle(selected ? Color.uplift.fg : Color.uplift.fgDim)
+                                        .lineLimit(2)
+                                        .multilineTextAlignment(.center)
+                                        .frame(minHeight: 22, alignment: .top)
+                                }
+                                .frame(minWidth: 44, minHeight: 44)
                             }
-                            .onTapGesture { systemImage = choice.symbol }
+                            .buttonStyle(.plain)
                             .accessibilityLabel(choice.label)
                             .accessibilityAddTraits(selected ? [.isSelected] : [])
                         }

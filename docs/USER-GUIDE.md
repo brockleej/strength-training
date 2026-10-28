@@ -92,7 +92,7 @@ After **Start**, the Workout tab is the session list — your map of the hour.
 **Each lift row**
 - Name, last session (or tap that line to flip to the progression **target**).
 - Tap the row to open logging (Focus).
-- Swipe left → **Remove from this workout** (today only) or **Remove from [day]** (drops it from that day’s plan; stays in the library).
+- Long-press → **Remove from this workout** (today only) or **Remove from [day]** (drops it from that day’s plan; stays in the library).
 - Long-press for edit / replace.
 
 **Add exercise** — pull in a library lift or create a new one for today only (or assign it to this day).
@@ -307,7 +307,7 @@ A planned-workout file (`.rocklogprogram` or a JSON whose format is `rocklog.pro
 | Start training | Workout tab → pick day → **Start** |
 | Leave and come back | **Home** → later **Resume** |
 | Log a set | Open lift → **Log set** |
-| Fix a wrong set | Tap the set → change it → **Update set**, or swipe to delete |
+| Fix a wrong set | Tap the set → change it → **Update set**, or swipe left to delete |
 | Skip a lift | **Done** with zero sets |
 | Finish the hour | **Finish Workout**, or **Done** on the last lift — then rate effort |
 | Assisted pull-ups | **Assist** on + body weight saved |

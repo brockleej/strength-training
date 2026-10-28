@@ -26,6 +26,9 @@ nonisolated struct ProgramDocument: Codable, Hashable, Sendable {
         case wrongFormat(String)
         case unsupportedVersion(Int)
         case emptyBlock
+        case fileTooLarge
+        case weightOutOfRange
+        case repsOutOfRange
 
         var errorDescription: String? {
             switch self {
@@ -35,9 +38,23 @@ nonisolated struct ProgramDocument: Codable, Hashable, Sendable {
                 return "This planned-workout file is newer than this version of RockLog."
             case .emptyBlock:
                 return "This file has no planned workouts to add."
+            case .fileTooLarge:
+                return "This file is too large to import."
+            case .weightOutOfRange:
+                return "A set weight must be between 0 and 10000 lb."
+            case .repsOutOfRange:
+                return "A set’s reps must be between 0 and 100."
             }
         }
     }
+}
+
+nonisolated enum ProgramLimits {
+    static let maxFileBytes = 5_000_000
+    static let minWeightLbs = 0.0
+    static let maxWeightLbs = 10_000.0
+    static let minReps = 0
+    static let maxReps = 100
 }
 
 nonisolated struct ProgramBlockPayload: Codable, Hashable, Identifiable, Sendable {
@@ -86,14 +103,15 @@ nonisolated enum ProgramCodec {
         f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return f
     }()
-    private static let dayStamp: DateFormatter = {
-        let f = DateFormatter()
-        f.calendar = Calendar(identifier: .gregorian)
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.timeZone = TimeZone(secondsFromGMT: 0)
-        f.dateFormat = "yyyy-MM-dd"
-        return f
-    }()
+    /// `yyyy-MM-dd` is a calendar day in the phone’s time zone, not UTC midnight.
+    private static func dateFromPlainDay(_ raw: String) -> Date? {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone.current
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.date(from: raw)
+    }
 
     static let decoder: JSONDecoder = {
         let d = JSONDecoder()
@@ -102,7 +120,7 @@ nonisolated enum ProgramCodec {
             let raw = try container.decode(String.self)
             if let date = iso8601.date(from: raw) { return date }
             if let date = iso8601Fractional.date(from: raw) { return date }
-            if let date = dayStamp.date(from: raw) { return date }
+            if let date = dateFromPlainDay(raw) { return date }
             throw DecodingError.dataCorruptedError(
                 in: container,
                 debugDescription: "Unrecognized date \(raw)"
@@ -119,6 +137,9 @@ nonisolated enum ProgramCodec {
     }()
 
     static func decode(_ data: Data) throws -> ProgramDocument {
+        guard data.count <= ProgramLimits.maxFileBytes else {
+            throw ProgramDocument.ProgramFormatError.fileTooLarge
+        }
         let data = try legacyProgramData(stripBOM(data))
         let doc = try decoder.decode(ProgramDocument.self, from: data)
         guard doc.format == ProgramFormat.formatName
@@ -132,7 +153,27 @@ nonisolated enum ProgramCodec {
         guard !doc.block.sessions.isEmpty else {
             throw ProgramDocument.ProgramFormatError.emptyBlock
         }
+        try validateValues(doc)
         return doc
+    }
+
+    /// Weight and rep bounds. Call this before any store delete.
+    static func validateValues(_ document: ProgramDocument) throws {
+        for session in document.block.sessions {
+            for exercise in session.exercises {
+                for set in exercise.sets {
+                    guard set.weightLbs.isFinite,
+                          set.weightLbs >= ProgramLimits.minWeightLbs,
+                          set.weightLbs <= ProgramLimits.maxWeightLbs
+                    else {
+                        throw ProgramDocument.ProgramFormatError.weightOutOfRange
+                    }
+                    guard set.reps >= ProgramLimits.minReps, set.reps <= ProgramLimits.maxReps else {
+                        throw ProgramDocument.ProgramFormatError.repsOutOfRange
+                    }
+                }
+            }
+        }
     }
 
     static func encode(_ document: ProgramDocument) throws -> Data {
