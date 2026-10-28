@@ -8,13 +8,14 @@ import XCTest
 final class WorkoutLoggingUITests: RockLogUITestCase {
 
     func test_logEditDeleteFinish_andEffortPrompt() {
-        launch(preset: "typical")
+        launch(preset: "typical", extra: [UITestID.touchLogArgument])
         selectPushIfNeeded()
         waitFor(UITestID.todayStart).tap()
 
         let fresh = waitFor(UITestID.workoutExercise("UI Fresh Lift"))
         fresh.tap()
         waitFor(UITestID.focusLogSet).tap()
+        noteLogSetTapped()
 
         let logged = tapHittableSet(1)
         printTEMPEditDeliveries("after set tap")
@@ -66,11 +67,12 @@ final class WorkoutLoggingUITests: RockLogUITestCase {
 
     /// The set row is the button. A tap on that element enters edit mode.
     func test_setRowAccessibilityAction_entersEditMode() {
-        launch(preset: "typical")
+        launch(preset: "typical", extra: [UITestID.touchLogArgument])
         selectPushIfNeeded()
         waitFor(UITestID.todayStart).tap()
         waitFor(UITestID.workoutExercise("UI Fresh Lift")).tap()
         waitFor(UITestID.focusLogSet).tap()
+        noteLogSetTapped()
         assertTEMPProbeBumpsReadout()
 
         let logged = tapHittableSet(1)
@@ -83,11 +85,12 @@ final class WorkoutLoggingUITests: RockLogUITestCase {
     /// Bench has a last-time control beside the set. Tapping the set identifier
     /// must edit; that control stays a separate element outside the set's frame.
     func test_comparisonRowTap_selectsSetNotLastTime() {
-        launch(preset: "typical")
+        launch(preset: "typical", extra: [UITestID.touchLogArgument])
         selectPushIfNeeded()
         waitFor(UITestID.todayStart).tap()
         waitFor(UITestID.workoutExercise("UI Bench Press")).tap()
         waitFor(UITestID.focusLogSet).tap()
+        noteLogSetTapped()
 
         let lastTime = waitFor(UITestID.focusLoadLast(1))
         let logged = waitFor(UITestID.focusSet(1))
@@ -100,8 +103,9 @@ final class WorkoutLoggingUITests: RockLogUITestCase {
             lastTime.frame.contains(setCenter),
             "focus.set center sits on the last-time control, so a tap loads last time instead of editing."
         )
-        attachTapScreenshot()
+        noteBeforeSetTap()
         logged.tap()
+        printHitOwner("after comparison tap")
         printTEMPEditDeliveries("after comparison tap")
         waitUntilEditing(logged)
         printTEMPEditDeliveries("after comparison editing")
@@ -114,10 +118,64 @@ final class WorkoutLoggingUITests: RockLogUITestCase {
         let row = waitFor(UITestID.focusSet(number))
         scrollUntilHittable(row)
         XCTAssertTrue(row.isHittable, "\(UITestID.focusSet(number)) is not hittable")
-        attachTapScreenshot()
+        noteBeforeSetTap()
         row.tap()
+        printHitOwner("after set tap")
         return row
     }
+
+    private var logSetTapAt: Date?
+
+    /// TEMP: remove before merge. Snapshot immediately after Log set.
+    private func noteLogSetTapped() {
+        logSetTapAt = Date()
+        attachTouchDiagnostics("after logSet")
+    }
+
+    /// TEMP: remove before merge. Snapshot immediately before the set-row tap.
+    private func noteBeforeSetTap() {
+        let elapsed: String
+        if let start = logSetTapAt {
+            elapsed = String(format: "%.0f", Date().timeIntervalSince(start) * 1000)
+        } else {
+            elapsed = "unset"
+        }
+        print("TEMP logSet-to-tap ms=\(elapsed)")
+        attachTouchDiagnostics("before set tap")
+    }
+
+    private func touchLogValue() -> String {
+        let probe = element(UITestID.focusTouchLogTEMP)
+        guard probe.waitForExistence(timeout: 2) else { return "missing" }
+        if let value = probe.value as? String, !value.isEmpty {
+            return value
+        }
+        return probe.label
+    }
+
+    private func printHitOwner(_ note: String) {
+        let text = touchLogValue()
+        print("TEMP hit-test \(note): \(text)")
+        XCTContext.runActivity(named: "TEMP hit-test \(note)") { _ in }
+    }
+
+    private func attachTouchDiagnostics(_ note: String) {
+        let shot = XCTAttachment(screenshot: app.screenshot())
+        shot.name = "TEMP \(note) screenshot"
+        shot.lifetime = .keepAlways
+        add(shot)
+        let hierarchy = XCTAttachment(string: app.debugDescription)
+        hierarchy.name = "TEMP \(note) hierarchy"
+        hierarchy.lifetime = .keepAlways
+        add(hierarchy)
+        let banner = app.descendants(matching: .any).matching(
+            NSPredicate(format: "identifier CONTAINS[c] %@ OR identifier CONTAINS[c] %@ OR identifier CONTAINS[c] %@", "banner", "toast", "prompt")
+        ).firstMatch
+        lastSurfaceNote = "TEMP \(note) keyboards=\(app.keyboards.count) sheets=\(app.sheets.count) alerts=\(app.alerts.count) bannerOrToastOrPrompt=\(banner.exists) effort=\(element(UITestID.effortSave).exists)"
+        print(lastSurfaceNote)
+    }
+
+    private var lastSurfaceNote = ""
 
     /// TEMP: remove before merge. A control outside swipeToDelete must move the readout.
     private func assertTEMPProbeBumpsReadout() {
@@ -169,7 +227,8 @@ final class WorkoutLoggingUITests: RockLogUITestCase {
             shot.lifetime = .keepAlways
             add(shot)
             let seenValue = (row.value as? String) ?? String(describing: row.value ?? "nil")
-            XCTFail("focus.set did not show editing in label or value. label=\(row.label) value=\(seenValue) delivery=\(delivery) \(dump)")
+            let hit = touchLogValue()
+            XCTFail("focus.set did not show editing in label or value. label=\(row.label) value=\(seenValue) delivery=\(delivery) \(dump) \(lastSurfaceNote) hit=\(hit)")
             return
         }
     }

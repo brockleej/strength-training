@@ -248,6 +248,12 @@ struct FocusView: View {
         } message: {
             Text("This workout only hides it today. Remove from the day to drop it from the plan. Sets logged this session will be deleted.")
         }
+        #if DEBUG
+        .uiTestSurface("editExercise", isShown: showEditExercise, blocksHits: true)
+        .uiTestSurface("replaceExercise", isShown: showReplaceSheet, blocksHits: true)
+        .uiTestSurface("removeConfirm", isShown: showRemoveConfirm, blocksHits: true)
+        .uiTestSurface("celebration", isShown: workoutVM.pendingCelebration != nil, blocksHits: true)
+        #endif
     }
 
     // MARK: - Sections

@@ -132,6 +132,13 @@ struct ContentView: View {
         .modifier(UITestDynamicTypeModifier())
         .tint(Color.uplift.accent)
         .preferredColorScheme(.dark)
+        #if DEBUG
+        .overlay(alignment: .top) {
+            if UITestLaunch.touchLogEnabled {
+                TouchLogReadout()
+            }
+        }
+        #endif
         .fullScreenCover(isPresented: Binding(
             get: { workoutViewModel != nil && !hasCompletedFirstRun },
             set: { if !$0 { hasCompletedFirstRun = true } }

@@ -55,6 +55,8 @@ enum AccessibilityID {
     static let focusEditDeliveryTEMP = "focus.editDelivery.TEMP"
     /// TEMP: remove before merge. Control outside swipeToDelete.
     static let focusEditDeliveryProbeTEMP = "focus.editDelivery.probe.TEMP"
+    /// TEMP: remove before merge. Hit-test chain. No labels or weights.
+    static let focusTouchLogTEMP = "focus.touchLog.TEMP"
     /// Last-time column. Kept off `focus.set` so a tap on the set does not load it.
     static func focusLoadLast(_ number: Int) -> String { "focus.loadLast.\(number)" }
     static func focusLoadPlan(_ number: Int) -> String { "focus.loadPlan.\(number)" }

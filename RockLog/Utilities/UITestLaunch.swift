@@ -30,6 +30,8 @@ enum UITestLaunch {
     /// Empty-library settings checks the rest-timer rows. Logging presets omit this
     /// and stay off so a logged set does not start a countdown.
     static let restTimerArgument = "-RockLogRestTimer"
+    /// TEMP: remove before merge. Records touch hit-tests. UI tests only.
+    static let touchLogArgument = "-RockLogTouchLog"
     static let injectEnvironmentKey = "ROCKLOG_INJECT_FILE_B64"
 
     static func restTimerEnabled(arguments: [String]) -> Bool {
@@ -45,6 +47,15 @@ enum UITestLaunch {
     static var isEnabled: Bool {
         #if DEBUG
         ProcessInfo.processInfo.arguments.contains(testingArgument)
+        #else
+        false
+        #endif
+    }
+
+    /// TEMP: remove before merge. Requires the UI-test launch as well.
+    static var touchLogEnabled: Bool {
+        #if DEBUG
+        isEnabled && ProcessInfo.processInfo.arguments.contains(touchLogArgument)
         #else
         false
         #endif

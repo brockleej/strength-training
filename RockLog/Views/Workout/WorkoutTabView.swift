@@ -44,5 +44,10 @@ struct WorkoutTabView: View {
         } message: {
             Text("Every lift is marked done.")
         }
+        #if DEBUG
+        .uiTestSurface("effort", isShown: viewModel.sessionPendingEffortRating != nil, blocksHits: true)
+        .uiTestSurface("summary", isShown: viewModel.sessionPendingSummary != nil, blocksHits: true)
+        .uiTestSurface("finish", isShown: viewModel.offerFinishWorkout, blocksHits: true)
+        #endif
     }
 }
