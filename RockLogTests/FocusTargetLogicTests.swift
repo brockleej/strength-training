@@ -253,3 +253,29 @@ final class FocusTargetLogicTests: XCTestCase {
         XCTAssertEqual(best?.reps, 5)
     }
 }
+
+@MainActor
+final class FocusSetEditTests: XCTestCase {
+    private let prefill = FocusTargetLogic.Prefill(weight: 45, reps: 5, weightDelta: nil, repsDelta: nil)
+
+    /// A tap can deliver the row gesture and the accessibility action together.
+    /// The second delivery must leave the set in edit mode.
+    func test_repeatToggleInsideTheWindowStaysEditing() {
+        let vm = FocusViewModel(prefill: prefill)
+        let set = SetRecord(setNumber: 1, weightLbs: 135, reps: 8)
+        vm.toggleEdit(set: set, prefillIfCancel: prefill)
+        vm.toggleEdit(set: set, prefillIfCancel: prefill)
+        XCTAssertEqual(vm.editingSetID, set.id)
+        XCTAssertEqual(vm.weight, 135)
+        XCTAssertEqual(vm.reps, 8)
+    }
+
+    func test_toggleAfterTheWindowCancelsEdit() {
+        let vm = FocusViewModel(prefill: prefill)
+        let set = SetRecord(setNumber: 1, weightLbs: 135, reps: 8)
+        vm.toggleEdit(set: set, prefillIfCancel: prefill)
+        Thread.sleep(forTimeInterval: FocusViewModel.repeatToggleSuppression + 0.05)
+        vm.toggleEdit(set: set, prefillIfCancel: prefill)
+        XCTAssertNil(vm.editingSetID)
+    }
+}

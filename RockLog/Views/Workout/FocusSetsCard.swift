@@ -30,11 +30,6 @@ struct FocusSetsCard: View {
     var onSelectPrevious: ((PreviousSet) -> Void)? = nil
     var onSelectPlanned: ((PreviousSet) -> Void)? = nil
 
-    /// One tap can deliver the button action and the accessibility action.
-    /// A second delivery in this window must not toggle straight back out of edit.
-    @State private var lastSelectAt = Date.distantPast
-    @State private var lastSelectID: UUID?
-
     private var rowCount: Int {
         let n = max(sets.count, previousSets.count, plannedSets.count)
         return n == 0 ? 0 : n
@@ -225,7 +220,7 @@ struct FocusSetsCard: View {
         .contentShape(Rectangle())
         .onTapGesture {
             guard let thisSet else { return }
-            select(thisSet)
+            onSelect(thisSet)
         }
         .accessibilityHidden(true)
     }
@@ -265,40 +260,25 @@ struct FocusSetsCard: View {
         }
     }
 
-    /// Select target for a logged set. Last/plan buttons are not inside it,
-    /// and the swipe gesture does not also toggle edit.
+    /// Select target for a logged set. Last/plan buttons are not inside it.
+    /// A plain tap selects; the swipe drag wins once the finger moves.
+    /// The identifier sits on this same element so a test tap hits the target.
     private func loggedSetButton<Content: View>(
         _ set: SetRecord,
         isSelected: Bool,
         label: String,
         @ViewBuilder content: () -> Content
     ) -> some View {
-        Button {
-            select(set)
-        } label: {
-            content()
-                .frame(maxWidth: .infinity, minHeight: 44)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .swipeToDelete(fullSwipeDeletes: true, onDelete: { onDelete(set) }, onTap: nil)
-        // Identifier on the swipe container, same as day-plan rows. An inner
-        // identifier is a different hit target, so swipe never reaches Remove.
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(label)
-        .accessibilityIdentifier(AccessibilityID.focusSet(set.setNumber))
-        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : [.isButton])
-        .accessibilityAction { select(set) }
-    }
-
-    private func select(_ set: SetRecord) {
-        let now = Date()
-        if lastSelectID == set.id, now.timeIntervalSince(lastSelectAt) < 0.25 {
-            return
-        }
-        lastSelectAt = now
-        lastSelectID = set.id
-        onSelect(set)
+        content()
+            .frame(maxWidth: .infinity, minHeight: 44)
+            .contentShape(Rectangle())
+            .onTapGesture { onSelect(set) }
+            .swipeToDelete(fullSwipeDeletes: true, onDelete: { onDelete(set) }, onTap: nil)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(label)
+            .accessibilityIdentifier(AccessibilityID.focusSet(set.setNumber))
+            .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : [.isButton])
+            .accessibilityAction { onSelect(set) }
     }
 
     private func simpleRow(_ set: SetRecord) -> some View {

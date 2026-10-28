@@ -27,6 +27,11 @@ final class FocusViewModel {
 
     /// When non-nil, steppers edit this set and the primary button is "Update set".
     private(set) var editingSetID: UUID?
+    /// One tap can deliver both the row gesture and the accessibility action.
+    /// A second call for the same set inside this window must not cancel edit.
+    static let repeatToggleSuppression: TimeInterval = 0.3
+    private var lastToggleAt = Date.distantPast
+    private var lastToggleID: UUID?
     /// Last time vs suggestion. Stepper edits do not rewrite it.
     var openingLineText: String = ""
     /// Weight the steppers opened on. Logging this exact number is not a carry.
@@ -100,6 +105,12 @@ final class FocusViewModel {
     // MARK: - Edit logged set
 
     func toggleEdit(set: SetRecord, prefillIfCancel: FocusTargetLogic.Prefill) {
+        let now = Date()
+        if lastToggleID == set.id, now.timeIntervalSince(lastToggleAt) < Self.repeatToggleSuppression {
+            return
+        }
+        lastToggleAt = now
+        lastToggleID = set.id
         if editingSetID == set.id {
             cancelEdit(restore: prefillIfCancel)
             return
