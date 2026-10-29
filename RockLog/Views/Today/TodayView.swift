@@ -10,6 +10,13 @@ import SwiftUI
 import SwiftData
 import UIKit
 
+/// Pushes from Today. One destination handler lives on the NavigationStack.
+private enum TodayRoute: Hashable {
+    case programs
+    case editSplit
+    case dayPlan(String)
+}
+
 struct TodayView: View {
     @Bindable var workoutVM: WorkoutViewModel
     /// Defaults to the phone's store. A preview or test can pass another one.
@@ -26,6 +33,9 @@ struct TodayView: View {
     @State private var previewPlannedID: UUID?
     @State private var confirmingPlannedID: UUID?
     @State private var pendingDeletePlannedID: UUID?
+    @State private var todayPath: [TodayRoute] = []
+    /// Captured once. Body does not read `Date.now`, which would keep this screen dirty.
+    @State private var anchoredNow = Date()
 
     @Query(
         filter: #Predicate<WorkoutSession> { $0.isCompleted == true },
@@ -55,27 +65,36 @@ struct TodayView: View {
     private var weekSessions: [WorkoutSession] {
         var cal = Calendar.current
         cal.firstWeekday = 2
-        guard let week = cal.dateInterval(of: .weekOfYear, for: .now) else { return [] }
+        guard let week = cal.dateInterval(of: .weekOfYear, for: anchoredNow) else { return [] }
         return completedSessions.filter { week.contains($0.date) }
     }
 
     var body: some View {
+        let _ = noteBodyChanges()
         replaceConfirmations(on: sessionLifecycle(on: todayNavigation))
+            .diagBody("TodayView")
+    }
+
+    private func noteBodyChanges() {
+        if UITestLaunch.diagControlEnabled {
+            Self._printChanges()
+        }
     }
 
     private var todayNavigation: some View {
-        NavigationStack {
+        NavigationStack(path: $todayPath) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     header
-                    NavigationLink {
-                        ProgramsHubView()
+                    Button {
+                        todayPath.append(.programs)
                     } label: {
                         Label("Programs", systemImage: "list.bullet.rectangle")
                             .font(.uplift.text(15, weight: .semibold))
                             .foregroundStyle(Color.uplift.accent)
                             .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                     }
+                    .buttonStyle(.plain)
                     .accessibilityIdentifier(AccessibilityID.workoutPrograms)
                     .padding(.top, 8)
                     if usesPlannedQueue {
@@ -92,6 +111,19 @@ struct TodayView: View {
             .background(Color.uplift.bgElev)
             .scrollIndicators(.hidden)
             .navigationBarHidden(true)
+            .navigationDestination(for: TodayRoute.self) { route in
+                switch route {
+                case .programs:
+                    ProgramsHubView(
+                        onEditSplit: { todayPath.append(.editSplit) },
+                        onEditDay: { todayPath.append(.dayPlan($0)) }
+                    )
+                case .editSplit:
+                    TrainingSplitSettingsView()
+                case .dayPlan(let name):
+                    DayPlanEditorView(dayType: DayType(rawValue: name))
+                }
+            }
             .navigationDestination(item: $workoutVM.summaryDetailSession) { session in
                 SessionDetailView(session: session, workoutVM: workoutVM)
             }
@@ -365,7 +397,7 @@ struct TodayView: View {
     private var header: some View {
         HStack(alignment: .top, spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
-                Text(Date.now.formatted(.dateTime.weekday(.wide).month(.wide).day()))
+                Text(anchoredNow.formatted(.dateTime.weekday(.wide).month(.wide).day()))
                     .font(.uplift.text(13, weight: .medium))
                     .foregroundStyle(Color.uplift.fgMuted)
                 Text("Today")
@@ -507,7 +539,7 @@ struct TodayView: View {
         case .weekly:
             var cal = Calendar.current
             cal.firstWeekday = 2
-            guard let week = cal.dateInterval(of: .weekOfYear, for: .now) else { return [] }
+            guard let week = cal.dateInterval(of: .weekOfYear, for: anchoredNow) else { return [] }
             let thisWeek = Set(
                 completedSessions
                     .filter { week.contains($0.date) && cycleNames.contains($0.day.rawValue) }

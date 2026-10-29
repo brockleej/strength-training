@@ -74,6 +74,7 @@ enum UITestID {
     static let setDelete = "set.delete"
     static let setUndo = "set.undo"
     static let diagControlArgument = "-RockLogDiag"
+    static func diagBody(_ name: String) -> String { "diag.body.\(name)" }
     static func focusLoadLast(_ number: Int) -> String { "focus.loadLast.\(number)" }
     static func focusLoadPlan(_ number: Int) -> String { "focus.loadPlan.\(number)" }
     static func stepperIncrease(_ label: String) -> String { "stepper.increase.\(label)" }

@@ -24,6 +24,14 @@ struct ActiveWorkoutBar: View {
     @Bindable var viewModel: WorkoutViewModel
 
     var body: some View {
+        if viewModel.activeSession == nil && viewModel.restEndDate == nil {
+            EmptyView()
+        } else {
+            tickingBar
+        }
+    }
+
+    private var tickingBar: some View {
         TimelineView(.periodic(from: .now, by: 1)) { context in
             let line = ActiveWorkoutBarCopy.line(
                 sessionStarted: viewModel.activeSession?.date,

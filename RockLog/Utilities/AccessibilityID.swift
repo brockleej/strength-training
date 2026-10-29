@@ -82,6 +82,7 @@ enum AccessibilityID {
     static func focusSet(_ number: Int) -> String { "focus.set.\(number)" }
     /// Button, pan begin, and pan cancel counts. UI tests pass `-RockLogDiag`.
     static let focusHitLog = "focus.hitLog"
+    static func diagBody(_ name: String) -> String { "diag.body.\(name)" }
     static let setDelete = "set.delete"
     static let setUndo = "set.undo"
     /// Last-time column. Kept off `focus.set` so a tap on the set does not load it.

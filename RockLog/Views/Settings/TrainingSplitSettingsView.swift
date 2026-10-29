@@ -44,6 +44,7 @@ struct TrainingSplitSettingsView: View {
     }
 
     var body: some View {
+        let _ = noteBodyChanges()
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 scheduleModeSection
@@ -58,9 +59,12 @@ struct TrainingSplitSettingsView: View {
         .background(Color.uplift.bgElev)
         .navigationTitle("Training Split")
         .navigationBarTitleDisplayMode(.inline)
-        .onAppear { syncOrderedIDs() }
-        .onChange(of: splitDays.map(\.id)) { _, _ in
-            if draggingID == nil { syncOrderedIDs() }
+        .diagBody("TrainingSplitSettingsView")
+        .onChange(of: splitDays.map(\.id), initial: true) { _, next in
+            // Do not assign when the ids already match. A write here rebuilds
+            // the view, and an eager parent used to run this again immediately.
+            guard draggingID == nil, next != orderedIDs else { return }
+            orderedIDs = next
         }
         .sheet(isPresented: $showAddSheet) {
             SplitDayEditorSheet(existing: nil) { name, image, subtitle, hex, all in
@@ -413,7 +417,15 @@ struct TrainingSplitSettingsView: View {
     }
 
     private func syncOrderedIDs() {
-        orderedIDs = splitDays.map(\.id)
+        let next = splitDays.map(\.id)
+        guard next != orderedIDs else { return }
+        orderedIDs = next
+    }
+
+    private func noteBodyChanges() {
+        if UITestLaunch.diagControlEnabled {
+            Self._printChanges()
+        }
     }
 
     private func persistOrder() {

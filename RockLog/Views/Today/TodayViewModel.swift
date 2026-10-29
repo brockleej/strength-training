@@ -35,17 +35,17 @@ final class TodayViewModel {
         pruneCarryover(completedSessions: completedSessions)
 
         if let suspended {
-            selectedDayType = suspended.day
+            setDay(suspended.day)
             syncRotationTrack(suspended: suspended, suggestedTrack: suggestedTrack)
-            incompleteWeekPrompt = nil
+            setPrompt(nil)
             return
         }
 
         // Planned queue owns “what’s next.” Do not prompt about the rolling split.
         if plannedQueueOwnsToday {
-            incompleteWeekPrompt = nil
+            setPrompt(nil)
             if let plannedDayType {
-                selectedDayType = plannedDayType
+                setDay(plannedDayType)
                 syncRotationTrack(suspended: nil, suggestedTrack: suggestedTrack)
             }
             return
@@ -62,11 +62,11 @@ final class TodayViewModel {
                 stamps: stamps
             )
         } else {
-            incompleteWeekPrompt = nil
+            setPrompt(nil)
         }
 
         if let plannedDayType {
-            selectedDayType = plannedDayType
+            setDay(plannedDayType)
             syncRotationTrack(suspended: nil, suggestedTrack: suggestedTrack)
             return
         }
@@ -77,7 +77,7 @@ final class TodayViewModel {
             mode: mode,
             carryoverDayNames: SplitSchedulePreferences.carryoverDayNames
         )
-        selectedDayType = suggested ?? DayType.defaultSelection
+        setDay(suggested ?? DayType.defaultSelection)
         syncRotationTrack(suspended: nil, suggestedTrack: suggestedTrack)
     }
 
@@ -153,7 +153,7 @@ final class TodayViewModel {
     ) {
         // Already carrying unfinished days — no need to re-prompt.
         if !SplitSchedulePreferences.carryoverDayNames.isEmpty {
-            incompleteWeekPrompt = nil
+            setPrompt(nil)
             return
         }
 
@@ -161,16 +161,16 @@ final class TodayViewModel {
             orderedDays: orderedDays,
             sessions: stamps
         ) else {
-            incompleteWeekPrompt = nil
+            setPrompt(nil)
             return
         }
 
         if SplitSchedulePreferences.didPrompt(forWeekStart: prompt.weekStart) {
-            incompleteWeekPrompt = nil
+            setPrompt(nil)
             return
         }
 
-        incompleteWeekPrompt = prompt
+        setPrompt(prompt)
     }
 
     private func pruneCarryover(completedSessions: [WorkoutSession]) {
@@ -195,12 +195,22 @@ final class TodayViewModel {
         suspended: WorkoutSession?,
         suggestedTrack: (DayType) -> RotationTrack
     ) {
+        let next: RotationTrack
         if let suspended, suspended.day == selectedDayType {
             // Resume keeps the session's track; default All → A for the control.
-            selectedRotationTrack = suspended.track == .every ? .a : suspended.track
+            next = suspended.track == .every ? .a : suspended.track
         } else {
-            selectedRotationTrack = suggestedTrack(selectedDayType)
+            next = suggestedTrack(selectedDayType)
         }
+        if selectedRotationTrack != next { selectedRotationTrack = next }
+    }
+
+    private func setDay(_ day: DayType) {
+        if selectedDayType != day { selectedDayType = day }
+    }
+
+    private func setPrompt(_ prompt: SplitScheduleLogic.IncompleteWeekPrompt?) {
+        if incompleteWeekPrompt != prompt { incompleteWeekPrompt = prompt }
     }
 
     /// Fetch the duration string for each day type's most recent completed session.

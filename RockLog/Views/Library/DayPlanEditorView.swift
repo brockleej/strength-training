@@ -256,7 +256,9 @@ struct DayPlanEditorView: View {
     }
 
     private func syncOrderedIDsFromStore() {
-        orderedIDs = dayExercisesSorted.map(\.id)
+        let next = dayExercisesSorted.map(\.id)
+        guard next != orderedIDs else { return }
+        orderedIDs = next
     }
 
     private func persistCurrentOrder() {

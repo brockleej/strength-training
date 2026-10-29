@@ -10,6 +10,9 @@ import SwiftData
 internal import UniformTypeIdentifiers
 
 struct ProgramsHubView: View {
+    var onEditSplit: () -> Void
+    var onEditDay: (String) -> Void
+
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \SplitDay.sortOrder) private var days: [SplitDay]
     @AppStorage(SplitSchedulePreferences.modeKey)
@@ -40,14 +43,14 @@ struct ProgramsHubView: View {
     private var queuedPlannedSessions: [WorkoutSession]
 
     var body: some View {
+        let _ = noteBodyChanges()
         List {
             Section {
-                NavigationLink {
-                    TrainingSplitSettingsView()
-                } label: {
+                Button(action: onEditSplit) {
                     Label("Edit training split", systemImage: "calendar")
                         .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                 }
+                .buttonStyle(.plain)
                 .accessibilityIdentifier(AccessibilityID.settingsEditSplit)
             } header: {
                 Text("Split")
@@ -69,12 +72,13 @@ struct ProgramsHubView: View {
 
             Section {
                 ForEach(days) { day in
-                    NavigationLink {
-                        DayPlanEditorView(dayType: day.asDayType)
+                    Button {
+                        onEditDay(day.name)
                     } label: {
                         Text(day.name)
                             .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                     }
+                    .buttonStyle(.plain)
                     .accessibilityIdentifier(AccessibilityID.programsDay(day.name))
                 }
             } header: {
@@ -116,6 +120,7 @@ struct ProgramsHubView: View {
             .listRowBackground(Color.uplift.surface1)
         }
         .settingsPage("Programs")
+        .diagBody("ProgramsHubView")
         .fileImporter(
             isPresented: $isImporting,
             allowedContentTypes: [.json, .rockLogProgram],
@@ -165,6 +170,12 @@ struct ProgramsHubView: View {
                 .accessibilityIdentifier(AccessibilityID.screenClose)
         } message: {
             Text(successMessage)
+        }
+    }
+
+    private func noteBodyChanges() {
+        if UITestLaunch.diagControlEnabled {
+            Self._printChanges()
         }
     }
 

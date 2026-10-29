@@ -168,6 +168,42 @@ final class SplitEditorUITests: RockLogUITestCase {
         wait(for: [pullSettled, pushSettled], timeout: 10)
     }
 
+    /// The editor used to rebuild forever, so this query never returned.
+    func test_editSplit_opensWithinFiveSeconds_andStaysIdle() {
+        launch(preset: "typical", extra: [UITestID.diagControlArgument])
+        waitFor(UITestID.workoutPrograms).tap()
+        let edit = element(UITestID.settingsEditSplit)
+        XCTAssertTrue(edit.waitForExistence(timeout: 5), "Programs did not show Edit split")
+        edit.tap()
+        XCTAssertTrue(
+            app.navigationBars["Training Split"].waitForExistence(timeout: 5),
+            "Edit split did not open within 5 seconds"
+        )
+        let splitProbe = element(UITestID.diagBody("TrainingSplitSettingsView"))
+        XCTAssertTrue(splitProbe.waitForExistence(timeout: 2))
+        let names = ["TodayView", "ProgramsHubView", "TrainingSplitSettingsView"].filter {
+            element(UITestID.diagBody($0)).exists
+        }
+        XCTAssertTrue(names.contains("TrainingSplitSettingsView"))
+        let before = names.map { bodyCount($0) }
+        let idle = expectation(description: "split editor idle")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { idle.fulfill() }
+        wait(for: [idle], timeout: 3)
+        for (index, name) in names.enumerated() {
+            let after = bodyCount(name)
+            XCTAssertLessThan(
+                after - before[index],
+                5,
+                "\(name) redrew \(after - before[index]) times while idle"
+            )
+        }
+    }
+
+    private func bodyCount(_ name: String) -> Int {
+        let probe = element(UITestID.diagBody(name))
+        return Int(probe.label) ?? 999
+    }
+
     private func assertMoveButtonsHidden() {
         XCTAssertFalse(
             element(UITestID.splitDayMoveUp("Pull")).waitForExistence(timeout: 1),
