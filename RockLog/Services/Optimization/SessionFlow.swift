@@ -57,8 +57,8 @@ nonisolated enum StartingWeightPreferences {
     static let key = "startingWeightChoice"
 
     static var choice: StartingWeightChoice {
-        get { StartingWeightChoice(rawValue: UserDefaults.standard.string(forKey: key) ?? "") ?? .lastTime }
-        set { UserDefaults.standard.set(newValue.rawValue, forKey: key) }
+        get { StartingWeightChoice(rawValue: AppDefaults.local.string(forKey: key) ?? "") ?? .lastTime }
+        set { AppDefaults.local.set(newValue.rawValue, forKey: key) }
     }
 }
 

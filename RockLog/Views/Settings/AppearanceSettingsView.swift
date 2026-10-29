@@ -33,7 +33,7 @@ enum AppearanceChoice: String, CaseIterable, Identifiable {
     }
 
     static func stored() -> AppearanceChoice {
-        AppearanceChoice(rawValue: UserDefaults.standard.string(forKey: key) ?? "") ?? .dark
+        AppearanceChoice(rawValue: AppDefaults.local.string(forKey: key) ?? "") ?? .dark
     }
 }
 

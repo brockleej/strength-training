@@ -21,22 +21,22 @@ enum RestTimerPreferences {
     static let presets: [Int] = [60, 90, 120, 180, 240, 300]
 
     static var isEnabled: Bool {
-        if UserDefaults.standard.object(forKey: enabledKey) == nil {
+        if AppDefaults.local.object(forKey: enabledKey) == nil {
             return defaultEnabled
         }
-        return UserDefaults.standard.bool(forKey: enabledKey)
+        return AppDefaults.local.bool(forKey: enabledKey)
     }
 
     /// Audible countdown ticks + done chirp (still haptics when sound is off).
     static var isSoundEnabled: Bool {
-        if UserDefaults.standard.object(forKey: soundEnabledKey) == nil {
+        if AppDefaults.local.object(forKey: soundEnabledKey) == nil {
             return defaultSoundEnabled
         }
-        return UserDefaults.standard.bool(forKey: soundEnabledKey)
+        return AppDefaults.local.bool(forKey: soundEnabledKey)
     }
 
     static var targetSeconds: Int {
-        let value = UserDefaults.standard.integer(forKey: secondsKey)
+        let value = AppDefaults.local.integer(forKey: secondsKey)
         return value > 0 ? value : defaultSeconds
     }
 
@@ -58,25 +58,25 @@ enum RestTimerPreferences {
     /// Uses the exercise’s last choice when set; otherwise the global Settings default.
     static func isEnabled(forExercise id: UUID) -> Bool {
         let key = exerciseEnabledKey(for: id)
-        if UserDefaults.standard.object(forKey: key) == nil {
+        if AppDefaults.local.object(forKey: key) == nil {
             return isEnabled
         }
-        return UserDefaults.standard.bool(forKey: key)
+        return AppDefaults.local.bool(forKey: key)
     }
 
     static func setEnabled(_ enabled: Bool, forExercise id: UUID) {
-        UserDefaults.standard.set(enabled, forKey: exerciseEnabledKey(for: id))
+        AppDefaults.local.set(enabled, forKey: exerciseEnabledKey(for: id))
     }
 
     /// The later row of a duplicate exercise id keeps the per-lift switch.
     /// The original key stays so the first row does too.
     static func copyExerciseSetting(from old: UUID, to new: UUID) {
         let oldKey = exerciseEnabledKey(for: old)
-        guard UserDefaults.standard.object(forKey: oldKey) != nil else { return }
-        setEnabled(UserDefaults.standard.bool(forKey: oldKey), forExercise: new)
+        guard AppDefaults.local.object(forKey: oldKey) != nil else { return }
+        setEnabled(AppDefaults.local.bool(forKey: oldKey), forExercise: new)
     }
 
     static func discardExerciseSetting(_ id: UUID) {
-        UserDefaults.standard.removeObject(forKey: exerciseEnabledKey(for: id))
+        AppDefaults.local.removeObject(forKey: exerciseEnabledKey(for: id))
     }
 }

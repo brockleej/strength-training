@@ -183,7 +183,7 @@ struct ContentView: View {
             // Dedupe walks every lift's history — only after CloudKit import.
 
             let exerciseCount = (try? modelContext.fetchCount(FetchDescriptor<Exercise>())) ?? 0
-            let hasRemoteSplit = UserDefaults.standard.bool(forKey: SeedData.hasConfiguredSplitKey)
+            let hasRemoteSplit = AppDefaults.local.bool(forKey: SeedData.hasConfiguredSplitKey)
                 || SeedData.loadSplitSnapshot() != nil
                 || SeedData.loadDayPlanSnapshot() != nil
             if exerciseCount == 0 && hasRemoteSplit {

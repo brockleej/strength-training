@@ -66,7 +66,7 @@ final class BodyProfileStore {
         loadMerged()
         kvsObserver = NotificationCenter.default.addObserver(
             forName: NSUbiquitousKeyValueStore.didChangeExternallyNotification,
-            object: NSUbiquitousKeyValueStore.default,
+            object: AppDefaults.cloud,
             queue: .main
         ) { [weak self] note in
             self?.applyExternalChange(note)
@@ -103,8 +103,8 @@ final class BodyProfileStore {
         isApplyingRemote = true
         defer { isApplyingRemote = false }
 
-        let defaults = UserDefaults.standard
-        let kvs = NSUbiquitousKeyValueStore.default
+        let defaults = AppDefaults.local
+        let kvs = AppDefaults.cloud
 
         weightPounds = preferredPositive(
             kvs.double(forKey: Self.weightKey),
@@ -150,8 +150,8 @@ final class BodyProfileStore {
         removeIfZero: Bool = false
     ) {
         guard !isApplyingRemote, value != old else { return }
-        let defaults = UserDefaults.standard
-        let kvs = NSUbiquitousKeyValueStore.default
+        let defaults = AppDefaults.local
+        let kvs = AppDefaults.cloud
         if removeIfZero, value <= 0 {
             defaults.removeObject(forKey: key)
             kvs.removeObject(forKey: key)
@@ -163,13 +163,13 @@ final class BodyProfileStore {
 
     private func persistString(_ value: String, key: String, old: String) {
         guard !isApplyingRemote, value != old else { return }
-        UserDefaults.standard.set(value, forKey: key)
-        NSUbiquitousKeyValueStore.default.set(value, forKey: key)
+        AppDefaults.local.set(value, forKey: key)
+        AppDefaults.cloud.set(value, forKey: key)
     }
 
     private func persistAll() {
-        let defaults = UserDefaults.standard
-        let kvs = NSUbiquitousKeyValueStore.default
+        let defaults = AppDefaults.local
+        let kvs = AppDefaults.cloud
         if weightPounds > 0 {
             defaults.set(weightPounds, forKey: Self.weightKey)
             kvs.set(weightPounds, forKey: Self.weightKey)

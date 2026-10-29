@@ -35,8 +35,8 @@ final class GymAccessStore {
     func load() {
         isApplying = true
         defer { isApplying = false }
-        let defaults = UserDefaults.standard
-        let kvs = NSUbiquitousKeyValueStore.default
+        let defaults = AppDefaults.local
+        let kvs = AppDefaults.cloud
         let raw = kvs.string(forKey: Self.storageKey) ?? defaults.string(forKey: Self.storageKey)
         let decoded = raw.flatMap { $0.data(using: .utf8) }.map { GymAccessCodec.decode($0) } ?? []
         let legacy = GymMembershipStore.shared
@@ -60,7 +60,7 @@ final class GymAccessStore {
 
     func pin(_ entry: GymAccessEntry) {
         pinnedID = entry.id
-        UserDefaults.standard.set(entry.id.uuidString, forKey: Self.pinnedKey)
+        AppDefaults.local.set(entry.id.uuidString, forKey: Self.pinnedKey)
     }
 
     func save(_ entry: GymAccessEntry) {
@@ -118,12 +118,12 @@ final class GymAccessStore {
         guard !isApplying else { return }
         let data = GymAccessCodec.encode(entries)
         let json = String(data: data, encoding: .utf8) ?? "[]"
-        UserDefaults.standard.set(json, forKey: Self.storageKey)
-        NSUbiquitousKeyValueStore.default.set(json, forKey: Self.storageKey)
+        AppDefaults.local.set(json, forKey: Self.storageKey)
+        AppDefaults.cloud.set(json, forKey: Self.storageKey)
         if let pinnedID {
-            UserDefaults.standard.set(pinnedID.uuidString, forKey: Self.pinnedKey)
+            AppDefaults.local.set(pinnedID.uuidString, forKey: Self.pinnedKey)
         } else {
-            UserDefaults.standard.removeObject(forKey: Self.pinnedKey)
+            AppDefaults.local.removeObject(forKey: Self.pinnedKey)
         }
     }
 }

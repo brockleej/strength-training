@@ -41,11 +41,11 @@ enum SetPrefillPreferences {
 
     static var mode: SetPrefillMode {
         get {
-            let raw = UserDefaults.standard.string(forKey: modeKey) ?? ""
+            let raw = AppDefaults.local.string(forKey: modeKey) ?? ""
             return SetPrefillMode(rawValue: raw) ?? defaultMode
         }
         set {
-            UserDefaults.standard.set(newValue.rawValue, forKey: modeKey)
+            AppDefaults.local.set(newValue.rawValue, forKey: modeKey)
         }
     }
 }

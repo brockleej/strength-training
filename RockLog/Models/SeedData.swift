@@ -169,16 +169,16 @@ struct SeedData {
     static let strippedUnusedStarterExtrasKey = "strippedUnusedStarterExtrasV1"
 
     static func markSplitConfigured(preset: SplitPreset? = nil, context: ModelContext? = nil) {
-        UserDefaults.standard.set(true, forKey: hasConfiguredSplitKey)
+        AppDefaults.local.set(true, forKey: hasConfiguredSplitKey)
         if mirrorsSplitToICloud {
-            let kvs = NSUbiquitousKeyValueStore.default
+            let kvs = AppDefaults.cloud
             kvs.set(true, forKey: hasConfiguredSplitKey)
             if let preset {
                 kvs.set(preset.rawValue, forKey: preferredSplitPresetKey)
             }
         }
         if let preset {
-            UserDefaults.standard.set(preset.rawValue, forKey: preferredSplitPresetKey)
+            AppDefaults.local.set(preset.rawValue, forKey: preferredSplitPresetKey)
         }
         if let context {
             persistSplitSnapshot(context: context)
@@ -197,25 +197,25 @@ struct SeedData {
 
     /// Pull split prefs from iCloud KVS into local UserDefaults (call on launch).
     static func hydrateSplitPreferencesFromICloud() {
-        let kvs = NSUbiquitousKeyValueStore.default
+        let kvs = AppDefaults.cloud
         if kvs.bool(forKey: hasConfiguredSplitKey) {
-            UserDefaults.standard.set(true, forKey: hasConfiguredSplitKey)
+            AppDefaults.local.set(true, forKey: hasConfiguredSplitKey)
         }
         if let raw = kvs.string(forKey: preferredSplitPresetKey), !raw.isEmpty {
-            UserDefaults.standard.set(raw, forKey: preferredSplitPresetKey)
+            AppDefaults.local.set(raw, forKey: preferredSplitPresetKey)
         }
         if let json = kvs.string(forKey: splitSnapshotKey), !json.isEmpty {
-            UserDefaults.standard.set(json, forKey: splitSnapshotKey)
+            AppDefaults.local.set(json, forKey: splitSnapshotKey)
         }
         if let json = kvs.string(forKey: dayPlanSnapshotKey), !json.isEmpty {
-            UserDefaults.standard.set(json, forKey: dayPlanSnapshotKey)
+            AppDefaults.local.set(json, forKey: dayPlanSnapshotKey)
         }
     }
 
     static func loadSplitSnapshot() -> [SplitDayBackup]? {
-        let json = UserDefaults.standard.string(forKey: splitSnapshotKey)
+        let json = AppDefaults.local.string(forKey: splitSnapshotKey)
             ?? (mirrorsSplitToICloud
-                ? NSUbiquitousKeyValueStore.default.string(forKey: splitSnapshotKey)
+                ? AppDefaults.cloud.string(forKey: splitSnapshotKey)
                 : nil)
         guard let json, let data = json.data(using: .utf8) else { return nil }
         return try? JSONDecoder().decode([SplitDayBackup].self, from: data)
@@ -239,10 +239,10 @@ struct SeedData {
         guard let data = try? JSONEncoder().encode(snaps),
               let json = String(data: data, encoding: .utf8)
         else { return }
-        UserDefaults.standard.set(json, forKey: splitSnapshotKey)
-        UserDefaults.standard.set(true, forKey: hasConfiguredSplitKey)
+        AppDefaults.local.set(json, forKey: splitSnapshotKey)
+        AppDefaults.local.set(true, forKey: hasConfiguredSplitKey)
         if mirrorsSplitToICloud {
-            let kvs = NSUbiquitousKeyValueStore.default
+            let kvs = AppDefaults.cloud
             kvs.set(json, forKey: splitSnapshotKey)
             kvs.set(true, forKey: hasConfiguredSplitKey)
         }
@@ -279,9 +279,9 @@ struct SeedData {
     }
 
     static func loadDayPlanSnapshot() -> [DayPlanBackup]? {
-        let json = UserDefaults.standard.string(forKey: dayPlanSnapshotKey)
+        let json = AppDefaults.local.string(forKey: dayPlanSnapshotKey)
             ?? (mirrorsSplitToICloud
-                ? NSUbiquitousKeyValueStore.default.string(forKey: dayPlanSnapshotKey)
+                ? AppDefaults.cloud.string(forKey: dayPlanSnapshotKey)
                 : nil)
         guard let json, let data = json.data(using: .utf8) else { return nil }
         return try? JSONDecoder().decode([DayPlanBackup].self, from: data)
@@ -291,9 +291,9 @@ struct SeedData {
         guard let data = try? JSONEncoder().encode(plans),
               let json = String(data: data, encoding: .utf8)
         else { return }
-        UserDefaults.standard.set(json, forKey: dayPlanSnapshotKey)
+        AppDefaults.local.set(json, forKey: dayPlanSnapshotKey)
         if mirrorsSplitToICloud {
-            NSUbiquitousKeyValueStore.default.set(json, forKey: dayPlanSnapshotKey)
+            AppDefaults.cloud.set(json, forKey: dayPlanSnapshotKey)
         }
     }
 
@@ -600,7 +600,7 @@ struct SeedData {
     /// When KVS only knows the last preset, drop leftover bro-split days (Arms / Full Body)
     /// that CloudKit re-imported after a first-run seed.
     static func stripSeedExtrasUsingPreset(context: ModelContext) -> Bool {
-        let raw = UserDefaults.standard.string(forKey: preferredSplitPresetKey) ?? ""
+        let raw = AppDefaults.local.string(forKey: preferredSplitPresetKey) ?? ""
         guard let preset = SplitPreset(rawValue: raw), preset != .broSplit else { return false }
         let allowed = Set(preset.definitions.map { $0.name.lowercased() })
         let rows = fetchSplitDays(context: context)
@@ -632,8 +632,8 @@ struct SeedData {
             return
         }
 
-        if UserDefaults.standard.bool(forKey: hasConfiguredSplitKey) {
-            let raw = UserDefaults.standard.string(forKey: preferredSplitPresetKey) ?? ""
+        if AppDefaults.local.bool(forKey: hasConfiguredSplitKey) {
+            let raw = AppDefaults.local.string(forKey: preferredSplitPresetKey) ?? ""
             if let preset = SplitPreset(rawValue: raw) {
                 insertPresetDays(preset, context: context, saves: saves)
             }
@@ -645,7 +645,7 @@ struct SeedData {
 
     /// True when this phone has never chosen a split (first use, no iCloud snapshot).
     static func needsFirstUseSplitSetup(context: ModelContext) -> Bool {
-        if UserDefaults.standard.bool(forKey: hasConfiguredSplitKey) { return false }
+        if AppDefaults.local.bool(forKey: hasConfiguredSplitKey) { return false }
         if loadSplitSnapshot() != nil { return false }
         if loadDayPlanSnapshot() != nil { return false }
         let splitCount = (try? context.fetchCount(FetchDescriptor<SplitDay>())) ?? 0
@@ -988,7 +988,7 @@ struct SeedData {
     static func seedIfNeeded(context: ModelContext, allowEmptyCatalogSeed: Bool = true) {
         seedSplitDaysIfNeeded(context: context)
 
-        let hasSeeded = UserDefaults.standard.bool(forKey: hasSeededExercisesKey)
+        let hasSeeded = AppDefaults.local.bool(forKey: hasSeededExercisesKey)
         let count = (try? context.fetchCount(FetchDescriptor<Exercise>())) ?? 0
 
         if !hasSeeded && count == 0 {
@@ -1000,7 +1000,7 @@ struct SeedData {
             insertCatalogExercises(context: context, existingNames: [], assignCatalogDays: false)
             ModelSave.logged(context, action: "SeedData")
             markCatalogSeeded()
-            UserDefaults.standard.set(catalogVersion, forKey: catalogVersionKey)
+            AppDefaults.local.set(catalogVersion, forKey: catalogVersionKey)
             persistDayPlanSnapshot(context: context)
             return
         }
@@ -1013,7 +1013,7 @@ struct SeedData {
     }
 
     static func markCatalogSeeded() {
-        UserDefaults.standard.set(true, forKey: hasSeededExercisesKey)
+        AppDefaults.local.set(true, forKey: hasSeededExercisesKey)
     }
 
     /// Empty UI-test launches share the simulator's UserDefaults with earlier
@@ -1026,23 +1026,23 @@ struct SeedData {
     static func resetExerciseCatalogSeed() {
         #if DEBUG
         guard UITestLaunch.isEnabled, UITestLaunch.preset == .empty else { return }
-        UserDefaults.standard.set(false, forKey: hasSeededExercisesKey)
-        UserDefaults.standard.removeObject(forKey: catalogVersionKey)
-        UserDefaults.standard.removeObject(forKey: strippedUnusedStarterExtrasKey)
+        AppDefaults.local.set(false, forKey: hasSeededExercisesKey)
+        AppDefaults.local.removeObject(forKey: catalogVersionKey)
+        AppDefaults.local.removeObject(forKey: strippedUnusedStarterExtrasKey)
         #endif
     }
 
     /// Skip the unused-starter cleanup (restored backup or first-run templates).
     static func markDayPlansTrusted() {
-        UserDefaults.standard.set(true, forKey: strippedUnusedStarterExtrasKey)
+        AppDefaults.local.set(true, forKey: strippedUnusedStarterExtrasKey)
     }
 
     /// One-time repair: if a day already has the user's lifts, drop unused
     /// starter-template names that a reinstall / CloudKit merge pinned back on.
     static func stripUnusedStarterExtrasIfNeeded(context: ModelContext) {
-        guard !UserDefaults.standard.bool(forKey: strippedUnusedStarterExtrasKey) else { return }
+        guard !AppDefaults.local.bool(forKey: strippedUnusedStarterExtrasKey) else { return }
         let changed = stripUnusedStarterExtras(context: context)
-        UserDefaults.standard.set(true, forKey: strippedUnusedStarterExtrasKey)
+        AppDefaults.local.set(true, forKey: strippedUnusedStarterExtrasKey)
         if changed {
             persistDayPlanSnapshot(context: context)
         }
@@ -1128,7 +1128,7 @@ struct SeedData {
     /// Insert catalog lifts missing from the library **only when** the catalog version
     /// increased. If a user deletes a stock lift, it must not reappear on every launch.
     static func topUpCatalogIfNeeded(context: ModelContext) {
-        let installedVersion = UserDefaults.standard.integer(forKey: catalogVersionKey)
+        let installedVersion = AppDefaults.local.integer(forKey: catalogVersionKey)
         guard installedVersion < catalogVersion else { return }
 
         let existing = (try? context.fetch(FetchDescriptor<Exercise>())) ?? []
@@ -1146,7 +1146,7 @@ struct SeedData {
             )
             ModelSave.logged(context, action: "SeedData")
         }
-        UserDefaults.standard.set(catalogVersion, forKey: catalogVersionKey)
+        AppDefaults.local.set(catalogVersion, forKey: catalogVersionKey)
     }
 
     /// - Parameter assignCatalogDays: When true (legacy), tags every lift with its

@@ -57,7 +57,7 @@ final class HealthKitWorkoutService {
     }
 
     private var persistedStartDate: Date? {
-        UserDefaults.standard.object(forKey: kHKWorkoutStartDate) as? Date
+        AppDefaults.local.object(forKey: kHKWorkoutStartDate) as? Date
     }
 
     init() {
@@ -169,7 +169,7 @@ final class HealthKitWorkoutService {
         } else {
             // Stale start from a killed session belongs to that workout's Finish,
             // not a brand-new Start (which would write a multi-hour Health ghost).
-            UserDefaults.standard.removeObject(forKey: kHKWorkoutStartDate)
+            AppDefaults.local.removeObject(forKey: kHKWorkoutStartDate)
             sessionStartDate = nil
         }
 
@@ -211,8 +211,8 @@ final class HealthKitWorkoutService {
 
         isSessionActive = true
 
-        UserDefaults.standard.set(true, forKey: kIsHKSessionActive)
-        UserDefaults.standard.set(startDate, forKey: kHKWorkoutStartDate)
+        AppDefaults.local.set(true, forKey: kIsHKSessionActive)
+        AppDefaults.local.set(startDate, forKey: kHKWorkoutStartDate)
 
         startElapsedTimer()
     }
@@ -294,12 +294,12 @@ final class HealthKitWorkoutService {
     }
 
     func cleanUpOrphanedState() {
-        let wasActive = UserDefaults.standard.bool(forKey: kIsHKSessionActive)
+        let wasActive = AppDefaults.local.bool(forKey: kIsHKSessionActive)
         // After a kill, workoutSession is nil even if the gym session continues.
         // Keep the start date so finish can write a full-length Health workout.
         if wasActive && workoutSession == nil && workoutBuilder == nil {
             isSessionActive = false
-            UserDefaults.standard.set(false, forKey: kIsHKSessionActive)
+            AppDefaults.local.set(false, forKey: kIsHKSessionActive)
         }
     }
 
@@ -516,8 +516,8 @@ final class HealthKitWorkoutService {
         heartRate = nil
         elapsedSeconds = 0
 
-        UserDefaults.standard.set(false, forKey: kIsHKSessionActive)
-        UserDefaults.standard.removeObject(forKey: kHKWorkoutStartDate)
+        AppDefaults.local.set(false, forKey: kIsHKSessionActive)
+        AppDefaults.local.removeObject(forKey: kHKWorkoutStartDate)
     }
 }
 

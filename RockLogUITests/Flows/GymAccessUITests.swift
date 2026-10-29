@@ -15,7 +15,8 @@ final class GymAccessUITests: RockLogUITestCase {
         element(UITestID.settingsGyms).tap()
         scrollUntilHittable(element(UITestID.settingsGymAccess))
         element(UITestID.settingsGymAccess).tap()
-        let add = waitFor(UITestID.gymAccessAdd)
+        let add = element(UITestID.gymAccessAdd)
+        scrollUntilHittable(add)
         add.tap()
         let name = waitFor(UITestID.gymAccessName)
         name.tap()
@@ -25,6 +26,10 @@ final class GymAccessUITests: RockLogUITestCase {
         code.typeText("12345")
         waitFor(UITestID.gymAccessSave).tap()
         XCTAssertTrue(element(UITestID.gymAccessRow("UI Gym")).waitForExistence(timeout: 4))
+        // Isolated defaults: only the gym this test just added, no leftovers.
+        let gymRows = app.descendants(matching: .any)
+            .matching(identifier: UITestID.gymAccessRow("UI Gym"))
+        XCTAssertEqual(gymRows.count, 1, "Expected exactly one UI Gym row; storage is leaking between launches")
 
         tapTab("Workout")
         waitFor(UITestID.todayGymPass).tap()

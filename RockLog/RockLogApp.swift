@@ -30,6 +30,8 @@ struct RockLogApp: App {
             } else if let container {
                 ContentView()
                     .modelContainer(container)
+                    // @AppStorage reads the same store as AppDefaults (an isolated suite in UI tests).
+                    .defaultAppStorage(AppDefaults.local)
             } else if let storeError {
                 RockLogLaunchPlaceholder(showsProgress: false)
                     .overlay(alignment: .bottom) {

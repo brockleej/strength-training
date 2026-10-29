@@ -1141,7 +1141,7 @@ final class WorkoutViewModel {
     }
 
     func suggestion(for exercise: Exercise, mode: TrainingMode) -> ProgressionSuggestion? {
-        let raw = UserDefaults.standard.string(forKey: "progressionAggressiveness") ?? ""
+        let raw = AppDefaults.local.string(forKey: "progressionAggressiveness") ?? ""
         let aggressiveness = ProgressionAggressiveness(rawValue: raw) ?? .moderate
         return ProgressionService.suggestion(
             for: exercise,

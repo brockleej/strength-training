@@ -71,7 +71,7 @@ final class GymMembershipStore {
         loadMerged()
         kvsObserver = NotificationCenter.default.addObserver(
             forName: NSUbiquitousKeyValueStore.didChangeExternallyNotification,
-            object: NSUbiquitousKeyValueStore.default,
+            object: AppDefaults.cloud,
             queue: .main
         ) { [weak self] note in
             self?.applyExternalChange(note)
@@ -97,8 +97,8 @@ final class GymMembershipStore {
         isApplyingRemote = true
         defer { isApplyingRemote = false }
 
-        let defaults = UserDefaults.standard
-        let kvs = NSUbiquitousKeyValueStore.default
+        let defaults = AppDefaults.local
+        let kvs = AppDefaults.cloud
 
         // Prefer non-empty iCloud value so reinstall recovers the pass.
         code = firstNonEmpty(
@@ -137,13 +137,13 @@ final class GymMembershipStore {
 
     private func persistIfNeeded(_ value: String, key: String, old: String) {
         guard !isApplyingRemote, value != old else { return }
-        UserDefaults.standard.set(value, forKey: key)
-        NSUbiquitousKeyValueStore.default.set(value, forKey: key)
+        AppDefaults.local.set(value, forKey: key)
+        AppDefaults.cloud.set(value, forKey: key)
     }
 
     private func persistAll() {
-        let defaults = UserDefaults.standard
-        let kvs = NSUbiquitousKeyValueStore.default
+        let defaults = AppDefaults.local
+        let kvs = AppDefaults.cloud
         defaults.set(code, forKey: Self.codeKey)
         defaults.set(label, forKey: Self.labelKey)
         defaults.set(formatRaw, forKey: Self.formatKey)

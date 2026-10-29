@@ -146,7 +146,7 @@ enum UITestLaunch {
     /// UserDefaults only. Does not write iCloud KVS — a UI test must not
     /// publish a split into the signed-in tester's account.
     static func prepareDefaults() {
-        let defaults = UserDefaults.standard
+        let defaults = AppDefaults.local
         let arguments = ProcessInfo.processInfo.arguments
         let unit = massUnit(arguments: arguments)
         defaults.set(unit.rawValue, forKey: MassUnitPreferences.key)

@@ -15,12 +15,12 @@ enum CoachAthletePreferences {
 
     nonisolated static var displayName: String {
         get {
-            let stored = UserDefaults.standard.string(forKey: nameKey) ?? ""
+            let stored = AppDefaults.local.string(forKey: nameKey) ?? ""
             let trimmed = stored.trimmingCharacters(in: .whitespacesAndNewlines)
             return trimmed.isEmpty ? defaultDisplayName : trimmed
         }
         set {
-            UserDefaults.standard.set(
+            AppDefaults.local.set(
                 newValue.trimmingCharacters(in: .whitespacesAndNewlines),
                 forKey: nameKey
             )
@@ -29,28 +29,28 @@ enum CoachAthletePreferences {
 
     /// Raw field for Settings — empty means the default label is used on export.
     nonisolated static var displayNameDraft: String {
-        get { UserDefaults.standard.string(forKey: nameKey) ?? "" }
-        set { UserDefaults.standard.set(newValue, forKey: nameKey) }
+        get { AppDefaults.local.string(forKey: nameKey) ?? "" }
+        set { AppDefaults.local.set(newValue, forKey: nameKey) }
     }
 
     nonisolated static var athleteID: UUID {
-        if let raw = UserDefaults.standard.string(forKey: idKey), let id = UUID(uuidString: raw) {
+        if let raw = AppDefaults.local.string(forKey: idKey), let id = UUID(uuidString: raw) {
             return id
         }
         let id = UUID()
-        UserDefaults.standard.set(id.uuidString, forKey: idKey)
+        AppDefaults.local.set(id.uuidString, forKey: idKey)
         return id
     }
 
     /// Master switch. Off hides send controls and auto-send.
     nonisolated static var isEnabled: Bool {
-        get { UserDefaults.standard.bool(forKey: enabledKey) }
-        set { UserDefaults.standard.set(newValue, forKey: enabledKey) }
+        get { AppDefaults.local.bool(forKey: enabledKey) }
+        set { AppDefaults.local.set(newValue, forKey: enabledKey) }
     }
 
     nonisolated static var shareAfterFinish: Bool {
-        get { UserDefaults.standard.bool(forKey: shareAfterFinishKey) }
-        set { UserDefaults.standard.set(newValue, forKey: shareAfterFinishKey) }
+        get { AppDefaults.local.bool(forKey: shareAfterFinishKey) }
+        set { AppDefaults.local.set(newValue, forKey: shareAfterFinishKey) }
     }
 
     nonisolated static var shouldOfferAfterFinish: Bool {

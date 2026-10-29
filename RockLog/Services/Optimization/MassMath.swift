@@ -109,21 +109,21 @@ nonisolated final class MemoryMassUnitStore: MassUnitStoring, @unchecked Sendabl
 nonisolated final class ProductionMassUnitStore: MassUnitStoring {
     var unit: MassUnit {
         get {
-            let local = UserDefaults.standard.string(forKey: MassUnitPreferences.key)
-            let cloud = NSUbiquitousKeyValueStore.default.string(forKey: MassUnitPreferences.key)
+            let local = AppDefaults.local.string(forKey: MassUnitPreferences.key)
+            let cloud = AppDefaults.cloud.string(forKey: MassUnitPreferences.key)
             let reading = MassUnitResolution.resolve(local: local, cloud: cloud)
             if let writeLocal = reading.writeLocal {
-                UserDefaults.standard.set(writeLocal, forKey: MassUnitPreferences.key)
+                AppDefaults.local.set(writeLocal, forKey: MassUnitPreferences.key)
             }
             if let writeCloud = reading.writeCloud {
-                NSUbiquitousKeyValueStore.default.set(writeCloud, forKey: MassUnitPreferences.key)
+                AppDefaults.cloud.set(writeCloud, forKey: MassUnitPreferences.key)
             }
             return reading.unit
         }
         set {
             let raw = newValue.rawValue
-            UserDefaults.standard.set(raw, forKey: MassUnitPreferences.key)
-            NSUbiquitousKeyValueStore.default.set(raw, forKey: MassUnitPreferences.key)
+            AppDefaults.local.set(raw, forKey: MassUnitPreferences.key)
+            AppDefaults.cloud.set(raw, forKey: MassUnitPreferences.key)
         }
     }
 }
@@ -166,7 +166,7 @@ nonisolated enum MassUnitPreferences {
     /// choice that iCloud does not have yet. No-ops in tests.
     static func pullFromCloud() {
         guard !isIsolatedFromCloud else { return }
-        NSUbiquitousKeyValueStore.default.synchronize()
+        AppDefaults.cloud.synchronize()
         _ = unit
     }
 

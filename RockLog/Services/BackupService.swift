@@ -857,19 +857,19 @@ struct BackupService {
     /// from the store that did commit.
     @MainActor
     static func markRestorePreferencesPending() {
-        UserDefaults.standard.set(true, forKey: restorePreferencesPendingKey)
+        AppDefaults.local.set(true, forKey: restorePreferencesPendingKey)
     }
 
     @MainActor
     static func clearRestorePreferencesPending() {
-        UserDefaults.standard.set(false, forKey: restorePreferencesPendingKey)
+        AppDefaults.local.set(false, forKey: restorePreferencesPendingKey)
     }
 
     /// Rebuild UserDefaults mirrors from the store when a restore saved the
     /// rows and then died before the preference write.
     @MainActor
     static func recoverRestorePreferencesIfNeeded(context: ModelContext) {
-        guard UserDefaults.standard.bool(forKey: restorePreferencesPendingKey) else { return }
+        guard AppDefaults.local.bool(forKey: restorePreferencesPendingKey) else { return }
         SeedData.persistDayPlanSnapshot(context: context)
         SeedData.persistSplitSnapshot(context: context)
         SeedData.markCatalogSeeded()
@@ -921,7 +921,7 @@ struct BackupService {
 
         let used = Set(names.map { $0.lowercased() })
         let preset = matchingPreset(for: used)
-            ?? SplitPreset(rawValue: UserDefaults.standard.string(forKey: SeedData.preferredSplitPresetKey) ?? "")
+            ?? SplitPreset(rawValue: AppDefaults.local.string(forKey: SeedData.preferredSplitPresetKey) ?? "")
         if let preset {
             let ordered = preset.definitions.map(\.name).filter { used.contains($0.lowercased()) }
             let extras = names.filter { name in

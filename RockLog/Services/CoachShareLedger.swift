@@ -11,11 +11,11 @@ enum CoachShareLedger {
 
     nonisolated static var sharedIDs: Set<UUID> {
         get {
-            let raw = UserDefaults.standard.stringArray(forKey: idsKey) ?? []
+            let raw = AppDefaults.local.stringArray(forKey: idsKey) ?? []
             return Set(raw.compactMap(UUID.init(uuidString:)))
         }
         set {
-            UserDefaults.standard.set(newValue.map(\.uuidString).sorted(), forKey: idsKey)
+            AppDefaults.local.set(newValue.map(\.uuidString).sorted(), forKey: idsKey)
         }
     }
 

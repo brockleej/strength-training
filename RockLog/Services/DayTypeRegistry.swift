@@ -92,7 +92,7 @@ final class DayTypeRegistry {
                         }
                 )
             } else {
-                let raw = UserDefaults.standard.string(forKey: SeedData.preferredSplitPresetKey) ?? ""
+                let raw = AppDefaults.local.string(forKey: SeedData.preferredSplitPresetKey) ?? ""
                 definitions = Self.uniquedDefinitions(
                     (SplitPreset(rawValue: raw) ?? .broSplit).definitions
                 )

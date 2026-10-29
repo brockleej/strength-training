@@ -48,35 +48,35 @@ enum SplitSchedulePreferences {
 
     static var mode: SplitScheduleMode {
         get {
-            let raw = UserDefaults.standard.string(forKey: modeKey) ?? ""
+            let raw = AppDefaults.local.string(forKey: modeKey) ?? ""
             return SplitScheduleMode(rawValue: raw) ?? .rolling
         }
         set {
-            UserDefaults.standard.set(newValue.rawValue, forKey: modeKey)
+            AppDefaults.local.set(newValue.rawValue, forKey: modeKey)
         }
     }
 
     /// Day names still owed from a prior incomplete week (weekly mode).
     static var carryoverDayNames: [String] {
         get {
-            (UserDefaults.standard.string(forKey: carryoverKey) ?? "")
+            (AppDefaults.local.string(forKey: carryoverKey) ?? "")
                 .split(separator: ",")
                 .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
                 .filter { !$0.isEmpty }
         }
         set {
-            UserDefaults.standard.set(newValue.joined(separator: ","), forKey: carryoverKey)
+            AppDefaults.local.set(newValue.joined(separator: ","), forKey: carryoverKey)
         }
     }
 
     /// ISO date string for the Monday of a week we already prompted.
     static var promptedWeekStartID: String? {
-        get { UserDefaults.standard.string(forKey: promptWeekKey) }
+        get { AppDefaults.local.string(forKey: promptWeekKey) }
         set {
             if let newValue {
-                UserDefaults.standard.set(newValue, forKey: promptWeekKey)
+                AppDefaults.local.set(newValue, forKey: promptWeekKey)
             } else {
-                UserDefaults.standard.removeObject(forKey: promptWeekKey)
+                AppDefaults.local.removeObject(forKey: promptWeekKey)
             }
         }
     }

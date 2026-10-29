@@ -14,14 +14,14 @@ enum BodyWeightPreferences {
     /// 0 means not set.
     static var pounds: Double {
         get {
-            let value = UserDefaults.standard.double(forKey: poundsKey)
+            let value = AppDefaults.local.double(forKey: poundsKey)
             return value > 0 ? value : 0
         }
         set {
             if newValue > 0 {
-                UserDefaults.standard.set(newValue, forKey: poundsKey)
+                AppDefaults.local.set(newValue, forKey: poundsKey)
             } else {
-                UserDefaults.standard.removeObject(forKey: poundsKey)
+                AppDefaults.local.removeObject(forKey: poundsKey)
             }
         }
     }
@@ -41,10 +41,10 @@ enum ExerciseAssistPreferences {
     }
 
     static func prefersAssist(for id: UUID) -> Bool {
-        UserDefaults.standard.bool(forKey: key(for: id))
+        AppDefaults.local.bool(forKey: key(for: id))
     }
 
     static func setPrefersAssist(_ enabled: Bool, for id: UUID) {
-        UserDefaults.standard.set(enabled, forKey: key(for: id))
+        AppDefaults.local.set(enabled, forKey: key(for: id))
     }
 }

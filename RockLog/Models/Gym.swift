@@ -105,8 +105,8 @@ enum GymLibrary {
             context.delete(profile)
         }
         context.delete(gym)
-        if UserDefaults.standard.string(forKey: activeKey) == id.uuidString {
-            UserDefaults.standard.removeObject(forKey: activeKey)
+        if AppDefaults.local.string(forKey: activeKey) == id.uuidString {
+            AppDefaults.local.removeObject(forKey: activeKey)
         }
         ModelSave.logged(context, action: "Gym")
     }
@@ -115,17 +115,17 @@ enum GymLibrary {
     static func activeID(in context: ModelContext) -> UUID {
         guard storeHasGyms(context) else { return UUID() }
         let home = ensureHome(in: context)
-        if let raw = UserDefaults.standard.string(forKey: activeKey),
+        if let raw = AppDefaults.local.string(forKey: activeKey),
            let id = UUID(uuidString: raw),
            ((try? context.fetch(FetchDescriptor<Gym>())) ?? []).contains(where: { $0.id == id }) {
             return id
         }
-        UserDefaults.standard.set(home.id.uuidString, forKey: activeKey)
+        AppDefaults.local.set(home.id.uuidString, forKey: activeKey)
         return home.id
     }
 
     @MainActor
     static func select(_ gym: Gym) {
-        UserDefaults.standard.set(gym.id.uuidString, forKey: activeKey)
+        AppDefaults.local.set(gym.id.uuidString, forKey: activeKey)
     }
 }

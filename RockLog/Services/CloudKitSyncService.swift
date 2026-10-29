@@ -35,7 +35,7 @@ final class CloudKitSyncService {
     private let log = Logger(subsystem: "com.lee.lift2026", category: "CloudKit")
 
     init() {
-        lastSyncDate = UserDefaults.standard.object(forKey: "lastCloudKitSyncDate") as? Date
+        lastSyncDate = AppDefaults.local.object(forKey: "lastCloudKitSyncDate") as? Date
         guard Self.isEnabled else {
             accountStatus = .couldNotDetermine
             hasCheckedAccount = true
@@ -166,7 +166,7 @@ final class CloudKitSyncService {
             syncError = nil
             lastExportWarning = nil
             lastSyncDate = event.endDate
-            UserDefaults.standard.set(event.endDate, forKey: "lastCloudKitSyncDate")
+            AppDefaults.local.set(event.endDate, forKey: "lastCloudKitSyncDate")
             return
         }
 
