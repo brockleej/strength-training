@@ -20,7 +20,18 @@ final class SettingsAndEdgesUITests: RockLogUITestCase {
         waitFor(UITestID.workoutPrograms).tap()
         XCTAssertTrue(element(UITestID.settingsEditSplit).waitForExistence(timeout: 8))
         XCTAssertTrue(element(UITestID.settingsAddPlanned).exists)
-        XCTAssertTrue(element(UITestID.settingsImportSplit).exists)
+        // On iPhone SE the Import split row sits below the fold of the lazy List.
+        let hierarchy = XCTAttachment(string: app.debugDescription)
+        hierarchy.name = "Programs hierarchy before scroll"
+        hierarchy.lifetime = .keepAlways
+        add(hierarchy)
+        let importSplit = element(UITestID.settingsImportSplit)
+        let scrollStart = Date()
+        scrollUntilHittable(importSplit, maxSwipes: 4)
+        XCTAssertLessThan(Date().timeIntervalSince(scrollStart), 5,
+                          "Scrolling to Import split took over 5s; Programs may be unresponsive")
+        XCTAssertTrue(importSplit.isHittable,
+                      "Import split is not hittable after 4 swipes on Programs")
     }
 
     func test_dynamicType_accessibility5_startStaysHittable() {

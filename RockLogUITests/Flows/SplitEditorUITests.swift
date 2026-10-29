@@ -189,8 +189,17 @@ final class SplitEditorUITests: RockLogUITestCase {
         let idle = expectation(description: "split editor idle")
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) { idle.fulfill() }
         wait(for: [idle], timeout: 3)
+        let afterCounts = names.map { bodyCount($0) }
+        let report = names.enumerated().map { i, n in
+            "\(n): before=\(before[i]) after=\(afterCounts[i]) idleDelta=\(afterCounts[i] - before[i])"
+        }.joined(separator: "\n")
+        print("[RLDIAG-COUNTS]\n" + report)
+        let countsAttachment = XCTAttachment(string: report)
+        countsAttachment.name = "Split editor body counts"
+        countsAttachment.lifetime = .keepAlways
+        add(countsAttachment)
         for (index, name) in names.enumerated() {
-            let after = bodyCount(name)
+            let after = afterCounts[index]
             XCTAssertLessThan(
                 after - before[index],
                 5,
