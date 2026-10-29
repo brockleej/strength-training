@@ -52,10 +52,34 @@ class RockLogUITestCase: XCTestCase {
         return log
     }
 
+    /// Accessibility identifiers SwiftUI gives each tab button (its SF Symbol).
+    /// Used only when the tabs are not inside a tab bar (e.g. the side rail on
+    /// wide iPhones such as iPhone Duo).
+    static let tabIdentifiers: [String: String] = [
+        "Workout": "dumbbell",
+        "History": "clock",
+        "Progress": "chart.line.uptrend.xyaxis",
+        "Exercises": "list.bullet",
+        "Settings": "gear",
+    ]
+
     func tapTab(_ name: String) {
-        let tab = app.tabBars.buttons[name]
-        XCTAssertTrue(tab.waitForExistence(timeout: 8), "Missing tab \(name)")
-        tab.tap()
+        let barTab = app.tabBars.buttons[name]
+        if barTab.waitForExistence(timeout: 4) {
+            barTab.tap()
+            return
+        }
+        guard let identifier = Self.tabIdentifiers[name] else {
+            XCTFail("Missing tab \(name) (no tab bar, no known identifier)")
+            return
+        }
+        let matches = app.buttons.matching(identifier: identifier)
+        _ = matches.firstMatch.waitForExistence(timeout: 4)
+        let hittable = matches.allElementsBoundByIndex.filter { $0.exists && $0.isHittable }
+        XCTAssertEqual(hittable.count, 1,
+                       "Missing tab \(name): expected exactly one hittable '\(identifier)' button, found \(hittable.count)")
+        guard hittable.count == 1 else { return }
+        hittable[0].tap()
     }
 
     func dismissAlert(button title: String, timeout: TimeInterval = 8) {
