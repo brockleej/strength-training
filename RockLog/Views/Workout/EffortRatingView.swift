@@ -74,7 +74,11 @@ struct EffortRatingView: View {
                 let dotSize: CGFloat = 4
                 let dotAreaWidth = dotCount * (dotSize + barSpacing * 2)
                 let totalBarSpacing = barSpacing * CGFloat(barCount - 1)
-                let barWidth = (geo.size.width - totalBarSpacing - dotAreaWidth) / CGFloat(barCount)
+                let barWidth = EffortRatingView.barWidth(
+                    available: geo.size.width,
+                    spacing: totalBarSpacing + dotAreaWidth,
+                    count: barCount
+                )
 
                 HStack(alignment: .bottom, spacing: barSpacing) {
                     ForEach(1...barCount, id: \.self) { index in
@@ -185,5 +189,15 @@ struct EffortRatingView: View {
             )
         }
         return AnyShapeStyle(Color.uplift.bgElev)
+    }
+}
+
+extension EffortRatingView {
+    /// Width for one bar. The first layout pass can report a zero or
+    /// non-finite width; SwiftUI warns on a negative or non-finite frame.
+    nonisolated static func barWidth(available: CGFloat, spacing: CGFloat, count: Int) -> CGFloat {
+        guard count > 0, available.isFinite, spacing.isFinite else { return 0 }
+        let width = (available - spacing) / CGFloat(count)
+        return width.isFinite ? max(0, width) : 0
     }
 }
