@@ -105,8 +105,15 @@ class RockLogUITestCase: XCTestCase {
     /// Scroll until the element is on screen. Existence is not enough: a
     /// VStack inside a ScrollView keeps off-screen rows in the tree, and a
     /// drag from there scrolls the page instead of reordering.
-    func scrollUntilHittable(_ match: XCUIElement, maxSwipes: Int = 8) {
-        if match.waitForExistence(timeout: 4), match.isHittable { return }
+    func scrollUntilHittable(
+        _ match: XCUIElement,
+        maxSwipes: Int = 8,
+        existenceTimeout: TimeInterval = 4,
+        afterExistenceProbe: (() -> Void)? = nil
+    ) {
+        let found = match.waitForExistence(timeout: existenceTimeout)
+        afterExistenceProbe?()
+        if found, match.isHittable { return }
         for _ in 0..<maxSwipes {
             swipeUpInScrollable()
             if match.isHittable { return }

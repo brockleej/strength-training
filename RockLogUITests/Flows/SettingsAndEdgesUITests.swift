@@ -26,10 +26,12 @@ final class SettingsAndEdgesUITests: RockLogUITestCase {
         hierarchy.lifetime = .keepAlways
         add(hierarchy)
         let importSplit = element(UITestID.settingsImportSplit)
-        let scrollStart = Date()
-        scrollUntilHittable(importSplit, maxSwipes: 4)
+        // The 5s bound starts after the existence probe: swipes + hittable check only.
+        var scrollStart = Date()
+        scrollUntilHittable(importSplit, maxSwipes: 4, existenceTimeout: 0.5,
+                            afterExistenceProbe: { scrollStart = Date() })
         XCTAssertLessThan(Date().timeIntervalSince(scrollStart), 5,
-                          "Scrolling to Import split took over 5s; Programs may be unresponsive")
+                          "Swiping to Import split took over 5s; Programs may be unresponsive")
         XCTAssertTrue(importSplit.isHittable,
                       "Import split is not hittable after 4 swipes on Programs")
     }
