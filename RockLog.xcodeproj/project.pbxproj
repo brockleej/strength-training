@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A0DE0001AD0F0000000000B1 /* AppDefaultsIsolationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0DE0001AD0F0000000000F1 /* AppDefaultsIsolationTests.swift */; };
 		023DF2513891F3465C785A7B /* LoaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E75D110844E6FE14A1B67FD5 /* LoaderView.swift */; };
 		058F457680F9F458E2562E70 /* ProgressionParameters.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7455DAD78FC12D62CD5226C5 /* ProgressionParameters.swift */; };
 		06EAF8373D2C66680087860B /* BackupModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C9B1F409EF0053F85ACE816 /* BackupModels.swift */; };
@@ -149,6 +150,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		A0DE0001AD0F0000000000F1 /* AppDefaultsIsolationTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppDefaultsIsolationTests.swift; sourceTree = "<group>"; };
 		0A503B4DC340838FA30BCFC0 /* BackupLoader.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BackupLoader.swift; sourceTree = "<group>"; };
 		0FE94BB865292C869CD64F4F /* BackupLoaderTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BackupLoaderTests.swift; sourceTree = "<group>"; };
 		165BF58640500A519020F992 /* ParameterPanel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ParameterPanel.swift; sourceTree = "<group>"; };
@@ -448,6 +450,7 @@
 				C9D0E12F3A4B5C6D7E8F9011 /* CloudKitErrorFormattingTests.swift */,
 				C8E4F1A29B0D4E6F8A1C3D5E /* SplitScheduleLogicTests.swift */,
 				EB1C5CC453A0B417B4B47C31 /* WorkoutFormatTests.swift */,
+				A0DE0001AD0F0000000000F1 /* AppDefaultsIsolationTests.swift */,
 				2C13DB8B2815F5DFA66CB019 /* E1RMDetectionTests.swift */,
 				A9D1927AD35565C0B0F0CB4D /* EffortScaleTests.swift */,
 				A1B2C3D4E5F60718293A4B5C /* BodyCompositionMathTests.swift */,
@@ -920,6 +923,7 @@
 				C9D0E12F3A4B5C6D7E8F9012 /* CloudKitErrorFormattingTests.swift in Sources */,
 				D9F5A2B30C1E5F708B2D4E6F /* SplitScheduleLogicTests.swift in Sources */,
 				52260489A0E5F8F397C552CE /* WorkoutFormatTests.swift in Sources */,
+				A0DE0001AD0F0000000000B1 /* AppDefaultsIsolationTests.swift in Sources */,
 				08F2D596CD1C0AF37A4D316E /* E1RMDetectionTests.swift in Sources */,
 				E817E9DE7E0C2E2F33F7A626 /* EffortScaleTests.swift in Sources */,
 				B2C3D4E5F60718293A4B5C6D /* BodyCompositionMathTests.swift in Sources */,

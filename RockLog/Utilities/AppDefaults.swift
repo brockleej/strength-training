@@ -76,6 +76,9 @@ nonisolated enum AppDefaults {
             return Stores(local: .standard, cloud: NSUbiquitousKeyValueStore.default, suiteName: nil)
         }
         let name = suitePrefix + UUID().uuidString
+        #if DEBUG
+        pruneStaleSuites(current: name, preferencesDirectory: preferencesDirectory)
+        #endif
         let suite = UserDefaults(suiteName: name)!
         suite.removePersistentDomain(forName: name)
         let stores = Stores(local: suite, cloud: MemoryCloudStore(), suiteName: name)
@@ -86,6 +89,41 @@ nonisolated enum AppDefaults {
         ) { _ in tearDown(stores) }
         return stores
     }
+
+    static var preferencesDirectory: URL {
+        URL(fileURLWithPath: NSHomeDirectory())
+            .appendingPathComponent("Library/Preferences", isDirectory: true)
+    }
+
+    /// Old test suites left by earlier launches (XCUITest kills the app, so
+    /// willTerminate never runs). Matches only `RockLogUITest-*`, never the
+    /// current launch, `.standard`, or the bundle-id domain.
+    static func staleSuiteNames(in directory: URL, excluding current: String) -> [String] {
+        let files = (try? FileManager.default.contentsOfDirectory(atPath: directory.path)) ?? []
+        let bundleID = Bundle.main.bundleIdentifier ?? ""
+        return files.compactMap { file -> String? in
+            guard file.hasSuffix(".plist") else { return nil }
+            let name = String(file.dropLast(".plist".count))
+            guard name.hasPrefix(suitePrefix), name != current, name != bundleID else { return nil }
+            return name
+        }.sorted()
+    }
+
+    #if DEBUG
+    /// UI-test launches only (callers are behind `isTestLaunch`).
+    @discardableResult
+    static func pruneStaleSuites(current: String, preferencesDirectory directory: URL) -> [String] {
+        let names = staleSuiteNames(in: directory, excluding: current)
+        for name in names {
+            UserDefaults().removePersistentDomain(forName: name)
+            let file = directory.appendingPathComponent(name + ".plist")
+            if FileManager.default.fileExists(atPath: file.path) {
+                try? FileManager.default.removeItem(at: file)
+            }
+        }
+        return names
+    }
+    #endif
 
     /// Drops an isolated suite. Never touches `.standard` or iCloud.
     static func tearDown(_ stores: Stores) {

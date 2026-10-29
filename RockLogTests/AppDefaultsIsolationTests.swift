@@ -51,4 +51,31 @@ final class AppDefaultsIsolationTests: XCTestCase {
         // The unit-test host launches without -RockLogUITesting.
         XCTAssertFalse(AppDefaults.isIsolated)
     }
+
+    func test_staleSuiteCleanup_neverTouchesStandardOrBundleDomain() throws {
+        let fm = FileManager.default
+        let dir = fm.temporaryDirectory.appendingPathComponent("prefs-\(UUID().uuidString)", isDirectory: true)
+        try fm.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: dir) }
+        let bundleID = Bundle.main.bundleIdentifier ?? "com.lee.lift2026"
+        let current = AppDefaults.suitePrefix + "CURRENT"
+        let stale = AppDefaults.suitePrefix + "OLD"
+        for name in [bundleID, ".GlobalPreferences", current, stale, "RockLogUITestNoDash"] {
+            try Data("x".utf8).write(to: dir.appendingPathComponent(name + ".plist"))
+        }
+        let probeKey = "rocklog.cleanupProbe.\(UUID().uuidString)"
+        UserDefaults.standard.set("keep", forKey: probeKey)
+        defer { UserDefaults.standard.removeObject(forKey: probeKey) }
+
+        XCTAssertEqual(AppDefaults.staleSuiteNames(in: dir, excluding: current), [stale])
+        let removed = AppDefaults.pruneStaleSuites(current: current, preferencesDirectory: dir)
+
+        XCTAssertEqual(removed, [stale])
+        XCTAssertFalse(removed.contains(bundleID))
+        XCTAssertFalse(removed.contains(current))
+        XCTAssertFalse(fm.fileExists(atPath: dir.appendingPathComponent(stale + ".plist").path))
+        XCTAssertTrue(fm.fileExists(atPath: dir.appendingPathComponent(bundleID + ".plist").path))
+        XCTAssertTrue(fm.fileExists(atPath: dir.appendingPathComponent(current + ".plist").path))
+        XCTAssertEqual(UserDefaults.standard.string(forKey: probeKey), "keep")
+    }
 }
