@@ -7,6 +7,7 @@
 
 import Foundation
 import SwiftData
+import os
 
 /// Schema of the store as it existed when versioning was introduced.
 ///
@@ -343,6 +344,14 @@ nonisolated enum RockLogMigrationPlan: SchemaMigrationPlan {
                 configurations: configurations
             )
         } catch let planned {
+            let ns = planned as NSError
+            // Only "unknown coordinator model version" (a V2 dev store not in the plan)
+            // falls back to inferred lightweight migration. Every other error is rethrown.
+            guard isUnknownModelVersion(planned) else {
+                throw planned
+            }
+            migrationLog.error("Planned open failed domain=\(ns.domain, privacy: .public) code=\(ns.code, privacy: .public); retrying without the plan")
+            fallbackCount.withLock { $0 += 1 }
             do {
                 return try ModelContainer(for: schema, configurations: configurations)
             } catch {
@@ -350,4 +359,23 @@ nonisolated enum RockLogMigrationPlan: SchemaMigrationPlan {
             }
         }
     }
+
+    /// True only for Core Data 134504 ("Cannot use staged migration with an unknown
+    /// model version"). SwiftData surfaces that one as SwiftDataError
+    /// .unknownDataStoreSchema with no underlying NSError, so both forms count.
+    nonisolated static func isUnknownModelVersion(_ error: Error) -> Bool {
+        let ns = error as NSError
+        if ns.domain == NSCocoaErrorDomain && ns.code == unknownModelVersionCode { return true }
+        if let swiftData = error as? SwiftDataError {
+            return String(describing: swiftData).contains("unknownDataStoreSchema")
+        }
+        return false
+    }
+
+    /// NSPersistentStoreIncompatibleVersionHashError-family code Core Data uses for
+    /// "unknown coordinator model version".
+    nonisolated static let unknownModelVersionCode = 134504
+    /// Times openContainer used the no-plan fallback in this process. Tests read it.
+    nonisolated static let fallbackCount = OSAllocatedUnfairLock(initialState: 0)
+    nonisolated private static let migrationLog = Logger(subsystem: "com.lee.lift2026", category: "migration")
 }

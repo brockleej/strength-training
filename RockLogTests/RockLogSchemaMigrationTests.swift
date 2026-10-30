@@ -110,6 +110,62 @@ final class RockLogSchemaMigrationTests: XCTestCase {
 
     /// A V2 file on disk, including a logged set, opens as V3 and keeps the row.
     /// Entered unit and value stay at the V3 defaults. Synthetic data only.
+    func test_v3Store_reopensThroughOpenContainer_withoutFallbackOrLoss() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("rocklog-v3-reopen-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appendingPathComponent("RockLog.store")
+        let schema = Schema(versionedSchema: RockLogSchemaV3.self)
+        let before = RockLogMigrationPlan.fallbackCount.withLock { $0 }
+        let setID = UUID(), gymID = UUID()
+        try open(schema: schema, url: url, migrationPlan: true)
+        do {
+            let c = container!.mainContext
+            let session = WorkoutSession(dayType: DayType(rawValue: "Push"))
+            let record = ExerciseRecord(trainingMode: .highWeightLowReps)
+            record.session = session
+            let set = SetRecord(setNumber: 1, weightLbs: 100, reps: 5, isWarmup: false, isEachSide: false, isAssisted: false, isTarget: false)
+            set.id = setID
+            set.stampEntered(45, unit: .kilograms)
+            set.exerciseRecord = record
+            let gym = Gym(name: "Synthetic Gym")
+            gym.id = gymID
+            c.insert(session); c.insert(record); c.insert(set); c.insert(gym)
+            try c.save()
+        }
+        container = nil
+        try open(schema: schema, url: url, migrationPlan: true)
+        let c = container!.mainContext
+        let sets = try c.fetch(FetchDescriptor<SetRecord>())
+        XCTAssertEqual(sets.map(\.id), [setID])
+        XCTAssertEqual(sets.first?.enteredUnitRaw, MassUnit.kilograms.rawValue)
+        XCTAssertNotNil(sets.first?.exerciseRecord?.session)
+        XCTAssertEqual(try c.fetch(FetchDescriptor<Gym>()).map(\.id), [gymID])
+        XCTAssertEqual(try c.fetchCount(FetchDescriptor<WorkoutSession>()), 1)
+        XCTAssertEqual(RockLogMigrationPlan.fallbackCount.withLock { $0 }, before, "A V3 store must open through the plan, not the fallback.")
+    }
+
+    func test_fallbackFilter_acceptsOnly134504() {
+        XCTAssertTrue(RockLogMigrationPlan.isUnknownModelVersion(NSError(domain: NSCocoaErrorDomain, code: 134504)))
+        XCTAssertFalse(RockLogMigrationPlan.isUnknownModelVersion(NSError(domain: NSCocoaErrorDomain, code: 134110)))
+        XCTAssertFalse(RockLogMigrationPlan.isUnknownModelVersion(NSError(domain: NSCocoaErrorDomain, code: 134100)))
+        XCTAssertFalse(RockLogMigrationPlan.isUnknownModelVersion(NSError(domain: "Other", code: 134504)))
+        XCTAssertFalse(RockLogMigrationPlan.isUnknownModelVersion(CocoaError(.fileReadNoPermission)))
+    }
+
+    func test_v2Store_usesFallback_for134504Only() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("rocklog-v2-fb-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appendingPathComponent("RockLog.store")
+        try writeVersionedV2Workout(url: url, exerciseID: UUID(), setID: UUID())
+        let before = RockLogMigrationPlan.fallbackCount.withLock { $0 }
+        try open(schema: Schema(versionedSchema: RockLogSchemaV3.self), url: url, migrationPlan: true)
+        XCTAssertEqual(RockLogMigrationPlan.fallbackCount.withLock { $0 }, before + 1)
+    }
+
     func test_v2OnDiskStore_migratesLoggedSetToV3() throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("rocklog-v2-set-\(UUID().uuidString)", isDirectory: true)

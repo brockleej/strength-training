@@ -83,8 +83,8 @@ struct OpenedBackup {
 }
 
 /// Repairs set ids that appear more than once in a backup (#56, Lee Oct 30).
-/// A later set that is identical in every field to the first set with its id is
-/// dropped. A later set with the same id but any different field is kept and
+/// A later set in the same exercise log that is identical in every field to the
+/// first set with its id is dropped (QA Check: never lose a real set). A later set with the same id but any different field is kept and
 /// given a fresh id. Nothing else refers to a set id (supersets use the exercise
 /// log's groupID, order uses setNumber), so no other reference needs remapping.
 enum BackupSetIDRepair {
@@ -107,7 +107,7 @@ enum BackupSetIDRepair {
                 }
             }
         }
-        var firstByID: [String: [String: JSONValue]] = [:]
+        var firstByID: [String: (set: [String: JSONValue], parent: String)] = [:]
         var removed = 0
         var renumbered = 0
         var newSessions: [JSONValue] = []
@@ -132,12 +132,18 @@ enum BackupSetIDRepair {
                         continue
                     }
                     let key = rawID.uppercased()
+                    let parent = (recordObject["id"].flatMap { value -> String? in
+                        if case .string(let id) = value { return id.uppercased() }
+                        return nil
+                    }) ?? ""
                     guard let first = firstByID[key] else {
-                        firstByID[key] = setObject
+                        firstByID[key] = (setObject, parent)
                         newSets.append(set)
                         continue
                     }
-                    if first == setObject {
+                    // Only same id + same exercise log + identical fields is a duplicate.
+                    // An identical set under another log is a real set: keep it, new id.
+                    if first.parent == parent && first.set == setObject {
                         removed += 1
                         continue
                     }
@@ -145,7 +151,7 @@ enum BackupSetIDRepair {
                     while allIDs.contains(fresh) { fresh = UUID().uuidString }
                     allIDs.insert(fresh)
                     setObject["id"] = .string(fresh)
-                    firstByID[fresh] = setObject
+                    firstByID[fresh] = (setObject, parent)
                     renumbered += 1
                     newSets.append(.object(setObject))
                 }

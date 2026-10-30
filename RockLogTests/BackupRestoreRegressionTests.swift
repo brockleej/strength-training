@@ -624,6 +624,19 @@ final class BackupRestoreRegressionTests: RockLogStoreTestCase {
         XCTAssertEqual(records.map(\.groupPosition), [1, 2])
     }
 
+    func test_dupSets_identicalSetUnderDifferentLog_isKeptWithNewID() throws {
+        let shared = UUID()
+        let backup = dupBackup([[dupSet(shared, number: 1)], [dupSet(shared, number: 1)]])
+        let report = try BackupService.restore(from: try encode(backup), context: context)
+        XCTAssertEqual(report.duplicateSetsRemoved, 0)
+        XCTAssertEqual(report.setsRenumbered, 1)
+        let sets = try restoredSets()
+        XCTAssertEqual(sets.count, 2, "A real set in another exercise log is never dropped.")
+        XCTAssertEqual(Set(sets.map(\.id)).count, 2)
+        let records = try context.fetch(FetchDescriptor<ExerciseRecord>())
+        XCTAssertEqual(records.map { $0.sets?.count ?? 0 }, [1, 1])
+    }
+
     func test_dupSets_none_noRepairAndNoNote() throws {
         let backup = dupBackup([[dupSet(UUID(), number: 1), dupSet(UUID(), number: 2)]])
         let report = try BackupService.restore(from: try encode(backup), context: context)
