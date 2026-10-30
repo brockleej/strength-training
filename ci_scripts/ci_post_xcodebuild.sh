@@ -19,8 +19,20 @@ unit_test_floor() {
     printf '%s\n' "$CI_EXPECTED_TEST_COUNT"
     return
   fi
-  count=$(grep -R --include='*.swift' -h -E '^[[:space:]]*func test_' "$ROOT/RockLogTests" 2>/dev/null | grep -c . || true)
-  printf '%s\n' "${count:-0}"
+  # test-without-building runs on a host where $ROOT may not hold the sources
+  # (Build 78: floor 0). Try the script's own checkout, then the committed floor.
+  script_root=$(CDPATH= cd -- "$(dirname "$0")/.." 2>/dev/null && pwd)
+  for dir in "$ROOT/RockLogTests" "$script_root/RockLogTests"; do
+    [ -d "$dir" ] || continue
+    count=$(grep -R --include='*.swift' -h -E '^[[:space:]]*func test_' "$dir" 2>/dev/null | grep -c . || true)
+    if [ "${count:-0}" -gt 0 ]; then printf '%s\n' "$count"; return; fi
+  done
+  committed="$(dirname "$0")/unit_test_floor.txt"
+  if [ -f "$committed" ]; then
+    echo "ci_post_xcodebuild: RockLogTests sources not found; using committed floor" >&2
+    tr -dc '0-9' < "$committed"; echo; return
+  fi
+  printf '0\n'
 }
 
 echo "ci_post_xcodebuild: CI_XCODEBUILD_ACTION=${CI_XCODEBUILD_ACTION:-unset} CI_BRANCH=${CI_BRANCH:-unset} CI_WORKFLOW=${CI_WORKFLOW:-unset}"

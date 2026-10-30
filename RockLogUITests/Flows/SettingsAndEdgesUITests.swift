@@ -14,12 +14,18 @@ final class SettingsAndEdgesUITests: RockLogUITestCase {
         element(UITestID.settingsDataBackup).tap()
         let restore = element(UITestID.settingsRestore)
         scrollUntilHittable(restore)
-        XCTAssertTrue(element(UITestID.settingsExport).exists)
+        let export = element(UITestID.settingsExport)
+        scrollUntilHittable(export)
+        XCTAssertTrue(export.isHittable, "Export is not hittable on Data & Backup")
         app.navigationBars.buttons["Settings"].tap()
         tapTab("Workout")
         waitFor(UITestID.workoutPrograms).tap()
         XCTAssertTrue(element(UITestID.settingsEditSplit).waitForExistence(timeout: 8))
-        XCTAssertTrue(element(UITestID.settingsAddPlanned).exists)
+        // Add planned heads the 4th lazy List section; on the SE it can be below the fold
+        // and absent from the accessibility tree, so scroll to it instead of an instant .exists.
+        let addPlanned = element(UITestID.settingsAddPlanned)
+        scrollUntilHittable(addPlanned)
+        XCTAssertTrue(addPlanned.isHittable, "Add planned is not hittable on Programs")
         // On iPhone SE the Import split row sits below the fold of the lazy List.
         let hierarchy = XCTAttachment(string: app.debugDescription)
         hierarchy.name = "Programs hierarchy before scroll"
