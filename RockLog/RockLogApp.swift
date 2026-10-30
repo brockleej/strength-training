@@ -72,10 +72,7 @@ struct RockLogApp: App {
         }
         #endif
         let schema = Schema(versionedSchema: RockLogSchemaV3.self)
-        let config = ModelConfiguration(
-            schema: schema,
-            cloudKitDatabase: .automatic
-        )
+        let config = RockLogMigrationPlan.storeConfiguration(schema: schema)
         do {
             container = try await Task.detached(priority: .userInitiated) {
                 try RockLogMigrationPlan.openContainer(

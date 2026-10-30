@@ -9,6 +9,15 @@ import Foundation
 import os
 import SwiftData
 
+/// Build-wide switches.
+nonisolated enum AppConfig {
+    /// iCloud (CloudKit) sync for the SwiftData store. OFF for the first TestFlight
+    /// build (Lee, Oct 30, 2026): no CloudKit schema is deployed, the store runs
+    /// on-device only, and Backup is how data is kept safe. When false, every
+    /// ModelConfiguration uses `cloudKitDatabase: .none` and no CKContainer is made.
+    static let cloudKitSyncEnabled = false
+}
+
 @Observable
 final class CloudKitSyncService {
     /// Must match the iCloud container in `RockLog.entitlements`
@@ -18,7 +27,7 @@ final class CloudKitSyncService {
     /// When false, never call CloudKit APIs — `accountStatus()` can hang forever
     /// without a configured iCloud container. Keep in sync with
     /// `ModelConfiguration(cloudKitDatabase:)` in `RockLogApp`.
-    static var isEnabled: Bool { true }
+    static var isEnabled: Bool { AppConfig.cloudKitSyncEnabled }
 
     private(set) var accountStatus: CKAccountStatus = .couldNotDetermine
     private(set) var isSyncing = false
@@ -31,7 +40,8 @@ final class CloudKitSyncService {
     private(set) var hasCheckedAccount = false
 
     private var observers: [Any] = []
-    private let container = CKContainer(identifier: CloudKitSyncService.containerIdentifier)
+    /// Created on first use only, which never happens while sync is off.
+    @ObservationIgnored private lazy var container = CKContainer(identifier: CloudKitSyncService.containerIdentifier)
     private let log = Logger(subsystem: "com.lee.lift2026", category: "CloudKit")
 
     init() {

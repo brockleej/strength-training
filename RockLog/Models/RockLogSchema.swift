@@ -360,6 +360,16 @@ nonisolated enum RockLogMigrationPlan: SchemaMigrationPlan {
         }
     }
 
+    /// The production store configuration. CloudKit mirroring only when
+    /// `AppConfig.cloudKitSyncEnabled`; otherwise on-device (`.none`).
+    nonisolated static func storeConfiguration(schema: Schema, url: URL? = nil) -> ModelConfiguration {
+        let database: ModelConfiguration.CloudKitDatabase = AppConfig.cloudKitSyncEnabled ? .automatic : .none
+        if let url {
+            return ModelConfiguration(schema: schema, url: url, cloudKitDatabase: database)
+        }
+        return ModelConfiguration(schema: schema, cloudKitDatabase: database)
+    }
+
     /// True only for Core Data 134504 ("Cannot use staged migration with an unknown
     /// model version"). SwiftData surfaces that one as SwiftDataError
     /// .unknownDataStoreSchema with no underlying NSError, so both forms count.

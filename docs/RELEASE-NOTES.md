@@ -24,9 +24,12 @@ Not merged to main and not on TestFlight. Adds on top of `a877aad`. Tester wordi
 
 - **Restore repairs repeated set ids** (Lee, Oct 30, #56): a set repeated in the same exercise log with identical fields is dropped; any other set sharing an id is kept under a new id. The Success alert says how many of each. Other duplicate ids still refuse the file.
 
-### Before upload (ship checklist)
+### iCloud sync is OFF in this build (Lee, Oct 30)
 
-- **Deploy the CloudKit schema Development → Production** for `iCloud.com.lee.lift2026` before any tester syncs this build: 2 new record types (`CD_Gym`, `CD_MachineStackProfile`) plus 16 new fields on existing types (5 Exercise, 2 WorkoutSession, 2 ExerciseRecord, 7 SetRecord). Expected list: `/workspace/rocklog-eval/pre-tf-gaps/cloudkit-expected-schema.md` (Grok Bot box). Production changes are add-only.
+- `AppConfig.cloudKitSyncEnabled = false` (`RockLog/Services/CloudKitSyncService.swift`). The store opens with `RockLogMigrationPlan.storeConfiguration`, which uses `cloudKitDatabase: .none`; `CloudKitSyncService` never creates a `CKContainer` and Settings shows "Local Storage Only".
+- **No CloudKit schema is deployed** for this build (Development or Production). Data lives only on the iPhone. **Use Settings → Data & Backup → Export Backup to keep your data safe.**
+- The iCloud entitlements are unchanged. Settings preferences still use iCloud key-value storage (`NSUbiquitousKeyValueStore`), which is not CloudKit and needs no schema.
+- Before turning sync on in a later build: deploy the schema Development → Production (2 new record types `CD_Gym`, `CD_MachineStackProfile` plus 16 new fields; list in `/workspace/rocklog-eval/pre-tf-gaps/cloudkit-expected-schema.md` on the Grok Bot box).
 
 ### Known, deferred
 

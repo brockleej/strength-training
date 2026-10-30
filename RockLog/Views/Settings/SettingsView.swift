@@ -763,7 +763,7 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Label("Local Storage Only", systemImage: "iphone")
                         .foregroundStyle(Color.uplift.fgMuted)
-                    Text("iCloud sync is off in this build (Personal Team cannot use CloudKit). Use Export Backup to keep a copy.")
+                    Text("iCloud sync is off in this build. Workouts stay on this iPhone. Use Export Backup to keep your data safe.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }

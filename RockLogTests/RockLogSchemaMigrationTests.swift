@@ -146,6 +146,59 @@ final class RockLogSchemaMigrationTests: XCTestCase {
         XCTAssertEqual(RockLogMigrationPlan.fallbackCount.withLock { $0 }, before, "A V3 store must open through the plan, not the fallback.")
     }
 
+    // MARK: - CloudKit sync off for the first TestFlight build (Lee, Oct 30)
+
+    func test_cloudKitSyncOff_storeConfigurationHasNoCloudKit() {
+        XCTAssertFalse(AppConfig.cloudKitSyncEnabled)
+        XCTAssertFalse(CloudKitSyncService.isEnabled)
+        let config = RockLogMigrationPlan.storeConfiguration(schema: Schema(versionedSchema: RockLogSchemaV3.self))
+        XCTAssertNil(config.cloudKitContainerIdentifier, "Sync off must not attach a CloudKit container.")
+        XCTAssertTrue(String(describing: config.cloudKitDatabase).lowercased().contains("none"), "\(config.cloudKitDatabase)")
+    }
+
+    @MainActor
+    func test_cloudKitSyncOff_dataPersistsAcrossReopen_andBackupRoundTrips() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("rocklog-nosync-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appendingPathComponent("RockLog.store")
+        let schema = Schema(versionedSchema: RockLogSchemaV3.self)
+        let setID = UUID()
+        container = try RockLogMigrationPlan.openContainer(for: schema, configurations: [RockLogMigrationPlan.storeConfiguration(schema: schema, url: url)])
+        do {
+            let c = container!.mainContext
+            let exercise = Exercise.make(name: "Synthetic Row", dayType: DayType(rawValue: "Pull"), muscleGroup: "Back", sortOrder: 0, isCustom: true, rotationTrack: .a)
+            let session = WorkoutSession(dayType: DayType(rawValue: "Pull"))
+            session.isCompleted = true
+            let record = ExerciseRecord(trainingMode: .highWeightLowReps)
+            record.session = session
+            record.exercise = exercise
+            let set = SetRecord(setNumber: 1, weightLbs: 95, reps: 10, isWarmup: false, isEachSide: false, isAssisted: false, isTarget: false)
+            set.id = setID
+            set.exerciseRecord = record
+            c.insert(exercise); c.insert(session); c.insert(record); c.insert(set)
+            try c.save()
+        }
+        container = nil
+        // Relaunch: same file, same sync-off configuration.
+        container = try RockLogMigrationPlan.openContainer(for: schema, configurations: [RockLogMigrationPlan.storeConfiguration(schema: schema, url: url)])
+        let c = container!.mainContext
+        XCTAssertEqual(try c.fetch(FetchDescriptor<SetRecord>()).map(\.id), [setID])
+        XCTAssertEqual(try c.fetch(FetchDescriptor<SetRecord>()).first?.exerciseRecord?.exercise?.name, "Synthetic Row")
+
+        // Backup: export, wipe by restoring into a second sync-off store, compare.
+        let backup = try BackupService.export(context: c)
+        let url2 = directory.appendingPathComponent("Restored.store")
+        let second = try RockLogMigrationPlan.openContainer(for: schema, configurations: [RockLogMigrationPlan.storeConfiguration(schema: schema, url: url2)])
+        try BackupService.restore(from: backup, context: second.mainContext)
+        let restored = try second.mainContext.fetch(FetchDescriptor<SetRecord>())
+        XCTAssertEqual(restored.map(\.id), [setID])
+        XCTAssertEqual(restored.first?.weightLbs, 95)
+        XCTAssertEqual(restored.first?.reps, 10)
+        XCTAssertEqual(try second.mainContext.fetchCount(FetchDescriptor<WorkoutSession>()), 1)
+    }
+
     func test_fallbackFilter_acceptsOnly134504() {
         XCTAssertTrue(RockLogMigrationPlan.isUnknownModelVersion(NSError(domain: NSCocoaErrorDomain, code: 134504)))
         XCTAssertFalse(RockLogMigrationPlan.isUnknownModelVersion(NSError(domain: NSCocoaErrorDomain, code: 134110)))
