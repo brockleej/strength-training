@@ -528,45 +528,142 @@ final class BackupRestoreRegressionTests: RockLogStoreTestCase {
         }
     }
 
-    func test_b5_duplicateSetIDs_areRejected() throws {
-        let shared = UUID()
-        let when = Date(timeIntervalSince1970: 1_700_000_000)
-        let exerciseID = UUID()
-        let backup = AppBackup(
+    // MARK: - #56 duplicate set ids (Lee, Oct 30): repair, do not refuse
+
+    private static let dupWhen = Date(timeIntervalSince1970: 1_700_000_000)
+
+    private func dupSet(_ id: UUID, number: Int, weight: Double = 100, reps: Int = 5) -> SetRecordBackup {
+        SetRecordBackup(id: id, setNumber: number, weightLbs: weight, reps: reps, isWarmup: false, completedAt: Self.dupWhen)
+    }
+
+    /// One session. Each inner array is one exercise log's sets.
+    /// Two logs share a superset group so group ids can be checked after repair.
+    private func dupBackup(_ logs: [[SetRecordBackup]], exerciseID: UUID = UUID()) -> AppBackup {
+        let group = UUID()
+        return AppBackup(
             version: 1,
-            exportedAt: when,
+            exportedAt: Self.dupWhen,
             exercises: [exerciseBackup(id: exerciseID, name: "Bench")],
             sessions: [
                 WorkoutSessionBackup(
                     id: UUID(),
-                    date: when,
+                    date: Self.dupWhen,
                     dayType: "Push",
                     notes: "",
                     isCompleted: true,
-                    exerciseRecords: [
+                    exerciseRecords: logs.enumerated().map { index, sets in
                         ExerciseRecordBackup(
                             id: UUID(),
                             exerciseID: exerciseID,
                             trainingMode: "Strength",
-                            sortOrder: 0,
+                            sortOrder: index,
                             isCompleted: true,
                             notes: "",
-                            sets: [
-                                SetRecordBackup(id: shared, setNumber: 1, weightLbs: 100, reps: 5, isWarmup: false, completedAt: when),
-                                SetRecordBackup(id: shared, setNumber: 2, weightLbs: 100, reps: 5, isWarmup: false, completedAt: when),
-                            ]
-                        ),
-                    ]
+                            sets: sets,
+                            groupID: logs.count >= 2 && index < 2 ? group : nil,
+                            groupPosition: logs.count >= 2 && index < 2 ? index + 1 : nil
+                        )
+                    }
                 ),
             ]
         )
-        XCTAssertThrowsError(try BackupService.decode(try encode(backup))) { error in
-            guard case BackupError.invalidBackup(let message) = error else {
-                return XCTFail("Expected invalidBackup, got \(error)")
-            }
-            XCTAssertTrue(message.contains("set"), message)
-            XCTAssertTrue(message.contains(shared.uuidString), message)
-        }
+    }
+
+    private var context: ModelContext { container.mainContext }
+
+    private func restoredSets() throws -> [SetRecord] {
+        try context.fetch(FetchDescriptor<SetRecord>())
+    }
+
+    func test_dupSets_exactDuplicate_isDroppedAndCounted() throws {
+        let shared = UUID()
+        let backup = dupBackup([[dupSet(shared, number: 1), dupSet(shared, number: 1), dupSet(UUID(), number: 2)]])
+        let report = try BackupService.restore(from: try encode(backup), context: context)
+        XCTAssertEqual(report.duplicateSetsRemoved, 1)
+        XCTAssertEqual(report.setsRenumbered, 0)
+        let sets = try restoredSets()
+        XCTAssertEqual(sets.count, 2)
+        XCTAssertEqual(Set(sets.map(\.id)).count, 2)
+        XCTAssertTrue(sets.contains { $0.id == shared })
+        XCTAssertEqual(sets.map(\.setNumber).sorted(), [1, 2])
+    }
+
+    func test_dupSets_sameIDDifferentContent_areKeptWithNewIDs() throws {
+        let shared = UUID()
+        let backup = dupBackup([[dupSet(shared, number: 1, weight: 100), dupSet(shared, number: 2, weight: 110, reps: 3)]])
+        let report = try BackupService.restore(from: try encode(backup), context: context)
+        XCTAssertEqual(report.duplicateSetsRemoved, 0)
+        XCTAssertEqual(report.setsRenumbered, 1)
+        let sets = try restoredSets().sorted { $0.setNumber < $1.setNumber }
+        XCTAssertEqual(sets.count, 2)
+        XCTAssertEqual(sets[0].id, shared, "The first set keeps its id.")
+        XCTAssertNotEqual(sets[1].id, shared)
+        XCTAssertEqual(sets[1].weightLbs, 110)
+        XCTAssertEqual(sets[1].reps, 3)
+        XCTAssertEqual(sets[1].exerciseRecord?.sets?.count, 2, "Both sets stay in their exercise log.")
+    }
+
+    func test_dupSets_mixed_dropsExactAndRenumbersDifferentAcrossLogs() throws {
+        let a = UUID(), b = UUID()
+        let backup = dupBackup([
+            [dupSet(a, number: 1), dupSet(a, number: 1), dupSet(a, number: 1), dupSet(b, number: 2)],
+            [dupSet(b, number: 1, weight: 50), dupSet(a, number: 2, reps: 8)],
+        ])
+        let report = try BackupService.restore(from: try encode(backup), context: context)
+        XCTAssertEqual(report.duplicateSetsRemoved, 2)
+        XCTAssertEqual(report.setsRenumbered, 2)
+        let sets = try restoredSets()
+        XCTAssertEqual(sets.count, 4)
+        XCTAssertEqual(Set(sets.map(\.id)).count, 4, "Every restored set id is unique.")
+        let records = try context.fetch(FetchDescriptor<ExerciseRecord>()).sorted { $0.sortOrder < $1.sortOrder }
+        XCTAssertEqual(records.map { $0.sets?.count ?? 0 }, [2, 2])
+        XCTAssertEqual(records[0].sets?.map(\.setNumber).sorted(), [1, 2], "Set order is unchanged.")
+        XCTAssertEqual(records[1].sets?.map(\.setNumber).sorted(), [1, 2])
+        XCTAssertNotNil(records[0].groupID, "Superset grouping survives the repair.")
+        XCTAssertEqual(records[0].groupID, records[1].groupID)
+        XCTAssertEqual(records.map(\.groupPosition), [1, 2])
+    }
+
+    func test_dupSets_none_noRepairAndNoNote() throws {
+        let backup = dupBackup([[dupSet(UUID(), number: 1), dupSet(UUID(), number: 2)]])
+        let report = try BackupService.restore(from: try encode(backup), context: context)
+        XCTAssertEqual(report.duplicateSetsRemoved, 0)
+        XCTAssertEqual(report.setsRenumbered, 0)
+        XCTAssertNil(report.duplicateSetNote)
+        XCTAssertEqual(report.userFacingSummary, "Backup restored successfully.")
+    }
+
+    func test_dupSets_noteCounts() {
+        var report = BackupRestoreReport(droppedExerciseRecords: 0, unknownTrainingModes: [])
+        report.duplicateSetsRemoved = 36
+        report.setsRenumbered = 1
+        XCTAssertEqual(report.duplicateSetNote, "Removed 36 duplicate sets. Gave 1 set a new ID because it shared an ID with a different set.")
+        XCTAssertTrue(report.userFacingSummary.contains(report.duplicateSetNote!))
+        report.duplicateSetsRemoved = 1
+        report.setsRenumbered = 0
+        XCTAssertEqual(report.duplicateSetNote, "Removed 1 duplicate set. Gave 0 sets a new ID because they shared an ID with a different set.")
+    }
+
+    /// Regression for the refused real backups: the file used to be rejected outright.
+    func test_dupSets_decodeNoLongerRejects_andExportIsClean() throws {
+        let shared = UUID()
+        let backup = dupBackup([[dupSet(shared, number: 1), dupSet(shared, number: 1), dupSet(shared, number: 2, reps: 9)]])
+        XCTAssertNoThrow(try BackupService.decode(try encode(backup)))
+        try BackupService.restore(from: try encode(backup), context: context)
+        let reopened = try BackupService.open(try BackupService.export(context: context))
+        let ids = reopened.backup.sessions.flatMap { $0.exerciseRecords.flatMap { $0.sets.map(\.id) } }
+        XCTAssertEqual(ids.count, 2)
+        XCTAssertEqual(Set(ids).count, 2)
+        XCTAssertEqual(reopened.duplicateSetsRemoved, 0, "A repaired store exports without duplicates.")
+    }
+
+    func test_dupSets_doNotHideDuplicateExerciseLogIDs() throws {
+        // Repair is for sets only. Other duplicate ids still cancel the restore.
+        let backup = dupBackup([[dupSet(UUID(), number: 1)], [dupSet(UUID(), number: 1)]])
+        var data = String(data: try encode(backup), encoding: .utf8)!
+        let ids = backup.sessions[0].exerciseRecords.map(\.id.uuidString)
+        data = data.replacingOccurrences(of: ids[1], with: ids[0])
+        XCTAssertThrowsError(try BackupService.decode(Data(data.utf8)))
     }
 
     func test_b5_unknownBodyMetricKind_isRejected() throws {

@@ -102,6 +102,7 @@ enum UITestID {
     static let progressRelative = "progress.relative"
     static let settingsEditSplit = "settings.editSplit"
     static let settingsRestore = "settings.restore"
+    static let restoreNoticeMessage = "restore.notice.message"
     static let settingsExport = "settings.export"
     static let settingsAddPlanned = "settings.addPlanned"
     static let settingsImportSplit = "settings.importSplit"

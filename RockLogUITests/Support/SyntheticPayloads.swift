@@ -101,6 +101,29 @@ enum SyntheticPayloads {
         """
     }
 
+    /// Same lift as backupRestoredLift, with set ids repeated: one exact copy
+    /// (dropped) and one same-id set with different reps (kept, new id).
+    static func backupDuplicateSetIDs() -> String {
+        let base = backupRestoredLift()
+        let original = """
+                    {
+                      "id": "C3000000-0000-4000-8000-000000000004",
+                      "setNumber": 1,
+                      "weightLbs": 135,
+                      "reps": 5,
+                      "isWarmup": false,
+                      "isEachSide": false,
+                      "isAssisted": false,
+                      "completedAt": "2026-01-15T12:10:00Z",
+                      "isTarget": false
+                    }
+        """
+        let changed = original
+            .replacingOccurrences(of: "\"setNumber\": 1", with: "\"setNumber\": 2")
+            .replacingOccurrences(of: "\"reps\": 5", with: "\"reps\": 3")
+        return base.replacingOccurrences(of: original, with: original + "," + original + "," + changed)
+    }
+
     static func backupRestoredLift() -> String {
         """
         {

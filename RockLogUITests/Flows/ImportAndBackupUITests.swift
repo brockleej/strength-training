@@ -102,6 +102,31 @@ final class ImportAndBackupUITests: RockLogUITestCase {
         XCTAssertFalse(element(UITestID.workoutExercise("UI Bench Press")).exists)
     }
 
+    /// #56 regression: a backup with repeated set ids used to be refused.
+    func test_restoreConfirm_duplicateSetIDs_showsRepairNote() {
+        let payload = SyntheticPayloads.backupDuplicateSetIDs()
+        XCTAssertEqual(payload.components(separatedBy: "C3000000-0000-4000-8000-000000000004").count - 1, 3, "Fixture must repeat the set id")
+        launch(
+            preset: "typical",
+            environment: SyntheticPayloads.environment(json: payload)
+        )
+        tapTab("Settings")
+        dismissAlert(button: "Replace split and exercises")
+        let restored = app.alerts["Success"]
+        XCTAssertTrue(restored.waitForExistence(timeout: 12))
+        let byID = restored.descendants(matching: .any)[UITestID.restoreNoticeMessage]
+        let byText = restored.staticTexts.containing(
+            NSPredicate(format: "label CONTAINS %@", "Removed 1 duplicate set. Gave 1 set a new ID")
+        ).firstMatch
+        if !byText.waitForExistence(timeout: 4) { print("ROCKLOG_ALERT_TREE \(restored.debugDescription)") }
+        XCTAssertTrue(byText.exists, "Repair note text missing")
+        print("ROCKLOG_RESTORE_NOTE_ID_EXISTS=\(byID.exists)")
+        let ok = restored.buttons["OK"]
+        XCTAssertTrue(ok.isHittable)
+        ok.tap()
+        XCTAssertTrue(element(UITestID.todayDay("UI Day")).waitForExistence(timeout: 8))
+    }
+
     func test_restoreConfirm_weekALift_isHiddenWhenNextSessionIsWeekB() {
         launch(
             preset: "typical",

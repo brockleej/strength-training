@@ -137,6 +137,7 @@ struct ContentView: View {
                 Button("OK", role: .cancel) { restoreNotice.dismiss() }
             } message: {
                 Text(restoreNotice.message ?? "")
+                    .accessibilityIdentifier("restore.notice.message")
             }
     }
 

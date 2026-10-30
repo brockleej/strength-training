@@ -38,9 +38,23 @@ struct BackupRestoreReport: Equatable {
     var unknownKeyCount: Int = 0
     var unknownEnumCount: Int = 0
     var orphanedGroupIDs: [UUID] = []
+    /// Sets dropped because another set had the same id and identical fields.
+    var duplicateSetsRemoved: Int = 0
+    /// Sets that shared an id with a different set and were kept under a new id.
+    var setsRenumbered: Int = 0
+
+    /// Shown after restore when a backup's set ids were repaired. Nil otherwise.
+    var duplicateSetNote: String? {
+        guard duplicateSetsRemoved > 0 || setsRenumbered > 0 else { return nil }
+        let removedNoun = duplicateSetsRemoved == 1 ? "set" : "sets"
+        let renumberedNoun = setsRenumbered == 1 ? "set" : "sets"
+        let pronoun = setsRenumbered == 1 ? "it" : "they"
+        return "Removed \(duplicateSetsRemoved) duplicate \(removedNoun). Gave \(setsRenumbered) \(renumberedNoun) a new ID because \(pronoun) shared an ID with a different set."
+    }
 
     var userFacingSummary: String {
         var sentences: [String] = []
+        if let duplicateSetNote { sentences.append(duplicateSetNote) }
         if droppedExerciseRecords > 0 {
             let noun = droppedExerciseRecords == 1 ? "exercise log" : "exercise logs"
             let modes = unknownTrainingModes.joined(separator: ", ")
@@ -64,6 +78,95 @@ struct BackupRestoreReport: Equatable {
 struct OpenedBackup {
     var backup: AppBackup
     var inspection: BackupInspection
+    var duplicateSetsRemoved: Int = 0
+    var setsRenumbered: Int = 0
+}
+
+/// Repairs set ids that appear more than once in a backup (#56, Lee Oct 30).
+/// A later set that is identical in every field to the first set with its id is
+/// dropped. A later set with the same id but any different field is kept and
+/// given a fresh id. Nothing else refers to a set id (supersets use the exercise
+/// log's groupID, order uses setNumber), so no other reference needs remapping.
+enum BackupSetIDRepair {
+    struct Result {
+        var root: [String: JSONValue]
+        var removed: Int
+        var renumbered: Int
+    }
+
+    static func repair(_ root: [String: JSONValue]) -> Result {
+        guard case .array(let sessions)? = root["sessions"] else {
+            return Result(root: root, removed: 0, renumbered: 0)
+        }
+        // Every id already in the file, so a fresh id can never collide.
+        var allIDs = Set<String>()
+        for session in sessions {
+            for record in session.object?["exerciseRecords"].flatMap(arrayValue) ?? [] {
+                for set in record.object?["sets"].flatMap(arrayValue) ?? [] {
+                    if case .string(let id)? = set.object?["id"] { allIDs.insert(id.uppercased()) }
+                }
+            }
+        }
+        var firstByID: [String: [String: JSONValue]] = [:]
+        var removed = 0
+        var renumbered = 0
+        var newSessions: [JSONValue] = []
+        for session in sessions {
+            guard var sessionObject = session.object,
+                  let records = sessionObject["exerciseRecords"].flatMap(arrayValue) else {
+                newSessions.append(session)
+                continue
+            }
+            var newRecords: [JSONValue] = []
+            for record in records {
+                guard var recordObject = record.object,
+                      let sets = recordObject["sets"].flatMap(arrayValue) else {
+                    newRecords.append(record)
+                    continue
+                }
+                var newSets: [JSONValue] = []
+                for set in sets {
+                    guard var setObject = set.object,
+                          case .string(let rawID)? = setObject["id"] else {
+                        newSets.append(set)
+                        continue
+                    }
+                    let key = rawID.uppercased()
+                    guard let first = firstByID[key] else {
+                        firstByID[key] = setObject
+                        newSets.append(set)
+                        continue
+                    }
+                    if first == setObject {
+                        removed += 1
+                        continue
+                    }
+                    var fresh = UUID().uuidString
+                    while allIDs.contains(fresh) { fresh = UUID().uuidString }
+                    allIDs.insert(fresh)
+                    setObject["id"] = .string(fresh)
+                    firstByID[fresh] = setObject
+                    renumbered += 1
+                    newSets.append(.object(setObject))
+                }
+                recordObject["sets"] = .array(newSets)
+                newRecords.append(.object(recordObject))
+            }
+            sessionObject["exerciseRecords"] = .array(newRecords)
+            newSessions.append(.object(sessionObject))
+        }
+        guard removed > 0 || renumbered > 0 else {
+            return Result(root: root, removed: 0, renumbered: 0)
+        }
+        var repaired = root
+        repaired["sessions"] = .array(newSessions)
+        return Result(root: repaired, removed: removed, renumbered: renumbered)
+    }
+
+    private static func arrayValue(_ value: JSONValue) -> [JSONValue]? {
+        if case .array(let items) = value { return items }
+        return nil
+    }
 }
 
 struct BackupService {
@@ -307,8 +410,9 @@ struct BackupService {
                 throw BackupError.invalidBackup("This backup could not be read. Nothing was changed.")
             }
         }
-        let inspection = BackupInspection.inspect(promoted)
-        let payload = try InterchangeCodec.encode(promoted)
+        let repair = BackupSetIDRepair.repair(promoted)
+        let inspection = BackupInspection.inspect(repair.root)
+        let payload = try InterchangeCodec.encode(repair.root)
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         let backup = try decoder.decode(AppBackup.self, from: payload)
@@ -316,7 +420,12 @@ struct BackupService {
             throw BackupError.unsupportedVersion(backup.version)
         }
         try validate(backup)
-        return OpenedBackup(backup: backup, inspection: inspection)
+        return OpenedBackup(
+            backup: backup,
+            inspection: inspection,
+            duplicateSetsRemoved: repair.removed,
+            setsRenumbered: repair.renumbered
+        )
     }
 
     /// Interchange files unwrap to the backup payload. Older backups pass through.
@@ -565,7 +674,10 @@ struct BackupService {
         let report: BackupRestoreReport
         markRestorePreferencesPending()
         do {
-            report = try writeBackup(backup, inspection: opened.inspection, into: context)
+            var written = try writeBackup(backup, inspection: opened.inspection, into: context)
+            written.duplicateSetsRemoved = opened.duplicateSetsRemoved
+            written.setsRenumbered = opened.setsRenumbered
+            report = written
             if let persisting {
                 try persisting(context)
             } else {
