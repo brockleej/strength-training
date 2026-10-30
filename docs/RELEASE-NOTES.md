@@ -22,8 +22,15 @@ Not merged to main and not on TestFlight. Adds on top of `a877aad`. Tester wordi
 - **Stage 1–3 UI:** system swipe-to-delete with Undo, workouts open past midnight, files checked before anything is removed; RockCoach month table uses the coach file’s time zone; Retry when the store fails to open; Last/Target buttons; Settings split into pages; Programs on the Workout tab; a workout bar on every tab; Appearance Dark / Light / System.
 - **Fixes in this branch’s last commits:** split and day-plan rows open reliably on the iPhone 18 Pro Max (`0c3bd34`); UI tests scroll to lazy Settings rows and the Import-split scroll is timed from the top with a 15 s bound (`d1fd4ad`, `f075801`); Xcode Cloud’s post-build script fails a test action on a non-zero xcodebuild exit and uses a committed unit-test floor (`d1fd4ad`, `b616bb0`).
 
+- **Restore repairs repeated set ids** (Lee, Oct 30, #56): a set repeated in the same exercise log with identical fields is dropped; any other set sharing an id is kept under a new id. The Success alert says how many of each. Other duplicate ids still refuse the file.
+
+### Before upload (ship checklist)
+
+- **Deploy the CloudKit schema Development → Production** for `iCloud.com.lee.lift2026` before any tester syncs this build: 2 new record types (`CD_Gym`, `CD_MachineStackProfile`) plus 16 new fields on existing types (5 Exercise, 2 WorkoutSession, 2 ExerciseRecord, 7 SetRecord). Expected list: `/workspace/rocklog-eval/pre-tf-gaps/cloudkit-expected-schema.md` (Grok Bot box). Production changes are add-only.
+
 ### Known, deferred
 
+- **Very large backups:** restoring a backup of about 100 MB can use a lot of memory (about 2 GB in the simulator) and iOS may close the app on smaller iPhones. Real backups so far are under 3 MB. Restore is not batched in this build.
 - `GymAccessSettingsView.swift:309` warning becomes an error under Swift 6.
 - AVAudioSession is set up on the main thread (runtime warning).
 

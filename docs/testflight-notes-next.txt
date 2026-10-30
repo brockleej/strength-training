@@ -9,6 +9,8 @@ Please try:
 6) Settings → Data & Backup: export a backup, then restore it. Everything should come back.
 7) Screenshot anything that looks off.
 
+Known issue: restoring a very large backup (about 100 MB) can use a lot of memory, and iOS may close the app on smaller iPhones. Normal backups are much smaller.
+
 Also still in this build (from the planned-workouts release):
 What's new: Planned workouts are a next-up list on Today. Tap a later day to see the lifts before you start. When you log a planned lift you'll see last time, the plan, and what you actually did. You can import a new training split without erasing History, share one Instructions for AI file, pick which workouts to send a coach, and delete leftover planned days. Settings should stay smooth.
 
