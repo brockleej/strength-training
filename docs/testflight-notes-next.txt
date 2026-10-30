@@ -1,3 +1,15 @@
+What's new (this build): Your body weight is now dated. Each set remembers the body weight it used, so logging a new or backdated weigh-in no longer changes old assisted lifts, e1RMs or PRs. New: kilograms (Settings → Units), gyms with a barcode pass and machine stack steps, Assist and Added load modes, drag to reorder and supersets during a workout, a rest alert that rings once and stays quiet during calls, and warm-ups that stay out of your e1RM. Settings is now a short list of pages, and Programs is on the Workout tab.
+
+Please try:
+1) Log a body weight with today's date, then an assisted pull-up. Then log a different body weight dated next week. The pull-up's e1RM and PR from today should not change.
+2) Log a set in kilograms, switch to pounds and back. The kilograms you typed should still show, and it should not celebrate a PR.
+3) Settings → Gyms: add a gym, set a machine's stack steps, and check the suggested weight snaps to the stack.
+4) Log a warm-up with Warm on. The next set should open with Warm off.
+5) Start rest after a set. At zero you should hear one chirp (none during a call), and an audiobook should keep playing.
+6) Settings → Data & Backup: export a backup, then restore it. Everything should come back.
+7) Screenshot anything that looks off.
+
+Also still in this build (from the planned-workouts release):
 What's new: Planned workouts are a next-up list on Today. Tap a later day to see the lifts before you start. When you log a planned lift you'll see last time, the plan, and what you actually did. You can import a new training split without erasing History, share one Instructions for AI file, pick which workouts to send a coach, and delete leftover planned days. Settings should stay smooth.
 
 Please try (plain gym use):

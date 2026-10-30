@@ -2,6 +2,31 @@
 
 There is no separate `CHANGELOG`. This file is the release log. The Xcode project’s `CURRENT_PROJECT_VERSION` for the RockLog app target is still **17**, while the notes below talk about build 25 and “next after 25.” The live TestFlight build number is not recorded in this repo.
 
+## Next TestFlight — branch `cursor/optimization-build` (PR #13, draft), Branch Test green at `f075801`
+
+Not merged to main and not on TestFlight. Adds on top of `a877aad`. Tester wording is in `docs/testflight-notes-next.txt`. `CURRENT_PROJECT_VERSION` is still 17 in the project; Xcode Cloud assigns the uploaded build number.
+
+### What’s new
+
+- **Body weight is dated.** Each set stores the body weight it used (`bodyWeightUsedLbs`). Assisted and added-load lifts use the latest weigh-in on or before the set, then the session date, then the Settings number. A later or backdated weigh-in no longer rewrites old assisted e1RMs or PRs. Logging a weight updates the Settings number only to the newest weigh-in by date.
+- **Load modes:** Bar, Assist (body weight minus assistance), and Added (body weight plus a belt or chain). Relative strength (e1RM ÷ body weight) on the lift’s progress page.
+- **Kilograms:** Settings → Units. The set keeps the unit and value you typed, so a kg → lb → kg round trip shows the same kilograms and does not fire a false PR. Plate math for kg bars and pairs.
+- **Gyms and machine stacks:** Settings → Gyms / Gym Access (barcode pass on Today, optional when-in-use location to pick the nearest gym, camera barcode scan). Per-gym, per-lift stack steps, pins and offsets; offers snap to the stack. Same-weight carry onto later sets with one undo.
+- **Workout order and groups:** drag to reorder during a workout; supersets / circuits of 2–4; rest follows the lift you just did and learns your real rests after 8 sets.
+- **Rest alert:** one chirp at zero, re-arms at 10 s, skips the chirp during a call, mixes with an audiobook. The Live Activity countdown is built (`RockLogWidget`) but **off in this build**: the extension is not embedded, `FeatureFlags.liveActivity` is false and the app `Info.plist` has `NSSupportsLiveActivities` false (see `docs/specs/rest-widget.md`).
+- **Warm-ups:** the Warm tag no longer copies onto the next set; warm-ups stay out of e1RM, PRs, suggestions and carry. Optional Suggest warm-ups.
+- **No crash** when Log set is tapped with no live workout (was `fatalError`).
+- **Starting weight / Previous:** the plan wins; Previous mirrors Next.
+- **Versioned interchange file** (`docs/format/`): backup v2 with gyms, stack profiles and set units. v1 files are promoted; v0 and future versions are refused; unknown keys are counted.
+- **Store:** SwiftData `RockLogSchemaV1 → V2 → V3`, two lightweight stages (V2 adds Gym, MachineStackProfile and new defaulted fields; V3 adds the entered unit and value on sets). See item 47 in the QA checklist: Lee to decide on two stages vs one. The new record types must exist in the **production** CloudKit schema before TestFlight users sync them.
+- **Stage 1–3 UI:** system swipe-to-delete with Undo, workouts open past midnight, files checked before anything is removed; RockCoach month table uses the coach file’s time zone; Retry when the store fails to open; Last/Target buttons; Settings split into pages; Programs on the Workout tab; a workout bar on every tab; Appearance Dark / Light / System.
+- **Fixes in this branch’s last commits:** split and day-plan rows open reliably on the iPhone 18 Pro Max (`0c3bd34`); UI tests scroll to lazy Settings rows and the Import-split scroll is timed from the top with a 15 s bound (`d1fd4ad`, `f075801`); Xcode Cloud’s post-build script fails a test action on a non-zero xcodebuild exit and uses a committed unit-test floor (`d1fd4ad`, `b616bb0`).
+
+### Known, deferred
+
+- `GymAccessSettingsView.swift:309` warning becomes an error under Swift 6.
+- AVAudioSession is set up on the main thread (runtime warning).
+
 ## On main, not on TestFlight yet — `eb497bd` (PR #9)
 
 Merged 2026-10-24. **Do not paste this into App Store Connect until a TestFlight build includes it.** Tester wording is in `docs/TESTFLIGHT-WHAT-TO-TEST.md` under the same heading.
