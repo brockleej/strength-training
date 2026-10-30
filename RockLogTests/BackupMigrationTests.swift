@@ -263,3 +263,179 @@ final class BackupMigrationTests: RockLogStoreTestCase {
         """.utf8)
     }
 }
+
+// MARK: - Pre-TestFlight break tests (checklist 52, 53, 57, 60). Synthetic data only.
+
+@MainActor
+final class PreTestFlightBreakTests: RockLogStoreTestCase {
+    /// Emoji (ZWJ + skin tone + flag), RTL Hebrew/Arabic, an RTL override,
+    /// NFD combining marks, zero-width space/joiner, and a CJK name.
+    static let unicodeNames: [String] = [
+        "Bench 👨🏽‍🦰💪🏿🇮🇱",
+        "לחיצת חזה",
+        "ضغط الصدر",
+        "Pre\u{202E}ss\u{202C} RLO",
+        "Cafe\u{0301} Squa\u{0308}t Z\u{0335}\u{0336}algo\u{0489}",
+        "Zero\u{200B}Width\u{200D}Joiner\u{FEFF}",
+        "深蹲 スクワット",
+    ]
+
+    private func seedUnicode(_ context: ModelContext) throws {
+        let stamp = Date(timeIntervalSince1970: 1_700_000_000)
+        for (index, name) in Self.unicodeNames.enumerated() {
+            let exercise = Exercise.make(name: name, dayType: .push, muscleGroup: "Chest", isCustom: true)
+            exercise.notes = "note " + name
+            let session = WorkoutSession(dayType: .push, date: stamp.addingTimeInterval(Double(index) * 86_400))
+            session.notes = "s " + name
+            session.isCompleted = true
+            let record = ExerciseRecord(trainingMode: .highWeightLowReps, sortOrder: 0)
+            record.exercise = exercise
+            record.session = session
+            let set = SetRecord(setNumber: 1, weightLbs: 100, reps: 5)
+            set.completedAt = stamp
+            set.exerciseRecord = record
+            record.sets = [set]
+            session.exerciseRecords = [record]
+            context.insert(exercise); context.insert(session); context.insert(record); context.insert(set)
+        }
+        let metric = BodyMetricEntry(kind: .weight, value: 180, date: stamp, note: Self.unicodeNames[0])
+        context.insert(metric)
+        try context.save()
+    }
+
+    private func counts(_ context: ModelContext) throws -> [Int] {
+        [try context.fetchCount(FetchDescriptor<Exercise>()),
+         try context.fetchCount(FetchDescriptor<WorkoutSession>()),
+         try context.fetchCount(FetchDescriptor<SetRecord>()),
+         try context.fetchCount(FetchDescriptor<BodyMetricEntry>())]
+    }
+
+    /// 57: names and notes survive export -> restore -> export byte-exact.
+    func test_57_unicodeBackup_roundTripsByteExact() throws {
+        let context = container.mainContext
+        try seedUnicode(context)
+        let first = try BackupService.export(context: context)
+        try BackupService.restore(from: first, context: context)
+        let names = try context.fetch(FetchDescriptor<Exercise>()).filter(\.isCustom).map { Array($0.name.utf8) }
+        for expected in Self.unicodeNames {
+            XCTAssertTrue(names.contains(Array(expected.utf8)), "lost or normalized: \(expected.unicodeScalars.map { String($0.value, radix: 16) })")
+        }
+        let notes = try context.fetch(FetchDescriptor<WorkoutSession>()).map { Array($0.notes.utf8) }
+        for expected in Self.unicodeNames {
+            XCTAssertTrue(notes.contains(Array(("s " + expected).utf8)))
+        }
+        let second = try BackupService.export(context: context)
+        let a = try BackupService.open(first).backup, b = try BackupService.open(second).backup
+        XCTAssertEqual(Set(a.exercises.map { Array($0.name.utf8) }), Set(b.exercises.map { Array($0.name.utf8) }))
+        print("PRETF_57_UNICODE_BACKUP ok names=\(Self.unicodeNames.count) bytes=\(first.count)")
+    }
+
+    /// 57: a program file with unicode lift names imports byte-exact.
+    func test_57_unicodeProgramImport_byteExact() throws {
+        let context = container.mainContext
+        let start = Date(timeIntervalSince1970: 1_800_000_000)
+        let exercises = Self.unicodeNames.map { name in
+            ProgramExercisePayload(id: UUID(), name: name, muscleGroup: "Chest", trainingMode: "Strength", notes: "n " + name,
+                                   sets: [ProgramSetPayload(setNumber: 1, weightLbs: 95, reps: 8, isWarmup: false, isEachSide: false, isAssisted: false)])
+        }
+        let doc = ProgramDocument(format: ProgramFormat.formatName, schemaVersion: ProgramFormat.schemaVersion,
+                                  exportedAt: start,
+                                  block: ProgramBlockPayload(id: UUID(), name: "Blöck ✨ בלוק", notes: "synthetic", startDate: start,
+                                                             sessions: [ProgramSessionPayload(id: UUID(), date: start, dayType: "Push", rotationTrack: "A", notes: "🏋️‍♀️", exercises: exercises)]))
+        let data = try ProgramCodec.encode(doc)
+        let decoded = try ProgramCodec.decode(data)
+        _ = try ProgramImportService.importDocument(decoded, context: context)
+        let names = try context.fetch(FetchDescriptor<Exercise>()).map { Array($0.name.utf8) }
+        for expected in Self.unicodeNames {
+            XCTAssertTrue(names.contains(Array(expected.utf8)), "program lost: \(expected)")
+        }
+        print("PRETF_57_UNICODE_PROGRAM ok")
+    }
+
+    /// 53 / 60: a truncated file (cut at 10/50/90 %), empty file and a
+    /// mid-restore save failure all leave the store unchanged.
+    func test_53_60_truncatedOrInterruptedRestore_leavesStoreUnchanged() throws {
+        let context = container.mainContext
+        try seedUnicode(context)
+        let before = try counts(context)
+        let good = try BackupService.export(context: context)
+        for fraction in [0.1, 0.5, 0.9, 0.999] {
+            let cut = good.prefix(Int(Double(good.count) * fraction))
+            XCTAssertThrowsError(try BackupService.restore(from: Data(cut), context: context), "cut \(fraction)")
+            XCTAssertEqual(try counts(context), before, "store changed after cut \(fraction)")
+        }
+        XCTAssertThrowsError(try BackupService.restore(from: Data(), context: context))
+        XCTAssertEqual(try counts(context), before)
+
+        struct Boom: Error {}
+        XCTAssertThrowsError(try BackupService.restore(from: good, context: context, persisting: { _ in throw Boom() }))
+        XCTAssertEqual(try counts(context), before, "store changed after failed save")
+        let names = try context.fetch(FetchDescriptor<Exercise>()).map { Array($0.name.utf8) }
+        XCTAssertTrue(names.contains(Array(Self.unicodeNames[0].utf8)))
+        print("PRETF_53_60_TRUNCATED ok counts=\(before)")
+    }
+
+    /// 52: a ~100 MB synthetic backup. Pass = no crash and either a clean
+    /// refusal or a complete restore. Prints size, time and resident memory.
+    func test_52_hundredMegabyteBackup_noCrash() throws {
+        // Heavy (~36 s, ~2.2 GB resident on the simulator). Opt-in so Xcode Cloud
+        // and the normal suite stay fast: TEST_RUNNER_ROCKLOG_HEAVY_BREAK=1.
+        try XCTSkipUnless(ProcessInfo.processInfo.environment["ROCKLOG_HEAVY_BREAK"] == "1", "set ROCKLOG_HEAVY_BREAK=1 to run")
+        let context = container.mainContext
+        try seedUnicode(context)
+        let seed = try BackupService.export(context: context)
+        var root = try JSONSerialization.jsonObject(with: seed) as! [String: Any]
+        let inPayload = root["payload"] is [String: Any]
+        var body = inPayload ? root["payload"] as! [String: Any] : root
+        let template = (body["sessions"] as! [[String: Any]])[0]
+        let filler = String(repeating: "synthetic filler ", count: 290)   // ~4.9 KB
+        func fresh(_ value: Any) -> Any {
+            if var dict = value as? [String: Any] {
+                for (key, inner) in dict { dict[key] = key == "id" ? UUID().uuidString : fresh(inner) }
+                return dict
+            }
+            if let array = value as? [Any] { return array.map(fresh) }
+            return value
+        }
+        var sessions: [[String: Any]] = []
+        let target = 20_000
+        sessions.reserveCapacity(target)
+        for i in 0..<target {
+            var s = fresh(template) as! [String: Any]
+            s["notes"] = "#\(i) " + filler
+            sessions.append(s)
+        }
+        body["sessions"] = sessions
+        body.removeValue(forKey: "trainingBlocks")
+        if inPayload { root["payload"] = body } else { root = body }
+        let big = try JSONSerialization.data(withJSONObject: root)
+        sessions.removeAll()
+        let mb = Double(big.count) / 1_048_576
+        let rssBefore = Self.residentMB()
+        let t0 = Date()
+        var outcome = "restored"
+        do {
+            try BackupService.restore(from: big, context: context)
+            let n = try context.fetchCount(FetchDescriptor<WorkoutSession>())
+            outcome = "restored sessions=\(n)"
+            XCTAssertEqual(n, target)
+        } catch {
+            outcome = "refused: \(String(describing: error).prefix(160))"
+        }
+        let secs = Date().timeIntervalSince(t0)
+        print(String(format: "PRETF_52_100MB size_mb=%.1f secs=%.1f rss_before_mb=%.0f rss_after_mb=%.0f outcome=%@",
+                     mb, secs, rssBefore, Self.residentMB(), outcome))
+        XCTAssertGreaterThan(mb, 95)
+    }
+
+    static func residentMB() -> Double {
+        var info = mach_task_basic_info()
+        var count = mach_msg_type_number_t(MemoryLayout<mach_task_basic_info>.size) / 4
+        let kr = withUnsafeMutablePointer(to: &info) {
+            $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {
+                task_info(mach_task_self_, task_flavor_t(MACH_TASK_BASIC_INFO), $0, &count)
+            }
+        }
+        return kr == KERN_SUCCESS ? Double(info.resident_size) / 1_048_576 : -1
+    }
+}

@@ -108,6 +108,34 @@ final class RockLogSchemaMigrationTests: XCTestCase {
         XCTAssertTrue(gyms.isEmpty)
     }
 
+    /// Pre-TestFlight #47: a V1 store (what main / the last TestFlight
+    /// wrote) opens straight into the live V3 schema through both
+    /// lightweight stages in one launch. Synthetic data only.
+    func test_v1OnDiskStore_migratesThroughBothStagesToV3() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("rocklog-v1-v3-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let storeURL = directory.appendingPathComponent("RockLog.store")
+        let exerciseID = UUID()
+        let setID = UUID()
+        try writeVersionedV1Workout(url: storeURL, exerciseID: exerciseID, setID: setID)
+
+        let schema = Schema(versionedSchema: RockLogSchemaV3.self)
+        try open(schema: schema, url: storeURL, migrationPlan: true)
+        let context = container!.mainContext
+        let sets = try context.fetch(FetchDescriptor<SetRecord>())
+        XCTAssertEqual(sets.map(\.id), [setID])
+        XCTAssertEqual(sets.first?.weightLbs, 135)
+        XCTAssertEqual(sets.first?.reps, 8)
+        XCTAssertEqual(sets.first?.enteredUnitRaw, "")
+        XCTAssertEqual(sets.first?.enteredValue, 0)
+        XCTAssertEqual(sets.first?.exerciseRecord?.exercise?.id, exerciseID)
+        XCTAssertEqual(sets.first?.exerciseRecord?.session?.isCompleted, true)
+        XCTAssertTrue(try context.fetch(FetchDescriptor<Gym>()).isEmpty)
+        XCTAssertTrue(try context.fetch(FetchDescriptor<MachineStackProfile>()).isEmpty)
+    }
+
     /// A V2 file on disk, including a logged set, opens as V3 and keeps the row.
     /// Entered unit and value stay at the V3 defaults. Synthetic data only.
     func test_v2OnDiskStore_migratesLoggedSetToV3() throws {
