@@ -68,6 +68,15 @@ if [ "${CI_BRANCH:-}" = "main" ]; then
   exit 0
 fi
 
+# A failed xcodebuild test action must fail here too, even if the bundle
+# and count look fine. Non-test actions (build-for-testing) keep their own result.
+if is_test_action && [ -n "${CI_XCODEBUILD_EXIT_CODE:-}" ] && [ "${CI_XCODEBUILD_EXIT_CODE}" != "0" ]; then
+  echo "ci_post_xcodebuild: xcodebuild exited ${CI_XCODEBUILD_EXIT_CODE}. Failing the test action."
+  FAIL_EXIT=1
+else
+  FAIL_EXIT=0
+fi
+
 case "${CI_XCODEBUILD_ACTION:-}" in
   archive|build-for-archive|export)
     echo "ci_post_xcodebuild: no test result for this action."
@@ -173,4 +182,5 @@ if count <= 0 or count < floor:
 PY
 status=$?
 rm -f "$SUMMARY_FILE"
+if [ "$FAIL_EXIT" = "1" ]; then exit 1; fi
 exit "$status"
