@@ -145,6 +145,24 @@ class RockLogUITestCase: XCTestCase {
         XCTAssertTrue(match.isHittable, "Not hittable after scrolling: \(match)")
     }
 
+    /// Swipes down in the largest scrollable until `anchor` is hittable (back at the top).
+    func scrollToTop(showing anchor: XCUIElement, maxSwipes: Int = 8) {
+        for _ in 0..<maxSwipes {
+            if anchor.exists, anchor.isHittable { return }
+            let candidates = [
+                app.collectionViews.firstMatch,
+                app.tables.firstMatch,
+                app.scrollViews.firstMatch,
+            ].filter(\.exists)
+            if let target = candidates.max(by: { $0.frame.height < $1.frame.height }) {
+                target.swipeDown(velocity: .fast)
+            } else {
+                app.swipeDown(velocity: .fast)
+            }
+        }
+        XCTAssertTrue(anchor.isHittable, "Could not scroll back to the top: \(anchor)")
+    }
+
     private func swipeUpInScrollable() {
         let candidates = [
             app.collectionViews.firstMatch,

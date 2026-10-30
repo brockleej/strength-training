@@ -26,18 +26,25 @@ final class SettingsAndEdgesUITests: RockLogUITestCase {
         let addPlanned = element(UITestID.settingsAddPlanned)
         scrollUntilHittable(addPlanned)
         XCTAssertTrue(addPlanned.isHittable, "Add planned is not hittable on Programs")
+        // Scrolling to Add planned can leave Import split already on screen, which made the
+        // timed scroll below near-zero. Go back to the top so it times a full scroll again.
+        scrollToTop(showing: element(UITestID.settingsEditSplit))
         // On iPhone SE the Import split row sits below the fold of the lazy List.
         let hierarchy = XCTAttachment(string: app.debugDescription)
         hierarchy.name = "Programs hierarchy before scroll"
         hierarchy.lifetime = .keepAlways
         add(hierarchy)
         let importSplit = element(UITestID.settingsImportSplit)
-        // The 5s bound starts after the existence probe: swipes + hittable check only.
+        // The 15s bound starts after the existence probe: swipes + hittable check only.
+        // Local max was 2.10s (0c3bd34); Cloud SE max was 6.43s (Oct 28), so 15s keeps headroom
+        // while still catching a frozen Programs list.
         var scrollStart = Date()
         scrollUntilHittable(importSplit, maxSwipes: 4, existenceTimeout: 0.5,
                             afterExistenceProbe: { scrollStart = Date() })
-        XCTAssertLessThan(Date().timeIntervalSince(scrollStart), 5,
-                          "Swiping to Import split took over 5s; Programs may be unresponsive")
+        let scrollSeconds = Date().timeIntervalSince(scrollStart)
+        print(String(format: "ROCKLOG_IMPORT_SPLIT_SCROLL_SECONDS=%.3f", scrollSeconds))
+        XCTAssertLessThan(scrollSeconds, 15,
+                          "Swiping to Import split took over 15s; Programs may be unresponsive")
         XCTAssertTrue(importSplit.isHittable,
                       "Import split is not hittable after 4 swipes on Programs")
     }
