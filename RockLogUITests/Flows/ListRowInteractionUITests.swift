@@ -2,10 +2,11 @@
 //  ListRowInteractionUITests.swift
 //  RockLogUITests
 //
-//  Regression for the 18 Pro Max tap drop on split rows (9a28cb0): a tap on a
-//  hittable split row must open exactly one Edit day sheet, on every device,
-//  with and without scrolling. Also covers swipe, menu and drag reorder on the
-//  split rows and the day plan rows. Synthetic "typical" preset only.
+//  Regression for the 18 Pro Max dead row center (9a28cb0, 20/20 failures):
+//  a CENTER tap (XCUIElement.tap) on each split row and on a day plan row must
+//  open exactly one editor. Also: mid-screen variant, swipe delete, context
+//  menu, and reorder (split: Move up/down buttons; day plan: number-handle
+//  long-press drag). Synthetic "typical" preset only.
 //
 
 import XCTest
@@ -35,7 +36,7 @@ final class ListRowInteractionUITests: RockLogUITestCase {
         openSplitEditor()
         _ = waitFor(UITestID.splitDay("Push"))
         guard let name = days.first(where: { element(UITestID.splitDay($0)).isHittable }) else {
-            throw XCTSkip("No split row is on screen without scrolling on this device")
+            throw XCTSkip("Explicit skip: no split row is on screen before scrolling on this device (e.g. iPhone SE); the center-tap tests cover it after scrolling")
         }
         element(UITestID.splitDay(name)).tap()
         assertSingleEditDaySheet(context: "\(name) no-scroll tap")
@@ -45,11 +46,12 @@ final class ListRowInteractionUITests: RockLogUITestCase {
     /// Scrolls Pull into the middle third of the window, then taps it.
     func test_splitRow_tapAtMidScreen_opensEditor() {
         openSplitEditor()
-        let pull = waitFor(UITestID.splitDay("Pull"))
+        let pull = element(UITestID.splitDay("Pull"))
+        scrollUntilHittable(pull)
         let window = app.windows.firstMatch.frame
         let low = window.minY + window.height * 0.3
         let high = window.minY + window.height * 0.7
-        let list = app.collectionViews.firstMatch
+        let list = app.scrollViews.firstMatch
         for _ in 0..<8 where pull.frame.midY > high {
             list.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.7))
                 .press(forDuration: 0.1, thenDragTo: list.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.55)))
@@ -64,8 +66,8 @@ final class ListRowInteractionUITests: RockLogUITestCase {
     func test_splitRow_swipeDelete_contextMenu_andReorder_stillWork() {
         openSplitEditor()
         // Reorder: Reorder on, Legs Move up twice -> 1., Reorder off.
-        // (The row's native long-press drag is .onMove; under XCUITest the
-        // long-press raises the row menu first, so it is checked by hand.)
+        // Split reorder is driven by Move up/down (XCUITest cannot reliably
+        // drive the number-handle drag here; it raises the row menu).
         let reorder = waitFor(UITestID.splitReorder)
         scrollUntilHittable(reorder)
         reorder.tap()
@@ -101,7 +103,7 @@ final class ListRowInteractionUITests: RockLogUITestCase {
 
     // MARK: Day plan rows
 
-    func test_dayPlanRows_tapSwipeMenuAndDragReorder_stillWork() {
+    func test_dayPlanRow_centerTap_handleDrag_andMenu_stillWork() {
         launch(preset: "typical")
         selectPushIfNeeded()
         waitFor(UITestID.todayEditDay).tap()
@@ -113,20 +115,24 @@ final class ListRowInteractionUITests: RockLogUITestCase {
         // Tap opens the exercise editor once.
         let first = rows.element(boundBy: 0)
         first.tap()
-        let cancel = app.buttons["Cancel"]
-        let done = app.buttons["Done"]
-        XCTAssertTrue(cancel.waitForExistence(timeout: 6) || done.waitForExistence(timeout: 1), "Tap did not open the editor")
-        if cancel.exists { cancel.tap() } else { done.firstMatch.tap() }
+        let save = app.buttons["Save"]
+        XCTAssertTrue(save.waitForExistence(timeout: 6), "Center tap did not open the exercise editor")
+        XCTAssertEqual(app.buttons.matching(identifier: "Save").count, 1, "expected exactly one exercise editor")
+        app.buttons["Cancel"].firstMatch.tap()
+        XCTAssertTrue(save.waitForNonExistence(timeout: 4), "Exercise editor did not close")
 
-        // Drag reorder: second row above the first (long-press, then drag).
+        // Reorder: long-press the number handle of row 2, drag it above row 1.
         rows = dayPlanRows()
         let second = rows.element(boundBy: 1)
         let secondID = second.identifier
         let firstRow = rows.element(boundBy: 0)
         scrollUntilHittable(second)
         XCTAssertTrue(second.label.hasPrefix("2."))
-        second.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
-            .press(forDuration: 1.0, thenDragTo: firstRow.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.1)))
+        let handle = second.coordinate(withNormalizedOffset: .zero)
+            .withOffset(CGVector(dx: 14 + 22, dy: second.frame.height / 2))
+        let target = firstRow.coordinate(withNormalizedOffset: .zero)
+            .withOffset(CGVector(dx: 14 + 22, dy: 2))
+        handle.press(forDuration: 0.6, thenDragTo: target, withVelocity: .slow, thenHoldForDuration: 0.3)
         let moved = element(secondID)
         wait(for: [XCTNSPredicateExpectation(predicate: NSPredicate(format: "label BEGINSWITH '1.'"), object: moved)], timeout: 10)
         dismissMenuIfShown()
@@ -138,30 +144,10 @@ final class ListRowInteractionUITests: RockLogUITestCase {
         tapMenuItem(identifier: "Remove", label: "Remove")
         XCTAssertFalse(element(aID).waitForExistence(timeout: 3))
 
-        // Swipe remove.
-        let b = dayPlanRows().element(boundBy: 0)
-        let bID = b.identifier
-        scrollUntilHittable(b)
-        b.swipeLeft()
-        let remove = app.buttons["Remove"]
-        XCTAssertTrue(remove.waitForExistence(timeout: 4), "Swipe did not show Remove")
-        remove.tap()
-        XCTAssertFalse(element(bID).waitForExistence(timeout: 3))
+        // Day plan rows have no swipe action in this design (menu only).
     }
 
     // MARK: Helpers
-
-    /// Drags the list until the element sits in the middle band of the window.
-    private func scrollToMiddle(_ target: XCUIElement) {
-        let window = app.windows.firstMatch.frame
-        let high = window.minY + window.height * 0.6
-        let list = app.collectionViews.firstMatch
-        for _ in 0..<8 where target.frame.midY > high {
-            list.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.7))
-                .press(forDuration: 0.1, thenDragTo: list.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.55)))
-        }
-        XCTAssertTrue(target.isHittable, "Not hittable after scrolling to middle: \(target.frame)")
-    }
 
     private func openSplitEditor() {
         launch(preset: "typical")

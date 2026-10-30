@@ -4,9 +4,8 @@
 //
 //  Configure the user's training split: presets (bro, PPL, …) plus
 //  add / rename / reorder / delete custom day types.
-//  One List is the only scroller. Reorder uses the List's own drag
-//  (.onMove). Move up / Move down appear only while the Reorder control is
-//  on, outside the swipe area. Tapping a row opens the editor (plain Button).
+//  Reorder uses the long-press drag. Move up / Move down appear only
+//  while the Reorder control is on, outside the swipe area.
 //
 
 import SwiftUI
@@ -24,6 +23,7 @@ struct TrainingSplitSettingsView: View {
     @State private var dayPendingDelete: SplitDay?
     @State private var showKeepLastDay = false
     @State private var orderedIDs: [UUID] = []
+    @State private var draggingID: UUID?
     @State private var isReordering = false
     @AppStorage(SplitSchedulePreferences.modeKey)
     private var scheduleModeRaw: String = SplitScheduleMode.rolling.rawValue
@@ -45,56 +45,17 @@ struct TrainingSplitSettingsView: View {
 
     var body: some View {
         let _ = noteBodyChanges()
-        List {
-            scheduleModeSection
-                .splitListRow(top: 12, bottom: 10)
-            presetsSection
-                .splitListRow(top: 10, bottom: 10)
-            daysHeader
-                .splitListRow(top: 10, bottom: 6)
-            if displayedDays.isEmpty {
-                EmptyListState(
-                    title: "No days yet",
-                    systemImage: "calendar",
-                    description: "Add a day or apply a preset above.",
-                    actionTitle: ListMutationCopy.addDay,
-                    action: { showAddSheet = true }
-                )
-                .splitListRow(top: 4, bottom: 4)
-            } else {
-                ForEach(Array(displayedDays.enumerated()), id: \.element.id) { index, day in
-                    dayRow(day, weekPosition: index + 1)
-                        .listRowInsets(EdgeInsets(top: 4, leading: 20, bottom: 4, trailing: 20))
-                        .listRowSeparator(.hidden)
-                        .listRowBackground(Color.clear)
-                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                            Button(role: .destructive) {
-                                requestDelete(day)
-                            } label: {
-                                Label("Delete", systemImage: "trash")
-                            }
-                            .accessibilityIdentifier(AccessibilityID.splitDelete)
-                        }
-                        .contextMenu {
-                            Button("Delete", role: .destructive) {
-                                requestDelete(day)
-                            }
-                            .accessibilityIdentifier(AccessibilityID.splitDelete)
-                        }
-                }
-                .onMove(perform: moveDays)
-
-                AddItemRow(title: ListMutationCopy.addDay) {
-                    showAddSheet = true
-                }
-                .splitListRow(top: 8, bottom: 4)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                scheduleModeSection
+                presetsSection
+                daysSection
             }
-            sectionFooter("This order is how days appear on Today — e.g. easier days first, harder days later in the week.")
-                .splitListRow(top: 6, bottom: 28)
+            .padding(.horizontal, 20)
+            .padding(.top, 12)
+            .padding(.bottom, 28)
         }
-        .listStyle(.plain)
-        .scrollContentBackground(.hidden)
-        .environment(\.defaultMinListRowHeight, 1)
+        .scrollDisabled(draggingID != nil)
         .background(Color.uplift.bgElev)
         .navigationTitle("Training Split")
         .navigationBarTitleDisplayMode(.inline)
@@ -102,7 +63,7 @@ struct TrainingSplitSettingsView: View {
         .onChange(of: splitDays.map(\.id), initial: true) { _, next in
             // Do not assign when the ids already match. A write here rebuilds
             // the view, and an eager parent used to run this again immediately.
-            guard next != orderedIDs else { return }
+            guard draggingID == nil, next != orderedIDs else { return }
             orderedIDs = next
         }
         .sheet(isPresented: $showAddSheet) {
@@ -234,7 +195,7 @@ struct TrainingSplitSettingsView: View {
         }
     }
 
-    private var daysHeader: some View {
+    private var daysSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .firstTextBaseline) {
                 sectionHeader("Your days · weekly order")
@@ -248,9 +209,56 @@ struct TrainingSplitSettingsView: View {
                 .accessibilityIdentifier(AccessibilityID.splitReorder)
                 .accessibilityAddTraits(isReordering ? AccessibilityTraits.isSelected : AccessibilityTraits())
             }
-            Text("Long-press a day and drag to reorder, or tap Reorder. Swipe left to remove. Tap to edit.")
+            Text(ListMutationCopy.reorderAndRemove + " Tap to edit.")
                 .font(.uplift.text(13, weight: .medium))
                 .foregroundStyle(Color.uplift.fgMuted)
+
+            if displayedDays.isEmpty {
+                EmptyListState(
+                    title: "No days yet",
+                    systemImage: "calendar",
+                    description: "Add a day or apply a preset above.",
+                    actionTitle: ListMutationCopy.addDay,
+                    action: { showAddSheet = true }
+                )
+            } else {
+                List {
+                    ForEach(Array(displayedDays.enumerated()), id: \.element.id) { index, day in
+                        dayRow(day, weekPosition: index + 1)
+                            .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
+                            .listRowSeparator(.hidden)
+                            .listRowBackground(Color.clear)
+                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                Button(role: .destructive) {
+                                    requestDelete(day)
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                                .accessibilityIdentifier(AccessibilityID.splitDelete)
+                            }
+                            .contextMenu {
+                                Button("Delete", role: .destructive) {
+                                    requestDelete(day)
+                                }
+                                .accessibilityIdentifier(AccessibilityID.splitDelete)
+                            }
+                    }
+                }
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
+                .scrollDisabled(true)
+                .environment(\.defaultMinListRowHeight, 44)
+                .frame(height: CGFloat(displayedDays.count) * (isReordering ? 128 : 88))
+            }
+
+            if !displayedDays.isEmpty {
+                AddItemRow(title: ListMutationCopy.addDay) {
+                    showAddSheet = true
+                }
+                .padding(.top, 4)
+            }
+
+            sectionFooter("This order is how days appear on Today — e.g. easier days first, harder days later in the week.")
         }
     }
 
@@ -270,12 +278,12 @@ struct TrainingSplitSettingsView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Color.uplift.surface1)
+                .fill(draggingID == day.id ? Color.uplift.surface2 : Color.uplift.surface1)
         }
     }
 
-    /// Tap target for the editor. Move buttons stay outside this view
-    /// so XCUITest can tap them. The row (not this Button) owns the menu.
+    /// Tap target for the editor; the List row owns the menu. Move buttons stay outside this view
+    /// so XCUITest can tap them. Reorder drag stays on the number.
     private func dayRowSummary(_ day: SplitDay, weekPosition: Int) -> some View {
         Button {
             editingDay = day
@@ -286,6 +294,13 @@ struct TrainingSplitSettingsView: View {
                 .foregroundStyle(Color.uplift.fgDim)
                 .frame(width: 44, height: 44)
                 .contentShape(Rectangle())
+                .accessibilityLabel("Reorder \(day.name)")
+                .longPressReorder(
+                    id: day.id,
+                    orderedIDs: $orderedIDs,
+                    draggingID: $draggingID,
+                    onReorder: persistOrder
+                )
 
             DayChip(dayType: day.asDayType, size: .sm)
 
@@ -311,17 +326,16 @@ struct TrainingSplitSettingsView: View {
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(Color.uplift.fgDim)
             }
+            // The label's shape is the Button's hit area. Without this the
+            // empty middle of the row (the tap point on wide phones) is dead.
             .frame(maxWidth: .infinity, alignment: .leading)
-            // Hit area is the label's shape, so the empty middle of the row
-            // must be part of it (on wide phones the center is empty).
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(weekPosition). \(day.name)")
         .accessibilityIdentifier(AccessibilityID.splitDay(day.name))
-        .accessibilityHint("Swipe left or long press to delete, tap to edit")
+        .accessibilityHint("Long press the number and drag to reorder, swipe left or long press to delete, tap to edit")
         .accessibilityAction(named: "Move up") { moveDay(day.id, by: -1) }
         .accessibilityAction(named: "Move down") { moveDay(day.id, by: 1) }
     }
@@ -380,14 +394,6 @@ struct TrainingSplitSettingsView: View {
         .disabled(isDisabled)
         .accessibilityLabel(label)
         .accessibilityIdentifier(identifier)
-    }
-
-    private func moveDays(from source: IndexSet, to destination: Int) {
-        var next = displayedDays.map(\.id)
-        next.move(fromOffsets: source, toOffset: destination)
-        guard next != orderedIDs else { return }
-        orderedIDs = next
-        persistOrder()
     }
 
     private func moveDay(_ id: UUID, by delta: Int) {
@@ -567,16 +573,5 @@ private struct SplitDayEditorSheet: View {
             }
         }
         .preferredColorScheme(.dark)
-    }
-}
-
-private extension View {
-    /// Full-width List row with the screen's 20 pt margins and no chrome.
-    func splitListRow(top: CGFloat, bottom: CGFloat) -> some View {
-        self
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .listRowInsets(EdgeInsets(top: top, leading: 20, bottom: bottom, trailing: 20))
-            .listRowSeparator(.hidden)
-            .listRowBackground(Color.clear)
     }
 }

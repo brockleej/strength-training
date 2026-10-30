@@ -3,8 +3,8 @@
 //  RockLog
 //
 //  Edit a day's exercise roster without starting a workout.
-//  One List is the only scroller. Long-press and drag to reorder (.onMove),
-//  swipe left or long-press to remove, tap to edit, Add exercise row.
+//  Global list patterns: long-press the number to reorder, long-press the
+//  row to remove, Add exercise row.
 //
 
 import SwiftUI
@@ -22,6 +22,7 @@ struct DayPlanEditorView: View {
     @State private var showAddPicker = false
     @State private var editingExercise: Exercise?
     @State private var orderedIDs: [UUID] = []
+    @State private var draggingID: UUID?
 
     init(dayType: DayType) {
         self.dayType = dayType
@@ -59,9 +60,9 @@ struct DayPlanEditorView: View {
 
     var body: some View {
         NavigationStack {
-            List {
+            ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    Text("Long-press an exercise and drag to reorder. Swipe left to remove. Tap to edit.")
+                    Text(ListMutationCopy.reorderAndRemove + " Tap to edit.")
                         .font(.uplift.text(13, weight: .medium))
                         .foregroundStyle(Color.uplift.fgMuted)
 
@@ -91,47 +92,31 @@ struct DayPlanEditorView: View {
                             .foregroundStyle(Color.uplift.fgDim)
                     }
 
-                }
-                .planListRow(top: 12, bottom: 8)
-
-                if displayedExercises.isEmpty {
-                    EmptyListState(
-                        title: "No exercises on this day",
-                        description: "Add lifts from your library. Unassigned lifts live under Exercises → Unassigned.",
-                        actionTitle: ListMutationCopy.addExercise,
-                        action: { showAddPicker = true }
-                    )
-                    .planListRow(top: 4, bottom: 28)
-                } else {
-                    ForEach(Array(displayedExercises.enumerated()), id: \.element.id) { index, exercise in
-                        planRow(exercise, index: index)
-                            .listRowInsets(EdgeInsets(top: 4, leading: 20, bottom: 4, trailing: 20))
-                            .listRowSeparator(.hidden)
-                            .listRowBackground(Color.clear)
-                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                Button(role: .destructive) {
-                                    removeExercise(exercise)
-                                } label: {
-                                    Label("Remove", systemImage: "trash")
-                                }
+                    if displayedExercises.isEmpty {
+                        EmptyListState(
+                            title: "No exercises on this day",
+                            description: "Add lifts from your library. Unassigned lifts live under Exercises → Unassigned.",
+                            actionTitle: ListMutationCopy.addExercise,
+                            action: { showAddPicker = true }
+                        )
+                    } else {
+                        VStack(spacing: 8) {
+                            ForEach(Array(displayedExercises.enumerated()), id: \.element.id) { index, exercise in
+                                planRow(exercise, index: index)
                             }
-                            .contextMenu {
-                                Button("Remove", role: .destructive) {
-                                    removeExercise(exercise)
-                                }
-                            }
-                    }
-                    .onMove(perform: moveExercises)
+                        }
 
-                    AddItemRow(title: ListMutationCopy.addExercise) {
-                        showAddPicker = true
+                        AddItemRow(title: ListMutationCopy.addExercise) {
+                            showAddPicker = true
+                        }
+                        .padding(.top, 4)
                     }
-                    .planListRow(top: 8, bottom: 28)
                 }
+                .padding(.horizontal, 20)
+                .padding(.top, 12)
+                .padding(.bottom, 28)
             }
-            .listStyle(.plain)
-            .scrollContentBackground(.hidden)
-            .environment(\.defaultMinListRowHeight, 1)
+            .scrollDisabled(draggingID != nil)
             .background(Color.uplift.bgElev)
             .navigationTitle("Edit \(dayType.rawValue)")
             .navigationBarTitleDisplayMode(.inline)
@@ -143,10 +128,14 @@ struct DayPlanEditorView: View {
             }
             .onAppear { syncOrderedIDsFromStore() }
             .onChange(of: allExercises.count) { _, _ in
-                syncOrderedIDsFromStore()
+                if draggingID == nil {
+                    syncOrderedIDsFromStore()
+                }
             }
             .onChange(of: membershipSignature) { _, _ in
-                syncOrderedIDsFromStore()
+                if draggingID == nil {
+                    syncOrderedIDsFromStore()
+                }
             }
             .sheet(isPresented: $showAddPicker, onDismiss: syncOrderedIDsFromStore) {
                 AddExerciseSheet(
@@ -191,6 +180,14 @@ struct DayPlanEditorView: View {
                 .font(.uplift.mono(13, weight: .bold))
                 .foregroundStyle(Color.uplift.fgDim)
                 .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
+                .longPressReorder(
+                    id: exercise.id,
+                    orderedIDs: $orderedIDs,
+                    draggingID: $draggingID,
+                    onReorder: persistCurrentOrder
+                )
+                .accessibilityLabel("Reorder \(exercise.name)")
 
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
@@ -229,16 +226,22 @@ struct DayPlanEditorView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Color.uplift.surface1)
+                .fill(draggingID == exercise.id ? Color.uplift.surface2 : Color.uplift.surface1)
         }
+        // The label's shape is the Button's hit area (whole row, incl. gaps).
         .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .contextMenu {
+            Button("Remove", role: .destructive) {
+                removeExercise(exercise)
+            }
+        }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(planAccessibility(index: index, exercise: exercise, personalBest: personalBest, hasHistory: hasHistory))
-        // Identifier on the combined row. The List row owns the Remove menu.
+        // Identifier on the combined row. A long-press opens Remove.
         .accessibilityIdentifier(AccessibilityID.dayPlanExercise(exercise.name))
-        .accessibilityHint("Swipe left or long press to remove, double tap to edit")
+        .accessibilityHint("Long press the number and drag to reorder, long press to remove, double tap to edit")
     }
 
     private func planAccessibility(
@@ -262,14 +265,6 @@ struct DayPlanEditorView: View {
         orderedIDs = next
     }
 
-    private func moveExercises(from source: IndexSet, to destination: Int) {
-        var next = displayedExercises.map(\.id)
-        next.move(fromOffsets: source, toOffset: destination)
-        guard next != orderedIDs else { return }
-        orderedIDs = next
-        persistCurrentOrder()
-    }
-
     private func persistCurrentOrder() {
         let byID = Dictionary(allExercises.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         let ordered = orderedIDs.compactMap { byID[$0] }
@@ -284,17 +279,6 @@ struct DayPlanEditorView: View {
         exercise.removeDayType(dayType)
         ModelSave.logged(modelContext, action: "DayPlanEditorView")
         SeedData.persistUserPlan(context: modelContext)
-    }
-}
-
-private extension View {
-    /// Full-width List row with the screen's 20 pt margins and no chrome.
-    func planListRow(top: CGFloat, bottom: CGFloat) -> some View {
-        self
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .listRowInsets(EdgeInsets(top: top, leading: 20, bottom: bottom, trailing: 20))
-            .listRowSeparator(.hidden)
-            .listRowBackground(Color.clear)
     }
 }
 
