@@ -78,9 +78,8 @@ struct RockLogApp: App {
         )
         do {
             container = try await Task.detached(priority: .userInitiated) {
-                try ModelContainer(
+                try RockLogMigrationPlan.openContainer(
                     for: schema,
-                    migrationPlan: RockLogMigrationPlan.self,
                     configurations: [config]
                 )
             }.value

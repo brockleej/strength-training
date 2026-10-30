@@ -304,21 +304,50 @@ nonisolated enum RockLogSchemaV3: VersionedSchema {
     }
 }
 
+/// One upgrade step (QA checklist #47, Lee's decision Oct 30, 2026):
+/// the plan lists only the shipped schema (V1) and the live schema (V3),
+/// joined by ONE lightweight stage. V2 is kept above only as a frozen
+/// description of the shape that pre-release development builds wrote.
+///
+/// A V2 store is not in the plan, so the staged migrator refuses it
+/// ("unknown coordinator model version"). `openContainer` then opens the
+/// same file without a plan, which is Core Data's inferred lightweight
+/// migration from the model saved in the store to V3. V2→V3 only adds
+/// defaulted fields, so nothing is dropped. If that also fails, the
+/// original error is thrown and nothing is deleted. Both paths are
+/// covered by RockLogSchemaMigrationTests with synthetic V1 and V2 stores.
 nonisolated enum RockLogMigrationPlan: SchemaMigrationPlan {
     nonisolated static var schemas: [any VersionedSchema.Type] {
-        [RockLogSchemaV1.self, RockLogSchemaV2.self, RockLogSchemaV3.self]
+        [RockLogSchemaV1.self, RockLogSchemaV3.self]
     }
 
     nonisolated static var stages: [MigrationStage] {
         [
             .lightweight(
                 fromVersion: RockLogSchemaV1.self,
-                toVersion: RockLogSchemaV2.self
-            ),
-            .lightweight(
-                fromVersion: RockLogSchemaV2.self,
                 toVersion: RockLogSchemaV3.self
             ),
         ]
+    }
+
+    /// Opens the store with the one-stage plan, falling back to inferred
+    /// lightweight migration for a V2 store written by a development build.
+    nonisolated static func openContainer(
+        for schema: Schema,
+        configurations: [ModelConfiguration]
+    ) throws -> ModelContainer {
+        do {
+            return try ModelContainer(
+                for: schema,
+                migrationPlan: RockLogMigrationPlan.self,
+                configurations: configurations
+            )
+        } catch let planned {
+            do {
+                return try ModelContainer(for: schema, configurations: configurations)
+            } catch {
+                throw planned
+            }
+        }
     }
 }
