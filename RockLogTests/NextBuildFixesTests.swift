@@ -404,26 +404,32 @@ final class CircuitGapsTests: XCTestCase {
         XCTAssertTrue(plan.upcomingSeats(forDayWith: Array(ids.prefix(3))).isEmpty)
     }
 
-    // (b) Circuit rest syncs through iCloud key-value storage like other settings
+    // (b) Circuit rest is phone-only: iCloud sync stays off until Lee approves it
 
-    func test_b_circuitRest_writesBothStores_andPrefersCloud() {
+    func test_b_circuitRest_isLocalOnly_andNeverWritesICloud() throws {
         let suite = "CircuitGapsTests-\(UUID().uuidString)"
         let local = UserDefaults(suiteName: suite)!
         defer { local.removePersistentDomain(forName: suite) }
-        let cloud = MemoryCloudStore()
         let g = UUID()
-        XCTAssertEqual(CircuitRestStore.seconds(for: g, local: local, cloud: cloud), 90)
-        CircuitRestStore.set(75, for: g, local: local, cloud: cloud)
+        XCTAssertEqual(CircuitRestStore.seconds(for: g, local: local), 90)
+        CircuitRestStore.set(75, for: g, local: local)
         XCTAssertEqual(local.integer(forKey: CircuitRestStore.key(g)), 75)
-        XCTAssertEqual(cloud.double(forKey: CircuitRestStore.key(g)), 75)
-        // Another device changed it: cloud wins over the stale local copy.
-        cloud.set(Double(45), forKey: CircuitRestStore.key(g))
-        XCTAssertEqual(CircuitRestStore.seconds(for: g, local: local, cloud: cloud), 45)
-        // Cloud empty (offline first launch): local copy still works.
-        let fresh = MemoryCloudStore()
-        XCTAssertEqual(CircuitRestStore.seconds(for: g, local: local, cloud: fresh), 75)
-        CircuitRestStore.set(1_000, for: g, local: local, cloud: cloud)
-        XCTAssertEqual(CircuitRestStore.seconds(for: g, local: local, cloud: cloud), 600)
+        XCTAssertEqual(CircuitRestStore.seconds(for: g, local: local), 75)
+        CircuitRestStore.set(1_000, for: g, local: local)
+        XCTAssertEqual(CircuitRestStore.seconds(for: g, local: local), 600)
+        // Default path writes the app's local store, and nothing reaches the cloud store.
+        let before = (AppDefaults.cloud as? MemoryCloudStore)?.writeCount
+        CircuitRestStore.set(45, for: g)
+        if let cloud = AppDefaults.cloud as? MemoryCloudStore { XCTAssertEqual(cloud.writeCount, before) }
+        XCTAssertNil(NSUbiquitousKeyValueStore.default.object(forKey: CircuitRestStore.key(g)))
+        AppDefaults.local.removeObject(forKey: CircuitRestStore.key(g))
+        // Source guard: the store's file never names the iCloud key-value store.
+        let source = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .deletingLastPathComponent().appendingPathComponent("RockLog/Services/Optimization/CircuitPlan.swift")
+        let text = try String(contentsOf: source, encoding: .utf8)
+        let code = text.split(separator: "\n").filter { !$0.trimmingCharacters(in: .whitespaces).hasPrefix("//") }.joined(separator: "\n")
+        XCTAssertFalse(code.contains("NSUbiquitousKeyValueStore"))
+        XCTAssertFalse(code.contains("AppDefaults.cloud"))
     }
 
     // (c) Round-complete rest between rounds
