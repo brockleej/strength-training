@@ -479,3 +479,121 @@ final class CircuitGapsTests: XCTestCase {
         XCTAssertEqual(CircuitRounds.startTitle(letter: "A", members: members([3, 3, 3])), "Circuit A done")
     }
 }
+
+/// View-model wiring for the 1.2 circuit gaps, on an in-memory store with synthetic lifts.
+@MainActor
+final class CircuitGapsViewModelTests: RockLogStoreTestCase {
+    private func makeSession(_ context: ModelContext, exercises: [Exercise], planned: Bool, logged: Bool) -> WorkoutSession {
+        let session = WorkoutSession(dayType: .push, date: Date())
+        if planned { session.planStatus = .planned }
+        context.insert(session)
+        var records: [ExerciseRecord] = []
+        for (index, exercise) in exercises.enumerated() {
+            let record = ExerciseRecord(trainingMode: .highWeightLowReps, sortOrder: index)
+            record.exercise = exercise
+            record.session = session
+            context.insert(record)
+            if logged && index == 0 {
+                let set = SetRecord(setNumber: 1, weightLbs: 100, reps: 5)
+                set.exerciseRecord = record
+                context.insert(set)
+                record.sets = [set]
+            }
+            records.append(record)
+        }
+        session.exerciseRecords = records
+        return session
+    }
+
+    private func lifts(_ context: ModelContext) -> [Exercise] {
+        (0..<3).map { index in
+            let exercise = Exercise.make(name: "UI Circuit Lift \(index)", dayType: .push, isCustom: true)
+            context.insert(exercise)
+            return exercise
+        }
+    }
+
+    func test_a_saveForAllUpcoming_copiesCircuitsToPlannedDays() throws {
+        let context = container.mainContext
+        let exercises = lifts(context)
+        _ = makeSession(context, exercises: exercises, planned: false, logged: true)
+        let future = makeSession(context, exercises: [exercises[2], exercises[0], exercises[1]], planned: true, logged: false)
+        try context.save()
+        let vm = holdWorkoutViewModel(WorkoutViewModel(modelContext: context, healthKitService: HealthKitWorkoutService()))
+        XCTAssertNotNil(vm.activeSession)
+        var plan = vm.todayCircuitPlan(orderedIDs: exercises.map(\.id))
+        let group = try XCTUnwrap(plan.makeCircuit([exercises[1].id, exercises[0].id]))
+        vm.applyTodayPlan(plan, exercises: exercises)
+        vm.saveTodayOrderToRemainingPlanned(exercises: exercises, plan: plan)
+        let byID = Dictionary(uniqueKeysWithValues: future.exerciseRecordsArray.map { ($0.exercise!.id, $0) })
+        XCTAssertEqual(byID[exercises[1].id]?.groupID, group)
+        XCTAssertEqual(byID[exercises[1].id]?.groupPosition, 1)
+        XCTAssertEqual(byID[exercises[0].id]?.groupID, group)
+        XCTAssertEqual(byID[exercises[0].id]?.groupPosition, 2)
+        XCTAssertNil(byID[exercises[2].id]?.groupID)
+    }
+
+    func test_d_endCircuitEarly_marksOpenLiftsDone_andLeavesOthers() throws {
+        let context = container.mainContext
+        let exercises = lifts(context)
+        let live = makeSession(context, exercises: exercises, planned: false, logged: true)
+        try context.save()
+        let vm = holdWorkoutViewModel(WorkoutViewModel(modelContext: context, healthKitService: HealthKitWorkoutService()))
+        var plan = vm.todayCircuitPlan(orderedIDs: exercises.map(\.id))
+        let group = try XCTUnwrap(plan.makeCircuit([exercises[0].id, exercises[1].id]))
+        vm.applyTodayPlan(plan, exercises: exercises)
+        vm.endCircuitEarly(group: group)
+        let byID = Dictionary(uniqueKeysWithValues: live.exerciseRecordsArray.map { ($0.exercise!.id, $0) })
+        XCTAssertEqual(byID[exercises[0].id]?.isCompleted, true)
+        XCTAssertEqual(byID[exercises[1].id]?.isCompleted, true)
+        XCTAssertEqual(byID[exercises[2].id]?.isCompleted, false)
+        XCTAssertNil(vm.circuitBreak)
+        XCTAssertFalse(vm.isResting)
+    }
+
+    func test_e_circuitStart_onlyOnTheFirstLiftOfACircuit() throws {
+        let context = container.mainContext
+        let exercises = lifts(context)
+        _ = makeSession(context, exercises: exercises, planned: false, logged: true)
+        try context.save()
+        let vm = holdWorkoutViewModel(WorkoutViewModel(modelContext: context, healthKitService: HealthKitWorkoutService()))
+        var plan = vm.todayCircuitPlan(orderedIDs: exercises.map(\.id))
+        plan.makeCircuit([exercises[1].id, exercises[2].id])
+        vm.applyTodayPlan(plan, exercises: exercises)
+        XCTAssertNil(vm.circuitStart(before: exercises[0], in: exercises))
+        XCTAssertNil(vm.circuitStart(before: exercises[2], in: exercises))
+        let start = try XCTUnwrap(vm.circuitStart(before: exercises[1], in: exercises))
+        XCTAssertEqual(start.letter, "A")
+        XCTAssertEqual(start.title, "Start Circuit A")
+        XCTAssertEqual(start.liftID, exercises[1].id)
+    }
+
+    func test_c_roundBreak_resumesAfterRelaunchFromTheLastSet() throws {
+        let context = container.mainContext
+        let exercises = lifts(context)
+        let live = makeSession(context, exercises: Array(exercises.prefix(2)), planned: false, logged: true)
+        // Lift 1 logs its round-1 set 10 s ago, so round 1 is complete.
+        let record = live.exerciseRecordsArray.first { $0.exercise?.id == exercises[1].id }!
+        let set = SetRecord(setNumber: 1, weightLbs: 80, reps: 8)
+        set.completedAt = Date().addingTimeInterval(-10)
+        set.exerciseRecord = record
+        context.insert(set)
+        record.sets = [set]
+        live.exerciseRecordsArray.first { $0.exercise?.id == exercises[0].id }?.sets?.forEach {
+            $0.completedAt = Date().addingTimeInterval(-40)
+        }
+        try context.save()
+        let vm = holdWorkoutViewModel(WorkoutViewModel(modelContext: context, healthKitService: HealthKitWorkoutService()))
+        var plan = vm.todayCircuitPlan(orderedIDs: exercises.prefix(2).map(\.id))
+        let group = try XCTUnwrap(plan.makeCircuit(exercises.prefix(2).map(\.id)))
+        vm.applyTodayPlan(plan, exercises: Array(exercises.prefix(2)))
+        XCTAssertNil(vm.circuitBreak)
+        vm.resumeCircuitBreakIfNeeded(for: exercises[0])
+        XCTAssertEqual(vm.circuitBreak?.group, group)
+        XCTAssertEqual(vm.circuitBreak?.completedRound, 1)
+        XCTAssertTrue(vm.isResting)
+        XCTAssertLessThanOrEqual(vm.remainingRestSeconds, Double(CircuitRestStore.seconds(for: group)) - 9)
+        vm.skipRest()
+        XCTAssertNil(vm.circuitBreak, "Skip rest also ends the break")
+    }
+}

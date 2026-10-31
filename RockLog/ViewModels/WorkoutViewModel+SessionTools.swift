@@ -198,7 +198,7 @@ extension WorkoutViewModel {
         ModelSave.logged(modelContext, action: "WorkoutViewModel+SessionTools")
     }
 
-    func saveTodayOrderToRemainingPlanned(exercises: [Exercise]) {
+    func saveTodayOrderToRemainingPlanned(exercises: [Exercise], plan: CircuitPlan? = nil) {
         guard let session = activeSession else { return }
         let orderedIDs = orderedExercises(exercises, session: session).map(\.id)
         let dayName = session.day.rawValue
@@ -218,6 +218,15 @@ extension WorkoutViewModel {
             for record in remaining {
                 record.sortOrder = position
                 position += 1
+            }
+            // Circuits go with the order (1.2 gap a). Same group, so the round rest carries over.
+            if let plan {
+                let seats = plan.upcomingSeats(forDayWith: records.compactMap { $0.exercise?.id })
+                for record in records {
+                    guard let id = record.exercise?.id else { continue }
+                    record.groupID = seats[id]?.group
+                    record.groupPosition = seats[id]?.position ?? 0
+                }
             }
             planned.followsSessionRoster = true
         }
@@ -482,5 +491,55 @@ extension WorkoutViewModel {
         session.exerciseRecords?.append(record)
         modelContext.insert(record)
         return record
+    }
+
+    // MARK: - Circuit gaps (1.2): round break, end early, start entry
+
+    /// Start a round break: same rest timer and End alert as any lift.
+    func beginCircuitBreak(_ found: CircuitBreak, seconds: Double, exercise: Exercise?) {
+        startRest(seconds: seconds, exercise: exercise)
+        circuitBreak = found
+    }
+
+    /// After a relaunch or a long background: bring the round break back if its rest
+    /// still has time left, timed from the last set logged in the circuit.
+    func resumeCircuitBreakIfNeeded(for exercise: Exercise, now: Date = .now) {
+        guard !isResting, circuitBreak == nil,
+              let session = activeSession, let info = circuitRoundMembers(for: exercise) else { return }
+        let lastSetAt = session.exerciseRecordsArray
+            .filter { $0.groupID == info.group }
+            .flatMap { $0.loggedSetsArray.filter { !$0.isWarmup } }
+            .map(\.completedAt)
+            .max()
+        guard let resumed = CircuitRounds.resumableBreak(
+            group: info.group, members: info.members, lastSetAt: lastSetAt,
+            restSeconds: CircuitRestStore.seconds(for: info.group), now: now
+        ) else { return }
+        beginCircuitBreak(resumed.break, seconds: resumed.remaining, exercise: exercise)
+    }
+
+    /// "End circuit early": lifts that still owe sets are marked done; rest stops.
+    func endCircuitEarly(group: UUID) {
+        guard let session = activeSession else { return }
+        let records = session.exerciseRecordsArray.filter { $0.groupID == group }
+        if let exercise = records.first?.exercise, let info = circuitRoundMembers(for: exercise) {
+            let close = Set(CircuitRounds.liftsToCloseEarly(info.members))
+            for record in records where record.exercise.map({ close.contains($0.id) }) == true {
+                record.isCompleted = true
+            }
+        }
+        if isResting || circuitBreak != nil { skipRest() }
+        circuitBreak = nil
+        ModelSave.logged(modelContext, action: "WorkoutViewModel+SessionTools")
+        setMutationEpoch &+= 1
+    }
+
+    /// "Start Circuit A" sits above the first lift of each circuit on today's list.
+    func circuitStart(before exercise: Exercise, in ordered: [Exercise]) -> (letter: String, title: String, liftID: UUID?)? {
+        guard let info = circuitRoundMembers(for: exercise) else { return nil }
+        let memberIDs = Set(info.members.map(\.exerciseID))
+        guard ordered.first(where: { memberIDs.contains($0.id) })?.id == exercise.id else { return nil }
+        let letter = circuitLetter(for: info.group)
+        return (letter, CircuitRounds.startTitle(letter: letter, members: info.members), CircuitRounds.startLift(info.members))
     }
 }

@@ -102,6 +102,9 @@ final class WorkoutViewModel {
     var restEndDate: Date? = nil {
         didSet { syncRestCountdownMonitor() }
     }
+    /// Rest between two circuit rounds. Uses the same countdown as any lift; Focus shows
+    /// the round-complete panel while this is set and the rest is running.
+    var circuitBreak: CircuitBreak? = nil
     /// Bumped when a per-exercise rest on/off changes so Focus re-renders.
     var restTimerPreferenceEpoch: Int = 0
     /// Bumped when sets are added/updated/removed so Focus re-reads SwiftData.
@@ -252,6 +255,7 @@ final class WorkoutViewModel {
     }
 
     func skipRest() {
+        circuitBreak = nil
         recordRestSampleIfNeeded(endedAt: .now)
         if var state = restAlert {
             let effects = RestAlertPolicy.onSkip(&state)
@@ -329,6 +333,7 @@ final class WorkoutViewModel {
             guard !Task.isCancelled, let self, let end = self.restEndDate, end.timeIntervalSinceNow <= 0 else { return }
             self.restAlert = nil
             self.restEndDate = nil
+            self.circuitBreak = nil
         }
     }
 
