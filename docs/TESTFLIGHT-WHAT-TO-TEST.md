@@ -1,5 +1,21 @@
 # TestFlight — What to Test
 
+## 1.2 (1) — paste this block
+
+```
+What's new in 1.2: Reorder Today is new. Tap Edit, drag lifts by the handle, and group 2 or more lifts into Circuit A, B or C (up to 3). A circuit moves as one block. Save for today or Save for all upcoming days (that copies your circuits too). In a workout, a circuit works like straight sets: no rest between lifts in a round, then one rest after each round, with End circuit early and a Start Circuit A button on the list. The rest End alert has 4 choices: Chirp at zero, 5-second countdown beeps, Buzz only, or Off. Beeps lower other audio and then let it back up. Kilograms get a 5 kg step and kg machine steps (2.5, 5, 10). The pills say Load: Total / Assist / Added and Steps 10 lb. The set screen says "Set 2 of 4" so you know there are more sets below. Editing an old set's reps no longer changes its weight.
+
+Please try on your phone (these can't be tested on a simulator):
+1) Play an audiobook or music. Pick 5-second countdown beeps, log a set and let rest run out. The audiobook should dip for each beep and come back to full volume after. Try Chirp at zero too.
+2) Feel the haptics: the buzz at zero, and the tap at 10 seconds if you turned it on.
+3) Use it at the gym: make a circuit of 2–3 lifts with other lifts on their own, run a whole workout, and use End circuit early once.
+4) In kilograms, pick Machine steps → Every 5 kg on a machine lift. The weight should jump to a real machine weight. Edit an old set's reps only; its weight should stay the same.
+
+Note: the End alert choice and circuit rest times are not in backups. A restore keeps whatever is set on the phone.
+```
+
+---
+
 ## Stage 3 — local, not a TestFlight paste yet
 
 ```
