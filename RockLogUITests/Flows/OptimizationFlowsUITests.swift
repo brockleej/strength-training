@@ -134,4 +134,35 @@ final class OptimizationFlowsUITests: RockLogUITestCase {
         launch(preset: "typical", extra: ["-RockLogRelaunchStore", "-RockLogRelaunchKeep"])
         XCTAssertTrue(element(UITestID.workoutExercise("UI Fresh Lift")).waitForExistence(timeout: 12))
     }
+
+    /// Items 11–12: make Circuit A in Reorder Today, then log inside it. Same Focus screen and
+    /// Log set; inside a round the app goes straight to the next lift with no rest timer.
+    func test_circuit_madeInReorder_logsWithoutRestInsideARound() {
+        launch(preset: "typical", extra: ["-RockLogRestTimer", "on"])
+        selectPushIfNeeded()
+        waitFor(UITestID.todayStart).tap()
+        XCTAssertTrue(element(UITestID.workoutExercise("UI Fresh Lift")).waitForExistence(timeout: 8))
+        let more = app.buttons["More options"]
+        XCTAssertTrue(more.waitForExistence(timeout: 6))
+        more.tap()
+        let reorder = app.buttons["Reorder today's list"]
+        XCTAssertTrue(reorder.waitForExistence(timeout: 4))
+        reorder.tap()
+        waitFor(UITestID.workoutCircuit).tap()
+        waitFor(UITestID.circuitPick("UI Bench Press")).tap()
+        waitFor(UITestID.circuitPick("UI Fresh Lift")).tap()
+        XCTAssertTrue(element(UITestID.circuitRest).waitForExistence(timeout: 4))
+        waitFor(UITestID.circuitCreate).tap()
+        XCTAssertTrue(element(UITestID.reorderCircuit("A")).waitForExistence(timeout: 6))
+        waitFor(UITestID.workoutSaveToday).tap()
+        waitFor(UITestID.workoutExercise("UI Bench Press")).tap()
+        XCTAssertTrue(element(UITestID.focusCircuitRound).waitForExistence(timeout: 8))
+        XCTAssertTrue(element(UITestID.focusCircuitLift("UI Fresh Lift")).exists)
+        waitForLogSet().tap()
+        // Inside the round: no rest, and Focus now shows the other lift's strip as current.
+        XCTAssertFalse(element(UITestID.restSkip).waitForExistence(timeout: 2), "No rest between lifts inside a round")
+        XCTAssertTrue(element(UITestID.focusCircuitRound).waitForExistence(timeout: 6))
+        XCTAssertTrue(element(UITestID.focusLogSet).exists)
+    }
 }
+
