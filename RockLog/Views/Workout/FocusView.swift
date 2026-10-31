@@ -252,6 +252,7 @@ struct FocusView: View {
                 }
                 if !isNoteEditing, let focusVM {
                     VStack(spacing: 12) {
+                        circuitStrip
                         setProgressRow(focusVM)
                         stepperFooter(focusVM)
                         comparisonLine(focusVM)
@@ -518,6 +519,58 @@ struct FocusView: View {
             )
         }
         .padding(.horizontal, 12)
+    }
+
+    /// Only for a lift in a circuit: a round pill and a strip of the circuit's lifts.
+    /// Everything else on the screen is the same as a standalone lift.
+    @ViewBuilder
+    private var circuitStrip: some View {
+        let _ = workoutVM.setMutationEpoch
+        if let info = workoutVM.circuitRoundMembers(for: exercise) {
+            let round = CircuitRounds.currentRound(info.members)
+            let total = CircuitRounds.totalRounds(info.members)
+            let done = CircuitRounds.doneThisRound(info.members)
+            let letter = workoutVM.circuitLetter(for: info.group)
+            let names = Dictionary(
+                (workoutVM.activeSession?.exerciseRecordsArray ?? []).compactMap { r in r.exercise.map { ($0.id, $0.name) } },
+                uniquingKeysWith: { a, _ in a }
+            )
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Circuit \(letter) · Round \(round) of \(total)")
+                    .font(.uplift.text(12, weight: .semibold))
+                    .foregroundStyle(Color.uplift.accent)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(Capsule().fill(Color.uplift.accent.opacity(0.16)))
+                    .accessibilityIdentifier(AccessibilityID.focusCircuitRound)
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 6) {
+                        ForEach(info.members, id: \.exerciseID) { member in
+                            let isCurrent = member.exerciseID == exercise.id
+                            Button {
+                                if !isCurrent { onJumpTo?(member.exerciseID) }
+                            } label: {
+                                HStack(spacing: 4) {
+                                    Image(systemName: done.contains(member.exerciseID) ? "checkmark" : (isCurrent ? "circle.fill" : "circle"))
+                                        .font(.system(size: 9, weight: .bold))
+                                    Text(names[member.exerciseID] ?? "Lift")
+                                        .lineLimit(1)
+                                }
+                                .font(.uplift.text(12, weight: .semibold))
+                                .foregroundStyle(isCurrent ? Color.uplift.onAccent : Color.uplift.fgMuted)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
+                                .background(Capsule().fill(isCurrent ? Color.uplift.accent : Color.uplift.surface1))
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityIdentifier(AccessibilityID.focusCircuitLift(names[member.exerciseID] ?? ""))
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, 16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
     }
 
     /// "Set 2 of 4 · 2 more below" so he knows more rows are further down the list.
@@ -1059,9 +1112,17 @@ struct FocusView: View {
         workoutVM.markCarryRowLogged(exercise: exercise, setNumber: setNumber)
         let opening = currentPrefill()
         focusVM.apply(prefill: opening.0, openingLine: opening.1)
-        workoutVM.startRestAfterSet(for: exercise)
-        if let nextID = workoutVM.circuitNext(after: exercise, wasWarmup: isWarmup) {
-            onJumpTo?(nextID)
+        // Circuits feel like straight sets: same screen and Log set. Inside a round the
+        // app goes straight to the next lift with no rest; rest runs once after each round.
+        if let circuit = workoutVM.circuitStep(after: exercise, wasWarmup: isWarmup) {
+            if circuit.step.restAfterRound, RestTimerPreferences.isEnabled {
+                workoutVM.startRest(seconds: Double(circuit.restSeconds), exercise: exercise)
+            }
+            if let nextID = circuit.step.next, nextID != exercise.id {
+                onJumpTo?(nextID)
+            }
+        } else {
+            workoutVM.startRestAfterSet(for: exercise)
         }
     }
 

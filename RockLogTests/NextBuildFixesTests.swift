@@ -301,7 +301,7 @@ final class NextBuildFixesTests: XCTestCase {
         XCTAssertEqual(plan.seats[ids[4]]?.position, 1)
         XCTAssertEqual(plan.seats[ids[0]]?.position, 2)
         XCTAssertNil(plan.seats[ids[1]])
-        XCTAssertEqual(plan.order.first, ids[0] == plan.order.first ? ids[0] : ids[4])
+        XCTAssertEqual(Array(plan.order.prefix(2)), [ids[4], ids[0]], "The circuit lands where its first lift was")
     }
 
     func test_circuitRest_defaultsTo90_andClamps() {
@@ -311,5 +311,58 @@ final class NextBuildFixesTests: XCTestCase {
         XCTAssertEqual(CircuitRestStore.seconds(for: g), 15)
         CircuitRestStore.set(120, for: g)
         XCTAssertEqual(CircuitRestStore.seconds(for: g), 120)
+    }
+
+    // MARK: Item 12 — in-workout circuit rounds (t299u)
+
+    private func members(_ logged: [Int], planned: Int? = 3) -> [CircuitRoundMember] {
+        logged.enumerated().map { index, count in
+            CircuitRoundMember(exerciseID: ids[index], position: index + 1, loggedWorkingSets: count, plannedWorkingSets: planned)
+        }
+    }
+
+    func test_insideARound_goesStraightToTheNextLift_withNoRest() {
+        let step = CircuitRounds.stepAfterLogging(ids[0], members: members([1, 0, 0]))
+        XCTAssertEqual(step, CircuitRoundStep(next: ids[1], restAfterRound: false, completedRound: nil))
+        let step2 = CircuitRounds.stepAfterLogging(ids[1], members: members([1, 1, 0]))
+        XCTAssertEqual(step2.next, ids[2])
+        XCTAssertFalse(step2.restAfterRound)
+    }
+
+    func test_endOfRound_restsOnce_thenLoopsToTheFirstLift() {
+        let step = CircuitRounds.stepAfterLogging(ids[2], members: members([1, 1, 1]))
+        XCTAssertEqual(step, CircuitRoundStep(next: ids[0], restAfterRound: true, completedRound: 1))
+        XCTAssertEqual(CircuitRounds.currentRound(members([1, 1, 1])), 2)
+        XCTAssertEqual(CircuitRounds.totalRounds(members([1, 1, 1])), 3)
+    }
+
+    func test_lastRound_finishesTheCircuit() {
+        let step = CircuitRounds.stepAfterLogging(ids[2], members: members([3, 3, 3]))
+        XCTAssertNil(step.next)
+        XCTAssertTrue(step.restAfterRound)
+        XCTAssertEqual(step.completedRound, 3)
+    }
+
+    func test_roundPill_andStrip() {
+        let m = members([2, 1, 1])
+        XCTAssertEqual(CircuitRounds.currentRound(m), 2)
+        XCTAssertEqual(CircuitRounds.doneThisRound(m), [ids[0]])
+    }
+
+    func test_unevenPlans_shortLiftDropsOut() {
+        var m = members([2, 2], planned: 3)
+        m[1].plannedWorkingSets = 2
+        // Lift 1 has finished its two; after lift 0's third set the circuit is done.
+        m[0].loggedWorkingSets = 3
+        let step = CircuitRounds.stepAfterLogging(ids[0], members: m)
+        XCTAssertNil(step.next)
+        // Mid-way, round 3 skips the finished lift and rests.
+        let mid = CircuitRounds.stepAfterLogging(ids[1], members: members([2, 2], planned: nil))
+        XCTAssertTrue(mid.restAfterRound)
+        XCTAssertEqual(mid.next, ids[0])
+    }
+
+    func test_noPlannedSets_defaultsToThreeRounds() {
+        XCTAssertEqual(CircuitRounds.totalRounds(members([0, 0], planned: nil)), 3)
     }
 }

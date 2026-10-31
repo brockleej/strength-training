@@ -277,6 +277,42 @@ extension WorkoutViewModel {
         setMutationEpoch &+= 1
     }
 
+    /// Round members for the circuit this lift is in. Nil for a standalone lift.
+    func circuitRoundMembers(for exercise: Exercise) -> (group: UUID, members: [CircuitRoundMember])? {
+        guard let session = activeSession, let record = currentRecord(for: exercise), let group = record.groupID else { return nil }
+        let members: [CircuitRoundMember] = session.exerciseRecordsArray.compactMap { other in
+            guard other.groupID == group, let id = other.exercise?.id else { return nil }
+            let planned = other.plannedSetsArray.filter { !$0.isWarmup }.count
+            return CircuitRoundMember(
+                exerciseID: id,
+                position: other.groupPosition,
+                loggedWorkingSets: other.loggedSetsArray.filter { !$0.isWarmup }.count,
+                plannedWorkingSets: planned > 0 ? planned : nil,
+                isDone: other.isCompleted
+            )
+        }
+        guard members.count >= CircuitAdvance.minimumCount else { return nil }
+        return (group, members.sorted { $0.position < $1.position })
+    }
+
+    /// Letter (A/B/C) for a circuit by where it sits in today's list.
+    func circuitLetter(for group: UUID) -> String {
+        guard let session = activeSession else { return "A" }
+        let ordered = session.exerciseRecordsArray.sorted { $0.sortOrder < $1.sortOrder }
+        var groups: [UUID] = []
+        for record in ordered {
+            if let g = record.groupID, !groups.contains(g) { groups.append(g) }
+        }
+        let index = groups.firstIndex(of: group) ?? 0
+        return index < CircuitPlan.letters.count ? CircuitPlan.letters[index] : "\(index + 1)"
+    }
+
+    /// What happens after a working set inside a circuit. Nil for warm-ups and standalone lifts.
+    func circuitStep(after exercise: Exercise, wasWarmup: Bool) -> (step: CircuitRoundStep, restSeconds: Int)? {
+        guard !wasWarmup, let info = circuitRoundMembers(for: exercise) else { return nil }
+        return (CircuitRounds.stepAfterLogging(exercise.id, members: info.members), CircuitRestStore.seconds(for: info.group))
+    }
+
     /// Working sets advance inside the group. Warm-ups stay on this lift.
     func circuitNext(after exercise: Exercise, wasWarmup: Bool) -> UUID? {
         guard !wasWarmup, let session = activeSession else { return nil }
