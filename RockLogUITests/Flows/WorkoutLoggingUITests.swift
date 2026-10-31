@@ -82,7 +82,11 @@ final class WorkoutLoggingUITests: RockLogUITestCase {
         }
         XCTAssertGreaterThanOrEqual(logged.frame.height, 44, "focus.set.1 is shorter than 44. \(layout)")
         XCTAssertTrue(logged.isHittable, "focus.set.1 is not hittable. \(layout)")
-        XCTAssertTrue(lastTime.isHittable, "focus.loadLast.1 is not hittable")
+        let lastCenter = CGPoint(x: lastTime.frame.midX, y: lastTime.frame.midY)
+        XCTAssertTrue(
+            lastTime.isHittable,
+            "focus.loadLast.1 is not hittable. last=\(frameDescription(lastTime)) set=\(frameDescription(logged)) owner=\(elementOwning(lastCenter)) window=\(format(app.windows.firstMatch.frame)) progress=\(frameDescription(element(UITestID.focusSetProgress))) logSet=\(frameDescription(element(UITestID.focusLogSet)))"
+        )
         XCTAssertNotEqual(lastTime.identifier, logged.identifier)
         let setCenter = CGPoint(x: logged.frame.midX, y: logged.frame.midY)
         XCTAssertFalse(
@@ -100,6 +104,20 @@ final class WorkoutLoggingUITests: RockLogUITestCase {
         waitUntilEditing(logged)
         XCTAssertTrue(element(UITestID.focusUpdateSet).waitForExistence(timeout: 4))
         XCTAssertTrue(lastTime.exists, "Selecting the set should leave the last-time control in place")
+    }
+
+    /// Regression (1.2 run 20261030-234727): the "Set 2 of 4" cue sat in the pinned
+    /// footer, made it taller, and pushed the just-logged row behind the steppers
+    /// so "last time" for set 1 was not tappable on iPhone 17 Pro.
+    func test_regression_setProgress_staysAboveSetRows_notInFooter() {
+        openLift("UI Bench Press")
+        waitForLogSet().tap()
+        let progress = waitFor(UITestID.focusSetProgress)
+        let lastTime = waitFor(UITestID.focusLoadLast(1))
+        XCTAssertLessThan(progress.frame.maxY, lastTime.frame.minY, "set progress should sit on the sets heading, above the rows")
+        // Reachable by a normal scroll on every phone (SE needs one swipe).
+        scrollUntilHittable(lastTime)
+        XCTAssertTrue(lastTime.isHittable, "set 1 last-time control stays covered after scrolling")
     }
 
     private func openLift(_ name: String) {

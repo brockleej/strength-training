@@ -253,7 +253,6 @@ struct FocusView: View {
                 if !isNoteEditing, let focusVM {
                     VStack(spacing: 12) {
                         circuitStrip
-                        setProgressRow(focusVM)
                         stepperFooter(focusVM)
                         comparisonLine(focusVM)
                         loadAndStackRow
@@ -303,12 +302,22 @@ struct FocusView: View {
         let prev = previousSetsForCard
         let planned = plannedSetsForCard
         VStack(alignment: .leading, spacing: 6) {
-            Text(setsHeading(hasLast: !prev.isEmpty, hasPlan: !planned.isEmpty))
-                .textCase(.uppercase)
-                .font(.uplift.text(11, weight: .semibold))
-                .tracking(0.4)
-                .foregroundStyle(Color.uplift.fgDim)
-                .padding(.horizontal, 20)
+            // The set progress cue shares the heading line inside the scroll
+            // view. In the pinned footer it added height and pushed the newest
+            // set row behind the steppers on a 6.3in phone.
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(setsHeading(hasLast: !prev.isEmpty, hasPlan: !planned.isEmpty))
+                    .textCase(.uppercase)
+                    .font(.uplift.text(11, weight: .semibold))
+                    .tracking(0.4)
+                    .foregroundStyle(Color.uplift.fgDim)
+                    .lineLimit(1)
+                Spacer(minLength: 4)
+                if let focusVM, !isNoteEditing {
+                    setProgressRow(focusVM)
+                }
+            }
+            .padding(.horizontal, 20)
 
             if let focusVM {
                 configuredSetsCard(focusVM, previous: prev, planned: planned)
@@ -591,9 +600,9 @@ struct FocusView: View {
                     .foregroundStyle(Color.uplift.fgMuted)
                     .accessibilityHidden(true)
             }
-            Spacer(minLength: 0)
         }
-        .padding(.horizontal, 16)
+        .lineLimit(1)
+        .minimumScaleFactor(0.8)
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier(AccessibilityID.focusSetProgress)
     }
