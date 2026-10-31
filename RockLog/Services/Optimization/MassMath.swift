@@ -23,7 +23,15 @@ nonisolated enum MassUnit: String, Codable, CaseIterable, Sendable {
     var stepperSteps: [Double] {
         switch self {
         case .pounds: [5, 1, 0.5]
-        case .kilograms: [2.5, 1, 0.5]
+        case .kilograms: [5, 2.5, 1, 0.5]
+        }
+    }
+
+    /// Step a fresh Focus screen starts on. Kilograms keep 2.5 even though 5 is in the cycle.
+    var defaultStepperStep: Double {
+        switch self {
+        case .pounds: 5
+        case .kilograms: 2.5
         }
     }
 

@@ -21,7 +21,7 @@ final class FocusViewModel {
     /// Weight field is assistance (machine “−100 lb”), not bar load.
     var isAssisted: Bool = false
     /// Current weight stepper increment (5 / 1 / 0.5). Persists while Focus is alive.
-    var weightStep: Double = MassUnitPreferences.unit.stepperSteps[0]
+    var weightStep: Double = MassUnitPreferences.unit.defaultStepperStep
     private(set) var weightDelta: String?  // non-nil → weight stepper target dress
     private(set) var repsDelta: String?    // non-nil → reps stepper target dress
 
@@ -49,7 +49,7 @@ final class FocusViewModel {
         isEachSide = prefill.isEachSide
         isAssisted = prefill.isAssisted || prefersAssist
         offeredWeight = prefill.weight
-        weightStep = MassUnitPreferences.unit.stepperSteps[0]
+        weightStep = MassUnitPreferences.unit.defaultStepperStep
     }
 
     /// Keep the typed number in the new unit and snap the increment onto that unit's grid.
@@ -61,7 +61,7 @@ final class FocusViewModel {
             offeredWeight = MassMath.display(fromPounds: offeredPounds, unit: unit)
         }
         if !unit.stepperSteps.contains(weightStep) {
-            weightStep = unit.stepperSteps[0]
+            weightStep = unit.defaultStepperStep
         }
     }
 
@@ -71,7 +71,7 @@ final class FocusViewModel {
         repsDelta = nil
     }
 
-    /// Cycle 5 → 1 → 0.5 → 5. Snaps current weight onto the new grid when possible.
+    /// Cycle through the unit steps (lb 5 → 1 → 0.5, kg 5 → 2.5 → 1 → 0.5). Snaps current weight onto the new grid when possible.
     func cycleWeightStep() {
         let steps = MassUnitPreferences.unit.stepperSteps
         guard let idx = steps.firstIndex(of: weightStep) else {

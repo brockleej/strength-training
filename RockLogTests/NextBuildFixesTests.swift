@@ -31,4 +31,16 @@ final class NextBuildFixesTests: XCTestCase {
         let shownKg = MassMath.exactDisplay(fromPounds: offer.weightPounds, unit: .kilograms)
         XCTAssertEqual((shownKg / 2.5).rounded() * 2.5, shownKg, accuracy: 0.001)
     }
+
+    // MARK: Item 3 — 5 kg weight step
+
+    func test_kgStepperCycle_includesFive_andStillStartsOnTwoPointFive() {
+        XCTAssertEqual(MassUnit.kilograms.stepperSteps, [5, 2.5, 1, 0.5])
+        XCTAssertEqual(MassUnit.kilograms.defaultStepperStep, 2.5)
+        XCTAssertEqual(MassUnit.pounds.stepperSteps, [5, 1, 0.5])
+        XCTAssertEqual(MassUnit.pounds.defaultStepperStep, 5)
+        for unit in MassUnit.allCases {
+            XCTAssertTrue(unit.stepperSteps.contains(unit.defaultStepperStep))
+        }
+    }
 }
