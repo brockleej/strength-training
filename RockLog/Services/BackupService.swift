@@ -169,7 +169,7 @@ enum BackupSetIDRepair {
         return Result(root: repaired, removed: removed, renumbered: renumbered)
     }
 
-    private static func arrayValue(_ value: JSONValue) -> [JSONValue]? {
+    private nonisolated static func arrayValue(_ value: JSONValue) -> [JSONValue]? {
         if case .array(let items) = value { return items }
         return nil
     }
