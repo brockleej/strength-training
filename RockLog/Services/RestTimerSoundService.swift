@@ -11,6 +11,52 @@ import AVFoundation
 import AudioToolbox
 import UIKit
 
+/// The two AVAudioSession calls the rest timer makes. A seam so tests can check
+/// the teardown without real audio.
+nonisolated protocol AudioSessionControlling: AnyObject, Sendable {
+    func setCategory(duck: Bool) throws
+    func setActive(_ active: Bool, notifyOthers: Bool) throws
+}
+
+nonisolated final class SystemAudioSession: AudioSessionControlling, @unchecked Sendable {
+    func setCategory(duck: Bool) throws {
+        var options: AVAudioSession.CategoryOptions = [.mixWithOthers]
+        if duck { options.insert(.duckOthers) }
+        try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: options)
+    }
+
+    func setActive(_ active: Bool, notifyOthers: Bool) throws {
+        try AVAudioSession.sharedInstance().setActive(active, options: notifyOthers ? [.notifyOthersOnDeactivation] : [])
+    }
+}
+
+/// Session activate/deactivate can block, so it runs on one serial queue, in order,
+/// never on the main thread.
+nonisolated enum AudioSessionGate {
+    static let queue = DispatchQueue(label: "rocklog.rest-audio-session", qos: .userInitiated)
+    nonisolated(unsafe) static var session: AudioSessionControlling = SystemAudioSession()
+
+    static func apply(duck: Bool) {
+        queue.async {
+            do {
+                try session.setCategory(duck: duck)
+                try session.setActive(true, notifyOthers: false)
+            } catch {
+                // Tone path may still work; otherwise we fall back to system sound.
+            }
+        }
+    }
+
+    /// Drop the duck: deactivating with notifyOthersOnDeactivation is what lets an
+    /// audiobook or music come back up. Then leave a plain mixing category in place.
+    static func release() {
+        queue.async {
+            try? session.setActive(false, notifyOthers: true)
+            try? session.setCategory(duck: false)
+        }
+    }
+}
+
 enum RestTimerSoundService {
 
     /// Seconds remaining that receive a countdown tick (inclusive).
@@ -73,21 +119,33 @@ enum RestTimerSoundService {
 
     /// Ducking is only for the chirp, then it comes off. There is no keep-alive.
     static func configureSession(duck: Bool) {
-        let session = AVAudioSession.sharedInstance()
-        var options: AVAudioSession.CategoryOptions = [.mixWithOthers]
-        if duck { options.insert(.duckOthers) }
-        do {
-            try session.setCategory(.playback, mode: .default, options: options)
-            didConfigureSession = true
-            try session.setActive(true, options: [])
-        } catch {
-            // Tone path may still work; otherwise we fall back to system sound.
+        didConfigureSession = true
+        AudioSessionGate.apply(duck: duck)
+    }
+
+    /// Pause the tone engine (a running engine blocks deactivation), then
+    /// deactivate with notifyOthersOnDeactivation so other audio comes back up.
+    /// The next tone restarts the engine.
+    static func endDuck() {
+        if let engine, engine.isRunning { engine.pause() }
+        AudioSessionGate.release()
+    }
+
+    #if DEBUG
+    /// Tests swap in a recording session. Returns the one it replaced.
+    @discardableResult
+    static func swapSessionForTesting(_ session: AudioSessionControlling) -> AudioSessionControlling {
+        AudioSessionGate.queue.sync {
+            let old = AudioSessionGate.session
+            AudioSessionGate.session = session
+            return old
         }
     }
 
-    static func endDuck() {
-        configureSession(duck: false)
+    static func waitForAudioQueueForTesting() {
+        AudioSessionGate.queue.sync {}
     }
+    #endif
 
     private static func configureSessionIfNeeded() {
         if !didConfigureSession { configureSession(duck: false) }

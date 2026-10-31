@@ -705,3 +705,43 @@ final class StoredSetValueTests: RockLogStoreTestCase {
         XCTAssertEqual(set.enteredValue, 147.5)
     }
 }
+
+// MARK: - QA 1.2: ducking ends by deactivating with notifyOthersOnDeactivation
+
+final class RecordingAudioSession: AudioSessionControlling, @unchecked Sendable {
+    var calls: [String] = []
+    func setCategory(duck: Bool) throws { calls.append("category duck=\(duck)") }
+    func setActive(_ active: Bool, notifyOthers: Bool) throws { calls.append("active=\(active) notify=\(notifyOthers)") }
+}
+
+@MainActor
+final class RestTimerDuckTeardownTests: XCTestCase {
+    func test_endDuck_deactivates_withNotifyOthers() {
+        let fake = RecordingAudioSession()
+        let previous = RestTimerSoundService.swapSessionForTesting(fake)
+        defer { _ = RestTimerSoundService.swapSessionForTesting(previous) }
+        RestTimerSoundService.configureSession(duck: true)
+        RestTimerSoundService.endDuck()
+        RestTimerSoundService.waitForAudioQueueForTesting()
+        XCTAssertEqual(fake.calls.first, "category duck=true")
+        XCTAssertTrue(fake.calls.contains("active=true notify=false"))
+        XCTAssertEqual(fake.calls.last { $0.hasPrefix("active=") }, "active=false notify=true",
+                       "the audiobook only comes back up if others are notified on deactivation")
+    }
+
+    func test_sessionCalls_runOffTheMainThread() {
+        final class ThreadProbe: AudioSessionControlling, @unchecked Sendable {
+            var onMain: [Bool] = []
+            func setCategory(duck: Bool) throws { onMain.append(Thread.isMainThread) }
+            func setActive(_ active: Bool, notifyOthers: Bool) throws { onMain.append(Thread.isMainThread) }
+        }
+        let probe = ThreadProbe()
+        let previous = RestTimerSoundService.swapSessionForTesting(probe)
+        defer { _ = RestTimerSoundService.swapSessionForTesting(previous) }
+        RestTimerSoundService.configureSession(duck: true)
+        RestTimerSoundService.endDuck()
+        RestTimerSoundService.waitForAudioQueueForTesting()
+        XCTAssertFalse(probe.onMain.isEmpty)
+        XCTAssertFalse(probe.onMain.contains(true))
+    }
+}
