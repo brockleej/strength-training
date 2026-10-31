@@ -164,5 +164,115 @@ final class OptimizationFlowsUITests: RockLogUITestCase {
         XCTAssertTrue(element(UITestID.focusCircuitRound).waitForExistence(timeout: 6))
         XCTAssertTrue(element(UITestID.focusLogSet).exists)
     }
+
+    // MARK: - 1.2 circuit gaps (c) round break, (d) End circuit early, (e) Start Circuit A
+
+    /// Circuit A = UI Bench Press → UI Fresh Lift, saved for today; returns on the list.
+    private func makeCircuitA(extra: [String] = []) {
+        launch(preset: "typical", extra: ["-RockLogRestTimer", "on"] + extra)
+        selectPushIfNeeded()
+        waitFor(UITestID.todayStart).tap()
+        XCTAssertTrue(element(UITestID.workoutExercise("UI Fresh Lift")).waitForExistence(timeout: 8))
+        let more = app.buttons["More options"]
+        XCTAssertTrue(more.waitForExistence(timeout: 6))
+        more.tap()
+        let reorder = app.buttons["Reorder today's list"]
+        XCTAssertTrue(reorder.waitForExistence(timeout: 4))
+        reorder.tap()
+        waitFor(UITestID.workoutCircuit).tap()
+        waitFor(UITestID.circuitPick("UI Bench Press")).tap()
+        waitFor(UITestID.circuitPick("UI Fresh Lift")).tap()
+        waitFor(UITestID.circuitCreate).tap()
+        XCTAssertTrue(element(UITestID.reorderCircuit("A")).waitForExistence(timeout: 6))
+        waitFor(UITestID.workoutSaveToday).tap()
+    }
+
+    /// From the list: Start Circuit A, log one round, land on the round-complete rest.
+    private func startAndFinishRoundOne() {
+        let start = waitFor(UITestID.workoutCircuitStart("A"))
+        XCTAssertEqual(start.label, "Start Circuit A")
+        start.tap()
+        XCTAssertTrue(element(UITestID.focusCircuitRound).waitForExistence(timeout: 8))
+        waitForLogSet().tap()
+        XCTAssertFalse(element(UITestID.focusCircuitBreak).waitForExistence(timeout: 1), "No break inside a round")
+        waitForLogSet().tap()
+        XCTAssertTrue(element(UITestID.focusCircuitBreak).waitForExistence(timeout: 6), "Round-complete rest after the round")
+    }
+
+    /// Unity rule: during the break it is still the normal Focus screen with Log set and the rest card.
+    private func assertBreakLooksLikeAnyLift() {
+        XCTAssertTrue(element(UITestID.focusCircuitUpNext).exists)
+        XCTAssertTrue(element(UITestID.restSkip).exists, "Same rest timer (Skip) as a standalone lift")
+        XCTAssertTrue(element(UITestID.focusLogSet).exists, "Same Log set button")
+        XCTAssertTrue(element(UITestID.focusCircuitEndEarly).exists)
+    }
+
+    func test_circuitStart_roundBreak_thenSkipLoopsToRoundTwo() {
+        makeCircuitA()
+        startAndFinishRoundOne()
+        assertBreakLooksLikeAnyLift()
+        element(UITestID.restSkip).tap()
+        XCTAssertFalse(element(UITestID.focusCircuitBreak).waitForExistence(timeout: 2))
+        let pill = waitFor(UITestID.focusCircuitRound)
+        XCTAssertTrue(pill.label.contains("Round 2"), "After the break it loops to round 2: \(pill.label)")
+    }
+
+    func test_endCircuitEarly_returnsToTheList_andMarksTheCircuitDone() {
+        makeCircuitA()
+        startAndFinishRoundOne()
+        waitFor(UITestID.focusCircuitEndEarly).tap()
+        let start = waitFor(UITestID.workoutCircuitStart("A"))
+        XCTAssertEqual(start.label, "Circuit A done")
+        XCTAssertFalse(element(UITestID.restSkip).exists, "Ending early stops the rest")
+    }
+
+    func test_endCircuitEarly_fromTheMenu_midRound() {
+        makeCircuitA()
+        waitFor(UITestID.workoutCircuitStart("A")).tap()
+        waitForLogSet().tap()
+        let more = app.buttons["More options"]
+        XCTAssertTrue(more.waitForExistence(timeout: 6))
+        more.tap()
+        waitFor(UITestID.focusCircuitEndEarlyMenu).tap()
+        XCTAssertEqual(waitFor(UITestID.workoutCircuitStart("A")).label, "Circuit A done")
+    }
+
+    func test_roundBreak_survivesBackgrounding() {
+        makeCircuitA()
+        startAndFinishRoundOne()
+        XCUIDevice.shared.press(.home)
+        sleep(2)
+        app.activate()
+        XCTAssertTrue(element(UITestID.focusCircuitBreak).waitForExistence(timeout: 8))
+        assertBreakLooksLikeAnyLift()
+    }
+
+    func test_roundBreak_resumesAfterRelaunch() {
+        makeCircuitA(extra: ["-RockLogRelaunchStore"])
+        startAndFinishRoundOne()
+        app.terminate()
+        launch(preset: "typical", extra: ["-RockLogRestTimer", "on", "-RockLogRelaunchStore", "-RockLogRelaunchKeep"])
+        let start = waitFor(UITestID.workoutCircuitStart("A"))
+        XCTAssertTrue(start.label.hasPrefix("Continue Circuit A · Round 2"), start.label)
+        start.tap()
+        XCTAssertTrue(element(UITestID.focusCircuitBreak).waitForExistence(timeout: 8), "Break comes back from the last set's time")
+        assertBreakLooksLikeAnyLift()
+    }
+
+    func test_roundBreak_lightAppearance_andLargeText() {
+        makeCircuitA(extra: ["-appearanceChoice", "light", "-RockLogDynamicType", "accessibility3"])
+        startAndFinishRoundOne()
+        assertBreakLooksLikeAnyLift()
+        XCTAssertTrue(waitForLogSet().isHittable)
+        XCTAssertTrue(element(UITestID.focusCircuitEndEarly).isHittable)
+    }
+
+    func test_roundBreak_darkAppearance_andLargeText() {
+        makeCircuitA(extra: ["-appearanceChoice", "dark", "-RockLogDynamicType", "accessibility1"])
+        startAndFinishRoundOne()
+        assertBreakLooksLikeAnyLift()
+        XCTAssertTrue(waitForLogSet().isHittable)
+        XCTAssertTrue(element(UITestID.focusCircuitEndEarly).isHittable)
+    }
 }
 
