@@ -159,22 +159,51 @@ nonisolated struct CircuitPlan: Equatable, Sendable {
         }
         return result
     }
+
+    /// Seats for another planned day ("Save for all upcoming days"). Each circuit keeps its
+    /// group and lift order; lifts missing that day drop out and a circuit left with one
+    /// lift is not made. Lifts not in a circuit are absent (standalone).
+    func upcomingSeats(forDayWith exerciseIDs: [UUID]) -> [UUID: (group: UUID, position: Int)] {
+        let present = Set(exerciseIDs)
+        var result: [UUID: (group: UUID, position: Int)] = [:]
+        for circuit in circuits {
+            let kept = circuit.lifts.filter(present.contains)
+            guard kept.count >= CircuitAdvance.minimumCount else { continue }
+            for (offset, id) in kept.enumerated() { result[id] = (circuit.group, offset + 1) }
+        }
+        return result
+    }
 }
 
 // MARK: - Rest after round
 
-/// Phone-local rest after each round, keyed by circuit group. Not in SwiftData or the backup.
+/// Rest after each round, keyed by circuit group. Written to the phone and to iCloud
+/// key-value storage like the other synced settings (BodyProfilePreferences); iCloud wins
+/// when it has a value, so a change on another device shows up here.
 enum CircuitRestStore {
     static let defaultSeconds = 90
     static let range = 15...600
-    private static func key(_ group: UUID) -> String { "circuitRest.\(group.uuidString)" }
+    static func key(_ group: UUID) -> String { "circuitRest.\(group.uuidString)" }
 
-    static func seconds(for group: UUID) -> Int {
-        let value = AppDefaults.local.integer(forKey: key(group))
-        return value > 0 ? value : defaultSeconds
+    static func seconds(for group: UUID,
+                        local: UserDefaults = AppDefaults.local,
+                        cloud: any CloudKeyValueStoring = AppDefaults.cloud) -> Int {
+        let synced = Int(cloud.double(forKey: key(group)).rounded())
+        if synced > 0 { return clamp(synced) }
+        let value = local.integer(forKey: key(group))
+        return value > 0 ? clamp(value) : defaultSeconds
     }
 
-    static func set(_ seconds: Int, for group: UUID) {
-        AppDefaults.local.set(min(max(seconds, range.lowerBound), range.upperBound), forKey: key(group))
+    static func set(_ seconds: Int, for group: UUID,
+                    local: UserDefaults = AppDefaults.local,
+                    cloud: any CloudKeyValueStoring = AppDefaults.cloud) {
+        let value = clamp(seconds)
+        local.set(value, forKey: key(group))
+        cloud.set(Double(value), forKey: key(group))
+        cloud.synchronize()
+    }
+
+    private static func clamp(_ seconds: Int) -> Int {
+        min(max(seconds, range.lowerBound), range.upperBound)
     }
 }

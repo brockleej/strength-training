@@ -366,3 +366,116 @@ final class NextBuildFixesTests: XCTestCase {
         XCTAssertEqual(CircuitRounds.totalRounds(members([0, 0], planned: nil)), 3)
     }
 }
+
+// MARK: - 1.2 circuit gaps (a)–(e). Synthetic UUIDs and numbers only.
+
+final class CircuitGapsTests: XCTestCase {
+    private let ids = (0..<6).map { _ in UUID() }
+
+    private func members(_ logged: [Int], planned: Int? = 3, done: Set<Int> = []) -> [CircuitRoundMember] {
+        logged.enumerated().map { index, count in
+            CircuitRoundMember(exerciseID: ids[index], position: index + 1, loggedWorkingSets: count,
+                               plannedWorkingSets: planned, isDone: done.contains(index))
+        }
+    }
+
+    // (a) Save for all upcoming days carries circuits
+
+    func test_a_upcomingSeats_keepCircuitOrder_forLiftsOnThatDay() {
+        var plan = CircuitPlan(order: Array(ids.prefix(4)), seats: [:])
+        let group = plan.makeCircuit([ids[2], ids[0], ids[1]])!
+        // Future day has lifts 1, 3, 2 (no lift 0 this time).
+        let seats = plan.upcomingSeats(forDayWith: [ids[1], ids[3], ids[2]])
+        XCTAssertEqual(seats[ids[2]]?.group, group)
+        XCTAssertEqual(seats[ids[2]]?.position, 1)
+        XCTAssertEqual(seats[ids[1]]?.position, 2)
+        XCTAssertNil(seats[ids[3]])
+        XCTAssertNil(seats[ids[0]])
+    }
+
+    func test_a_upcomingSeats_dropACircuitThatWouldHaveOneLift() {
+        var plan = CircuitPlan(order: Array(ids.prefix(4)), seats: [:])
+        plan.makeCircuit([ids[0], ids[1]])
+        XCTAssertTrue(plan.upcomingSeats(forDayWith: [ids[0], ids[3]]).isEmpty)
+    }
+
+    func test_a_upcomingSeats_ungroupedPlanClearsSeats() {
+        let plan = CircuitPlan(order: Array(ids.prefix(3)), seats: [:])
+        XCTAssertTrue(plan.upcomingSeats(forDayWith: Array(ids.prefix(3))).isEmpty)
+    }
+
+    // (b) Circuit rest syncs through iCloud key-value storage like other settings
+
+    func test_b_circuitRest_writesBothStores_andPrefersCloud() {
+        let suite = "CircuitGapsTests-\(UUID().uuidString)"
+        let local = UserDefaults(suiteName: suite)!
+        defer { local.removePersistentDomain(forName: suite) }
+        let cloud = MemoryCloudStore()
+        let g = UUID()
+        XCTAssertEqual(CircuitRestStore.seconds(for: g, local: local, cloud: cloud), 90)
+        CircuitRestStore.set(75, for: g, local: local, cloud: cloud)
+        XCTAssertEqual(local.integer(forKey: CircuitRestStore.key(g)), 75)
+        XCTAssertEqual(cloud.double(forKey: CircuitRestStore.key(g)), 75)
+        // Another device changed it: cloud wins over the stale local copy.
+        cloud.set(Double(45), forKey: CircuitRestStore.key(g))
+        XCTAssertEqual(CircuitRestStore.seconds(for: g, local: local, cloud: cloud), 45)
+        // Cloud empty (offline first launch): local copy still works.
+        let fresh = MemoryCloudStore()
+        XCTAssertEqual(CircuitRestStore.seconds(for: g, local: local, cloud: fresh), 75)
+        CircuitRestStore.set(1_000, for: g, local: local, cloud: cloud)
+        XCTAssertEqual(CircuitRestStore.seconds(for: g, local: local, cloud: cloud), 600)
+    }
+
+    // (c) Round-complete rest between rounds
+
+    func test_c_roundBreak_onlyBetweenRounds() {
+        let g = UUID()
+        let mid = CircuitRounds.roundBreak(group: g, members: members([1, 1, 1]))
+        XCTAssertEqual(mid, CircuitBreak(group: g, completedRound: 1, totalRounds: 3, nextExerciseID: ids[0]))
+        XCTAssertNil(CircuitRounds.roundBreak(group: g, members: members([1, 1, 0])), "Inside a round: no break")
+        XCTAssertNil(CircuitRounds.roundBreak(group: g, members: members([0, 0, 0])), "Not started: no break")
+        XCTAssertNil(CircuitRounds.roundBreak(group: g, members: members([3, 3, 3])), "Last round: back to the list")
+    }
+
+    func test_c_resumeAfterRelaunch_usesTheLastSetTime() {
+        let g = UUID()
+        let now = Date(timeIntervalSince1970: 1_000_000)
+        let resumed = CircuitRounds.resumableBreak(group: g, members: members([2, 2, 2]),
+                                                   lastSetAt: now.addingTimeInterval(-20), restSeconds: 60, now: now)
+        XCTAssertEqual(resumed?.break.completedRound, 2)
+        XCTAssertEqual(resumed?.remaining ?? 0, 40, accuracy: 0.001)
+        XCTAssertNil(CircuitRounds.resumableBreak(group: g, members: members([2, 2, 2]),
+                                                  lastSetAt: now.addingTimeInterval(-61), restSeconds: 60, now: now),
+                     "Rest already over while the app was closed")
+        XCTAssertNil(CircuitRounds.resumableBreak(group: g, members: members([2, 2, 1]),
+                                                  lastSetAt: now, restSeconds: 60, now: now))
+        XCTAssertNil(CircuitRounds.resumableBreak(group: g, members: members([2, 2, 2]),
+                                                  lastSetAt: nil, restSeconds: 60, now: now))
+    }
+
+    // (d) End circuit early
+
+    func test_d_endEarly_closesOnlyOpenLifts() {
+        var m = members([2, 1, 3])
+        m[1].isDone = false
+        XCTAssertEqual(Set(CircuitRounds.liftsToCloseEarly(m)), [ids[0], ids[1]])
+        XCTAssertTrue(CircuitRounds.liftsToCloseEarly(members([3, 3], planned: 3)).isEmpty)
+        XCTAssertTrue(CircuitRounds.liftsToCloseEarly(members([1, 1], done: [0, 1])).isEmpty)
+    }
+
+    // (e) Start Circuit A entry point
+
+    func test_e_startLift_opensTheLiftThatOwesASet() {
+        XCTAssertEqual(CircuitRounds.startLift(members([0, 0, 0])), ids[0])
+        XCTAssertEqual(CircuitRounds.startLift(members([1, 0, 0])), ids[1])
+        XCTAssertEqual(CircuitRounds.startLift(members([1, 1, 1])), ids[0])
+        XCTAssertNil(CircuitRounds.startLift(members([3, 3, 3])))
+    }
+
+    func test_e_startTitle() {
+        XCTAssertEqual(CircuitRounds.startTitle(letter: "A", members: members([0, 0, 0])), "Start Circuit A")
+        XCTAssertEqual(CircuitRounds.startTitle(letter: "B", members: members([1, 1, 0])), "Continue Circuit B · Round 1 of 3")
+        XCTAssertEqual(CircuitRounds.startTitle(letter: "A", members: members([1, 1, 1])), "Continue Circuit A · Round 2 of 3")
+        XCTAssertEqual(CircuitRounds.startTitle(letter: "A", members: members([3, 3, 3])), "Circuit A done")
+    }
+}

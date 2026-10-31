@@ -83,3 +83,63 @@ nonisolated enum CircuitRounds {
         return CircuitRoundStep(next: next, restAfterRound: true, completedRound: round)
     }
 }
+
+// MARK: - Between rounds, end early, start (1.2 gaps c–e)
+
+/// Rest between two rounds of one circuit. Same rest timer and End alert as any lift.
+nonisolated struct CircuitBreak: Equatable, Sendable {
+    var group: UUID
+    var completedRound: Int
+    var totalRounds: Int
+    /// First lift of the next round.
+    var nextExerciseID: UUID?
+}
+
+extension CircuitRounds {
+    /// Every open lift has done the same round, and more rounds are left.
+    static func roundBreak(group: UUID, members: [CircuitRoundMember]) -> CircuitBreak? {
+        let ordered = members.sorted { $0.position < $1.position }
+        let total = totalRounds(ordered)
+        let open = ordered.filter { !isFinishedPublic($0, total: total) }
+        guard let first = open.first else { return nil }
+        let counts = Set(open.map(\.loggedWorkingSets))
+        guard counts.count == 1, let done = counts.first, done >= 1, done < total else { return nil }
+        return CircuitBreak(group: group, completedRound: done, totalRounds: total, nextExerciseID: first.exerciseID)
+    }
+
+    /// After a relaunch or a long background: the break, if its rest has time left.
+    static func resumableBreak(group: UUID, members: [CircuitRoundMember], lastSetAt: Date?,
+                               restSeconds: Int, now: Date) -> (break: CircuitBreak, remaining: TimeInterval)? {
+        guard let lastSetAt, let found = roundBreak(group: group, members: members) else { return nil }
+        let remaining = lastSetAt.addingTimeInterval(TimeInterval(restSeconds)).timeIntervalSince(now)
+        guard remaining > 0 else { return nil }
+        return (found, remaining)
+    }
+
+    /// "End circuit early" marks these lifts done (the ones that still owe sets).
+    static func liftsToCloseEarly(_ members: [CircuitRoundMember]) -> [UUID] {
+        let total = totalRounds(members)
+        return members.sorted { $0.position < $1.position }
+            .filter { !isFinishedPublic($0, total: total) }
+            .map(\.exerciseID)
+    }
+
+    /// Lift "Start Circuit A" opens: first lift that still owes a set this round.
+    static func startLift(_ members: [CircuitRoundMember]) -> UUID? {
+        let ordered = members.sorted { $0.position < $1.position }
+        let total = totalRounds(ordered)
+        let round = currentRound(ordered)
+        let open = ordered.filter { !isFinishedPublic($0, total: total) }
+        return (open.first { $0.loggedWorkingSets < round } ?? open.first)?.exerciseID
+    }
+
+    static func startTitle(letter: String, members: [CircuitRoundMember]) -> String {
+        guard startLift(members) != nil else { return "Circuit \(letter) done" }
+        if members.allSatisfy({ $0.loggedWorkingSets == 0 }) { return "Start Circuit \(letter)" }
+        return "Continue Circuit \(letter) · Round \(currentRound(members)) of \(totalRounds(members))"
+    }
+
+    static func isFinishedPublic(_ member: CircuitRoundMember, total: Int) -> Bool {
+        member.isDone || member.loggedWorkingSets >= (member.plannedWorkingSets.flatMap { $0 > 0 ? $0 : nil } ?? total)
+    }
+}
