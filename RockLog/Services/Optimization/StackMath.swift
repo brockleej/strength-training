@@ -444,3 +444,14 @@ nonisolated enum GymHistory {
         return Selection(ids: Set(rows.filter { isHome($0.gymID) }.map(\.id)), usedHome: true)
     }
 }
+
+/// Machine-step choices for the Focus menu, in the unit the lifter sees.
+/// Steps are stored in that unit (`pinUnit`), so a kg menu must offer kg steps.
+nonisolated enum MachineSteps {
+    static func options(for unit: MassUnit) -> [Double] {
+        switch unit {
+        case .pounds: [5, 10, 15, 20]
+        case .kilograms: [2.5, 5, 10]
+        }
+    }
+}

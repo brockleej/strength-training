@@ -1055,10 +1055,11 @@ struct FocusView: View {
             .accessibilityIdentifier(AccessibilityID.focusLoadMode)
 
             Menu {
-                Button("5") { workoutVM.applyTypedStack(exercise: exercise, step: 5, pins: []) }
-                Button("10") { workoutVM.applyTypedStack(exercise: exercise, step: 10, pins: []) }
-                Button("15") { workoutVM.applyTypedStack(exercise: exercise, step: 15, pins: []) }
-                Button("20") { workoutVM.applyTypedStack(exercise: exercise, step: 20, pins: []) }
+                ForEach(MachineSteps.options(for: MassUnitPreferences.unit), id: \.self) { step in
+                    Button(MassMath.formatDisplay(step) + " " + MassUnitPreferences.unit.rawValue) {
+                        workoutVM.applyTypedStack(exercise: exercise, step: step, pins: [])
+                    }
+                }
                 Button("Clear learned") { workoutVM.clearLearnedStack(exercise: exercise) }
             } label: {
                 Text("Stack")

@@ -94,6 +94,7 @@
 		E03682C16B5A7E61108A1231 /* UpliftTokensTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22DFB812A881562839943F79 /* UpliftTokensTests.swift */; };
 		E15010E82FA7E5AB009EF2FB /* TrainingMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = E15010E72FA7E5AB009EF2FB /* TrainingMode.swift */; };
 		E71CE961AAE0B26627F132E0 /* backup-with-orphans.json in Resources */ = {isa = PBXBuildFile; fileRef = 8EE03F51930E877B27379EF2 /* backup-with-orphans.json */; };
+		A1B2C3D4E5F60718293A4B01 /* NextBuildFixesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B02 /* NextBuildFixesTests.swift */; };
 		E775E13496C6909B4FF9F6EB /* StepperLogicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4513366655FE67F2A44DEB5 /* StepperLogicTests.swift */; };
 		E805369068D8F5B36110D3FB /* ConfigArtifactWriter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 450F037775C1159761CB6A2E /* ConfigArtifactWriter.swift */; };
 		E817E9DE7E0C2E2F33F7A626 /* EffortScaleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9D1927AD35565C0B0F0CB4D /* EffortScaleTests.swift */; };
@@ -212,6 +213,7 @@
 		C0ACF001D0C0000000000020 /* MonthlyOverload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthlyOverload.swift; sourceTree = "<group>"; };
 		C0ACF001D0C0000000000023 /* MonthlyOverloadTable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthlyOverloadTable.swift; sourceTree = "<group>"; };
 		C29E8DFE676157D4AD6A2D25 /* minimal-backup.json */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.json; path = "minimal-backup.json"; sourceTree = "<group>"; };
+		A1B2C3D4E5F60718293A4B02 /* NextBuildFixesTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NextBuildFixesTests.swift; sourceTree = "<group>"; };
 		C4513366655FE67F2A44DEB5 /* StepperLogicTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StepperLogicTests.swift; sourceTree = "<group>"; };
 		C8E4F1A29B0D4E6F8A1C3D5E /* SplitScheduleLogicTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SplitScheduleLogicTests.swift; sourceTree = "<group>"; };
 		C9D0E12F3A4B5C6D7E8F9011 /* CloudKitErrorFormattingTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CloudKitErrorFormattingTests.swift; sourceTree = "<group>"; };
@@ -443,6 +445,7 @@
 				9BB09AE52C260DDF439056CC /* ProgressionServiceParityTests.swift */,
 				22DFB812A881562839943F79 /* UpliftTokensTests.swift */,
 				C4513366655FE67F2A44DEB5 /* StepperLogicTests.swift */,
+				A1B2C3D4E5F60718293A4B02 /* NextBuildFixesTests.swift */,
 				77A045484DE02168813131AA /* TodayStatsTests.swift */,
 				84E0B9265A12EFB99615DBA6 /* PrevSessionsStripDataTests.swift */,
 				D469A75D83D9297C0A3174B3 /* FocusTargetLogicTests.swift */,
@@ -917,6 +920,7 @@
 				63C0E77E57834034C11BC61C /* ProgressionServiceParityTests.swift in Sources */,
 				E03682C16B5A7E61108A1231 /* UpliftTokensTests.swift in Sources */,
 				E775E13496C6909B4FF9F6EB /* StepperLogicTests.swift in Sources */,
+				A1B2C3D4E5F60718293A4B01 /* NextBuildFixesTests.swift in Sources */,
 				DD41F85ED9D23F809FE149E0 /* TodayStatsTests.swift in Sources */,
 				F10E09BC7B41DF904051DC08 /* PrevSessionsStripDataTests.swift in Sources */,
 				93349D7552961CAD8C765FB7 /* FocusTargetLogicTests.swift in Sources */,
