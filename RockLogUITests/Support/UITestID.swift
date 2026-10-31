@@ -50,6 +50,14 @@ enum UITestID {
     static let workoutCircuit = "workout.circuit"
     static let workoutSaveOrderDay = "workout.saveOrderDay"
     static let workoutSaveOrderRemaining = "workout.saveOrderRemaining"
+    static let workoutSaveToday = "workout.saveToday"
+    static let workoutReorderCancel = "workout.reorderCancel"
+    static let circuitCreate = "circuit.create"
+    static let circuitRest = "circuit.rest"
+    static func circuitPick(_ name: String) -> String { "circuit.pick.\(name)" }
+    static func reorderRow(_ name: String) -> String { "reorder.row.\(name)" }
+    static func reorderCircuit(_ letter: String) -> String { "reorder.circuit.\(letter)" }
+    static func reorderCircuitMenu(_ letter: String) -> String { "reorder.circuit.menu.\(letter)" }
 
     static func workoutExercise(_ name: String) -> String { "workout.exercise.\(name)" }
     static let workoutSecondaryToggle = "workout.secondaryToggle"
@@ -64,6 +72,8 @@ enum UITestID {
     static let focusComparison = "focus.comparison"
     static let focusPlates = "focus.plates"
     static let focusSetProgress = "focus.setProgress"
+    static let focusCircuitRound = "focus.circuit.round"
+    static func focusCircuitLift(_ name: String) -> String { "focus.circuit.lift.\(name)" }
     static let focusLoadMode = "focus.loadMode"
     static let focusCarryUndo = "focus.carryUndo"
     static let focusLogSet = "focus.logSet"

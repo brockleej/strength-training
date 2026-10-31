@@ -240,4 +240,76 @@ final class NextBuildFixesTests: XCTestCase {
         XCTAssertEqual(SetProgressLabel.text(loggedCount: 0, plannedCount: 0), "Set 1")
         XCTAssertEqual(SetProgressLabel.text(loggedCount: 2, plannedCount: 3, editingSetNumber: 1), "Editing set 1 of 3")
     }
+
+    // MARK: Item 11 — Reorder Today with circuits
+
+    private let ids = (0..<6).map { _ in UUID() }
+
+    func test_plan_buildsBlocks_andACircuitMovesAsOne() {
+        let g = UUID()
+        var plan = CircuitPlan(order: ids, seats: [ids[2]: (g, 1), ids[3]: (g, 2)])
+        XCTAssertEqual(plan.blocks.count, 5)
+        XCTAssertEqual(plan.blocks[2], .circuit(group: g, lifts: [ids[2], ids[3]]))
+        XCTAssertEqual(plan.letter(for: g), "A")
+        // Drag the circuit block to the top.
+        plan.move(fromOffsets: IndexSet(integer: 2), toOffset: 0)
+        XCTAssertEqual(plan.order, [ids[2], ids[3], ids[0], ids[1], ids[4], ids[5]])
+        // Drag a lift above the circuit; the circuit stays together.
+        plan.move(fromOffsets: IndexSet(integer: 1), toOffset: 0)
+        XCTAssertEqual(plan.blocks[0].id, ids[0])
+        XCTAssertEqual(plan.blocks[1], .circuit(group: g, lifts: [ids[2], ids[3]]))
+    }
+
+    func test_moved_matchesListOnMoveSemantics() {
+        XCTAssertEqual(CircuitPlan.moved([1, 2, 3, 4], fromOffsets: IndexSet(integer: 0), toOffset: 4), [2, 3, 4, 1])
+        XCTAssertEqual(CircuitPlan.moved([1, 2, 3, 4], fromOffsets: IndexSet(integer: 3), toOffset: 0), [4, 1, 2, 3])
+        XCTAssertEqual(CircuitPlan.moved([1, 2, 3, 4], fromOffsets: IndexSet([0, 2]), toOffset: 4), [2, 4, 1, 3])
+        XCTAssertEqual(CircuitPlan.moved([1, 2, 3, 4], fromOffsets: IndexSet(integer: 1), toOffset: 2), [1, 2, 3, 4])
+    }
+
+    func test_upToThreeCircuits_fromSixLifts_eachWithItsOwnLetter() {
+        var plan = CircuitPlan(order: ids, seats: [:])
+        let a = plan.makeCircuit([ids[0], ids[1]])
+        let b = plan.makeCircuit([ids[3], ids[2]])
+        XCTAssertTrue(plan.canMakeAnotherCircuit)
+        let c = plan.makeCircuit([ids[4], ids[5]])
+        XCTAssertNotNil(a); XCTAssertNotNil(b); XCTAssertNotNil(c)
+        XCTAssertEqual(plan.circuits.count, 3)
+        XCTAssertEqual([a, b, c].compactMap { $0.flatMap(plan.letter(for:)) }, ["A", "B", "C"])
+        // B keeps the order the lifts were picked in.
+        XCTAssertEqual(plan.circuits[1].lifts, [ids[3], ids[2]])
+        XCTAssertFalse(plan.canMakeAnotherCircuit)
+        XCTAssertNil(plan.makeCircuit([ids[0], ids[2]]), "Lifts already in a circuit are not pickable")
+    }
+
+    func test_editAndUngroup() {
+        var plan = CircuitPlan(order: ids, seats: [:])
+        let a = plan.makeCircuit([ids[1], ids[2], ids[3]])!
+        XCTAssertEqual(plan.makeCircuit([ids[1], ids[3]], editing: a), a)
+        XCTAssertEqual(plan.circuits.first?.lifts, [ids[1], ids[3]])
+        XCTAssertTrue(plan.ungroupedLifts.contains(ids[2]), "A lift dropped from a circuit goes back to standalone")
+        plan.ungroup(a)
+        XCTAssertTrue(plan.circuits.isEmpty)
+        XCTAssertEqual(Set(plan.order), Set(ids))
+        XCTAssertNil(plan.makeCircuit([ids[0]]), "A circuit needs at least two lifts")
+    }
+
+    func test_seats_areOneBasedPerCircuit() {
+        var plan = CircuitPlan(order: ids, seats: [:])
+        let a = plan.makeCircuit([ids[4], ids[0]])!
+        XCTAssertEqual(plan.seats[ids[4]]?.group, a)
+        XCTAssertEqual(plan.seats[ids[4]]?.position, 1)
+        XCTAssertEqual(plan.seats[ids[0]]?.position, 2)
+        XCTAssertNil(plan.seats[ids[1]])
+        XCTAssertEqual(plan.order.first, ids[0] == plan.order.first ? ids[0] : ids[4])
+    }
+
+    func test_circuitRest_defaultsTo90_andClamps() {
+        let g = UUID()
+        XCTAssertEqual(CircuitRestStore.seconds(for: g), 90)
+        CircuitRestStore.set(5, for: g)
+        XCTAssertEqual(CircuitRestStore.seconds(for: g), 15)
+        CircuitRestStore.set(120, for: g)
+        XCTAssertEqual(CircuitRestStore.seconds(for: g), 120)
+    }
 }

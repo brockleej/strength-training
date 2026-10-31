@@ -248,6 +248,35 @@ extension WorkoutViewModel {
         setMutationEpoch &+= 1
     }
 
+    /// Today's order as blocks (lifts and circuits) for the Reorder sheet.
+    func todayCircuitPlan(orderedIDs: [UUID]) -> CircuitPlan {
+        var seats: [UUID: (group: UUID, position: Int)] = [:]
+        for record in activeSession?.exerciseRecordsArray ?? [] {
+            guard let id = record.exercise?.id, let group = record.groupID else { continue }
+            seats[id] = (group, record.groupPosition)
+        }
+        return CircuitPlan(order: orderedIDs, seats: seats)
+    }
+
+    /// Save the Reorder sheet: order first, then every lift's circuit seat from the plan.
+    func applyTodayPlan(_ plan: CircuitPlan, exercises: [Exercise]) {
+        reorderToday(plan.order, exercises: exercises)
+        guard let session = activeSession else { return }
+        let seats = plan.seats
+        for record in session.exerciseRecordsArray {
+            guard let id = record.exercise?.id else { continue }
+            if let seat = seats[id] {
+                record.groupID = seat.group
+                record.groupPosition = seat.position
+            } else {
+                record.groupID = nil
+                record.groupPosition = 0
+            }
+        }
+        ModelSave.logged(modelContext, action: "WorkoutViewModel+SessionTools")
+        setMutationEpoch &+= 1
+    }
+
     /// Working sets advance inside the group. Warm-ups stay on this lift.
     func circuitNext(after exercise: Exercise, wasWarmup: Bool) -> UUID? {
         guard !wasWarmup, let session = activeSession else { return nil }

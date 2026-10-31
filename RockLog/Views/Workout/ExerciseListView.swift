@@ -24,7 +24,6 @@ struct ExerciseListView: View {
     @State private var showDayPlanEditor = false
     @State private var reorderIDs: [UUID] = []
     @State private var draggingID: UUID?
-    @State private var circuitSelection: Set<UUID> = []
     @Environment(\.scenePhase) private var scenePhase
     @Query(sort: \Gym.sortOrder) private var gyms: [Gym]
     @State private var focusLaunch: FocusLaunch?
@@ -285,7 +284,6 @@ struct ExerciseListView: View {
             .onChange(of: workoutVM.presentSessionReorder) { _, open in
                 if open {
                     reorderIDs = flatExercises.map(\.id)
-                    circuitSelection = []
                 }
             }
             .onChange(of: scenePhase) { _, phase in
@@ -581,56 +579,35 @@ struct ExerciseListView: View {
     }
 
     private var sessionReorderSheet: some View {
-        NavigationStack {
-            List {
-                ForEach(reorderIDs, id: \.self) { id in
-                    if let exercise = flatExercises.first(where: { $0.id == id }) ?? allExercises.first(where: { $0.id == id }) {
-                        HStack {
-                            Text(exercise.name)
-                            Spacer()
-                            Button(circuitSelection.contains(id) ? "In circuit" : "Add") {
-                                if circuitSelection.contains(id) { circuitSelection.remove(id) }
-                                else if circuitSelection.count < CircuitAdvance.maximumCount { circuitSelection.insert(id) }
-                            }
-                            .font(.uplift.text(13, weight: .semibold))
-                        }
-                        .longPressReorder(id: id, orderedIDs: $reorderIDs, draggingID: $draggingID) {
-                            workoutVM.reorderToday(reorderIDs, exercises: flatExercises)
-                        }
-                    }
-                }
-            }
-            .navigationTitle("Today's list")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Done") { workoutVM.presentSessionReorder = false }
-                }
-            }
-            .safeAreaInset(edge: .bottom) {
-                VStack(spacing: 8) {
-                    Button("Save order to this day") {
-                        workoutVM.reorderToday(reorderIDs, exercises: flatExercises)
-                        workoutVM.saveTodayOrderToThisDay(exercises: flatExercises)
-                    }
-                    .accessibilityIdentifier(AccessibilityID.workoutSaveOrderDay)
-                    Button("Save order to remaining planned days") {
-                        workoutVM.reorderToday(reorderIDs, exercises: flatExercises)
-                        workoutVM.saveTodayOrderToRemainingPlanned(exercises: flatExercises)
-                    }
-                    .accessibilityIdentifier(AccessibilityID.workoutSaveOrderRemaining)
-                    Button("Make a circuit") {
-                        let ordered = reorderIDs.filter { circuitSelection.contains($0) }
-                        workoutVM.createCircuit(exerciseIDs: ordered)
-                    }
-                    .disabled(!CircuitAdvance.canCreate(count: circuitSelection.count))
-                    .accessibilityIdentifier(AccessibilityID.workoutCircuit)
-                }
-                .font(.uplift.text(15, weight: .semibold))
-                .padding()
-            }
+        let lookup: (UUID) -> Exercise? = { id in
+            flatExercises.first(where: { $0.id == id }) ?? allExercises.first(where: { $0.id == id })
         }
-        .preferredColorScheme(.dark)
+        return ReorderTodaySheet(
+            dayName: dayType.rawValue,
+            name: { lookup($0)?.name ?? "Lift" },
+            detail: { id in
+                guard let exercise = lookup(id) else { return "" }
+                let planned = workoutVM.currentRecord(for: exercise)?.plannedSetsArray.filter { !$0.isWarmup } ?? []
+                var parts: [String] = []
+                if !planned.isEmpty { parts.append(planned.count == 1 ? "1 set" : "\(planned.count) sets") }
+                if planned.contains(where: \.isEachSide) { parts.append("per side") }
+                return parts.isEmpty ? "No planned sets" : parts.joined(separator: " · ")
+            },
+            onSaveToday: { plan in
+                reorderIDs = plan.order
+                workoutVM.applyTodayPlan(plan, exercises: flatExercises)
+                workoutVM.presentSessionReorder = false
+            },
+            onSaveUpcoming: { plan in
+                reorderIDs = plan.order
+                workoutVM.applyTodayPlan(plan, exercises: flatExercises)
+                workoutVM.saveTodayOrderToThisDay(exercises: flatExercises)
+                workoutVM.saveTodayOrderToRemainingPlanned(exercises: flatExercises)
+                workoutVM.presentSessionReorder = false
+            },
+            onCancel: { workoutVM.presentSessionReorder = false },
+            plan: workoutVM.todayCircuitPlan(orderedIDs: flatExercises.map(\.id))
+        )
     }
 
     private var finishBar: some View {

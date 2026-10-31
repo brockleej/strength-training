@@ -105,9 +105,12 @@ final class OptimizationFlowsUITests: RockLogUITestCase {
         let reorder = app.buttons["Reorder today's list"]
         XCTAssertTrue(reorder.waitForExistence(timeout: 4))
         reorder.tap()
-        XCTAssertTrue(element(UITestID.workoutSaveOrderDay).waitForExistence(timeout: 6))
+        XCTAssertTrue(element(UITestID.workoutSaveToday).waitForExistence(timeout: 6))
         XCTAssertTrue(element(UITestID.workoutCircuit).exists)
         XCTAssertTrue(element(UITestID.workoutSaveOrderRemaining).exists)
+        XCTAssertFalse(app.buttons["Add"].exists, "No stray Add links on the reorder sheet")
+        element(UITestID.workoutSaveToday).tap()
+        XCTAssertFalse(element(UITestID.workoutSaveToday).waitForExistence(timeout: 2))
     }
 
     func test_dynamicType_focusLogStaysHittable() {
