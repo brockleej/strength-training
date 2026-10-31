@@ -346,7 +346,7 @@ struct FocusView: View {
         previous: [FocusSetsCard.PreviousSet],
         planned: [FocusSetsCard.PreviousSet]
     ) -> some View {
-        var card = FocusSetsCard(
+        let card = FocusSetsCard(
             sets: loggedSets,
             previousSets: previous,
             previousDateLabel: previousDateLabel,
