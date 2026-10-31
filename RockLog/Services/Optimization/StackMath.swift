@@ -454,4 +454,32 @@ nonisolated enum MachineSteps {
         case .kilograms: [2.5, 5, 10]
         }
     }
+
+    static let title = "Machine steps"
+
+    /// "Every 10 lb" — the plain menu label for one step.
+    static func optionLabel(_ step: Double, unit: MassUnit) -> String {
+        "Every \(MassMath.formatDisplay(step)) \(unit.rawValue)"
+    }
+
+    /// The pill under the steppers. Shows the chosen step so he can see it took.
+    static func pillLabel(for stack: StackDefinition?) -> String {
+        guard let stack, let step = stack.step, step > 0 else {
+            if let stack, !stack.pins.isEmpty { return "Steps: pins" }
+            return title
+        }
+        return "Steps \(MassMath.formatDisplay(step)) \(stack.pinUnit.rawValue)"
+    }
+
+    /// The displayed stepper weight moved onto the nearest real machine weight.
+    /// Returns the input when the stack has nothing to snap to.
+    static func snappedDisplay(_ displayed: Double, unit: MassUnit, stack: StackDefinition) -> Double {
+        guard stack.isActive, displayed > 0 else { return displayed }
+        let pounds = MassMath.pounds(fromDisplay: displayed, unit: unit)
+        let available = StackMath.availablePounds(stack, aroundPounds: pounds)
+        guard let chosen = StackMath.select(target: pounds, available: available, policy: stack.policy) else {
+            return displayed
+        }
+        return MassMath.display(fromPounds: chosen, unit: unit)
+    }
 }

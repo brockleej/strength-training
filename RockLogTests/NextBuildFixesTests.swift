@@ -64,4 +64,37 @@ final class NextBuildFixesTests: XCTestCase {
         XCTAssertEqual(readout.platesPerSide, [20])
         XCTAssertEqual(PlateLinePolicy.readout(displayedWeight: 135, unit: .pounds).platesPerSide, [45])
     }
+
+    // MARK: Item 5 — Machine steps clarity
+
+    func test_machineSteps_pillShowsTheChosenStep() {
+        XCTAssertEqual(MachineSteps.pillLabel(for: nil), "Machine steps")
+        XCTAssertEqual(MachineSteps.pillLabel(for: .empty), "Machine steps")
+        var stack = StackDefinition.empty
+        stack.step = 10
+        XCTAssertEqual(MachineSteps.pillLabel(for: stack), "Steps 10 lb")
+        stack.step = 2.5
+        stack.pinUnit = .kilograms
+        XCTAssertEqual(MachineSteps.pillLabel(for: stack), "Steps 2.5 kg")
+        XCTAssertEqual(MachineSteps.optionLabel(10, unit: .pounds), "Every 10 lb")
+        XCTAssertEqual(MachineSteps.optionLabel(2.5, unit: .kilograms), "Every 2.5 kg")
+    }
+
+    /// Regression (t277u): picking a step did nothing visible; the shown weight must snap at once.
+    func test_regression_pickingAStep_snapsTheShownWeight() {
+        let profile = MachineStackProfile(gymID: UUID(), exerciseID: UUID())
+        profile.applyTyped(step: 10, pins: [], unit: .pounds)
+        XCTAssertEqual(MachineSteps.snappedDisplay(137, unit: .pounds, stack: profile.definition), 140)
+        XCTAssertEqual(MachineSteps.snappedDisplay(140, unit: .pounds, stack: profile.definition), 140)
+        XCTAssertEqual(MachineSteps.snappedDisplay(137, unit: .pounds, stack: .empty), 137)
+        profile.applyTyped(step: 5, pins: [], unit: .kilograms)
+        XCTAssertEqual(MachineSteps.snappedDisplay(52, unit: .kilograms, stack: profile.definition), 50, accuracy: 0.26)
+    }
+
+    func test_noMachineSteps_turnsTheStackOff() {
+        let profile = MachineStackProfile(gymID: UUID(), exerciseID: UUID())
+        profile.applyTyped(step: 10, pins: [], unit: .pounds)
+        profile.applyTyped(step: nil, pins: [], unit: .pounds)
+        XCTAssertFalse(profile.definition.isActive)
+    }
 }

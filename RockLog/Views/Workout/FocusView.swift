@@ -1059,14 +1059,17 @@ struct FocusView: View {
             .accessibilityIdentifier(AccessibilityID.focusLoadMode)
 
             Menu {
-                ForEach(MachineSteps.options(for: MassUnitPreferences.unit), id: \.self) { step in
-                    Button(MassMath.formatDisplay(step) + " " + MassUnitPreferences.unit.rawValue) {
-                        workoutVM.applyTypedStack(exercise: exercise, step: step, pins: [])
+                Section("Weight jumps on this machine") {
+                    ForEach(MachineSteps.options(for: MassUnitPreferences.unit), id: \.self) { step in
+                        Button(MachineSteps.optionLabel(step, unit: MassUnitPreferences.unit)) {
+                            chooseMachineStep(step)
+                        }
                     }
                 }
-                Button("Clear learned") { workoutVM.clearLearnedStack(exercise: exercise) }
+                Button("No machine steps") { chooseMachineStep(nil) }
+                Button("Forget learned steps") { workoutVM.clearLearnedStack(exercise: exercise) }
             } label: {
-                Text("Stack")
+                Text(machineStepsPillText)
                     .font(.uplift.text(12, weight: .semibold))
                     .foregroundStyle(Color.uplift.fgMuted)
                     .padding(.horizontal, 10)
@@ -1077,6 +1080,28 @@ struct FocusView: View {
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 16)
+    }
+
+    /// Reads the mutation epoch so the pill redraws as soon as a step is picked.
+    private var machineStepsPillText: String {
+        _ = workoutVM.setMutationEpoch
+        return MachineSteps.pillLabel(for: workoutVM.stackDefinition(for: exercise))
+    }
+
+    /// Save the step, then move the weight on screen onto a real machine weight right away.
+    private func chooseMachineStep(_ step: Double?) {
+        workoutVM.applyTypedStack(exercise: exercise, step: step, pins: [])
+        guard let focusVM, let stack = workoutVM.stackDefinition(for: exercise) else { return }
+        let unit = MassUnitPreferences.unit
+        let snapped = MachineSteps.snappedDisplay(focusVM.weight, unit: unit, stack: stack)
+        if !MassMath.sameDisplayed(
+            MassMath.pounds(fromDisplay: snapped, unit: unit),
+            MassMath.pounds(fromDisplay: focusVM.weight, unit: unit),
+            unit: unit
+        ) {
+            focusVM.weight = snapped
+            focusVM.userEdited()
+        }
     }
 
     private var carryUndoLine: some View {
