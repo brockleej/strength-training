@@ -84,6 +84,11 @@ enum AccessibilityID {
     static let focusSetProgress = "focus.setProgress"
     static let focusCircuitRound = "focus.circuit.round"
     static func focusCircuitLift(_ name: String) -> String { "focus.circuit.lift.\(name)" }
+    static let focusCircuitBreak = "focus.circuit.break"
+    static let focusCircuitUpNext = "focus.circuit.upNext"
+    static let focusCircuitEndEarly = "focus.circuit.endEarly"
+    static let focusCircuitEndEarlyMenu = "focus.circuit.endEarlyMenu"
+    static func workoutCircuitStart(_ letter: String) -> String { "workout.circuitStart.\(letter)" }
     static let focusLoadMode = "focus.loadMode"
     static let focusCarryUndo = "focus.carryUndo"
     static let focusLogSet = "focus.logSet"

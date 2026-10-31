@@ -460,6 +460,7 @@ struct ExerciseListView: View {
                 }
                 ForEach(Array(section.exercises.enumerated()), id: \.element.id) { index, exercise in
                     let rowData = rowData(for: exercise)
+                    circuitStartButton(before: exercise)
                     ExerciseListRow(
                         name: exercise.name,
                         state: rowState(for: exercise, number: index + 1),
@@ -517,6 +518,43 @@ struct ExerciseListView: View {
             }
         }
         .padding(.horizontal, 20)
+    }
+
+    /// "Start Circuit A" above a circuit's first lift (mockup f.html). Opens the lift that
+    /// owes a set this round, on the same Focus screen as any lift.
+    @ViewBuilder
+    private func circuitStartButton(before exercise: Exercise) -> some View {
+        let _ = workoutVM.setMutationEpoch
+        if let start = workoutVM.circuitStart(before: exercise, in: flatExercises) {
+            Button {
+                guard let id = start.liftID else { return }
+                let index = flatExercises.firstIndex(where: { $0.id == id }) ?? 0
+                focusLaunch = FocusLaunch(exerciseID: id, startIndex: index)
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: start.liftID == nil ? "checkmark.circle.fill" : "play.fill")
+                        .font(.system(size: 13, weight: .bold))
+                        .accessibilityHidden(true)
+                    Text(start.title)
+                        .font(.uplift.text(15, weight: .semibold))
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 0)
+                }
+                .foregroundStyle(start.liftID == nil ? Color.uplift.fgMuted : Color.uplift.onAccent)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
+                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                .background(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(start.liftID == nil ? Color.uplift.surface1 : Color.uplift.accent)
+                )
+            }
+            .buttonStyle(.plain)
+            .disabled(start.liftID == nil)
+            .padding(.top, 4)
+            .accessibilityIdentifier(AccessibilityID.workoutCircuitStart(start.letter))
+        }
     }
 
     private var secondaryLineTip: some View {
@@ -602,7 +640,7 @@ struct ExerciseListView: View {
                 reorderIDs = plan.order
                 workoutVM.applyTodayPlan(plan, exercises: flatExercises)
                 workoutVM.saveTodayOrderToThisDay(exercises: flatExercises)
-                workoutVM.saveTodayOrderToRemainingPlanned(exercises: flatExercises)
+                workoutVM.saveTodayOrderToRemainingPlanned(exercises: flatExercises, plan: plan)
                 workoutVM.presentSessionReorder = false
             },
             onCancel: { workoutVM.presentSessionReorder = false },

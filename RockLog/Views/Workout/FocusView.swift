@@ -183,6 +183,7 @@ struct FocusView: View {
             if focusVM == nil {
                 focusVM = makeFocusVM()
             }
+            workoutVM.resumeCircuitBreakIfNeeded(for: exercise)
         }
         .onChange(of: workoutVM.selectedMode) {
             let opening = currentPrefill()
@@ -448,6 +449,15 @@ struct FocusView: View {
                 Label("Reorder today's list", systemImage: "arrow.up.arrow.down")
             }
             .accessibilityIdentifier(AccessibilityID.workoutReorder)
+            if let info = workoutVM.circuitRoundMembers(for: exercise) {
+                Button {
+                    workoutVM.endCircuitEarly(group: info.group)
+                    dismiss()
+                } label: {
+                    Label("End circuit early", systemImage: "stop.circle")
+                }
+                .accessibilityIdentifier(AccessibilityID.focusCircuitEndEarlyMenu)
+            }
             Button {
                 showEditExercise = true
             } label: {
@@ -544,7 +554,20 @@ struct FocusView: View {
                 (workoutVM.activeSession?.exerciseRecordsArray ?? []).compactMap { r in r.exercise.map { ($0.id, $0.name) } },
                 uniquingKeysWith: { a, _ in a }
             )
+            let roundBreak = workoutVM.isResting ? workoutVM.circuitBreak.flatMap { $0.group == info.group ? $0 : nil } : nil
             VStack(alignment: .leading, spacing: 6) {
+                if let roundBreak {
+                    // Round-complete rest (mockup f.html, screen 3). The countdown, ±15 and Skip
+                    // are the normal rest card below, with the same End alert.
+                    Text("Circuit \(letter) · Round \(roundBreak.completedRound) of \(roundBreak.totalRounds) complete")
+                        .font(.uplift.text(12, weight: .semibold))
+                        .foregroundStyle(Color.uplift.accent)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(Capsule().fill(Color.uplift.accent.opacity(0.16)))
+                        .accessibilityIdentifier(AccessibilityID.focusCircuitBreak)
+                } else {
                 Text("Circuit \(letter) · Round \(round) of \(total)")
                     .font(.uplift.text(12, weight: .semibold))
                     .foregroundStyle(Color.uplift.accent)
@@ -552,6 +575,7 @@ struct FocusView: View {
                     .padding(.vertical, 4)
                     .background(Capsule().fill(Color.uplift.accent.opacity(0.16)))
                     .accessibilityIdentifier(AccessibilityID.focusCircuitRound)
+                }
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 6) {
                         ForEach(info.members, id: \.exerciseID) { member in
@@ -574,6 +598,25 @@ struct FocusView: View {
                             .buttonStyle(.plain)
                             .accessibilityIdentifier(AccessibilityID.focusCircuitLift(names[member.exerciseID] ?? ""))
                         }
+                    }
+                }
+                if let roundBreak {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Text("Up next: Round \(roundBreak.completedRound + 1) · \(roundBreak.nextExerciseID.flatMap { names[$0] } ?? "next lift")")
+                            .font(.uplift.text(12, weight: .medium))
+                            .foregroundStyle(Color.uplift.fgMuted)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .accessibilityIdentifier(AccessibilityID.focusCircuitUpNext)
+                        Spacer(minLength: 4)
+                        Button("End circuit early") {
+                            workoutVM.endCircuitEarly(group: info.group)
+                            dismiss()
+                        }
+                        .font(.uplift.text(13, weight: .semibold))
+                        .foregroundStyle(Color.uplift.fg)
+                        .frame(minHeight: 44)
+                        .accessibilityIdentifier(AccessibilityID.focusCircuitEndEarly)
+                        .accessibilityHint("Marks this circuit's lifts done and goes back to the list")
                     }
                 }
             }
@@ -785,7 +828,9 @@ struct FocusView: View {
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 1) {
-                Text(timerOn ? "Rest · this lift" : "Rest off · this lift")
+                Text(wvm.isResting && wvm.circuitBreak != nil
+                     ? "Rest after round \(wvm.circuitBreak?.completedRound ?? 1)"
+                     : (timerOn ? "Rest · this lift" : "Rest off · this lift"))
                     .font(.uplift.text(11, weight: .semibold))
                     .tracking(0.3)
                     .textCase(.uppercase)
@@ -1124,11 +1169,22 @@ struct FocusView: View {
         // Circuits feel like straight sets: same screen and Log set. Inside a round the
         // app goes straight to the next lift with no rest; rest runs once after each round.
         if let circuit = workoutVM.circuitStep(after: exercise, wasWarmup: isWarmup) {
+            let roundBreak = circuit.step.restAfterRound
+                ? workoutVM.circuitRoundMembers(for: exercise).flatMap { CircuitRounds.roundBreak(group: $0.group, members: $0.members) }
+                : nil
             if circuit.step.restAfterRound, RestTimerPreferences.isEnabled {
-                workoutVM.startRest(seconds: Double(circuit.restSeconds), exercise: exercise)
+                if let roundBreak {
+                    // Between rounds: round-complete panel plus the normal rest timer.
+                    workoutVM.beginCircuitBreak(roundBreak, seconds: Double(circuit.restSeconds), exercise: exercise)
+                } else {
+                    workoutVM.startRest(seconds: Double(circuit.restSeconds), exercise: exercise)
+                }
             }
             if let nextID = circuit.step.next, nextID != exercise.id {
                 onJumpTo?(nextID)
+            } else if circuit.step.next == nil {
+                // Last round done: back to the list, like finishing a lift's last set.
+                dismiss()
             }
         } else {
             workoutVM.startRestAfterSet(for: exercise)
