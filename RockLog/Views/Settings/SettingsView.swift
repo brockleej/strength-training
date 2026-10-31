@@ -57,8 +57,8 @@ struct SettingsView: View {
     @AppStorage(RestTimerPreferences.secondsKey)
     private var restTimerSeconds: Int = RestTimerPreferences.defaultSeconds
 
-    @AppStorage(RestTimerPreferences.soundEnabledKey)
-    private var restTimerSoundEnabled: Bool = RestTimerPreferences.defaultSoundEnabled
+    @AppStorage(RestAlertPreferences.endAlertKey)
+    private var restEndAlertRaw: String = RestAlertPreferences.endAlert.rawValue
 
     @AppStorage(SetPrefillPreferences.modeKey)
     private var setPrefillModeRaw: String = SetPrefillPreferences.defaultMode.rawValue
@@ -410,10 +410,16 @@ struct SettingsView: View {
                     .tint(Color.uplift.accent)
 
                     if restTimerEnabled {
-                    Toggle(isOn: $restTimerSoundEnabled) {
-                        Label("Countdown sounds", systemImage: "speaker.wave.2.fill")
+                    Picker(selection: $restEndAlertRaw) {
+                        ForEach(RestEndAlert.allCases, id: \.rawValue) { alert in
+                            Text(alert.title).tag(alert.rawValue)
+                        }
+                    } label: {
+                        Label("End alert", systemImage: "speaker.wave.2.fill")
                     }
+                    .pickerStyle(.menu)
                     .tint(Color.uplift.accent)
+                    .accessibilityIdentifier(AccessibilityID.settingsEndAlert)
 
                     Toggle(isOn: $tapAtTen) {
                         Label("Tap at 10 seconds", systemImage: "hand.tap")
@@ -473,7 +479,7 @@ struct SettingsView: View {
                 } header: {
                     sectionHeader("Timer")
                 } footer: {
-                    sectionFooter("Default length for new lifts. On Focus you can turn rest on/off per exercise (useful for supersets). Sounds are ticks then a go chirp; off = haptics only.")
+                    sectionFooter("Default length for new lifts. On Focus you can turn rest on/off per exercise (useful for supersets). End alert sounds play while RockLog is on screen and lower other audio briefly instead of stopping it. Away from the app you get one “Rest is over” notification (none when End alert is Off).")
                 }
                 .listRowBackground(Color.uplift.surface1)
 

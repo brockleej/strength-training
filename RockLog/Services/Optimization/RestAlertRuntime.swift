@@ -17,6 +17,9 @@ import CallKit
 enum RestAlertRuntime {
     static func apply(_ effects: RestAlertEffects, exerciseName: String) {
         if effects.strongHaptic { HapticService.restFinished() }
+        if let beep = effects.countdownBeep {
+            RestTimerSoundService.playCountdownTick(remainingWholeSeconds: beep)
+        }
         if effects.lightTap { HapticService.restWarningTap() }
         if effects.playChirp {
             RestTimerSoundService.playChirp(duck: effects.duck)
@@ -28,7 +31,7 @@ enum RestAlertRuntime {
         }
         if effects.endActivity { RestActivityController.endAll() }
         if effects.cancelBackup { RestTimerNotificationScheduler.cancelBackup() }
-        if let date = effects.scheduleBackupAt {
+        if let date = effects.scheduleBackupAt, RestAlertPreferences.endAlert != .off {
             RestTimerNotificationScheduler.armBackup(at: date, exerciseName: exerciseName)
         }
     }
@@ -41,7 +44,8 @@ enum RestAlertRuntime {
             callConnected: RestCallMonitor.shared.hasConnectedCall,
             liveActivitiesAvailable: RestActivityController.areAvailable,
             notificationPermissionDenied: false,
-            appIsActive: true
+            appIsActive: true,
+            endAlert: RestAlertPreferences.endAlert
         )
     }
 }

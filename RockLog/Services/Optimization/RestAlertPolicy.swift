@@ -41,6 +41,8 @@ nonisolated struct RestAlertEffects: Equatable, Sendable {
     var scheduleBackupAt: Date?
     var cancelBackup = false
     var activityEnded = false
+    /// Whole seconds left (5…1) for a countdown beep. Nil means no beep this tick.
+    var countdownBeep: Int?
 }
 
 nonisolated enum RestAlertPolicy {
@@ -53,6 +55,8 @@ nonisolated enum RestAlertPolicy {
     static let keepAliveDucks = false
     static let categoryIsPlayback = true
     static let endAlertIsTimeSensitive = false
+    /// Seconds that get a countdown beep when End alert is "5-second countdown beeps".
+    static let countdownWindow = 5
 
     struct Tick: Sendable {
         var now: Date
@@ -62,6 +66,8 @@ nonisolated enum RestAlertPolicy {
         var liveActivitiesAvailable: Bool
         var notificationPermissionDenied: Bool
         var appIsActive: Bool
+        /// Defaults to the chirp so callers that predate End alert keep their behavior.
+        var endAlert: RestEndAlert = .chirp
     }
 
     static func onStart(_ state: RestAlertState, tick: Tick) -> RestAlertEffects {
@@ -74,6 +80,15 @@ nonisolated enum RestAlertPolicy {
     static func onTick(_ state: inout RestAlertState, tick: Tick) -> RestAlertEffects {
         var effects = RestAlertEffects()
         let remaining = state.endDate.timeIntervalSince(tick.now)
+        // One beep per whole second crossed in the last five, on screen only, never on a call.
+        if tick.endAlert.beepsLastFive, tick.appIsActive, !tick.callConnected, remaining > 0 {
+            let before = Int(state.previousRemaining.rounded(.up))
+            let now = Int(remaining.rounded(.up))
+            if now < before, (1...countdownWindow).contains(now) {
+                effects.countdownBeep = now
+                effects.duck = true
+            }
+        }
         if tick.tapAtTenEnabled, state.previousRemaining > 10, remaining <= 10, remaining > 0 {
             state.tenTapFired = true
             effects.lightTap = true
@@ -83,13 +98,13 @@ nonisolated enum RestAlertPolicy {
         if remaining <= 0 {
             guard !state.zeroFired else { return effects }
             state.zeroFired = true
-            effects.strongHaptic = true
+            effects.strongHaptic = tick.endAlert.buzzes
             effects.endActivity = true
             effects.activityEnded = true
             // The app is on screen and plays the alert, so the backup notification must not also fire.
             if tick.appIsActive {
                 effects.cancelBackup = true
-                if tick.soundEnabled && !tick.callConnected {
+                if tick.soundEnabled && tick.endAlert.playsSound && !tick.callConnected {
                     effects.playChirp = true
                     effects.duck = true
                     state.chirpStarted = true

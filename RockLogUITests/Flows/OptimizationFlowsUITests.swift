@@ -25,6 +25,7 @@ final class OptimizationFlowsUITests: RockLogUITestCase {
         element(UITestID.settingsWorkoutDefaults).tap()
         scrollUntilExists(UITestID.settingsStartingWeight)
         scrollUntilExists(UITestID.settingsTapAtTen)
+        scrollUntilExists(UITestID.settingsEndAlert)
         app.navigationBars.buttons["Settings"].tap()
         scrollUntilHittable(element(UITestID.settingsUnits))
         element(UITestID.settingsUnits).tap()

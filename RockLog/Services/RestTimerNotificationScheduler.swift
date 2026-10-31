@@ -2,11 +2,12 @@
 //  RestTimerNotificationScheduler.swift
 //  RockLog
 //
-//  Rest countdown is **audio only** (RestTimerSoundService + background keep-alive).
-//  We intentionally do **not** schedule local notifications for ticks or “done” —
-//  those produced five banners when the app was inactive.
-//
-//  This type only clears any legacy rest-timer notifications still pending/delivered.
+//  On screen, RestTimerSoundService plays the End alert (chirp, or countdown beeps
+//  then the chirp). There is no background audio keep-alive.
+//  Off screen, one local notification fires at the end time ("Rest is over",
+//  default sound, not Time Sensitive). The app cancels it when it plays the alert
+//  itself. End alert "Off" does not arm it. No per-second tick notifications are
+//  scheduled (they once produced five banners); legacy ones are cleared here.
 //
 
 import Foundation

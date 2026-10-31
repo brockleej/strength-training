@@ -31,9 +31,17 @@ enum RestTimerSoundService {
         _ = sharedPlayer()
     }
 
-    /// The last five seconds used to chirp. They do not. One chirp at zero is the sound.
+    /// One short beep for 5…1 when End alert is "5-second countdown beeps".
+    /// On screen only (the policy checks), ducks other audio, then lets it back up.
+    /// There is still no background keep-alive (ab12c88 / c0ffab3).
     static func playCountdownTick(remainingWholeSeconds: Int) {
-        _ = remainingWholeSeconds
+        guard (1...tickWindow).contains(remainingWholeSeconds) else { return }
+        configureSession(duck: true)
+        // Rising pitch toward zero, like the 1.0 build.
+        let pitches: [Double] = [740, 830, 932, 1047, 1175]
+        let index = max(0, min(tickWindow - 1, tickWindow - remainingWholeSeconds))
+        playTone(frequency: pitches[index], duration: 0.08, volume: 0.5)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { endDuck() }
     }
 
     /// One chirp at zero. The caller decides whether a call or the sound switch forbids it.

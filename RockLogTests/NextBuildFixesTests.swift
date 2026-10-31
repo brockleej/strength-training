@@ -108,4 +108,86 @@ final class NextBuildFixesTests: XCTestCase {
         // Stored raw values are unchanged so old sets still decode.
         XCTAssertEqual(LoadMode(stored: "bar", isAssisted: false), .bar)
     }
+
+    // MARK: Item 7 — End alert options
+
+    private func tick(_ seconds: TimeInterval, alert: RestEndAlert, active: Bool = true, call: Bool = false) -> RestAlertPolicy.Tick {
+        RestAlertPolicy.Tick(
+            now: Date(timeIntervalSince1970: seconds),
+            soundEnabled: alert.playsSound,
+            tapAtTenEnabled: true,
+            callConnected: call,
+            liveActivitiesAvailable: false,
+            notificationPermissionDenied: false,
+            appIsActive: active,
+            endAlert: alert
+        )
+    }
+
+    /// Walk a 30 s rest in 0.15 s steps (the app polls every 150 ms) and collect what fired.
+    private func run(_ alert: RestEndAlert, active: Bool = true, call: Bool = false) -> (beeps: [Int], chirp: Bool, buzz: Bool, tap: Bool) {
+        var state = RestAlertState.started(now: Date(timeIntervalSince1970: 0), duration: 30)
+        var beeps: [Int] = []
+        var chirp = false, buzz = false, tap = false
+        var t = 0.15
+        while t <= 30.3 {
+            let e = RestAlertPolicy.onTick(&state, tick: tick(t, alert: alert, active: active, call: call))
+            if let b = e.countdownBeep { beeps.append(b) }
+            chirp = chirp || e.playChirp
+            buzz = buzz || e.strongHaptic
+            tap = tap || e.lightTap
+            t += 0.15
+        }
+        return (beeps, chirp, buzz, tap)
+    }
+
+    func test_endAlert_chirpIsTheDefault_andHasNoBeeps() {
+        XCTAssertEqual(RestEndAlert.resolve(stored: nil, legacySoundEnabled: nil), .chirp)
+        let r = run(.chirp)
+        XCTAssertEqual(r.beeps, [])
+        XCTAssertTrue(r.chirp)
+        XCTAssertTrue(r.buzz)
+        XCTAssertTrue(r.tap, "Tap at 10 seconds is kept")
+    }
+
+    /// Regression (t290u/t291u): 1.1 lost the 5-second countdown; it is back as its own choice.
+    func test_regression_countdownBeeps_fireOncePerSecond_fiveToOne_thenChirp() {
+        let r = run(.countdown)
+        XCTAssertEqual(r.beeps, [5, 4, 3, 2, 1])
+        XCTAssertTrue(r.chirp)
+        XCTAssertTrue(r.buzz)
+    }
+
+    func test_countdownBeeps_onScreenOnly_andNotDuringACall() {
+        XCTAssertEqual(run(.countdown, active: false).beeps, [])
+        XCTAssertEqual(run(.countdown, call: true).beeps, [])
+    }
+
+    func test_buzzOnly_andOff() {
+        let buzz = run(.buzz)
+        XCTAssertEqual(buzz.beeps, [])
+        XCTAssertFalse(buzz.chirp)
+        XCTAssertTrue(buzz.buzz)
+        let off = run(.off)
+        XCTAssertEqual(off.beeps, [])
+        XCTAssertFalse(off.chirp)
+        XCTAssertFalse(off.buzz)
+    }
+
+    func test_endAlert_migratesTheOldCountdownSoundsSwitch() {
+        XCTAssertEqual(RestEndAlert.resolve(stored: nil, legacySoundEnabled: false), .buzz)
+        XCTAssertEqual(RestEndAlert.resolve(stored: nil, legacySoundEnabled: true), .chirp)
+        XCTAssertEqual(RestEndAlert.resolve(stored: "countdown", legacySoundEnabled: false), .countdown)
+        XCTAssertEqual(RestEndAlert.resolve(stored: "bogus", legacySoundEnabled: nil), .chirp)
+        XCTAssertEqual(RestEndAlert.allCases.map(\.title),
+                       ["Chirp at zero", "5-second countdown beeps", "Buzz only", "Off"])
+    }
+
+    func test_countdownBeep_ducksOtherAudio() {
+        var state = RestAlertState.started(now: Date(timeIntervalSince1970: 0), duration: 30)
+        _ = RestAlertPolicy.onTick(&state, tick: tick(25.5, alert: .countdown))
+        let e = RestAlertPolicy.onTick(&state, tick: tick(26.0, alert: .countdown))
+        XCTAssertEqual(e.countdownBeep, 4)
+        XCTAssertTrue(e.duck)
+    }
 }

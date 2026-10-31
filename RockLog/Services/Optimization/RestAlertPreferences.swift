@@ -7,7 +7,49 @@
 
 import Foundation
 
+/// What happens when rest runs out. Sounds play only while RockLog is on screen and
+/// duck (lower, not stop) other audio such as music or an audiobook.
+nonisolated enum RestEndAlert: String, CaseIterable, Sendable {
+    case chirp
+    case countdown
+    case buzz
+    case off
+
+    var title: String {
+        switch self {
+        case .chirp: "Chirp at zero"
+        case .countdown: "5-second countdown beeps"
+        case .buzz: "Buzz only"
+        case .off: "Off"
+        }
+    }
+
+    /// Chirp at zero (countdown also ends on the chirp).
+    var playsSound: Bool { self == .chirp || self == .countdown }
+    var beepsLastFive: Bool { self == .countdown }
+    var buzzes: Bool { self != .off }
+
+    /// Stored choice, else the old "Countdown sounds" switch (off → Buzz only), else Chirp.
+    static func resolve(stored: String?, legacySoundEnabled: Bool?) -> RestEndAlert {
+        if let stored, let alert = RestEndAlert(rawValue: stored) { return alert }
+        if legacySoundEnabled == false { return .buzz }
+        return .chirp
+    }
+}
+
 enum RestAlertPreferences {
+    static let endAlertKey = "restEndAlert"
+
+    static var endAlert: RestEndAlert {
+        get {
+            let legacyKey = RestTimerPreferences.soundEnabledKey
+            let legacy: Bool? = AppDefaults.local.object(forKey: legacyKey) == nil
+                ? nil : AppDefaults.local.bool(forKey: legacyKey)
+            return RestEndAlert.resolve(stored: AppDefaults.local.string(forKey: endAlertKey), legacySoundEnabled: legacy)
+        }
+        set { AppDefaults.local.set(newValue.rawValue, forKey: endAlertKey) }
+    }
+
     /// Light tap when 10 seconds remain. Off until he turns it on.
     static let tapAtTenKey = "restTapAtTenSeconds"
     /// Ask to change a lift's rest only after enough real rests. Off until he turns it on.

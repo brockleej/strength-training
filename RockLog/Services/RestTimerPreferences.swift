@@ -27,12 +27,10 @@ enum RestTimerPreferences {
         return AppDefaults.local.bool(forKey: enabledKey)
     }
 
-    /// Audible countdown ticks + done chirp (still haptics when sound is off).
+    /// True when the End alert plays a sound (Chirp at zero or 5-second countdown).
+    /// The old "Countdown sounds" key is read only as a migration input.
     static var isSoundEnabled: Bool {
-        if AppDefaults.local.object(forKey: soundEnabledKey) == nil {
-            return defaultSoundEnabled
-        }
-        return AppDefaults.local.bool(forKey: soundEnabledKey)
+        RestAlertPreferences.endAlert.playsSound
     }
 
     static var targetSeconds: Int {
