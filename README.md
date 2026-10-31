@@ -249,15 +249,33 @@ xcodebuild test -scheme ProgressionLab -destination 'platform=macOS'
 | --- | --- |
 | **HealthKit** | Physical device |
 | **CloudKit** | Paid team, iCloud entitlement, signed-in iCloud |
-| **Backup** | Settings → Export before a restore. Contents on `main` are described under [Backup on main, not on TestFlight yet](#backup-on-main-not-on-testflight-yet). |
+| **Backup** | Settings → Export before a restore. Contents are described under [Backup (in TestFlight 1.1 and 1.2)](#backup-in-testflight-11-and-12). |
 
 ## TestFlight
 
 **Xcode Cloud** on this fork ships **RockLog** (`com.lee.lift2026`) to internal TestFlight on every push to **`main`**. **RockCoach** lives in this repo for local Xcode builds — it is not on TestFlight.
 
-## Backup on main, not on TestFlight yet
+Current builds for the internal groups (Lee Only and Friends):
 
-Merged to `main` in `eb497bd` (pull request #9). **Not on TestFlight yet.** The build testers have does not include this.
+- **1.1 (1)** — built from `fae17c6` on Oct 30, 2026.
+- **1.2 (1)** — built from branch `cursor/rocklog-1.2` on Oct 31, 2026. Xcode Cloud was at its monthly limit, so this build was archived on a local Mac and uploaded to App Store Connect by hand. It is not on `main` yet.
+
+### What's new in 1.2
+
+- **Reorder Today** has Edit-mode drag handles. You can save the order for today or for all upcoming days, and group lifts into 1–3 lettered circuits (A, B, C) that move as a block.
+- **Circuits work like straight sets.** No rest between lifts inside a round; one rest after each round, with the same rest card. You can **End circuit early**.
+- **Rest End alert** has 4 choices: Chirp at zero, 5-second countdown beeps, Buzz only, or Off. Music or an audiobook dips during the sound and comes back after.
+- **kg mode** adds a 5 kg weight step, and **Machine steps** (formerly Stack) offers kg steps of 2.5, 5 and 10.
+- **Load** and **Steps** pills show the active mode and the chosen step.
+- A **"Set 2 of 4"** cue sits on the sets heading so you know where you are.
+- Editing only the reps on an old set **keeps its weight**.
+- Plainer wording in Settings → Units and the import prompts.
+
+Tester notes: [docs/TESTFLIGHT-WHAT-TO-TEST.md](docs/TESTFLIGHT-WHAT-TO-TEST.md).
+
+## Backup (in TestFlight 1.1 and 1.2)
+
+Merged to `main` in `eb497bd` (pull request #9). TestFlight 1.1 (1) and 1.2 (1) include it. Not included: the End alert choice and circuit rest, which are phone-only settings and are not in backups yet.
 
 A new export includes body measurements and planned programs, along with the library, split, day plans, and sessions. An older file that omits those sections leaves the measurements and programs already on the phone. A file that includes an empty list clears them. Restore saves once; if that save fails, the phone rolls back to what it had. A file with bad numbers (negative reps, a weight that is not a real number, a weight over 10,000 lb, a measurement kind this app does not know) is refused and nothing changes. A lift whose training mode this version does not understand is skipped, and the app says how many. A lift you have only done once suggests a weight rounded to the nearest 5 lb. Two workouts with the same date are ordered by session id so the suggestion does not flip.
 
@@ -265,15 +283,15 @@ The iCloud store opens as `RockLogSchemaV1` with an empty migration plan. The ne
 
 ## Month table on main, not on TestFlight yet
 
-Merged to `main` in `a877aad` (pull request #10). **Not on TestFlight yet.**
+Merged to `main` in `a877aad` (pull request #10). **Not in TestFlight 1.1 or 1.2** — both builds branch from before this merge.
 
-The this-month / last-month card on Progress, and the same table in RockCoach, count a workout in one month only. A session at the exact start of a month (midnight as the 1st begins) belongs to the month that is starting. February, including a leap day, and a daylight-saving change stay with the phone’s calendar. The TestFlight build can still show that midnight workout in both months.
+The this-month / last-month card on Progress, and the same table in RockCoach, count a workout in one month only. A session at the exact start of a month (midnight as the 1st begins) belongs to the month that is starting. February, including a leap day, and a daylight-saving change stay with the phone’s calendar. TestFlight builds 1.1 and 1.2 can still show that midnight workout in both months.
 
 Request beta access via [Issues](https://github.com/brockleej/strength-training/issues).
 
 ### What’s new — planned workouts and split import
 
-This is the latest tester paste in the repo. The backup work (`eb497bd`) and the month-table fix (`a877aad`) are on `main` and are **not** part of that paste until a TestFlight build includes them.
+This feature shipped before 1.1. The month-table fix (`a877aad`) is on `main` only and is not in a TestFlight build yet.
 
 See [docs/TESTFLIGHT-WHAT-TO-TEST.md](docs/TESTFLIGHT-WHAT-TO-TEST.md) for the tester copy (plain language).
 
