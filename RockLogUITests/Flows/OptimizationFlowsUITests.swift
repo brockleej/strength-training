@@ -32,6 +32,7 @@ final class OptimizationFlowsUITests: RockLogUITestCase {
         let massUnit = element(UITestID.settingsMassUnit)
         XCTAssertTrue(massUnit.waitForExistence(timeout: 6))
         XCTAssertTrue(massUnit.isHittable)
+        XCTAssertTrue(element(UITestID.settingsUnitsFooter).exists)
         app.navigationBars.buttons["Settings"].tap()
         scrollUntilHittable(element(UITestID.settingsGyms))
         element(UITestID.settingsGyms).tap()

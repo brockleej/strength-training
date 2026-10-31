@@ -94,6 +94,7 @@ enum UITestID {
     static let settingsStartingWeight = "settings.startingWeight"
     static let settingsTapAtTen = "settings.tapAtTen"
     static let settingsEndAlert = "settings.endAlert"
+    static let settingsUnitsFooter = "settings.units.footer"
     static let settingsGym = "settings.gym"
     static let restToggle = "rest.toggle"
     static let restSkip = "rest.skip"

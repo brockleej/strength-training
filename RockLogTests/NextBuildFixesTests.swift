@@ -220,4 +220,13 @@ final class NextBuildFixesTests: XCTestCase {
         let summary = ProgramImportSummary(blockName: "S", sessionCount: 1, weekCount: 1, createdExerciseCount: 0, skippedDuplicateSessionCount: 0)
         XCTAssertEqual(ProgramImportService.resultMessage(summary: summary, replacedSplit: false), "Added 1 workout to your plan. Your history is unchanged.")
     }
+
+    // MARK: Item 9 — Units copy
+
+    func test_unitsCopy_isPlain_andHasNoPlateList() {
+        XCTAssertEqual(UnitsSettingsCopy.footer,
+                       "Choose how weights show across the app. Suggestions go up by 5 lb or 2.5 kg at a time.")
+        XCTAssertFalse(UnitsSettingsCopy.footer.contains("plates"))
+        XCTAssertFalse(UnitsSettingsCopy.footer.contains("1.25"))
+    }
 }

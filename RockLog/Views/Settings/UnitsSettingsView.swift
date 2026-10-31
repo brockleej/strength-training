@@ -8,6 +8,10 @@
 
 import SwiftUI
 
+enum UnitsSettingsCopy {
+    static let footer = "Choose how weights show across the app. Suggestions go up by 5 lb or 2.5 kg at a time."
+}
+
 struct UnitsSettingsView: View {
     @AppStorage(MassUnitPreferences.key)
     private var massUnitRaw: String = MassUnit.pounds.rawValue
@@ -26,7 +30,8 @@ struct UnitsSettingsView: View {
             } header: {
                 Text("Weight")
             } footer: {
-                Text("Default is pounds. 5 lb and 2.5 kg are the progression steps. A 20 kg bar uses 25, 20, 15, 10, 5, 2.5, and 1.25 kg plates.")
+                Text(UnitsSettingsCopy.footer)
+                    .accessibilityIdentifier(AccessibilityID.settingsUnitsFooter)
             }
             .listRowBackground(Color.uplift.surface1)
         }
