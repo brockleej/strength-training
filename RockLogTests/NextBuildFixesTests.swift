@@ -97,4 +97,15 @@ final class NextBuildFixesTests: XCTestCase {
         profile.applyTyped(step: nil, pins: [], unit: .pounds)
         XCTAssertFalse(profile.definition.isActive)
     }
+
+    // MARK: Item 6 — load pill names the mode
+
+    func test_loadPill_namesTheActiveMode() {
+        XCTAssertEqual(LoadMode.bar.pillLabel, "Load: Total")
+        XCTAssertEqual(LoadMode.assist.pillLabel, "Load: Assist")
+        XCTAssertEqual(LoadMode.added.pillLabel, "Load: Added")
+        XCTAssertEqual(Set(LoadMode.allCases.map(\.menuLabel)).count, 3)
+        // Stored raw values are unchanged so old sets still decode.
+        XCTAssertEqual(LoadMode(stored: "bar", isAssisted: false), .bar)
+    }
 }

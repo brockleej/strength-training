@@ -1043,13 +1043,19 @@ struct FocusView: View {
         HStack(spacing: 8) {
             Menu {
                 ForEach(LoadMode.allCases, id: \.self) { mode in
-                    Button(mode.title) {
+                    Button {
                         exercise.loadMode = mode
                         ModelSave.logged(workoutVM.modelContext, action: "FocusView")
+                    } label: {
+                        if exercise.loadMode == mode {
+                            Label(mode.menuLabel, systemImage: "checkmark")
+                        } else {
+                            Text(mode.menuLabel)
+                        }
                     }
                 }
             } label: {
-                Text(exercise.loadMode.title)
+                Text(exercise.loadMode.pillLabel)
                     .font(.uplift.text(12, weight: .semibold))
                     .foregroundStyle(Color.uplift.fg)
                     .padding(.horizontal, 10)

@@ -15,11 +15,23 @@ nonisolated enum LoadMode: String, Codable, CaseIterable, Sendable {
 
     var title: String {
         switch self {
-        case .bar: "Bar"
+        case .bar: "Total"
         case .assist: "Assist"
         case .added: "Added"
         }
     }
+
+    /// Plain menu wording. The pill shows `title`.
+    var menuLabel: String {
+        switch self {
+        case .bar: "Total — the weight I lift"
+        case .assist: "Assist — machine helps (body weight minus)"
+        case .added: "Added — on top of body weight"
+        }
+    }
+
+    /// Pill text, e.g. "Load: Total".
+    var pillLabel: String { "Load: \(title)" }
 
     init(stored raw: String, isAssisted: Bool) {
         if let mode = LoadMode(rawValue: raw), !raw.isEmpty {
