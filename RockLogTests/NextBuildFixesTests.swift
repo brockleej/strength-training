@@ -43,4 +43,25 @@ final class NextBuildFixesTests: XCTestCase {
             XCTAssertTrue(unit.stepperSteps.contains(unit.defaultStepperStep))
         }
     }
+
+    // MARK: Item 4 — plate-math line
+
+    func test_plateLine_showsOnlyForPlainBarTotals() {
+        var stack = StackDefinition.empty
+        XCTAssertTrue(PlateLinePolicy.shows(isAssisted: false, loadMode: .bar, stack: nil))
+        XCTAssertTrue(PlateLinePolicy.shows(isAssisted: false, loadMode: .bar, stack: stack))
+        XCTAssertFalse(PlateLinePolicy.shows(isAssisted: true, loadMode: .bar, stack: nil))
+        XCTAssertFalse(PlateLinePolicy.shows(isAssisted: false, loadMode: .assist, stack: nil))
+        XCTAssertFalse(PlateLinePolicy.shows(isAssisted: false, loadMode: .added, stack: nil))
+        stack.step = 10
+        XCTAssertFalse(PlateLinePolicy.shows(isAssisted: false, loadMode: .bar, stack: stack))
+    }
+
+    /// Regression: the plate line converted an already-displayed kg number as if it were pounds.
+    func test_regression_kgPlateLine_usesTheDisplayedKgTotal() {
+        let readout = PlateLinePolicy.readout(displayedWeight: 60, unit: .kilograms)
+        XCTAssertEqual(readout.bar, 20)
+        XCTAssertEqual(readout.platesPerSide, [20])
+        XCTAssertEqual(PlateLinePolicy.readout(displayedWeight: 135, unit: .pounds).platesPerSide, [45])
+    }
 }

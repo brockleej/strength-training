@@ -92,3 +92,18 @@ nonisolated enum LoadMath {
         return e1RM / bodyWeight
     }
 }
+
+/// When the Focus screen shows "bar + plates per side".
+nonisolated enum PlateLinePolicy {
+    /// Plates only make sense for a plain total on a bar: not assisted, not added to body weight,
+    /// and not on a machine whose steps were set for this lift.
+    static func shows(isAssisted: Bool, loadMode: LoadMode, stack: StackDefinition?) -> Bool {
+        guard !isAssisted, loadMode == .bar else { return false }
+        return !(stack?.isActive ?? false)
+    }
+
+    /// The readout for the number on the weight stepper. That number is already in `unit`.
+    static func readout(displayedWeight: Double, unit: MassUnit) -> MassMath.PlateReadout {
+        MassMath.plates(forTotal: displayedWeight, unit: unit)
+    }
+}

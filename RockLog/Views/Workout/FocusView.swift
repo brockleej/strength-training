@@ -527,10 +527,14 @@ struct FocusView: View {
                     .foregroundStyle(Color.uplift.fgMuted)
                     .accessibilityIdentifier(AccessibilityID.focusComparison)
             }
-            if !focusVM.isAssisted {
+            if PlateLinePolicy.shows(
+                isAssisted: focusVM.isAssisted,
+                loadMode: exercise.loadMode,
+                stack: workoutVM.stackDefinition(for: exercise)
+            ) {
                 let unit = MassUnitPreferences.unit
-                let shown = MassMath.display(fromPounds: focusVM.weight, unit: unit)
-                Text(MassMath.plates(forTotal: shown, unit: unit).text)
+                // focusVM.weight is already in the display unit.
+                Text(PlateLinePolicy.readout(displayedWeight: focusVM.weight, unit: unit).text)
                     .font(.uplift.mono(11, weight: .medium))
                     .foregroundStyle(Color.uplift.fgDim)
                     .accessibilityIdentifier(AccessibilityID.focusPlates)
