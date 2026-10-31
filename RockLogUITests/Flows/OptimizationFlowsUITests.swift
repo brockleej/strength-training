@@ -75,6 +75,8 @@ final class OptimizationFlowsUITests: RockLogUITestCase {
         XCTAssertTrue(element(UITestID.focusDone).exists)
         _ = waitForLogSet()
         XCTAssertTrue(element(UITestID.focusPlates).exists)
+        XCTAssertTrue(element(UITestID.focusSetProgress).exists)
+        XCTAssertTrue(app.staticTexts["Load: Total"].exists || element(UITestID.focusLoadMode).label.contains("Total"))
         XCTAssertTrue(element(UITestID.focusLoadMode).exists)
         XCTAssertTrue(element(UITestID.stackOverride).exists)
         waitFor(UITestID.focusWarmup).tap()

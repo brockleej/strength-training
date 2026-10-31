@@ -229,4 +229,15 @@ final class NextBuildFixesTests: XCTestCase {
         XCTAssertFalse(UnitsSettingsCopy.footer.contains("plates"))
         XCTAssertFalse(UnitsSettingsCopy.footer.contains("1.25"))
     }
+
+    // MARK: Item 10 — more sets below
+
+    /// Regression (t290u): nothing said more planned sets were further down.
+    func test_regression_setProgress_saysMoreBelow() {
+        XCTAssertEqual(SetProgressLabel.text(loggedCount: 1, plannedCount: 4), "Set 2 of 4 · 2 more below")
+        XCTAssertEqual(SetProgressLabel.text(loggedCount: 3, plannedCount: 4), "Set 4 of 4 · last planned")
+        XCTAssertEqual(SetProgressLabel.text(loggedCount: 4, plannedCount: 4), "Set 5 · extra (4 planned)")
+        XCTAssertEqual(SetProgressLabel.text(loggedCount: 0, plannedCount: 0), "Set 1")
+        XCTAssertEqual(SetProgressLabel.text(loggedCount: 2, plannedCount: 3, editingSetNumber: 1), "Editing set 1 of 3")
+    }
 }

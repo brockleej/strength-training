@@ -73,6 +73,7 @@ enum AccessibilityID {
     static let focusWarmupRamp = "focus.warmupRamp"
     static let focusComparison = "focus.comparison"
     static let focusPlates = "focus.plates"
+    static let focusSetProgress = "focus.setProgress"
     static let focusLoadMode = "focus.loadMode"
     static let focusCarryUndo = "focus.carryUndo"
     static let focusLogSet = "focus.logSet"

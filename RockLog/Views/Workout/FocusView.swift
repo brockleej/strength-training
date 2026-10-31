@@ -252,6 +252,7 @@ struct FocusView: View {
                 }
                 if !isNoteEditing, let focusVM {
                     VStack(spacing: 12) {
+                        setProgressRow(focusVM)
                         stepperFooter(focusVM)
                         comparisonLine(focusVM)
                         loadAndStackRow
@@ -517,6 +518,31 @@ struct FocusView: View {
             )
         }
         .padding(.horizontal, 12)
+    }
+
+    /// "Set 2 of 4 · 2 more below" so he knows more rows are further down the list.
+    private func setProgressRow(_ focusVM: FocusViewModel) -> some View {
+        let editingNumber = focusVM.editingSetID.flatMap { id in loggedSets.first { $0.id == id }?.setNumber }
+        let text = SetProgressLabel.text(
+            loggedCount: loggedSets.count,
+            plannedCount: plannedSetsForCard.count,
+            editingSetNumber: editingNumber
+        )
+        return HStack(spacing: 6) {
+            Text(text)
+                .font(.uplift.text(12, weight: .semibold))
+                .foregroundStyle(Color.uplift.fgMuted)
+            if text.contains("more below") {
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(Color.uplift.fgMuted)
+                    .accessibilityHidden(true)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 16)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier(AccessibilityID.focusSetProgress)
     }
 
     private func comparisonLine(_ focusVM: FocusViewModel) -> some View {
