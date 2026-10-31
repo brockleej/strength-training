@@ -1120,6 +1120,15 @@ struct FocusView: View {
         if let editingID = focusVM.editingSetID,
            let set = loggedSets.first(where: { $0.id == editingID }) {
             let previousWeight = set.weightLbs
+            // Keep the stored weight and original entry unless the weight itself was edited.
+            let entry = MassMath.editedEntry(
+                previousPounds: set.weightLbs,
+                previousEnteredValue: set.enteredValue,
+                previousEnteredUnit: set.enteredUnit,
+                newDisplay: entered,
+                unit: unit
+            )
+            let weight = entry.pounds
             let repsOnly = MassMath.sameStoredPounds(previousWeight, weight) && set.reps != reps
             workoutVM.updateSet(
                 set,
@@ -1128,8 +1137,8 @@ struct FocusView: View {
                 isWarmup: isWarmup,
                 isEachSide: isEachSide,
                 isAssisted: isAssisted,
-                enteredValue: entered,
-                enteredUnit: unit
+                enteredValue: entry.enteredValue,
+                enteredUnit: entry.enteredUnit
             )
             workoutVM.applyCarry(
                 exercise: exercise,

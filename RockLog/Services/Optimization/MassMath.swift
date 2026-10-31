@@ -256,6 +256,29 @@ nonisolated enum MassMath {
         snap(exactDisplay(fromPounds: pounds, unit: unit), quantum: unit.readoutQuantum)
     }
 
+    /// What an edit to a saved set stores. If the weight on screen is the same
+    /// number the set already shows in `unit`, the stored pounds and the original
+    /// entry stay exactly as they were (a reps-only edit in kg must not rewrite a
+    /// set entered in lb). Otherwise the new number is stored as typed in `unit`.
+    static func editedEntry(
+        previousPounds: Double,
+        previousEnteredValue: Double?,
+        previousEnteredUnit: MassUnit?,
+        newDisplay: Double,
+        unit: MassUnit
+    ) -> (pounds: Double, enteredValue: Double?, enteredUnit: MassUnit?) {
+        let shownBefore = shown(
+            enteredValue: previousEnteredUnit == nil ? nil : previousEnteredValue,
+            enteredUnit: previousEnteredUnit,
+            canonicalPounds: previousPounds,
+            display: unit
+        )
+        if snap(newDisplay, quantum: unit.readoutQuantum) == snap(shownBefore, quantum: unit.readoutQuantum) {
+            return (previousPounds, previousEnteredUnit == nil ? nil : previousEnteredValue, previousEnteredUnit)
+        }
+        return (storedPounds(fromEntered: newDisplay, unit: unit), newDisplay, unit)
+    }
+
     /// Store the pound equivalent of a number the lifter typed in `unit`,
     /// snapped onto that unit's readout so the next view matches.
     static func storedPounds(fromEntered value: Double, unit: MassUnit) -> Double {

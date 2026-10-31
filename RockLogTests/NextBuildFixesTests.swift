@@ -603,3 +603,105 @@ final class CircuitGapsViewModelTests: RockLogStoreTestCase {
         XCTAssertNil(vm.circuitBreak, "Skip rest also ends the break")
     }
 }
+
+// MARK: - QA 1.2: stored set values never move when display or machine steps change
+
+@MainActor
+final class StoredSetValueTests: RockLogStoreTestCase {
+    private var savedUnit: MassUnit = .pounds
+
+    override func setUpWithError() throws {
+        try super.setUpWithError()
+        savedUnit = MassUnitPreferences.unit
+    }
+
+    override func tearDown() {
+        MassUnitPreferences.unit = savedUnit
+        super.tearDown()
+    }
+
+    private func liveSet(_ context: ModelContext, entered: Double, unit: MassUnit) throws -> (Exercise, SetRecord) {
+        let exercise = Exercise.make(name: "Synthetic Machine Row", dayType: .push, isCustom: true)
+        context.insert(exercise)
+        let session = WorkoutSession(dayType: .push, date: Date())
+        context.insert(session)
+        let record = ExerciseRecord(trainingMode: .highWeightLowReps, sortOrder: 0)
+        record.exercise = exercise
+        record.session = session
+        context.insert(record)
+        let set = SetRecord(setNumber: 1, weightLbs: 0, reps: 8)
+        set.stampEntered(entered, unit: unit)
+        set.exerciseRecord = record
+        context.insert(set)
+        record.sets = [set]
+        session.exerciseRecords = [record]
+        try context.save()
+        return (exercise, set)
+    }
+
+    func test_savedSet_unchanged_byMachineStepsSnapAndUnitToggle() throws {
+        let context = container.mainContext
+        MassUnitPreferences.unit = .pounds
+        let (exercise, set) = try liveSet(context, entered: 147.5, unit: .pounds)
+        let before = (set.weightLbs, set.enteredValue, set.enteredUnitRaw, set.reps)
+        let vm = holdWorkoutViewModel(WorkoutViewModel(modelContext: context, healthKitService: HealthKitWorkoutService()))
+
+        vm.applyTypedStack(exercise: exercise, step: 10, pins: [])
+        if let stack = vm.stackDefinition(for: exercise) {
+            _ = MachineSteps.snappedDisplay(set.displayValue(in: .pounds), unit: .pounds, stack: stack)
+        }
+        MassUnitPreferences.unit = .kilograms
+        vm.applyTypedStack(exercise: exercise, step: 5, pins: [])
+        if let stack = vm.stackDefinition(for: exercise) {
+            _ = MachineSteps.snappedDisplay(set.displayValue(in: .kilograms), unit: .kilograms, stack: stack)
+        }
+        _ = MassUnit.kilograms.stepperSteps
+        vm.applyTypedStack(exercise: exercise, step: nil, pins: [])
+        MassUnitPreferences.unit = .pounds
+
+        XCTAssertEqual(set.weightLbs, before.0)
+        XCTAssertEqual(set.enteredValue, before.1)
+        XCTAssertEqual(set.enteredUnitRaw, before.2)
+        XCTAssertEqual(set.reps, before.3)
+        XCTAssertEqual(set.displayValue(in: .pounds), 147.5, "lb → kg → lb does not walk the number")
+    }
+
+    func test_editEntry_keepsStoredWeight_whenOnlyRepsChange_inOtherUnit() {
+        // Entered 147.5 lb, edited while the app shows kg, weight untouched.
+        let pounds = MassMath.pounds(fromDisplay: 147.5, unit: .pounds)
+        let shownKg = MassMath.shown(enteredValue: 147.5, enteredUnit: .pounds, canonicalPounds: pounds, display: .kilograms)
+        let kept = MassMath.editedEntry(
+            previousPounds: pounds, previousEnteredValue: 147.5, previousEnteredUnit: .pounds,
+            newDisplay: shownKg, unit: .kilograms
+        )
+        XCTAssertEqual(kept.pounds, pounds)
+        XCTAssertEqual(kept.enteredValue, 147.5)
+        XCTAssertEqual(kept.enteredUnit, .pounds)
+
+        let changed = MassMath.editedEntry(
+            previousPounds: pounds, previousEnteredValue: 147.5, previousEnteredUnit: .pounds,
+            newDisplay: 70, unit: .kilograms
+        )
+        XCTAssertEqual(changed.enteredValue, 70)
+        XCTAssertEqual(changed.enteredUnit, .kilograms)
+        XCTAssertEqual(changed.pounds, MassMath.storedPounds(fromEntered: 70, unit: .kilograms), accuracy: 0.0001)
+    }
+
+    func test_historyEdit_repsOnly_inKg_keepsStoredPoundsAndEntry() throws {
+        let context = container.mainContext
+        MassUnitPreferences.unit = .kilograms
+        let (_, set) = try liveSet(context, entered: 147.5, unit: .pounds)
+        let pounds = set.weightLbs
+        let vm = holdWorkoutViewModel(WorkoutViewModel(modelContext: context, healthKitService: HealthKitWorkoutService()))
+        let entry = MassMath.editedEntry(
+            previousPounds: set.weightLbs, previousEnteredValue: set.enteredValue,
+            previousEnteredUnit: set.enteredUnit, newDisplay: set.displayValue(in: .kilograms), unit: .kilograms
+        )
+        vm.updateSet(set, weight: entry.pounds, reps: 10,
+                     enteredValue: entry.enteredValue, enteredUnit: entry.enteredUnit)
+        XCTAssertEqual(set.reps, 10, "the edited field changes")
+        XCTAssertEqual(set.weightLbs, pounds, "weight stays exactly as stored")
+        XCTAssertEqual(set.enteredUnit, .pounds)
+        XCTAssertEqual(set.enteredValue, 147.5)
+    }
+}
