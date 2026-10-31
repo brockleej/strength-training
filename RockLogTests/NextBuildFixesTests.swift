@@ -190,4 +190,34 @@ final class NextBuildFixesTests: XCTestCase {
         XCTAssertEqual(e.countdownBeep, 4)
         XCTAssertTrue(e.duck)
     }
+
+    // MARK: Item 8 — import prompt copy
+
+    /// Regression (t278u): a one-day file said "Add 1 week of planned workouts".
+    func test_regression_oneDayFile_saysOneWorkout_notOneWeek() {
+        let prompt = ProgramImportSummary(
+            blockName: "Synthetic", sessionCount: 1, weekCount: 1,
+            createdExerciseCount: 0, skippedDuplicateSessionCount: 0
+        ).confirmationPrompt
+        XCTAssertTrue(prompt.message.contains("1 workout"), prompt.message)
+        XCTAssertFalse(prompt.message.localizedCaseInsensitiveContains("week"), prompt.message)
+        XCTAssertEqual(ProgramImportService.planAmount(sessionCount: 4, weekCount: 1), "4 workouts")
+        XCTAssertEqual(ProgramImportService.planAmount(sessionCount: 24, weekCount: 8), "24 workouts over 8 weeks")
+    }
+
+    func test_importButtons_arePlainAndSafe() {
+        let prompt = ProgramImportService.addPlanPrompt(sessionCount: 3, weekCount: 1)
+        XCTAssertEqual(prompt.confirmTitle, "Add to my plan")
+        XCTAssertEqual(prompt.cancelTitle, "Cancel")
+        XCTAssertEqual(ProgramImportService.replaceUnusedPlanTitle, "Replace upcoming planned days")
+        XCTAssertEqual(ProgramImportService.importSplitConfirmTitle, "Replace my split")
+        XCTAssertEqual(ProgramImportService.importSplitCancelTitle, "Cancel")
+        for text in [prompt.message, ProgramImportService.replaceSplitMessage(), ProgramImportService.importSplitMessage()] {
+            XCTAssertTrue(text.contains("History"), text)
+            XCTAssertFalse(text.localizedCaseInsensitiveContains("unused"), text)
+            XCTAssertFalse(text.localizedCaseInsensitiveContains("block"), text)
+        }
+        let summary = ProgramImportSummary(blockName: "S", sessionCount: 1, weekCount: 1, createdExerciseCount: 0, skippedDuplicateSessionCount: 0)
+        XCTAssertEqual(ProgramImportService.resultMessage(summary: summary, replacedSplit: false), "Added 1 workout to your plan. Your history is unchanged.")
+    }
 }

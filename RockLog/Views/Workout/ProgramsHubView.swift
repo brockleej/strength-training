@@ -20,12 +20,7 @@ struct ProgramsHubView: View {
 
     @State private var isImporting = false
     @State private var pendingProgram: ProgramDocument?
-    @State private var pendingProgramPrompt = RestorePrompt(
-        title: "Add planned workouts?",
-        message: ProgramImportService.confirmationMessage(weekCount: 8),
-        confirmTitle: "Add workouts",
-        cancelTitle: "Don't add"
-    )
+    @State private var pendingProgramPrompt = ProgramImportService.addPlanPrompt(sessionCount: 1, weekCount: 1)
     @State private var showProgramConfirmation = false
     @State private var pendingSplitDocument: ProgramDocument?
     @State private var showImportSplitConfirm = false
@@ -129,7 +124,7 @@ struct ProgramsHubView: View {
             handleImport(result)
         }
         .alert(pendingProgramPrompt.title, isPresented: $showProgramConfirmation) {
-            Button(pendingProgramPrompt.cancelTitle) { pendingProgram = nil }
+            Button(pendingProgramPrompt.cancelTitle, role: .cancel) { pendingProgram = nil }
             Button(pendingProgramPrompt.confirmTitle) {
                 if let document = pendingProgram {
                     importProgram(document)

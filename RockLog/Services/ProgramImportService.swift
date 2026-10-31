@@ -3,7 +3,7 @@
 //  RockLog
 //
 //  Merge a rocklog.program file into the live store. Never deletes history
-//  or the library. Split stays unless the user taps Use this split.
+//  or the library. Split stays unless the user taps Use these days.
 //  Exercise match: UUID, then name.
 //
 
@@ -18,12 +18,7 @@ struct ProgramImportSummary: Equatable {
     var skippedDuplicateSessionCount: Int
 
     var confirmationPrompt: RestorePrompt {
-        RestorePrompt(
-            title: "Add planned workouts?",
-            message: ProgramImportService.confirmationMessage(weekCount: weekCount),
-            confirmTitle: "Add workouts",
-            cancelTitle: "Don't add"
-        )
+        ProgramImportService.addPlanPrompt(sessionCount: sessionCount, weekCount: weekCount)
     }
 }
 
@@ -46,19 +41,22 @@ enum ProgramImportService {
     /// Explicit opt-in. Default import keeps file dates as metadata; the
     /// unused queue still rolls to the first unstarted session.
     static let startThisBlockTodayTitle = "Start this block today"
-    static let useThisSplitTitle = "Use this as your training split?"
-    static let useThisSplitConfirmTitle = "Use this split"
+    static let useThisSplitTitle = "Also change your weekly days?"
+    static let useThisSplitConfirmTitle = "Use these days"
     static let keepCurrentSplitTitle = "Keep my current split"
-    static let replaceUnusedPlanTitle = "Replace unused plan"
-    static let importSplitTitle = "Import training split?"
-    static let importSplitConfirmTitle = "Use this split"
-    static let importSplitCancelTitle = "Don't import"
+    static let addPlanTitle = "Add planned workouts?"
+    static let addToPlanTitle = "Add to my plan"
+    static let replaceUnusedPlanTitle = "Replace upcoming planned days"
+    static let addPlanCancelTitle = "Cancel"
+    static let importSplitTitle = "Replace your training split?"
+    static let importSplitConfirmTitle = "Replace my split"
+    static let importSplitCancelTitle = "Cancel"
     static let keepPlannedAfterSplitTitle = "Keep remaining planned workouts?"
     static let keepPlannedAfterSplitConfirmTitle = "Keep them"
     static let removePlannedAfterSplitTitle = "Remove leftover plan"
 
     static func importSplitMessage() -> String {
-        "This replaces your current days and the lifts on each day. History stays."
+        "Your days and the lifts on each day will be replaced by this file. Finished workouts stay in History."
     }
 
     static func keepPlannedAfterSplitMessage() -> String {
@@ -77,15 +75,33 @@ enum ProgramImportService {
         return !PlannedBlockQueue.unusedSessions(in: all).isEmpty
     }
 
+    /// "1 workout", "4 workouts", or "24 workouts over 8 weeks". A one-day file is never "1 week".
+    static func planAmount(sessionCount: Int, weekCount: Int) -> String {
+        let sessions = max(1, sessionCount)
+        let sessionText = sessions == 1 ? "1 workout" : "\(sessions) workouts"
+        guard sessions > 1, weekCount > 1 else { return sessionText }
+        return "\(sessionText) over \(weekCount) weeks"
+    }
+
     /// Human copy for the Files / share-sheet confirm. No jargon.
-    static func confirmationMessage(weekCount: Int) -> String {
-        let weeks = max(1, weekCount)
-        let weekWord = weeks == 1 ? "week" : "weeks"
-        return "Add \(weeks) \(weekWord) of planned workouts? History stays. Add keeps leftover planned days. Replace unused plan swaps those leftover days for this file."
+    static func confirmationMessage(sessionCount: Int, weekCount: Int) -> String {
+        "This file has \(planAmount(sessionCount: sessionCount, weekCount: weekCount)). "
+            + "“\(addToPlanTitle)” keeps the planned days you already have. "
+            + "“\(replaceUnusedPlanTitle)” removes only planned days you haven’t started. "
+            + "Finished workouts in History are never changed."
+    }
+
+    static func addPlanPrompt(sessionCount: Int, weekCount: Int) -> RestorePrompt {
+        RestorePrompt(
+            title: addPlanTitle,
+            message: confirmationMessage(sessionCount: sessionCount, weekCount: weekCount),
+            confirmTitle: addToPlanTitle,
+            cancelTitle: addPlanCancelTitle
+        )
     }
 
     static func replaceSplitMessage() -> String {
-        "This replaces your current days and the lifts on each day with this block. Your old workouts stay in History."
+        "Today would rotate through this file’s days instead of your current split. Keep my current split leaves your days alone; the planned workouts are added either way. Finished workouts stay in History."
     }
 
     static func replaceSplitPrompt() -> RestorePrompt {
@@ -103,12 +119,11 @@ enum ProgramImportService {
                 ? "Those planned workouts are already on this phone. Your training split now matches this block."
                 : "Those planned workouts are already on this phone."
         }
-        let weeks = max(1, summary.weekCount)
-        let weekWord = weeks == 1 ? "week" : "weeks"
+        let amount = planAmount(sessionCount: summary.sessionCount, weekCount: summary.weekCount)
         if replacedSplit {
-            return "Added \(weeks) \(weekWord) of planned workouts. Your training split now matches this block. History is unchanged."
+            return "Added \(amount) to your plan. Your training split now matches this file. History is unchanged."
         }
-        return "Added \(weeks) \(weekWord) of planned workouts. Your history is unchanged."
+        return "Added \(amount) to your plan. Your history is unchanged."
     }
 
     /// Unique days in file order, each with first-seen lifts (id, then name).

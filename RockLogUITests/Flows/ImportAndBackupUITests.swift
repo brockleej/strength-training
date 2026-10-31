@@ -12,7 +12,7 @@ final class ImportAndBackupUITests: RockLogUITestCase {
             preset: "typical",
             environment: SyntheticPayloads.environment(json: SyntheticPayloads.programMysteryLift())
         )
-        dismissAlert(button: "Add workouts")
+        dismissAlert(button: "Add to my plan")
         dismissAlert(button: "Keep my current split")
         XCTAssertTrue(app.buttons["OK"].waitForExistence(timeout: 4))
         app.buttons["OK"].tap()
@@ -35,7 +35,7 @@ final class ImportAndBackupUITests: RockLogUITestCase {
             preset: "typical",
             environment: SyntheticPayloads.environment(json: SyntheticPayloads.splitAlphaBeta())
         )
-        dismissAlert(button: "Use this split")
+        dismissAlert(button: "Replace my split")
         XCTAssertTrue(app.buttons["OK"].waitForExistence(timeout: 6))
         app.buttons["OK"].tap()
         XCTAssertTrue(element(UITestID.todayDay("UI Alpha")).waitForExistence(timeout: 8))
@@ -47,7 +47,7 @@ final class ImportAndBackupUITests: RockLogUITestCase {
             preset: "planWaiting",
             environment: SyntheticPayloads.environment(json: SyntheticPayloads.splitAlphaBeta())
         )
-        dismissAlert(button: "Use this split")
+        dismissAlert(button: "Replace my split")
         dismissAlert(button: "Keep them")
         XCTAssertTrue(app.buttons["OK"].waitForExistence(timeout: 4))
         app.buttons["OK"].tap()

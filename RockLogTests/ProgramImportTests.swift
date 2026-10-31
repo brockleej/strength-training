@@ -75,12 +75,12 @@ final class ProgramImportTests: RockLogStoreTestCase {
 
     func test_confirmationCopy_isPlainLanguage() {
         XCTAssertEqual(
-            ProgramImportService.confirmationMessage(weekCount: 8),
-            "Add 8 weeks of planned workouts? History stays. Add keeps leftover planned days. Replace unused plan swaps those leftover days for this file."
+            ProgramImportService.confirmationMessage(sessionCount: 24, weekCount: 8),
+            "This file has 24 workouts over 8 weeks. “Add to my plan” keeps the planned days you already have. “Replace upcoming planned days” removes only planned days you haven’t started. Finished workouts in History are never changed."
         )
         XCTAssertEqual(
-            ProgramImportService.confirmationMessage(weekCount: 1),
-            "Add 1 week of planned workouts? History stays. Add keeps leftover planned days. Replace unused plan swaps those leftover days for this file."
+            ProgramImportService.confirmationMessage(sessionCount: 1, weekCount: 1),
+            "This file has 1 workout. “Add to my plan” keeps the planned days you already have. “Replace upcoming planned days” removes only planned days you haven’t started. Finished workouts in History are never changed."
         )
         XCTAssertEqual(PlannedBlockQueue.nextUpLabel(dayName: "Lower"), "Next up: Lower")
         XCTAssertEqual(PlannedBlockQueue.cardSecondary(isNext: true, liftCount: 6), "Next up · 6 lifts")
@@ -108,8 +108,8 @@ final class ProgramImportTests: RockLogStoreTestCase {
         XCTAssertEqual(todayVM.selectedDayType, .lower)
         XCTAssertNil(todayVM.incompleteWeekPrompt)
         XCTAssertEqual(ProgramImportService.startThisBlockTodayTitle, "Start this block today")
-        XCTAssertEqual(ProgramImportService.useThisSplitTitle, "Use this as your training split?")
-        XCTAssertEqual(ProgramImportService.useThisSplitConfirmTitle, "Use this split")
+        XCTAssertEqual(ProgramImportService.useThisSplitTitle, "Also change your weekly days?")
+        XCTAssertEqual(ProgramImportService.useThisSplitConfirmTitle, "Use these days")
         XCTAssertEqual(ProgramImportService.keepCurrentSplitTitle, "Keep my current split")
         XCTAssertEqual(ListMutationCopy.keepLastDayTitle, "Keep at least one day")
         XCTAssertTrue(ListMutationCopy.keepLastDayMessage.contains("one day"))
@@ -118,11 +118,11 @@ final class ProgramImportTests: RockLogStoreTestCase {
         XCTAssertFalse(ListMutationCopy.keepLastDayWithBlockMessage.localizedCaseInsensitiveContains("DayType"))
         XCTAssertEqual(
             ProgramImportService.replaceSplitMessage(),
-            "This replaces your current days and the lifts on each day with this block. Your old workouts stay in History."
+            "Today would rotate through this file’s days instead of your current split. Keep my current split leaves your days alone; the planned workouts are added either way. Finished workouts stay in History."
         )
         XCTAssertEqual(
             ProgramImportService.importSplitMessage(),
-            "This replaces your current days and the lifts on each day. History stays."
+            "Your days and the lifts on each day will be replaced by this file. Finished workouts stay in History."
         )
         XCTAssertEqual(ProgramImportService.keepPlannedAfterSplitTitle, "Keep remaining planned workouts?")
         XCTAssertEqual(ProgramImportService.keepPlannedAfterSplitConfirmTitle, "Keep them")
@@ -143,9 +143,9 @@ final class ProgramImportTests: RockLogStoreTestCase {
         XCTAssertFalse(ProgramImportService.keepPlannedAfterSplitMessage().localizedCaseInsensitiveContains("JSON"))
         XCTAssertFalse(ProgramImportService.replaceSplitMessage().localizedCaseInsensitiveContains("backup"))
         XCTAssertFalse(ProgramImportService.replaceSplitMessage().localizedCaseInsensitiveContains("JSON"))
-        XCTAssertFalse(ProgramImportService.confirmationMessage(weekCount: 8).localizedCaseInsensitiveContains("schema"))
-        XCTAssertFalse(ProgramImportService.confirmationMessage(weekCount: 8).localizedCaseInsensitiveContains("JSON"))
-        XCTAssertFalse(ProgramImportService.confirmationMessage(weekCount: 8).localizedCaseInsensitiveContains("dates in the file"))
+        XCTAssertFalse(ProgramImportService.confirmationMessage(sessionCount: 24, weekCount: 8).localizedCaseInsensitiveContains("schema"))
+        XCTAssertFalse(ProgramImportService.confirmationMessage(sessionCount: 24, weekCount: 8).localizedCaseInsensitiveContains("JSON"))
+        XCTAssertFalse(ProgramImportService.confirmationMessage(sessionCount: 24, weekCount: 8).localizedCaseInsensitiveContains("dates in the file"))
         let added = ProgramImportSummary(
             blockName: "Demo",
             sessionCount: 8,
@@ -155,11 +155,11 @@ final class ProgramImportTests: RockLogStoreTestCase {
         )
         XCTAssertEqual(
             ProgramImportService.resultMessage(summary: added, replacedSplit: false),
-            "Added 8 weeks of planned workouts. Your history is unchanged."
+            "Added 8 workouts over 8 weeks to your plan. Your history is unchanged."
         )
         XCTAssertTrue(
             ProgramImportService.resultMessage(summary: added, replacedSplit: true)
-                .contains("Your training split now matches this block")
+                .contains("Your training split now matches this file")
         )
     }
 

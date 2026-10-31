@@ -27,12 +27,7 @@ struct SettingsView: View {
     )
     @State private var showRestoreConfirmation = false
     @State private var pendingProgram: ProgramDocument?
-    @State private var pendingProgramPrompt = RestorePrompt(
-        title: "Add planned workouts?",
-        message: ProgramImportService.confirmationMessage(weekCount: 8),
-        confirmTitle: "Add workouts",
-        cancelTitle: "Don't add"
-    )
+    @State private var pendingProgramPrompt = ProgramImportService.addPlanPrompt(sessionCount: 1, weekCount: 1)
     @State private var showProgramConfirmation = false
     @State private var pendingReplaceSplitDocument: ProgramDocument?
     @State private var pendingReplaceSplitSummary: ProgramImportSummary?
@@ -99,7 +94,7 @@ struct SettingsView: View {
                 pendingProgramPrompt.title,
                 isPresented: $showProgramConfirmation
             ) {
-                Button(pendingProgramPrompt.cancelTitle) {
+                Button(pendingProgramPrompt.cancelTitle, role: .cancel) {
                     pendingProgram = nil
                 }
                 Button(pendingProgramPrompt.confirmTitle) {

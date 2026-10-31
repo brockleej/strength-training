@@ -25,12 +25,7 @@ struct ContentView: View {
     /// so restore can delete SwiftData rows without those views reading them.
     @State private var storeReplaceInProgress = false
     @State private var pendingIncomingProgram: ProgramDocument?
-    @State private var incomingProgramPrompt = RestorePrompt(
-        title: "Add planned workouts?",
-        message: ProgramImportService.confirmationMessage(weekCount: 8),
-        confirmTitle: "Add workouts",
-        cancelTitle: "Don't add"
-    )
+    @State private var incomingProgramPrompt = ProgramImportService.addPlanPrompt(sessionCount: 1, weekCount: 1)
     @State private var showIncomingProgramConfirm = false
     @State private var pendingReplaceSplitDocument: ProgramDocument?
     @State private var pendingReplaceSplitSummary: ProgramImportSummary?
@@ -48,7 +43,7 @@ struct ContentView: View {
                 incomingProgramPrompt.title,
                 isPresented: $showIncomingProgramConfirm
             ) {
-                Button(incomingProgramPrompt.cancelTitle) {
+                Button(incomingProgramPrompt.cancelTitle, role: .cancel) {
                     pendingIncomingProgram = nil
                 }
                 Button(incomingProgramPrompt.confirmTitle) {
