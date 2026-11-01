@@ -58,14 +58,7 @@ struct WorkoutSummaryView: View {
                     Text("\(session.day.rawValue) · \(session.date.formatted(.dateTime.weekday(.wide).month(.wide).day()))")
                         .font(.uplift.text(14, weight: .medium))
                         .foregroundStyle(Color.uplift.fgMuted)
-                    if let badge = session.track.badge {
-                        Text(badge)
-                            .font(.uplift.text(11, weight: .bold))
-                            .foregroundStyle(Color.uplift.accent)
-                            .padding(.horizontal, 7)
-                            .padding(.vertical, 2)
-                            .background(Capsule().fill(Color.uplift.accent.opacity(0.16)))
-                    }
+                    RotationTrackBadge(track: session.track)
                     if let rating = session.effortRating {
                         Text("Effort \(rating) · \(EffortScale.label(for: rating))")
                             .font(.uplift.text(11, weight: .semibold))

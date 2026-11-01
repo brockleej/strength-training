@@ -164,9 +164,12 @@ struct SessionDetailView: View {
                         .font(.uplift.text(11, weight: .semibold))
                         .tracking(0.4)
                         .foregroundStyle(session.day.upliftInk)
-                    Text(session.date.formatted(.dateTime.weekday(.wide).month(.wide).day().hour().minute()))
-                        .font(.uplift.text(12, weight: .medium))
-                        .foregroundStyle(Color.uplift.fgMuted)
+                    HStack(spacing: 8) {
+                        Text(session.date.formatted(.dateTime.weekday(.wide).month(.wide).day().hour().minute()))
+                            .font(.uplift.text(12, weight: .medium))
+                            .foregroundStyle(Color.uplift.fgMuted)
+                        RotationTrackBadge(track: session.track)
+                    }
                 }
             }
             Text(session.day.rawValue)

@@ -251,10 +251,7 @@ struct TodayView: View {
             if let id = confirmingPlannedID,
                let session = unusedPlannedSessions.first(where: { $0.id == id }) {
                 Button("Start \(session.day.rawValue)", role: .destructive) {
-                    workoutVM.abandonSuspendedAndStart(
-                        planned: session,
-                        rotationTrack: todayVM.selectedRotationTrack
-                    )
+                    workoutVM.abandonSuspendedAndStart(planned: session)
                     confirmingPlannedID = nil
                     previewPlannedID = nil
                 }
@@ -661,7 +658,8 @@ struct TodayView: View {
     private func startTapped() {
         if usesPlannedQueue, let next = nextUnusedPlanned {
             if isResume {
-                workoutVM.startPlannedSession(next, rotationTrack: todayVM.selectedRotationTrack)
+                // Planned sessions keep the imported A/B label. The picker is for ad-hoc days.
+                workoutVM.startPlannedSession(next)
                 return
             }
             todayVM.selectDayType(
@@ -747,7 +745,7 @@ struct TodayView: View {
             confirmingPlannedID = session.id
             return
         }
-        workoutVM.startPlannedSession(session, rotationTrack: todayVM.selectedRotationTrack)
+        workoutVM.startPlannedSession(session)
         previewPlannedID = nil
     }
 

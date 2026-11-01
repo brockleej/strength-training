@@ -489,8 +489,9 @@ final class WorkoutViewModel {
         // Resume a suspended session of the same type
         if let suspended = suspendedSession, suspended.day == dayType {
             activeSession = suspended
-            // Honor the track chosen on Today if the user flipped A/B before resume.
-            if let rotationTrack {
+            // Ad-hoc days honor the A/B picker. A planned session keeps the track
+            // stored at import, including after it has been started and parked.
+            if let rotationTrack, !Self.keepsImportedRotationTrack(suspended) {
                 suspended.track = rotationTrack
                 ModelSave.logged(modelContext, action: "WorkoutViewModel")
             }
@@ -514,14 +515,14 @@ final class WorkoutViewModel {
     }
 
     /// Start a specific queued planned session (not only the next unused).
-    func startPlannedSession(_ session: WorkoutSession, rotationTrack: RotationTrack? = nil, now: Date = .now) {
+    ///
+    /// `rotationTrack` is ignored. Today used to pass the A/B picker (often A,
+    /// and hidden when no library lifts are tagged), which replaced the label
+    /// stored on the imported session. Ad-hoc days still use `startSession`.
+    func startPlannedSession(_ session: WorkoutSession, rotationTrack _: RotationTrack? = nil, now: Date = .now) {
         GymAccessStore.shared.noteWorkoutStarted()
         if let suspended = suspendedSession, suspended.id == session.id {
             activeSession = suspended
-            if let rotationTrack {
-                suspended.track = rotationTrack
-                ModelSave.logged(modelContext, action: "WorkoutViewModel")
-            }
             suspendedSession = nil
             if !isProtectedHistorySession(suspended) {
                 healthKitService.resumeWorkout()
@@ -533,11 +534,11 @@ final class WorkoutViewModel {
             suspendedSession = nil
         }
         clearRevisiting()
-        let track = rotationTrack ?? suggestedRotationTrack(for: session.day)
-        activatePlannedSession(session, rotationTrack: track, now: now)
+        activatePlannedSession(session, now: now)
     }
 
-    func abandonSuspendedAndStart(planned session: WorkoutSession, rotationTrack: RotationTrack) {
+    /// Replace a parked workout with this planned session. The session keeps its stored A/B label.
+    func abandonSuspendedAndStart(planned session: WorkoutSession) {
         if let suspended = suspendedSession {
             releaseParkedSession(suspended, discardLiveWork: true)
             suspendedSession = nil
@@ -556,7 +557,7 @@ final class WorkoutViewModel {
                 event: "activatePlannedSession",
                 vm: vmID
             ), let self else { return }
-            self.activatePlannedSession(session, rotationTrack: rotationTrack, now: .now)
+            self.activatePlannedSession(session, now: .now)
         }
     }
 
@@ -1416,7 +1417,8 @@ final class WorkoutViewModel {
         now: Date = .now
     ) {
         if let planned = earliestUnusedPlannedSession(dayType: dayType) {
-            activatePlannedSession(planned, rotationTrack: rotationTrack, now: now)
+            // The picker track applies only when this creates an ad-hoc session.
+            activatePlannedSession(planned, now: now)
             return
         }
         let session = WorkoutSession(dayType: dayType, date: now, rotationTrack: rotationTrack)
@@ -1428,13 +1430,17 @@ final class WorkoutViewModel {
         startHealthKitWorkout()
     }
 
+    /// Imported planned rows, and a started session that still belongs to that block,
+    /// keep the A/B label from the file. The Today picker is for ad-hoc days.
+    private static func keepsImportedRotationTrack(_ session: WorkoutSession) -> Bool {
+        session.trainingBlock != nil || session.isPlanned || session.isSkippedPlan
+    }
+
     private func activatePlannedSession(
         _ session: WorkoutSession,
-        rotationTrack: RotationTrack,
         now: Date
     ) {
         session.planStatus = .none
-        session.track = rotationTrack
         session.isCompleted = false
         session.date = now
         assignCurrentGym(to: session)

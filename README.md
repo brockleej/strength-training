@@ -259,6 +259,11 @@ Current builds for the internal groups (Lee Only and Friends):
 
 - **1.1 (1)** — built from `fae17c6` on Oct 30, 2026.
 - **1.2 (1)** — built from branch `cursor/rocklog-1.2` on Oct 31, 2026. Xcode Cloud was at its monthly limit, so this build was archived on a local Mac and uploaded to App Store Connect by hand. It is not on `main` yet.
+- **1.2.1 (1)** — patch on `cursor/rocklog-1.2`. Marketing version in the RockLog target is 1.2.1, build 1. Not uploaded.
+
+### What's new in 1.2.1
+
+Starting a planned workout keeps the A or B week that was stored on that session when it was imported. Today’s A/B picker still applies when you start a day that is not in the plan. History and the session screen show the same A/B pill as the workout summary.
 
 ### What's new in 1.2
 
