@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import UIKit
 #if canImport(ActivityKit)
 import ActivityKit
 #endif
@@ -36,6 +37,17 @@ enum RestAlertRuntime {
         }
     }
 
+    /// True only while RockLog is on screen. A live HealthKit workout keeps the app
+    /// running with the phone locked, so the rest ticks keep coming. This used to be
+    /// hard-coded true: with the phone in a pocket the app ducked other audio for a
+    /// countdown beep it could not play in the background, then cancelled the end
+    /// notification, so nothing was heard (1.2 bug, Lee Nov 9 2026). Off screen,
+    /// the policy now leaves audio alone and lets the "Rest is over" notification sound.
+    /// Tests replace this.
+    static var isAppActive: () -> Bool = {
+        UIApplication.shared.applicationState == .active
+    }
+
     static func tickContext(now: Date) -> RestAlertPolicy.Tick {
         RestAlertPolicy.Tick(
             now: now,
@@ -44,7 +56,7 @@ enum RestAlertRuntime {
             callConnected: RestCallMonitor.shared.hasConnectedCall,
             liveActivitiesAvailable: RestActivityController.areAvailable,
             notificationPermissionDenied: false,
-            appIsActive: true,
+            appIsActive: isAppActive(),
             endAlert: RestAlertPreferences.endAlert
         )
     }
