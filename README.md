@@ -259,11 +259,18 @@ Current builds for the internal groups (Lee Only and Friends):
 
 - **1.1 (1)** — built from `fae17c6` on Oct 30, 2026.
 - **1.2 (1)** — built from branch `cursor/rocklog-1.2` on Oct 31, 2026. Xcode Cloud was at its monthly limit, so this build was archived on a local Mac and uploaded to App Store Connect by hand. It is not on `main` yet.
-- **1.2.1 (1)** — patch on `cursor/rocklog-1.2`. Marketing version in the RockLog target is 1.2.1, build 1. Not uploaded.
+- **1.2.1 (2)** — patch on `cursor/rocklog-1.2`. Marketing version in the RockLog target is 1.2.1, build 2 (build 1 was never uploaded). Not uploaded.
 
 ### What's new in 1.2.1
 
 Starting a planned workout keeps the A or B week that was stored on that session when it was imported. Today’s A/B picker still applies when you start a day that is not in the plan. History and the session screen show the same A/B pill as the workout summary.
+
+Fixes from trying 1.2 (Nov 9–11, 2026):
+
+- **Plan column on a lift.** The planned weight × reps now shows even when the Strength / Endurance switch is on the other mode. Starting a planned workout also sets the switch to the plan's mode. Before, a switch left on Endurance hid the plan and only "last" showed.
+- **Rest alert with the phone locked.** With the phone in a pocket, the app no longer turns other audio down for a beep it cannot play. It leaves the "Rest is over" notification to sound instead. On screen, the 5-second countdown beeps are unchanged.
+- **Rest bar and the tabs.** The Rest / Workout bar now sits above the tab bar instead of on top of it. On a lift screen it is left out because the rest card already counts down.
+- **Circuits.** After the last set of a lift in a circuit, the app stays on that lift so you can tap Done there. Earlier sets still move to the next lift on their own.
 
 ### What's new in 1.2
 
