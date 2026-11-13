@@ -26,6 +26,9 @@ nonisolated struct CircuitRoundStep: Equatable, Sendable {
     var restAfterRound: Bool
     /// Round that just ended (1-based) when `restAfterRound` is true.
     var completedRound: Int?
+    /// That set was this lift's last one. Stay on it so Done is right there,
+    /// like a standalone lift (Lee, Nov 11 2026). Rest still follows `restAfterRound`.
+    var staysForDone: Bool = false
 }
 
 nonisolated enum CircuitRounds {
@@ -69,6 +72,13 @@ nonisolated enum CircuitRounds {
             return CircuitRoundStep(next: nil, restAfterRound: true, completedRound: nil)
         }
         let total = totalRounds(ordered)
+        var step = routeAfterLogging(index: index, ordered: ordered, total: total)
+        let logged = ordered[index]
+        step.staysForDone = !logged.isDone && logged.loggedWorkingSets >= rounds(for: logged, total: total)
+        return step
+    }
+
+    private static func routeAfterLogging(index: Int, ordered: [CircuitRoundMember], total: Int) -> CircuitRoundStep {
         let round = ordered[index].loggedWorkingSets
         // Later lifts in this round that still owe a set: go straight there, no rest.
         for member in ordered[(index + 1)...] where !isFinished(member, total: total) && member.loggedWorkingSets < round {
