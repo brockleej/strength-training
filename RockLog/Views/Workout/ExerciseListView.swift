@@ -225,6 +225,7 @@ struct ExerciseListView: View {
             .safeAreaInset(edge: .bottom) {
                 finishBar
             }
+            .activeWorkoutBar(workoutVM)
             .navigationBarHidden(true)
             .navigationDestination(item: $focusLaunch) { launch in
                 FocusFlowView(
