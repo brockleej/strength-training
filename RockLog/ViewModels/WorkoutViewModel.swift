@@ -1200,6 +1200,32 @@ final class WorkoutViewModel {
         }
     }
 
+    /// The imported plan targets for this lift in the live session, in any mode.
+    ///
+    /// `selectedMode` (Strength / Endurance) is one app-wide switch that is not
+    /// reset between workouts. Looking the plan up only in that mode hid the PLAN
+    /// column whenever the switch was on the other mode: Focus showed only "last"
+    /// (1.2 bug, Lee Nov 9 2026). The plan is what the file says, so show it.
+    func plannedRecord(for exercise: Exercise) -> ExerciseRecord? {
+        if let record = currentRecord(for: exercise), !record.plannedSetsArray.isEmpty {
+            return record
+        }
+        guard let session = activeSession, !session.isDeleted else { return nil }
+        return session.exerciseRecordsArray
+            .sorted { $0.sortOrder < $1.sortOrder }
+            .first { record in
+                !record.isDeleted && record.exercise?.id == exercise.id && !record.plannedSetsArray.isEmpty
+            }
+    }
+
+    /// Mode of the first planned lift in a session. Nil when nothing is planned.
+    static func plannedMode(of session: WorkoutSession) -> TrainingMode? {
+        session.exerciseRecordsArray
+            .sorted { $0.sortOrder < $1.sortOrder }
+            .first { !$0.plannedSetsArray.isEmpty }?
+            .trainingMode
+    }
+
     /// Restore deletes every SwiftData row. Drop in-memory session refs so
     /// the workout tab cannot read or save zombie records (TF 13 crashes).
     func resetAfterStoreReplace() {
@@ -1445,6 +1471,11 @@ final class WorkoutViewModel {
         session.date = now
         assignCurrentGym(to: session)
         suppressUnplannedDayLifts(on: session)
+        // A planned workout opens in the mode its file asked for, not whatever
+        // the app-wide switch was left on from an earlier workout.
+        if let planMode = Self.plannedMode(of: session) {
+            selectedMode = planMode
+        }
         ModelSave.logged(modelContext, action: "WorkoutViewModel")
         activeSession = session
         celebratedExerciseIDsThisSession = []

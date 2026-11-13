@@ -625,7 +625,7 @@ struct ExerciseListView: View {
             name: { lookup($0)?.name ?? "Lift" },
             detail: { id in
                 guard let exercise = lookup(id) else { return "" }
-                let planned = workoutVM.currentRecord(for: exercise)?.plannedSetsArray.filter { !$0.isWarmup } ?? []
+                let planned = workoutVM.plannedRecord(for: exercise)?.plannedSetsArray.filter { !$0.isWarmup } ?? []
                 var parts: [String] = []
                 if !planned.isEmpty { parts.append(planned.count == 1 ? "1 set" : "\(planned.count) sets") }
                 if planned.contains(where: \.isEachSide) { parts.append("per side") }

@@ -45,7 +45,7 @@ struct FocusView: View {
 
     private var plannedSetsForCard: [FocusSetsCard.PreviousSet] {
         let _ = workoutVM.setMutationEpoch
-        return (workoutVM.currentRecord(for: exercise)?.plannedSetsArray ?? [])
+        return (workoutVM.plannedRecord(for: exercise)?.plannedSetsArray ?? [])
             .map {
                 FocusSetsCard.PreviousSet(
                     weight: $0.weightLbs,
