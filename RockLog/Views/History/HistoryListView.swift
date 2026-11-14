@@ -207,6 +207,7 @@ private struct HistorySessionRow: View {
                         .font(.uplift.text(15, weight: .semibold))
                         .kerning(-0.2)
                         .foregroundStyle(Color.uplift.fg)
+                    RotationTrackBadge(track: session.track)
                     if prCount > 0 {
                         HStack(spacing: 3) {
                             Image(systemName: "trophy.fill")
@@ -240,6 +241,9 @@ private struct HistorySessionRow: View {
 
     private var rowAccessibilityLabel: String {
         var label = "\(session.day.rawValue), \(session.date.formatted(.dateTime.weekday(.wide).month(.wide).day()))"
+        if let badge = session.track.badge {
+            label += ", \(badge) week"
+        }
         label += ", \(TodayStats.formatVolume(MassMath.exactDisplay(fromPounds: SessionMath.volume(of: session), unit: massUnit))) \(massUnit == .kilograms ? "kilograms" : "pounds"), \(SessionMath.setCount(of: session)) sets"
         if prCount > 0 {
             label += ", \(prCount) personal record\(prCount == 1 ? "" : "s")"

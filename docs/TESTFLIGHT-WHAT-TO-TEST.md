@@ -1,5 +1,17 @@
 # TestFlight — What to Test
 
+## 1.2.1 (1) — patch, not uploaded
+
+```
+What's new in 1.2.1: Starting a planned workout keeps the A or B week from the imported plan. Today’s A/B picker still applies when you start a day that is not in that plan. History and the workout detail show an A or B pill next to the day when the workout has one.
+
+Please try:
+1) Import a planned workout whose session is B (or A). On Today, tap Start. A coach export of that session should show the same week as the day you imported, not the Today picker.
+2) With no planned list waiting, start a day and pick A or B. The session should use the week you picked.
+```
+
+---
+
 ## 1.2 (1) — paste this block
 
 ```

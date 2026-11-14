@@ -45,7 +45,7 @@ struct FocusView: View {
 
     private var plannedSetsForCard: [FocusSetsCard.PreviousSet] {
         let _ = workoutVM.setMutationEpoch
-        return (workoutVM.currentRecord(for: exercise)?.plannedSetsArray ?? [])
+        return (workoutVM.plannedRecord(for: exercise)?.plannedSetsArray ?? [])
             .map {
                 FocusSetsCard.PreviousSet(
                     weight: $0.weightLbs,
@@ -1189,7 +1189,10 @@ struct FocusView: View {
                     workoutVM.startRest(seconds: Double(circuit.restSeconds), exercise: exercise)
                 }
             }
-            if let nextID = circuit.step.next, nextID != exercise.id {
+            if circuit.step.staysForDone {
+                // His last set on this lift: stay so he can tap Done here, the same
+                // as a standalone lift. Done then moves on (Lee, Nov 11 2026).
+            } else if let nextID = circuit.step.next, nextID != exercise.id {
                 onJumpTo?(nextID)
             } else if circuit.step.next == nil {
                 // Last round done: back to the list, like finishing a lift's last set.

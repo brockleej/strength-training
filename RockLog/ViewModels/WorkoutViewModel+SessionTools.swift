@@ -135,7 +135,7 @@ extension WorkoutViewModel {
             return existing
         }
         let record = currentRecord(for: exercise)
-        let planned = record?.plannedSetsArray ?? []
+        let planned = plannedRecord(for: exercise)?.plannedSetsArray ?? []
         let logged = Set((record?.loggedSetsArray ?? []).map(\.setNumber))
         let last = exercise.lastCompletedRecord(mode: selectedMode, excludingSessionID: activeSession?.id)
         let historical = last?.loggedSetsArray.sorted { $0.setNumber < $1.setNumber } ?? []

@@ -78,6 +78,8 @@
 		C3B0A0003C0B000000000002 /* InMemoryRockLogStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3B0A0003C0B000000000001 /* InMemoryRockLogStore.swift */; };
 		RLDIAG0000000000000002 /* RockLogTestObservation.swift in Sources */ = {isa = PBXBuildFile; fileRef = RLDIAG0000000000000001 /* RockLogTestObservation.swift */; };
 		C3B0A0013C0B000000000002 /* PlannedBlockQueueTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3B0A0013C0B000000000001 /* PlannedBlockQueueTests.swift */; };
+		D4C0A0013C0B000000000002 /* PlannedRotationTrackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4C0A0013C0B000000000001 /* PlannedRotationTrackTests.swift */; };
+		E5C0A0013C0B000000000002 /* Build121FixesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5C0A0013C0B000000000001 /* Build121FixesTests.swift */; };
 		C3B0A0023C0B000000000002 /* SplitImportEdgeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3B0A0023C0B000000000001 /* SplitImportEdgeTests.swift */; };
 		C3B0A0033C0B000000000002 /* WorkoutEdgeCaseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3B0A0033C0B000000000001 /* WorkoutEdgeCaseTests.swift */; };
 		C3B0A0043C0B000000000002 /* PastBuildRegressionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3B0A0043C0B000000000001 /* PastBuildRegressionTests.swift */; };
@@ -202,6 +204,8 @@
 		C3B0A0003C0B000000000001 /* InMemoryRockLogStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InMemoryRockLogStore.swift; sourceTree = "<group>"; };
 		RLDIAG0000000000000001 /* RockLogTestObservation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RockLogTestObservation.swift; sourceTree = "<group>"; };
 		C3B0A0013C0B000000000001 /* PlannedBlockQueueTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlannedBlockQueueTests.swift; sourceTree = "<group>"; };
+		D4C0A0013C0B000000000001 /* PlannedRotationTrackTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlannedRotationTrackTests.swift; sourceTree = "<group>"; };
+		E5C0A0013C0B000000000001 /* Build121FixesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Build121FixesTests.swift; sourceTree = "<group>"; };
 		C3B0A0023C0B000000000001 /* SplitImportEdgeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitImportEdgeTests.swift; sourceTree = "<group>"; };
 		C3B0A0033C0B000000000001 /* WorkoutEdgeCaseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutEdgeCaseTests.swift; sourceTree = "<group>"; };
 		C3B0A0043C0B000000000001 /* PastBuildRegressionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PastBuildRegressionTests.swift; sourceTree = "<group>"; };
@@ -469,6 +473,8 @@
 				C3B0A0003C0B000000000001 /* InMemoryRockLogStore.swift */,
 				RLDIAG0000000000000001 /* RockLogTestObservation.swift */,
 				C3B0A0013C0B000000000001 /* PlannedBlockQueueTests.swift */,
+				D4C0A0013C0B000000000001 /* PlannedRotationTrackTests.swift */,
+				E5C0A0013C0B000000000001 /* Build121FixesTests.swift */,
 				C3B0A0023C0B000000000001 /* SplitImportEdgeTests.swift */,
 				C3B0A0033C0B000000000001 /* WorkoutEdgeCaseTests.swift */,
 				C3B0A0043C0B000000000001 /* PastBuildRegressionTests.swift */,
@@ -944,6 +950,8 @@
 				C3B0A0003C0B000000000002 /* InMemoryRockLogStore.swift in Sources */,
 				RLDIAG0000000000000002 /* RockLogTestObservation.swift in Sources */,
 				C3B0A0013C0B000000000002 /* PlannedBlockQueueTests.swift in Sources */,
+				D4C0A0013C0B000000000002 /* PlannedRotationTrackTests.swift in Sources */,
+				E5C0A0013C0B000000000002 /* Build121FixesTests.swift in Sources */,
 				C3B0A0023C0B000000000002 /* SplitImportEdgeTests.swift in Sources */,
 				C3B0A0033C0B000000000002 /* WorkoutEdgeCaseTests.swift in Sources */,
 				C3B0A0043C0B000000000002 /* PastBuildRegressionTests.swift in Sources */,
@@ -1453,7 +1461,7 @@
 				CODE_SIGN_ENTITLEMENTS = RockLog/RockLog.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = 53AH938CUW;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -1470,7 +1478,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.2;
+				MARKETING_VERSION = 1.2.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.lee.lift2026;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -1492,7 +1500,7 @@
 				CODE_SIGN_ENTITLEMENTS = RockLog/RockLog.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = 53AH938CUW;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -1509,7 +1517,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.2;
+				MARKETING_VERSION = 1.2.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.lee.lift2026;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -1646,7 +1654,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = RockLogWidget/RockLogWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = 53AH938CUW;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = RockLogWidget/Info.plist;
@@ -1656,7 +1664,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.2;
+				MARKETING_VERSION = 1.2.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.lee.lift2026.restwidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -1673,7 +1681,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = RockLogWidget/RockLogWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = 53AH938CUW;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = RockLogWidget/Info.plist;
@@ -1683,7 +1691,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.2;
+				MARKETING_VERSION = 1.2.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.lee.lift2026.restwidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;

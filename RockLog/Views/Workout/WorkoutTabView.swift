@@ -16,6 +16,7 @@ struct WorkoutTabView: View {
                 ExerciseListView(workoutVM: viewModel)
             } else {
                 TodayView(workoutVM: viewModel)
+                    .activeWorkoutBar(viewModel)
             }
         }
         .sheet(item: $viewModel.sessionPendingEffortRating, onDismiss: {

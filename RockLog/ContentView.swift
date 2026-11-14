@@ -273,26 +273,27 @@ struct ContentView: View {
             tab("history", built: shown) {
                 HistoryListView(workoutVM: vm)
             }
+            .activeWorkoutBar(vm)
             .tabItem { Label("History", systemImage: "clock") }
             .tag("history")
             tab("progress", built: shown) {
                 ProgressDashboardView()
             }
+            .activeWorkoutBar(vm)
             .tabItem { Label("Progress", systemImage: "chart.line.uptrend.xyaxis") }
             .tag("progress")
             tab("exercises", built: shown) {
                 ExerciseLibraryView()
             }
+            .activeWorkoutBar(vm)
             .tabItem { Label("Exercises", systemImage: "list.bullet") }
             .tag("exercises")
             tab("settings", built: shown) {
                 SettingsView(healthKitService: healthKitService, cloudKitSyncService: cloudKitSyncService)
             }
+            .activeWorkoutBar(vm)
             .tabItem { Label("Settings", systemImage: "gear") }
             .tag("settings")
-        }
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            ActiveWorkoutBar(viewModel: vm)
         }
     }
 

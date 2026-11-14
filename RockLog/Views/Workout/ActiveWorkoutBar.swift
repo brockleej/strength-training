@@ -43,10 +43,26 @@ struct ActiveWorkoutBar: View {
                     .font(.uplift.mono(13, weight: .semibold))
                     .foregroundStyle(Color.uplift.fg)
                     .frame(maxWidth: .infinity, minHeight: 44)
-                    .background(Color.uplift.surface2)
+                    // Stops at the bar: no fill behind the floating tab bar.
+                    .background(Color.uplift.surface2, ignoresSafeAreaEdges: [])
                     .accessibilityIdentifier(AccessibilityID.activeWorkoutBar)
                     .accessibilityLabel(line)
             }
+        }
+    }
+}
+
+extension View {
+    /// Puts the bar at the bottom of a tab's own content, so it sits above the tab bar.
+    ///
+    /// It used to be a safe-area inset on the TabView itself. The iOS 26+ floating
+    /// tab bar does not move for that inset, so the bar was drawn over the tabs:
+    /// on a Pro Max every tab button was covered (1.2 bug, Lee Nov 10 2026, "the
+    /// rest footer gets in the way of navigation"). Focus does not add it: its rest
+    /// card already shows the countdown, and the small-phone footer has no room.
+    func activeWorkoutBar(_ viewModel: WorkoutViewModel) -> some View {
+        safeAreaInset(edge: .bottom, spacing: 0) {
+            ActiveWorkoutBar(viewModel: viewModel)
         }
     }
 }
