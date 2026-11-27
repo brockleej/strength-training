@@ -41,6 +41,7 @@ nonisolated struct ProgramDocument: Codable, Hashable, Sendable {
         case fileTooLarge
         case weightOutOfRange
         case repsOutOfRange
+        case weightIncrementOutOfRange
 
         var errorDescription: String? {
             switch self {
@@ -59,6 +60,8 @@ nonisolated struct ProgramDocument: Codable, Hashable, Sendable {
                 return "A set weight must be between 0 and 10000 lb."
             case .repsOutOfRange:
                 return "A set’s reps must be between 0 and 100."
+            case .weightIncrementOutOfRange:
+                return "A machine weight step (weightIncrementLbs) must be more than 0 and at most 100 lb."
             }
         }
     }
@@ -96,6 +99,9 @@ nonisolated struct ProgramExercisePayload: Codable, Hashable, Identifiable, Send
     var trainingMode: String?
     var notes: String?
     var sets: [ProgramSetPayload]
+    /// Optional. This machine's jump in pounds (10 = 10, 20, 30…). Older files omit it.
+    /// Import sets the lift's machine step at Home and rounds these targets to it.
+    var weightIncrementLbs: Double? = nil
 }
 
 nonisolated struct ProgramSetPayload: Codable, Hashable, Sendable {
@@ -176,6 +182,9 @@ nonisolated enum ProgramCodec {
     static func validateValues(_ document: ProgramDocument) throws {
         for session in document.block.sessions {
             for exercise in session.exercises {
+                if let increment = exercise.weightIncrementLbs, !MachineIncrement.isValid(increment) {
+                    throw ProgramDocument.ProgramFormatError.weightIncrementOutOfRange
+                }
                 for set in exercise.sets {
                     guard set.weightLbs.isFinite,
                           set.weightLbs >= ProgramLimits.minWeightLbs,

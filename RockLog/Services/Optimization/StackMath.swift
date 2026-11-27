@@ -457,6 +457,16 @@ nonisolated enum MachineSteps {
 
     static let title = "Machine steps"
 
+    /// The weight stepper's +/- for this lift, in the unit on screen. A fixed step
+    /// (10 lb on a kneeling hamstring curl, 15 lb on a leg extension) moves by that
+    /// step. Pins, or no profile, keep the normal 5 / 1 / 0.5 cycle (nil).
+    static func stepperStep(for stack: StackDefinition?, unit: MassUnit) -> Double? {
+        guard let stack, stack.pins.isEmpty, let step = stack.step, step > 0, step.isFinite else { return nil }
+        if stack.pinUnit == unit { return step }
+        let pounds = MassMath.pounds(fromDisplay: step, unit: stack.pinUnit)
+        return (MassMath.exactDisplay(fromPounds: pounds, unit: unit) * 100).rounded() / 100
+    }
+
     /// "Every 10 lb" — the plain menu label for one step.
     static func optionLabel(_ step: Double, unit: MassUnit) -> String {
         "Every \(MassMath.formatDisplay(step)) \(unit.rawValue)"
@@ -481,5 +491,35 @@ nonisolated enum MachineSteps {
             return displayed
         }
         return MassMath.display(fromPounds: chosen, unit: unit)
+    }
+}
+
+// MARK: - Per-machine increment in program files
+
+/// `weightIncrementLbs` on a rocklog.program exercise: the machine's jump in pounds.
+nonisolated enum MachineIncrement {
+    static let maxPounds = 100.0
+
+    static func isValid(_ pounds: Double) -> Bool {
+        pounds.isFinite && pounds > 0 && pounds <= maxPounds
+    }
+
+    /// Nearest whole step. A tie rounds down, like the stack's `nearest` policy, so
+    /// a plan is never rounded up into more than was written. A positive weight never
+    /// rounds to 0 (one step is the lightest pin). 0 and invalid input come back as is.
+    static func rounded(_ weight: Double, toStep step: Double) -> Double {
+        guard isValid(step), weight.isFinite, weight > 0 else { return weight }
+        let lower = (weight / step).rounded(.down) * step
+        let upper = lower + step
+        let chosen = (weight - lower) <= (upper - weight) + 0.000_001 ? lower : upper
+        let value = max(chosen, step)
+        return (value * 1000).rounded() / 1000
+    }
+
+    /// The stack's fixed step in pounds, for writing a program file. Pins → nil.
+    static func pounds(of stack: StackDefinition?) -> Double? {
+        guard let stack, stack.pins.isEmpty, let step = stack.step, step > 0 else { return nil }
+        let pounds = MassMath.pounds(fromDisplay: step, unit: stack.pinUnit)
+        return (pounds * 1000).rounded() / 1000
     }
 }

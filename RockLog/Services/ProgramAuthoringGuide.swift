@@ -76,6 +76,7 @@ enum ProgramAuthoringGuide {
     | `trainingMode` | Optional. `"Strength"` or `"Endurance"` |
     | `notes` | Optional |
     | `sets` | Warmups and work sets, in order |
+    | `weightIncrementLbs` | Optional number, pounds. The machine's jump (e.g. `10` for a kneeling hamstring curl, `15` for a leg extension). Targets round to it. Omit for barbells and dumbbells |
 
     ## Set
 

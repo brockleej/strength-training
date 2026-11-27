@@ -122,14 +122,15 @@ enum UITestFixture {
         let block = TrainingBlock(name: blockName, startDate: today, notes: "Synthetic queue")
         context.insert(block)
 
-        let planned: [(Int, DayType, Exercise, Double)] = [
-            (0, .push, lifts.bench, 0),
-            (1, .pull, lifts.row, 10_000),
+        // Push is an A-week session and Pull a B-week one, so What's Next shows both labels.
+        let planned: [(Int, DayType, RotationTrack, Exercise, Double)] = [
+            (0, .push, .a, lifts.bench, 0),
+            (1, .pull, .b, lifts.row, 10_000),
         ]
         var sessions: [WorkoutSession] = []
-        for (order, day, exercise, weight) in planned {
+        for (order, day, track, exercise, weight) in planned {
             let date = calendar.date(byAdding: .day, value: -(7 + order), to: today) ?? today
-            let session = WorkoutSession(dayType: day, date: date, rotationTrack: .a)
+            let session = WorkoutSession(dayType: day, date: date, rotationTrack: track)
             session.isCompleted = false
             session.planStatus = .planned
             session.planOrder = order

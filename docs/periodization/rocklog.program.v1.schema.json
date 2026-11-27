@@ -60,6 +60,12 @@
         "muscleGroup": { "type": "string" },
         "trainingMode": { "type": "string" },
         "notes": { "type": "string" },
+        "weightIncrementLbs": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 100,
+          "description": "Optional (RockLog 1.2.2+). This machine's weight jump in pounds, e.g. 10 for a kneeling hamstring curl or 15 for a leg extension. Import sets the lift's machine step at Home (a step already picked on the phone wins) and rounds this exercise's targets to the nearest step (a tie rounds down). Older RockLog builds ignore it."
+        },
         "sets": {
           "type": "array",
           "items": { "$ref": "#/$defs/set" }

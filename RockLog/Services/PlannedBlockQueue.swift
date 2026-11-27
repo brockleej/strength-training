@@ -9,6 +9,13 @@
 import Foundation
 
 enum PlannedBlockQueue {
+    /// "Lower A", "Upper B", or plain "Push" when the planned session has no A/B week.
+    /// What's Next rows, the Start button, and the planned preview all use this.
+    static func trackedDayTitle(dayName: String, track: RotationTrack) -> String {
+        guard let badge = track.badge else { return dayName }
+        return "\(dayName) \(badge)"
+    }
+
     /// Next-up line for Today. No “you missed Monday.”
     nonisolated static func nextUpLabel(dayName: String) -> String {
         "Next up: \(dayName)"
