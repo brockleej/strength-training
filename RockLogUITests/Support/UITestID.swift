@@ -84,6 +84,8 @@ enum UITestID {
     static let focusLogSet = "focus.logSet"
     static let focusUpdateSet = "focus.updateSet"
     static let focusCancelEdit = "focus.cancelEdit"
+    static let focusReopenFinished = "focus.reopenFinished"
+    static let focusReopenDismiss = "focus.reopenDismiss"
 
     static func focusSet(_ number: Int) -> String { "focus.set.\(number)" }
     static let focusHitLog = "focus.hitLog"
@@ -134,5 +136,6 @@ enum UITestID {
     static let historyEmpty = "history.empty"
 
     static func plannedRow(_ day: String) -> String { "planned.row.\(day)" }
+    static let plannedPreviewStart = "planned.preview.start"
     static func dayPlanExercise(_ name: String) -> String { "dayPlan.exercise.\(name)" }
 }

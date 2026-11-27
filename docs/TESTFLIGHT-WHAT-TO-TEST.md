@@ -1,5 +1,18 @@
 # TestFlight — What to Test
 
+## 1.2.2 (1) — draft, not uploaded
+
+```
+What's new in 1.2.2: What's Next and the Start button show the A/B week of each planned workout (Lower A, Upper B, Start Lower A). After you tap Done on a lift, the next lift shows "… done · Edit sets" so you can jump right back and fix a set; done lifts on the workout list say Edit and still open. A lift with a machine step (Machine steps → Every 10 lb / Every 15 lb) now moves the weight + and − by that step. Planned-workout files can carry each machine's step, and importing one rounds its targets to that step.
+
+Please try:
+1) On Today, check that each What's Next row and the Start button say A or B.
+2) In a workout, log a set, tap Done, then tap Edit sets on the next lift. Change a set, then tap Done again.
+3) On the kneeling hamstring curl pick Machine steps → Every 10 lb, and on the leg extension Every 15 lb. The + and − should move by 10 and by 15. Tap the step hint to get 5 / 1 / 0.5 for one set.
+```
+
+---
+
 ## 1.2.1 (1) — patch, not uploaded
 
 ```

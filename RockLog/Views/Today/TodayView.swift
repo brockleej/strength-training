@@ -250,7 +250,7 @@ struct TodayView: View {
         ) {
             if let id = confirmingPlannedID,
                let session = unusedPlannedSessions.first(where: { $0.id == id }) {
-                Button("Start \(session.day.rawValue)", role: .destructive) {
+                Button("Start \(PlannedBlockQueue.trackedDayTitle(dayName: session.day.rawValue, track: session.track))", role: .destructive) {
                     workoutVM.abandonSuspendedAndStart(planned: session)
                     confirmingPlannedID = nil
                     previewPlannedID = nil
@@ -642,11 +642,17 @@ struct TodayView: View {
         let day = todayVM.selectedDayType.rawValue
         if isResume {
             if usesPlannedQueue {
-                return "Resume \(day)"
+                // Planned sessions keep their imported A/B week: "Resume Lower A".
+                let track = workoutVM.suspendedSession?.track ?? nextUnusedPlanned?.track ?? .every
+                return "Resume \(PlannedBlockQueue.trackedDayTitle(dayName: day, track: track))"
             }
             return "Resume \(day) · \(todayVM.selectedRotationTrack.sessionFilterLabel)"
         }
         if usesPlannedQueue {
+            // "Start Lower A" — the next planned session's own week, not Today's picker.
+            if let next = nextUnusedPlanned {
+                return "Start \(PlannedBlockQueue.trackedDayTitle(dayName: next.day.rawValue, track: next.track))"
+            }
             return "Start \(day)"
         }
         if selectedDayIsNextPlanned {
@@ -728,7 +734,8 @@ struct TodayView: View {
                     id: session.id,
                     dayType: session.day,
                     liftCount: session.exerciseRecordsArray.count,
-                    isNext: index == 0
+                    isNext: index == 0,
+                    track: session.track
                 )
             }
     }

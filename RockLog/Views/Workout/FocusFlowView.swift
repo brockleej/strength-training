@@ -9,10 +9,17 @@
 
 import SwiftUI
 
+/// The lift just finished with Done, kept so Focus can offer a way back in.
+struct FinishedLift: Equatable {
+    let id: UUID
+    let name: String
+}
+
 struct FocusFlowView: View {
     @Bindable var workoutVM: WorkoutViewModel
     let exercises: [Exercise]
     @State private var index: Int
+    @State private var justFinished: FinishedLift?
 
     init(workoutVM: WorkoutViewModel, exercises: [Exercise], startIndex: Int) {
         self.workoutVM = workoutVM
@@ -43,7 +50,10 @@ struct FocusFlowView: View {
                     onNext: goNext,
                     onPrevious: goPrevious,
                     onMarkDoneAndAdvance: markDoneAndAdvance,
-                    onJumpTo: jumpTo
+                    onJumpTo: jumpTo,
+                    justFinished: justFinished,
+                    onReopenFinished: reopenFinished,
+                    onDismissFinished: { justFinished = nil }
                 )
                 .id(exercises[index].id)
             } else {
@@ -73,25 +83,41 @@ struct FocusFlowView: View {
 
     private func goNext() {
         guard let i = nextIndex() else { return }
+        justFinished = nil
         index = i
     }
 
     private func goPrevious() {
         guard let i = previousIndex() else { return }
+        justFinished = nil
         index = i
     }
 
     private func jumpTo(_ exerciseID: UUID) {
         guard let i = exercises.firstIndex(where: { $0.id == exerciseID }) else { return }
+        justFinished = nil
+        index = i
+    }
+
+    /// Back to the lift just marked Done. It stays done; tapping a set edits it.
+    private func reopenFinished() {
+        guard let finished = justFinished,
+              let i = exercises.firstIndex(where: { $0.id == finished.id }) else {
+            justFinished = nil
+            return
+        }
+        justFinished = nil
         index = i
     }
 
     private func markDoneAndAdvance() {
         guard exercises.indices.contains(index) else { return }
-        workoutVM.markExerciseDone(exercises[index])
+        let finished = exercises[index]
+        workoutVM.markExerciseDone(finished)
         workoutVM.offerFinishIfAllLiftsDone(in: exercises)
         if workoutVM.offerFinishWorkout { return }
-        if let i = nextIndex() {
+        if let i = nextIndex(), i != index {
+            justFinished = FinishedLift(id: finished.id, name: finished.name)
             index = i
         }
     }

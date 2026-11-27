@@ -16,6 +16,10 @@ struct ProgramImportSummary: Equatable {
     var weekCount: Int
     var createdExerciseCount: Int
     var skippedDuplicateSessionCount: Int
+    /// Lifts whose Home machine step came from the file's `weightIncrementLbs`.
+    var machineStepsSet: Int = 0
+    /// Lifts where a step he picked on the phone was kept over the file's.
+    var machineStepsKept: Int = 0
 
     var confirmationPrompt: RestorePrompt {
         ProgramImportService.addPlanPrompt(sessionCount: sessionCount, weekCount: weekCount)
@@ -123,7 +127,13 @@ enum ProgramImportService {
         if replacedSplit {
             return "Added \(amount) to your plan. Your training split now matches this file. History is unchanged."
         }
-        return "Added \(amount) to your plan. Your history is unchanged."
+        return "Added \(amount) to your plan. Your history is unchanged.\(machineStepLine(summary))"
+    }
+
+    private static func machineStepLine(_ summary: ProgramImportSummary) -> String {
+        guard summary.machineStepsSet > 0 else { return "" }
+        let lifts = summary.machineStepsSet == 1 ? "1 lift" : "\(summary.machineStepsSet) lifts"
+        return " Machine steps set for \(lifts)."
     }
 
     /// Unique days in file order, each with first-seen lifts (id, then name).
@@ -344,6 +354,8 @@ enum ProgramImportService {
         var createdExercises = 0
         var imported = 0
         var skipped = 0
+        /// Lift id → the file's machine step in pounds. Last mention wins.
+        var increments: [UUID: Double] = [:]
 
         // File order is the queue. Same dayType twice in a week stays two sessions.
         for (index, payload) in sessions.enumerated() {
@@ -378,6 +390,8 @@ enum ProgramImportService {
                     context: context
                 )
                 if resolved.created { createdExercises += 1 }
+                let increment = exercisePayload.weightIncrementLbs.flatMap { MachineIncrement.isValid($0) ? $0 : nil }
+                if let increment { increments[resolved.exercise.id] = increment }
 
                 let mode = TrainingMode(rawValue: exercisePayload.trainingMode ?? "")
                     ?? .highWeightLowReps
@@ -391,16 +405,19 @@ enum ProgramImportService {
 
                 let fileUnit = MassUnit(rawValue: document.weightUnit ?? "") ?? .pounds
                 for setPayload in exercisePayload.sets.sorted(by: { $0.setNumber < $1.setNumber }) {
+                    // Targets land on a weight this machine can load.
+                    let target = increment.map { MachineIncrement.rounded(setPayload.weightLbs, toStep: $0) }
+                        ?? setPayload.weightLbs
                     let set = SetRecord(
                         setNumber: setPayload.setNumber,
-                        weightLbs: setPayload.weightLbs,
+                        weightLbs: target,
                         reps: max(0, setPayload.reps),
                         isWarmup: setPayload.resolvedWarmup,
                         isEachSide: setPayload.resolvedEachSide,
                         isAssisted: setPayload.resolvedAssisted,
                         isTarget: true
                     )
-                    set.stampEntered(setPayload.weightLbs, unit: fileUnit)
+                    set.stampEntered(target, unit: increment == nil ? fileUnit : .pounds)
                     set.completedAt = payload.date
                     set.exerciseRecord = record
                     context.insert(set)
@@ -416,6 +433,7 @@ enum ProgramImportService {
         if imported == 0 {
             context.delete(block)
         }
+        let steps = imported > 0 ? applyMachineIncrements(increments, context: context) : (set: 0, kept: 0)
         try context.save()
 
         let summary = ProgramImportSummary(
@@ -423,9 +441,36 @@ enum ProgramImportService {
             sessionCount: imported,
             weekCount: weekCount(from: sessions.map(\.date)),
             createdExerciseCount: createdExercises,
-            skippedDuplicateSessionCount: skipped
+            skippedDuplicateSessionCount: skipped,
+            machineStepsSet: steps.set,
+            machineStepsKept: steps.kept
         )
         return ProgramImportResult(blockID: block.id, summary: summary)
+    }
+
+    /// The file's step becomes the lift's typed Home step. A step he already picked
+    /// on the phone for that lift at Home wins, so a file never overwrites his machine.
+    @MainActor
+    static func applyMachineIncrements(_ increments: [UUID: Double], context: ModelContext) -> (set: Int, kept: Int) {
+        guard !increments.isEmpty,
+              GymLibrary.storeHasGyms(context),
+              context.container.schema.entities.contains(where: { $0.name == "MachineStackProfile" })
+        else { return (0, 0) }
+        let home = GymLibrary.ensureHome(in: context)
+        var set = 0
+        var kept = 0
+        for (exerciseID, pounds) in increments.sorted(by: { $0.key.uuidString < $1.key.uuidString }) {
+            if let existing = StackProfileStore.profile(gymID: home.id, exerciseID: exerciseID, in: context),
+               existing.definition.origin == .typed,
+               existing.definition.isActive {
+                kept += 1
+                continue
+            }
+            let profile = StackProfileStore.findOrCreate(gymID: home.id, exerciseID: exerciseID, in: context)
+            profile.applyTyped(step: pounds, pins: [], unit: .pounds)
+            set += 1
+        }
+        return (set, kept)
     }
 
     private static func nameKey(_ name: String) -> String {

@@ -116,12 +116,22 @@ struct ExerciseListRow: View {
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(Color.uplift.accent)
                     .accessibilityHidden(true)
+            } else if isCompleted {
+                // A done lift still opens. Say so, so it does not look locked.
+                HStack(spacing: 3) {
+                    Text("Edit")
+                        .font(.uplift.text(12, weight: .semibold))
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 11, weight: .semibold))
+                }
+                .foregroundStyle(Color.uplift.accent)
+                .accessibilityHidden(true)
             }
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityText)
         .accessibilityAddTraits(.isButton)
-        .accessibilityHint("Opens this lift")
+        .accessibilityHint(isCompleted ? "Opens this finished lift so you can edit or delete a set" : "Opens this lift")
         .accessibilityAction(.default) { onOpen?() }
         .modifier(OpenIdentifier(identifier: openIdentifier))
     }
@@ -275,7 +285,7 @@ struct ExerciseListRow: View {
     private var accessibilityText: String {
         let stateText: String
         switch state {
-        case .completed: stateText = "completed"
+        case .completed: stateText = "completed, tap to edit"
         case .active: stateText = "current exercise"
         case .pending(let n): stateText = "number \(n)"
         }

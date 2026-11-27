@@ -22,6 +22,8 @@ final class FocusViewModel {
     var isAssisted: Bool = false
     /// Current weight stepper increment (5 / 1 / 0.5). Persists while Focus is alive.
     var weightStep: Double = MassUnitPreferences.unit.defaultStepperStep
+    /// This machine's own jump in the unit on screen (e.g. 15 lb). Nil = normal cycle.
+    private(set) var machineStep: Double?
     private(set) var weightDelta: String?  // non-nil → weight stepper target dress
     private(set) var repsDelta: String?    // non-nil → reps stepper target dress
 
@@ -60,9 +62,30 @@ final class FocusViewModel {
             let offeredPounds = MassMath.pounds(fromDisplay: offeredWeight, unit: old)
             offeredWeight = MassMath.display(fromPounds: offeredPounds, unit: unit)
         }
-        if !unit.stepperSteps.contains(weightStep) {
-            weightStep = unit.defaultStepperStep
+        if !Self.stepCycle(machineStep: machineStep, unit: unit).contains(weightStep) {
+            weightStep = machineStep ?? unit.defaultStepperStep
         }
+    }
+
+    /// Machine step first, then the smaller unit steps: 15 → 5 → 1 → 0.5 lb.
+    static func stepCycle(machineStep: Double?, unit: MassUnit) -> [Double] {
+        let base = unit.stepperSteps
+        guard let machineStep, machineStep > 0, machineStep.isFinite else { return base }
+        return [machineStep] + base.filter { $0 < machineStep - 0.000_1 }
+    }
+
+    var stepCycle: [Double] {
+        Self.stepCycle(machineStep: machineStep, unit: MassUnitPreferences.unit)
+    }
+
+    /// Use this lift's machine step for +/−. Nil goes back to the unit default.
+    func adoptMachineStep(_ step: Double?) {
+        if let step, step > 0, step.isFinite {
+            machineStep = step
+        } else {
+            machineStep = nil
+        }
+        weightStep = machineStep ?? MassUnitPreferences.unit.defaultStepperStep
     }
 
     /// Any manual +/− clears BOTH target dresses (spec §6.1).
@@ -73,14 +96,18 @@ final class FocusViewModel {
 
     /// Cycle through the unit steps (lb 5 → 1 → 0.5, kg 5 → 2.5 → 1 → 0.5). Snaps current weight onto the new grid when possible.
     func cycleWeightStep() {
-        let steps = MassUnitPreferences.unit.stepperSteps
+        let steps = stepCycle
         guard let idx = steps.firstIndex(of: weightStep) else {
             weightStep = steps[0]
             return
         }
         weightStep = steps[(idx + 1) % steps.count]
         let step = weightStep
-        weight = (weight / step).rounded() * step
+        // Back on the machine step: the weight is already a real stack weight
+        // (it may carry an offset, e.g. 145 on a 10 lb stack). Leave it.
+        if step != machineStep {
+            weight = (weight / step).rounded() * step
+        }
         userEdited()
     }
 

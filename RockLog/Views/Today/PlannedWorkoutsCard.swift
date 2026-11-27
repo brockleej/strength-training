@@ -19,6 +19,12 @@ struct PlannedWorkoutsCard: View {
         let dayType: DayType
         let liftCount: Int
         let isNext: Bool
+        /// The planned session's own A/B week (not Today's picker).
+        var track: RotationTrack = .every
+
+        var title: String {
+            PlannedBlockQueue.trackedDayTitle(dayName: dayType.rawValue, track: track)
+        }
     }
 
     var body: some View {
@@ -57,7 +63,7 @@ struct PlannedWorkoutsCard: View {
             DayChip(dayType: row.dayType, size: .sm)
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 8) {
-                    Text(row.dayType.rawValue)
+                    Text(row.title)
                         .font(.uplift.text(15, weight: .semibold))
                         .kerning(-0.2)
                         .foregroundStyle(Color.uplift.fg)
@@ -84,7 +90,7 @@ struct PlannedWorkoutsCard: View {
 
     private func rowAccessibility(_ row: Row) -> String {
         let next = row.isNext ? ", next up" : ""
-        return "\(row.dayType.rawValue)\(next), \(row.liftCount) lifts"
+        return "\(row.title)\(next), \(row.liftCount) lifts"
     }
 }
 
@@ -92,8 +98,8 @@ struct PlannedWorkoutsCard: View {
     PlannedWorkoutsCard(
         blockName: "Demo 8-Week Strength Block",
         rows: [
-            .init(id: UUID(), dayType: .lower, liftCount: 6, isNext: true),
-            .init(id: UUID(), dayType: .push, liftCount: 6, isNext: false),
+            .init(id: UUID(), dayType: .lower, liftCount: 6, isNext: true, track: .a),
+            .init(id: UUID(), dayType: .lower, liftCount: 6, isNext: false, track: .b),
         ]
     )
     .padding(20)

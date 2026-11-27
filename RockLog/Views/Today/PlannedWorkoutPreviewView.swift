@@ -16,6 +16,11 @@ struct PlannedWorkoutPreviewView: View {
 
     @Environment(\.dismiss) private var dismiss
 
+    /// "Lower A" / "Upper B" from the session's own track.
+    private var title: String {
+        PlannedBlockQueue.trackedDayTitle(dayName: session.day.rawValue, track: session.track)
+    }
+
     private var lifts: [(id: UUID, name: String, recipe: String)] {
         session.exerciseRecordsArray
             .sorted { $0.sortOrder < $1.sortOrder }
@@ -81,7 +86,7 @@ struct PlannedWorkoutPreviewView: View {
                 HStack(spacing: 8) {
                     Image(systemName: "bolt.fill")
                         .font(.system(size: 15, weight: .semibold))
-                    Text("Start workout")
+                    Text("Start \(title)")
                         .font(.uplift.text(16, weight: .semibold))
                         .kerning(-0.2)
                 }
@@ -95,7 +100,8 @@ struct PlannedWorkoutPreviewView: View {
             .padding(.top, 8)
             .padding(.bottom, 8)
             .background(Color.uplift.bgElev.opacity(0.92))
-            .accessibilityLabel("Start \(session.day.rawValue) workout")
+            .accessibilityIdentifier(AccessibilityID.plannedPreviewStart)
+            .accessibilityLabel("Start \(title) workout")
         }
     }
 
@@ -103,7 +109,7 @@ struct PlannedWorkoutPreviewView: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 10) {
                 DayChip(dayType: session.day, size: .md)
-                Text(session.day.rawValue)
+                Text(title)
                     .font(.uplift.display(28, weight: .bold))
                     .kerning(-0.6)
                     .foregroundStyle(Color.uplift.fg)

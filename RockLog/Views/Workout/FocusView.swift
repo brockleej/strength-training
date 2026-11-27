@@ -22,6 +22,10 @@ struct FocusView: View {
     var onMarkDoneAndAdvance: (() -> Void)? = nil
     /// Circuit auto-advance. Previous and Next stay on the session-list rule.
     var onJumpTo: ((UUID) -> Void)? = nil
+    /// The lift just marked Done from Focus. A banner offers a one-tap way back in.
+    var justFinished: FinishedLift? = nil
+    var onReopenFinished: (() -> Void)? = nil
+    var onDismissFinished: (() -> Void)? = nil
 
     @Environment(\.dismiss) private var dismiss
     @State private var focusVM: FocusViewModel?
@@ -123,6 +127,7 @@ struct FocusView: View {
                         LiveHealthKitCard(service: workoutVM.healthKitService)
                             .padding(.horizontal, 20)
                     }
+                    justFinishedBanner
                     titleSection
                     // Sets first (with last-session inline) so logging doesn’t
                     // require scrolling past a huge “Last time” card.
@@ -193,6 +198,7 @@ struct FocusView: View {
             let from = MassUnit(rawValue: old) ?? .pounds
             let to = MassUnit(rawValue: new) ?? .pounds
             focusVM?.adoptUnit(to, from: from)
+            focusVM?.adoptMachineStep(machineStepForStepper)
         }
         .onChange(of: exercise.id) { _, _ in
             focusVM = makeFocusVM()
@@ -501,6 +507,7 @@ struct FocusView: View {
         let opening = currentPrefill()
         let model = FocusViewModel(prefill: opening.0)
         model.openingLineText = opening.1
+        model.adoptMachineStep(machineStepForStepper)
         return model
     }
 
@@ -758,6 +765,63 @@ struct FocusView: View {
             .padding(.horizontal, 16)
         }
         .padding(.bottom, 12)
+    }
+
+    /// Shown on the next lift after Done. "Edit sets" goes back to the finished lift,
+    /// where any set can be tapped to edit or swiped to delete.
+    @ViewBuilder
+    private var justFinishedBanner: some View {
+        if let justFinished, justFinished.id != exercise.id {
+            HStack(spacing: 10) {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(Color.uplift.up)
+                    .accessibilityHidden(true)
+                Text("\(justFinished.name) done")
+                    .font(.uplift.text(13, weight: .semibold))
+                    .foregroundStyle(Color.uplift.fg)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                Spacer(minLength: 6)
+                Button {
+                    onReopenFinished?()
+                } label: {
+                    Text("Edit sets")
+                        .font(.uplift.text(13, weight: .semibold))
+                        .foregroundStyle(Color.uplift.accent)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(Capsule().fill(Color.uplift.accent.opacity(0.16)))
+                        .frame(minHeight: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .fixedSize()
+                .accessibilityIdentifier(AccessibilityID.focusReopenFinished)
+                .accessibilityLabel("Edit sets for \(justFinished.name)")
+                .accessibilityHint("Goes back to the lift you just finished so you can edit or delete a set")
+                Button {
+                    onDismissFinished?()
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(Color.uplift.fgMuted)
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier(AccessibilityID.focusReopenDismiss)
+                .accessibilityLabel("Dismiss")
+            }
+            .padding(.leading, 14)
+            .padding(.trailing, 2)
+            .background {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(Color.uplift.surface1)
+            }
+            .padding(.horizontal, 16)
+            .padding(.bottom, 8)
+        }
     }
 
     /// Compact like Warm; far right of the log row. Explicit finish, not set-count.
@@ -1237,7 +1301,10 @@ struct FocusView: View {
                     }
                 }
                 Button("No machine steps") { chooseMachineStep(nil) }
-                Button("Forget learned steps") { workoutVM.clearLearnedStack(exercise: exercise) }
+                Button("Forget learned steps") {
+                    workoutVM.clearLearnedStack(exercise: exercise)
+                    focusVM?.adoptMachineStep(machineStepForStepper)
+                }
             } label: {
                 Text(machineStepsPillText)
                     .font(.uplift.text(12, weight: .semibold))
@@ -1258,9 +1325,15 @@ struct FocusView: View {
         return MachineSteps.pillLabel(for: workoutVM.stackDefinition(for: exercise))
     }
 
+    /// This lift's machine step in the unit on screen, for the weight stepper's +/−.
+    private var machineStepForStepper: Double? {
+        MachineSteps.stepperStep(for: workoutVM.stackDefinition(for: exercise), unit: MassUnitPreferences.unit)
+    }
+
     /// Save the step, then move the weight on screen onto a real machine weight right away.
     private func chooseMachineStep(_ step: Double?) {
         workoutVM.applyTypedStack(exercise: exercise, step: step, pins: [])
+        focusVM?.adoptMachineStep(machineStepForStepper)
         guard let focusVM, let stack = workoutVM.stackDefinition(for: exercise) else { return }
         let unit = MassUnitPreferences.unit
         let snapped = MachineSteps.snappedDisplay(focusVM.weight, unit: unit, stack: stack)
