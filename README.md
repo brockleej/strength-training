@@ -259,7 +259,17 @@ Current builds for the internal groups (Lee Only and Friends):
 
 - **1.1 (1)** — built from `fae17c6` on Oct 30, 2026.
 - **1.2 (1)** — built from branch `cursor/rocklog-1.2` on Oct 31, 2026. Xcode Cloud was at its monthly limit, so this build was archived on a local Mac and uploaded to App Store Connect by hand. It is not on `main` yet.
-- **1.2.1 (2)** — patch on `cursor/rocklog-1.2`. Marketing version in the RockLog target is 1.2.1, build 2 (build 1 was never uploaded). Not uploaded.
+- **1.2.1 (2)** — patch on `cursor/rocklog-1.2`. Marketing version in the RockLog target is 1.2.1, build 2 (build 1 was never uploaded). Uploaded by hand Nov 14, 2026 to Lee Only; the Friends group received it automatically.
+- **1.2.2 (1)** — on branch `cursor/rocklog-1.2.2`, built on top of 1.2.1. Marketing version 1.2.2, build 1. Not uploaded.
+
+### What's new in 1.2.2
+
+From Lee's notes on 1.2.1 (Nov 14 and Nov 19, 2026):
+
+- **A/B week on What's Next.** Queue rows, the Start button and the planned-workout preview say **Lower A**, **Upper B**, **Start Lower A**. The week comes from the planned session itself. A plan with no A/B week still says just the day.
+- **Back into a lift after Done.** After you tap Done, the next lift shows a bar at the top: "Bench Press done · **Edit sets**". One tap goes straight back to it. Tap a set to edit it, or swipe it to delete it. On the workout list a done lift now says **Edit** and still opens. Editing a set reopens the lift, as before, so tap Done again when you are finished.
+- **Machine weight steps on the stepper.** When a lift has a machine step (Machine steps → Every 10 lb, Every 15 lb…), the weight **+ / −** moves by that step. Tap the step hint to drop to 5, 1 or 0.5 lb for one set, then back around to the machine step. Planned targets still round to the machine's step when the lift opens.
+- **Machine steps in planned-workout files.** A `.rocklogprogram` exercise may carry `weightIncrementLbs` (e.g. `10` for a kneeling hamstring curl, `15` for a leg extension). Importing sets that lift's step at Home and rounds the file's targets to it (a tie rounds down). A step you already picked on the phone wins. Older files without the field import exactly as before, and older RockLog builds ignore it. Backups already carry machine steps.
 
 ### What's new in 1.2.1
 
